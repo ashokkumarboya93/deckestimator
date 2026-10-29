@@ -18,3 +18,4 @@ export function formatCurrency(amount, currency = 'USD') {
     maximumFractionDigits: 2,
   }).format(amount);
 }
+

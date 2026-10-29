@@ -89,3 +89,4 @@ function optionalAuth(req, res, next) {
 }
 
 module.exports = { authenticate, optionalAuth };
+

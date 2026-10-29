@@ -50,3 +50,4 @@ describe('Health Endpoint', () => {
     assert.ok(!server.listening, 'Server should be closed');
   });
 });
+

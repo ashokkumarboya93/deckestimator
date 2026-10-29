@@ -1,14 +1,9 @@
 // =============================================
 // DECK PRO — Shared React Providers
 // =============================================
-// Central location for context providers.
-// Auth context and other providers will be added in later phases.
+
+import { AuthProvider } from '../features/auth/hooks/useAuth';
 
 export function Providers({ children }) {
-  return (
-    <>
-      {/* AuthProvider will wrap children in Phase 5 */}
-      {children}
-    </>
-  );
+  return <AuthProvider>{children}</AuthProvider>;
 }

@@ -30,3 +30,4 @@ export function formatDateTime(date) {
     minute: '2-digit',
   });
 }
+

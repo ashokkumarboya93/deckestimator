@@ -95,3 +95,4 @@ module.exports = {
   ANALYSIS_STATUS,
   DISCOUNT_TYPE,
 };
+

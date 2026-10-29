@@ -55,6 +55,13 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// Phase 2: Auth and Users routes
+const authRoutes = require('./modules/auth/auth.routes');
+const userRoutes = require('./modules/users/users.routes');
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //
@@ -80,3 +87,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+
