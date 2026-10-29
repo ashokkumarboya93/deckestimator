@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+frontend/dist/
+backend/dist/
+
+# Environment files (never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (local dev only)
+uploads/
+
+# Generated reports
+generated/
+
+# Test artifacts
+.nyc_output/
