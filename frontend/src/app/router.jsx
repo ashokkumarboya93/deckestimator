@@ -1,11 +1,12 @@
 // =============================================
-// DECK PRO — Route Definitions
+// Deck Estimator — Route Definitions
 // =============================================
 
 import { createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
+import { GuestOnly } from './routeGuards';
 
 const router = createBrowserRouter([
   {
@@ -14,11 +15,19 @@ const router = createBrowserRouter([
     children: [
       {
         path: 'login',
-        element: <LoginPage />,
+        element: (
+          <GuestOnly>
+            <LoginPage />
+          </GuestOnly>
+        ),
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: (
+          <GuestOnly>
+            <RegisterPage />
+          </GuestOnly>
+        ),
       },
     ],
   },

@@ -49,28 +49,42 @@ async function registerUser(userData) {
       : ACCOUNT_STATUS.ACTIVE;
 
   // Create User
-  const user = await User.create({
-    fullName: userData.fullName.trim(),
-    email: normalizedEmail,
-    phone: userData.phone ? userData.phone.trim() : '',
-    passwordHash,
-    role,
-    accountStatus: initialAccountStatus,
-  });
+  let user;
+  try {
+    user = await User.create({
+      fullName: userData.fullName.trim(),
+      email: normalizedEmail,
+      phone: userData.phone ? userData.phone.trim() : '',
+      passwordHash,
+      role,
+      accountStatus: initialAccountStatus,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new ConflictError('An account with this email already exists.');
+    }
+    throw err;
+  }
 
   let contractorProfile = null;
 
   // Create Contractor Profile if role is contractor
   if (role === ROLES.CONTRACTOR) {
-    contractorProfile = await ContractorProfile.create({
-      userId: user._id,
-      businessName: userData.businessName.trim(),
-      businessEmail: normalizedEmail,
-      businessPhone: userData.phone ? userData.phone.trim() : '',
-      licenseNumber: userData.licenseNumber.trim(),
-      licenseJurisdiction: userData.licenseJurisdiction ? userData.licenseJurisdiction.trim() : '',
-      verificationStatus: VERIFICATION_STATUS.PENDING,
-    });
+    try {
+      contractorProfile = await ContractorProfile.create({
+        userId: user._id,
+        businessName: userData.businessName.trim(),
+        businessEmail: normalizedEmail,
+        businessPhone: userData.phone ? userData.phone.trim() : '',
+        licenseNumber: userData.licenseNumber.trim(),
+        licenseJurisdiction: userData.licenseJurisdiction ? userData.licenseJurisdiction.trim() : '',
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+      });
+    } catch (profileErr) {
+      // Clean up orphaned user record if contractor profile creation fails
+      await User.findByIdAndDelete(user._id);
+      throw profileErr;
+    }
   }
 
   const token = generateToken(user);

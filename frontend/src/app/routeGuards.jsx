@@ -1,44 +1,79 @@
 // =============================================
-// DECK PRO — Route Guards
+// Deck Estimator — Route Guards
 // =============================================
 // UX-level navigation guards based on session/role.
 // These improve user experience but are NOT a security boundary.
 // The backend enforces all authorization.
 
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../features/auth/hooks/useAuth';
 
 /**
  * Protect routes that require authentication.
- * Redirects to login if user is not authenticated.
+ * Displays a loading state while session verification completes,
+ * or redirects to /login if unauthenticated.
  */
-export function RequireAuth({ user, children }) {
-  if (!user) {
-    return <Navigate to="/login" replace />;
+export function RequireAuth({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Verifying session...</p>
+      </div>
+    );
   }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
   return children;
 }
 
 /**
  * Restrict routes to specific roles.
- * Redirects to home if user's role is not allowed.
+ * Redirects to root if user role is not permitted.
  */
-export function RequireRole({ user, allowedRoles, children }) {
+export function RequireRole({ allowedRoles, children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Verifying permissions...</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+
   if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
+
   return children;
 }
 
 /**
- * Redirect authenticated users away from auth pages (login, register).
+ * Redirect authenticated users away from guest pages (login, register).
  */
-export function GuestOnly({ user, children }) {
-  if (user) {
-    return <Navigate to="/" replace />;
+export function GuestOnly({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
   }
+
+  if (user) {
+    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (user.role === 'contractor') return <Navigate to="/contractor/dashboard" replace />;
+    return <Navigate to="/customer/dashboard" replace />;
+  }
+
   return children;
 }
 

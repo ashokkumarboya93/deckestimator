@@ -1,13 +1,18 @@
-# DECK PRO — Deck Restoration Estimator
+# Deck Estimator
 
-A full-stack MERN application for deck restoration cost estimation, contractor management, and lead generation.
+A web-based Deck Restoration Estimator and Lead Management Platform.
+
+The platform supports three primary user roles:
+1. Customer
+2. Contractor
+3. Administrator
 
 ## Tech Stack
 
-- **Frontend:** React + Vite
+- **Frontend:** React + Vite + React Router + Axios
 - **Backend:** Node.js + Express
 - **Database:** MongoDB Atlas (Mongoose ODM)
-- **Architecture:** Modular monolith
+- **Architecture:** Modular Monolithic Architecture
 
 ## Prerequisites
 
@@ -46,34 +51,26 @@ npm run dev                # Starts on http://localhost:5173
 - Health check: http://localhost:5000/api/v1/health
 - Frontend: http://localhost:5173
 
-## Project Structure
+## Official 12-Phase Development Sequence
 
-```
-deck-pro/
-├── frontend/        # React + Vite application
-├── backend/         # Express REST API
-├── docs/            # Architecture, HLD, LLD, specs
-├── tests/           # Cross-module E2E tests
-├── .gitignore
-├── .editorconfig
-└── README.md
-```
-
-## Development Phases
-
-- [x] Phase 1: Project skeleton & configuration
-- [ ] Phase 2: Authentication & authorization
-- [ ] Phase 3: Deck inputs & file handling
-- [ ] Phase 4: Catalog & pricing configuration
-- [ ] Phase 5: Estimate calculation & history
-- [ ] Phase 6: AI condition analysis
-- [ ] Phase 7: Contractor verification & leads
-- [ ] Phase 8: Admin workflows, discounts, reports
+- [x] Phase 1: Project Inspection, Requirements Analysis & Architecture
+- [x] Phase 2: Project Structure, Application Skeleton & Backend Foundation
+- [x] Phase 3: Authentication & Authorization
+- [ ] Phase 4: Deck Input Management & Secure File Uploads
+- [ ] Phase 5: Material & Service Catalog Management
+- [ ] Phase 6: Pricing Calculation Engine & Estimate Management
+- [ ] Phase 7: AI-Based Deck Condition Analysis
+- [ ] Phase 8: Contractor Verification & Lead Management
+- [ ] Phase 9: Contractor Discounts & Commission Management
+- [ ] Phase 10: Administrative Dashboard & Platform Management
+- [ ] Phase 11: Integration, Security & Quality Assurance
+- [ ] Phase 12: Deployment, Documentation & Production Readiness
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [HLD & LLD](docs/HLD_LLD.md)
+- [Phase 3 Review](CompletionReviews/Phase_3_Completion_Review.md)
 
 ## License
 

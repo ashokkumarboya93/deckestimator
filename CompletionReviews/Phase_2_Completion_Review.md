@@ -64,3 +64,4 @@
 - Validated rejection of duplicate email registrations with `409 Conflict`.
 - Validated role protection blocking public Admin registration with `400 Bad Request`.
 - Verified password security (hashes never leaked in responses).
+

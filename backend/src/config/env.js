@@ -11,6 +11,9 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const requiredVars = ['MONGODB_URI'];
+if (process.env.NODE_ENV === 'production') {
+  requiredVars.push('JWT_SECRET');
+}
 
 /**
  * Validate that all required environment variables are set.
