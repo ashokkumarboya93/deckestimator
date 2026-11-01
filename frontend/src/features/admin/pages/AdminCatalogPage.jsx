@@ -8,6 +8,7 @@ import MaterialsTab from '../components/MaterialsTab';
 import ServiceCategoriesTab from '../components/ServiceCategoriesTab';
 import ServicesTab from '../components/ServicesTab';
 import CompatibilityTab from '../components/CompatibilityTab';
+import PricingConfigTab from '../components/PricingConfigTab';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'service-categories', label: 'Service Categories' },
   { id: 'services', label: 'Services Catalog' },
   { id: 'compatibility', label: 'Compatibility Matrix' },
+  { id: 'pricing-config', label: 'Pricing Rules (Phase 6)' },
 ];
 
 export default function AdminCatalogPage() {
@@ -69,6 +71,7 @@ export default function AdminCatalogPage() {
         {activeTab === 'service-categories' && <ServiceCategoriesTab />}
         {activeTab === 'services' && <ServicesTab />}
         {activeTab === 'compatibility' && <CompatibilityTab />}
+        {activeTab === 'pricing-config' && <PricingConfigTab />}
       </div>
     </div>
   );

@@ -73,6 +73,13 @@ const catalogRoutes = require('./modules/catalogs/catalog.routes');
 app.use('/api/v1/catalog', catalogRoutes);
 app.use('/api/v1/catalogs', catalogRoutes);
 
+// Phase 6: Pricing Engine & Estimate Management routes
+const pricingRoutes = require('./modules/pricing/pricing.routes');
+const estimateRoutes = require('./modules/estimates/estimate.routes');
+
+app.use('/api/v1/pricing', pricingRoutes);
+app.use('/api/v1/estimates', estimateRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //

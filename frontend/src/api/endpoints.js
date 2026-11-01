@@ -59,10 +59,21 @@ export const ENDPOINTS = {
     BY_ID: (id) => `/files/${id}`,
   },
 
-  // Estimates (Phase 8)
+  // Pricing (Phase 6)
+  PRICING: {
+    CONFIGURATIONS: '/pricing/configurations',
+    ACTIVE: '/pricing/configurations/active',
+    BY_ID: (id) => `/pricing/configurations/${id}`,
+    STATUS: (id) => `/pricing/configurations/${id}/status`,
+  },
+
+  // Estimates (Phase 6)
   ESTIMATES: {
     BASE: '/estimates',
     BY_ID: (id) => `/estimates/${id}`,
+    RECALCULATE: (id) => `/estimates/${id}/recalculate`,
+    STATUS: (id) => `/estimates/${id}/status`,
+    HISTORY: (id) => `/estimates/${id}/history`,
     REPORT: (id) => `/estimates/${id}/report`,
   },
 

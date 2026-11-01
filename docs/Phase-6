@@ -1,0 +1,731 @@
+# Phase 6 – Pricing Calculation Engine and Estimate Management
+
+**Project:** Deck Estimator  
+**Phase:** 6 of 12  
+**Phase Name:** Pricing Calculation Engine and Estimate Management  
+**Previous Phase:** Phase 5 – Material and Service Catalog Management  
+**Next Phase:** Phase 7 – AI-Based Deck Condition Analysis  
+**Status:** Development Specification – Pending Implementation Approval
+
+---
+
+# 1. Phase Objective
+
+Phase 6 develops the core pricing engine of Deck Estimator.
+
+The system must convert deck information, measurements, selected materials, required services, and approved pricing configurations into an accurate project estimate.
+
+The pricing engine must calculate:
+
+- Material quantities.
+- Material costs.
+- Service costs.
+- Labor costs, where approved.
+- Additional project charges.
+- Applicable taxes, if configured.
+- Minimum job price rules, if approved.
+- Final estimated project cost.
+
+The system must also allow users to generate, view, save, update, and manage estimates.
+
+**Important:** All commercial pricing rules must be approved by the business owner. Developers must not invent actual prices, labor rates, tax percentages, minimum charges, waste percentages, or travel charges.
+
+# 2. Phase 6 Scope
+
+## 2.1 Included Features
+
+1. Pricing configuration management.
+2. Material quantity calculation.
+3. Material cost calculation.
+4. Service quantity and cost calculation.
+5. Labor cost calculation, if approved.
+6. Additional charge calculation.
+7. Tax calculation, if approved.
+8. Minimum job price handling, if approved.
+9. Estimate generation.
+10. Estimate history and management.
+11. Estimate breakdown and summary.
+12. Estimate recalculation when relevant inputs change.
+13. Admin control over approved pricing configurations.
+
+## 2.2 Excluded Features
+
+Do not implement:
+
+- AI-based deck condition detection (Phase 7).
+- Contractor verification and lead management (Phase 8).
+- Contractor discounts and commissions (Phase 9).
+- Advanced administrative platform management (Phase 10).
+- Unapproved external integrations.
+- Automated pricing decisions based on AI predictions.
+
+Contractor discounts and commissions must remain in Phase 9.
+
+# 3. Inputs Required for Pricing
+
+The pricing engine must use information from existing Phase 4 and Phase 5 modules.
+
+## 3.1 Deck Information
+
+Retrieve the customer's existing deck information:
+
+- Project Name.
+- Property Location.
+- Measurement Unit.
+- Deck Length.
+- Deck Width.
+- Deck Area.
+- Deck Shape.
+- Number of Deck Levels.
+- Attached or Detached.
+- Railing Present.
+- Stairs Present.
+- Number of Stairs.
+- Built-in Features.
+- Surface Material.
+- Existing Coating Status.
+- Visible Deck Conditions.
+
+Do not ask customers to enter the same information again if it already exists in their saved deck record.
+
+## 3.2 Material Information
+
+Retrieve available materials from Phase 5:
+
+- Material Name.
+- Material Code.
+- Material Category.
+- Brand Name.
+- Product Name.
+- Compatible Surfaces.
+- Measurement Unit.
+- Coverage Information.
+- Approved Material Cost.
+- Product Specifications.
+- Material Status.
+
+Only active and approved materials should be selectable.
+
+## 3.3 Service Information
+
+Retrieve available services from Phase 5:
+
+- Service Name.
+- Service Code.
+- Service Category.
+- Service Type.
+- Measurement Unit.
+- Operational Details.
+- Equipment Requirements.
+- Safety Requirements.
+- Service Status.
+
+Only active services should be selectable.
+
+## 3.4 Compatibility Validation
+
+Before calculating an estimate:
+
+1. Check the deck surface material.
+2. Check the selected material's surface compatibility.
+3. Check material-service compatibility.
+4. Reject incompatible combinations.
+5. Flag `requires_review` combinations for appropriate review.
+
+The system must not silently treat incompatible materials and services as compatible.
+
+# 4. Pricing Configuration Management
+
+Create an Admin-controlled pricing configuration module.
+
+The Admin must be able to configure approved pricing rules without modifying source code.
+
+Potential configuration categories:
+
+### 4.1 Material Pricing
+
+- Material cost per unit.
+- Coverage per unit.
+- Effective date.
+- Active/inactive status.
+
+### 4.2 Service Pricing
+
+- Service pricing method.
+- Service rate.
+- Applicable measurement unit.
+- Effective date.
+- Active/inactive status.
+
+### 4.3 Labor Pricing
+
+If the business supplies approved labor rates:
+
+- Labor rate.
+- Labor measurement method.
+- Applicable service.
+- Effective date.
+- Active/inactive status.
+
+### 4.4 Waste Allowance
+
+If approved by the business:
+
+- Waste percentage.
+- Applicable material categories.
+- Effective date.
+- Active/inactive status.
+
+### 4.5 Additional Charges
+
+Potential configurable charges:
+
+- Travel charge.
+- Equipment charge.
+- Special preparation charge.
+- Additional structure charge.
+
+Each charge must have a clearly defined calculation method.
+
+### 4.6 Minimum Job Price
+
+If the business confirms a minimum job price, allow Admin configuration of:
+
+- Minimum amount.
+- Effective date.
+- Applicable project types.
+- Active/inactive status.
+
+The previously discussed $2,500 minimum is an example only until confirmed by the business.
+
+### 4.7 Tax Configuration
+
+If required by the business:
+
+- Tax name.
+- Tax percentage.
+- Applicable location.
+- Tax calculation basis.
+- Effective date.
+- Active/inactive status.
+
+Tax must not be calculated using an invented or globally assumed percentage.
+
+# 5. Calculation Engine
+
+The calculation engine must be implemented as a separate backend business-logic module.
+
+It must not place pricing calculations directly inside controllers or frontend components.
+
+## 5.1 Deck Area Calculation
+
+For rectangular decks:
+
+Deck Area = Length × Width
+
+Example:
+
+Length = 24 ft  
+Width = 16 ft
+
+Deck Area = 24 × 16 = 384 sq.ft.
+
+For square decks, use the same formula.
+
+For L-shaped and custom decks, use the approved area captured in Phase 4 or a separately validated measurement breakdown.
+
+Do not assume every deck is rectangular.
+
+## 5.2 Material Quantity Calculation
+
+General formula:
+
+Required Material Quantity = Required Coverage Area ÷ Coverage per Unit
+
+If an approved waste allowance exists:
+
+Adjusted Material Quantity = Required Quantity × (1 + Waste Percentage / 100)
+
+Round quantities according to the material's purchasing unit and approved business rules.
+
+Example using illustrative values only:
+
+- Deck Area: 384 sq.ft.
+- Product Coverage: 200 sq.ft. per gallon.
+- Waste Allowance: 10%.
+
+Required Quantity:
+
+384 ÷ 200 = 1.92 gallons
+
+Adjusted Quantity:
+
+1.92 × 1.10 = 2.112 gallons
+
+If the product can only be purchased in whole gallons, the purchase quantity would be rounded according to the approved purchasing rule.
+
+## 5.3 Material Cost Calculation
+
+Material Cost = Required Purchase Quantity × Approved Unit Cost
+
+Example:
+
+Purchase Quantity = 3 gallons  
+Cost per gallon = $50
+
+Material Cost = 3 × $50 = $150
+
+These values are illustrative and must not become production defaults.
+
+## 5.4 Service Cost Calculation
+
+Service costs must support the measurement method configured for each service.
+
+Examples:
+
+- Per square foot.
+- Per linear foot.
+- Per hour.
+- Per unit.
+- Fixed charge.
+
+General formula:
+
+Service Cost = Service Quantity × Approved Service Rate
+
+For fixed charges:
+
+Service Cost = Approved Fixed Charge
+
+The system must prevent incompatible measurement units from being used in calculations.
+
+## 5.5 Labor Cost Calculation
+
+Only implement labor calculations after approved labor pricing rules are supplied.
+
+Possible formula:
+
+Labor Cost = Labor Quantity × Approved Labor Rate
+
+The labor quantity and measurement method must be explicitly defined for each applicable service.
+
+Do not invent labor hours or labor rates.
+
+## 5.6 Additional Charges
+
+Additional charges must be separately identified.
+
+Examples:
+
+- Travel.
+- Equipment.
+- Special preparation.
+
+The calculation engine must not add a charge twice if it is already included in another pricing component.
+
+## 5.7 Subtotal
+
+Project Subtotal =
+
+Material Costs  
++ Service Costs  
++ Labor Costs  
++ Approved Additional Charges
+
+## 5.8 Minimum Job Price
+
+If an approved minimum job price applies:
+
+Pre-Tax Project Total = Maximum(Project Subtotal, Minimum Job Price)
+
+The estimate must clearly distinguish the calculated subtotal from any minimum-price adjustment.
+
+The exact commercial treatment must be confirmed before implementation.
+
+## 5.9 Tax
+
+If tax rules are approved:
+
+Tax Amount = Applicable Taxable Amount × Tax Rate
+
+Final Estimate = Pre-Tax Project Total + Tax Amount
+
+The applicable tax basis and location rules must be approved by the business.
+
+## 5.10 Final Estimate
+
+The final estimate must provide a complete breakdown:
+
+- Material Cost.
+- Service Cost.
+- Labor Cost.
+- Additional Charges.
+- Minimum Price Adjustment, if applicable.
+- Subtotal.
+- Tax.
+- Final Estimated Amount.
+
+Do not include Phase 9 contractor discounts or commissions in this phase.
+
+# 6. Estimate Management
+
+Create a dedicated Estimate Management module.
+
+## 6.1 Estimate Creation
+
+Users should be able to:
+
+1. Select an existing deck.
+2. Review deck measurements and project details.
+3. Select compatible materials.
+4. Select required services.
+5. Review the calculated quantities.
+6. Generate the estimate.
+7. Save the estimate.
+
+## 6.2 Estimate Information
+
+Each estimate should contain:
+
+- Estimate Number.
+- Deck ID.
+- Owner ID.
+- Created By.
+- Selected Materials.
+- Selected Services.
+- Material Quantity Breakdown.
+- Material Cost Breakdown.
+- Service Cost Breakdown.
+- Labor Breakdown, if applicable.
+- Additional Charges.
+- Tax Breakdown, if applicable.
+- Subtotal.
+- Final Estimated Amount.
+- Pricing Configuration Version.
+- Estimate Status.
+- Created Date.
+- Updated Date.
+
+## 6.3 Estimate Status
+
+Suggested statuses:
+
+- Draft.
+- Generated.
+- Revised.
+- Approved.
+- Rejected.
+- Expired.
+
+Confirm the business workflow before implementing approval-related transitions.
+
+## 6.4 Estimate History
+
+Users must be able to:
+
+- View previous estimates.
+- Open estimate details.
+- Identify revised estimates.
+- Compare estimate versions.
+- Track creation and modification dates.
+
+Do not silently overwrite an existing finalized estimate.
+
+## 6.5 Estimate Versioning
+
+When pricing rules or deck information change, the system must preserve the original estimate snapshot.
+
+A revised estimate should create a new version or revision record.
+
+Historical estimates must retain their original calculated values, rates, and pricing configuration references.
+
+# 7. Database Design
+
+Reuse existing Phase 4 and Phase 5 models.
+
+Create or extend the following collections only when necessary.
+
+### 7.1 PricingConfiguration
+
+Possible fields:
+
+- configurationName.
+- configurationType.
+- applicableMaterial.
+- applicableService.
+- pricingMethod.
+- rate.
+- percentage.
+- measurementUnit.
+- effectiveFrom.
+- effectiveTo.
+- status.
+- createdBy.
+- updatedBy.
+- timestamps.
+
+### 7.2 Estimate
+
+Possible fields:
+
+- estimateNumber.
+- deckId.
+- ownerId.
+- createdBy.
+- selectedMaterials.
+- selectedServices.
+- materialBreakdown.
+- serviceBreakdown.
+- laborBreakdown.
+- additionalCharges.
+- subtotal.
+- taxBreakdown.
+- finalAmount.
+- pricingSnapshot.
+- status.
+- version.
+- timestamps.
+
+### 7.3 EstimateRevision
+
+Use this collection if the implementation requires separate revision history.
+
+Possible fields:
+
+- estimateId.
+- version.
+- previousSnapshot.
+- revisedSnapshot.
+- revisionReason.
+- revisedBy.
+- createdAt.
+
+These are proposed structures. Follow the existing database architecture and avoid duplicate collections.
+
+# 8. Backend API Requirements
+
+Use the existing API structure and authentication middleware.
+
+Suggested endpoints:
+
+### Pricing Configuration
+
+- `POST /api/v1/pricing/configurations`
+- `GET /api/v1/pricing/configurations`
+- `GET /api/v1/pricing/configurations/:id`
+- `PATCH /api/v1/pricing/configurations/:id`
+- `PATCH /api/v1/pricing/configurations/:id/status`
+
+Admin-only modifications.
+
+### Estimate Management
+
+- `POST /api/v1/estimates`
+- `GET /api/v1/estimates`
+- `GET /api/v1/estimates/:id`
+- `PATCH /api/v1/estimates/:id`
+- `POST /api/v1/estimates/:id/recalculate`
+- `GET /api/v1/estimates/:id/history`
+
+Implement only the endpoints required by the approved workflow.
+
+### Authorization
+
+- Customers can access only their own estimates.
+- Contractors can access only estimates they are authorized to manage.
+- Admins can access estimates according to their administrative permissions.
+- Only authorized roles can modify pricing configurations.
+- Backend authorization must enforce ownership and access restrictions.
+
+# 9. Frontend Requirements
+
+## 9.1 Customer Estimate Workflow
+
+1. Open an existing deck.
+2. Start a new estimate.
+3. Review deck details.
+4. Select materials.
+5. Select services.
+6. View calculated quantities and costs.
+7. Review the estimate summary.
+8. Save the estimate.
+9. View estimate history.
+
+## 9.2 Contractor Estimate Workflow
+
+Contractors should be able to create and view estimates only for decks they are authorized to manage.
+
+Contractor-specific discounts are not included in Phase 6.
+
+## 9.3 Admin Pricing Dashboard
+
+Admin should be able to:
+
+- View pricing configurations.
+- Create pricing configurations.
+- Edit approved rates.
+- Configure effective dates.
+- Activate/deactivate pricing rules.
+- Review pricing changes.
+- View audit history.
+
+## 9.4 Estimate Details Page
+
+Display:
+
+- Project information.
+- Deck measurements.
+- Selected materials.
+- Selected services.
+- Quantity calculations.
+- Cost breakdown.
+- Tax and additional charges, if applicable.
+- Final estimate.
+- Estimate version and status.
+
+The user must be able to understand how the final amount was calculated.
+
+# 10. Security and Data Integrity
+
+Mandatory requirements:
+
+- Validate all calculation inputs on the backend.
+- Never trust frontend-supplied prices or totals.
+- Retrieve approved prices from the database.
+- Validate material-service compatibility.
+- Validate measurement units.
+- Prevent unauthorized pricing changes.
+- Enforce estimate ownership.
+- Prevent cross-customer and cross-contractor access.
+- Preserve historical estimate snapshots.
+- Prevent duplicate or inconsistent calculations.
+- Record administrative pricing changes in audit logs.
+- Use decimal-safe monetary calculations and consistent rounding rules.
+
+# 11. Testing Requirements
+
+## Backend Tests
+
+Test:
+
+- Deck area calculation.
+- Material quantity calculation.
+- Waste allowance calculation.
+- Material cost calculation.
+- Service cost calculation.
+- Labor calculation, if approved.
+- Additional charges.
+- Minimum job price.
+- Tax calculation.
+- Final estimate calculation.
+- Invalid measurement handling.
+- Incompatible material/service handling.
+- Missing pricing configuration.
+- Inactive material/service rejection.
+- Estimate creation.
+- Estimate revision.
+- Historical estimate preservation.
+- Customer ownership validation.
+- Contractor authorization.
+- Admin pricing permissions.
+
+## Frontend Tests
+
+Verify:
+
+- Material selection.
+- Service selection.
+- Estimate calculation display.
+- Estimate summary.
+- Estimate history.
+- Admin pricing configuration screens.
+- Form validation.
+- Error and loading states.
+
+## Database Verification
+
+Verify:
+
+- Pricing configurations persist correctly.
+- Estimates persist correctly.
+- Estimate revisions retain history.
+- References between decks, materials, services, and estimates are valid.
+- Historical pricing snapshots remain unchanged after pricing updates.
+
+# 12. Mandatory Business Decisions Before Production Pricing
+
+The following values and rules must be confirmed by the business owner before they are used as production defaults:
+
+1. Material costs and coverage rates.
+2. Service rates and calculation methods.
+3. Labor rates and labor calculation methods.
+4. Waste percentages.
+5. Minimum job price.
+6. Travel charges and distance calculation rules.
+7. Equipment and additional charges.
+8. Tax rules and applicable locations.
+9. Monetary rounding rules.
+10. Estimate validity period.
+11. Estimate approval and rejection workflow.
+12. Whether material prices can vary by location or contractor.
+
+Until confirmed, use clearly labeled test fixtures or configuration records marked as sample data. Do not present sample estimates as real commercial quotes.
+
+# 13. Development Sequence
+
+Implement Phase 6 in this order:
+
+1. Review the Phase 6 specification and existing Phase 4/5 models.
+2. Confirm available pricing data and business-approved calculation rules.
+3. Implement pricing configuration models and APIs.
+4. Implement the calculation engine independently.
+5. Implement material quantity and cost calculations.
+6. Implement service quantity and cost calculations.
+7. Implement other approved pricing components.
+8. Implement estimate creation and persistence.
+9. Implement estimate versioning and history.
+10. Implement customer and contractor estimate workflows.
+11. Implement Admin pricing configuration screens.
+12. Add backend and frontend tests.
+13. Verify database persistence and authorization.
+14. Update documentation.
+15. Complete the Phase 6 review.
+16. Commit and synchronize the completed implementation.
+17. Stop and wait for explicit approval.
+
+Do not implement unapproved business rules just to make the phase appear complete.
+
+# 14. Acceptance Criteria
+
+Phase 6 is complete only when:
+
+- Approved pricing configurations can be managed by Admin.
+- Material quantities are calculated correctly.
+- Material costs are calculated correctly.
+- Service costs are calculated correctly.
+- Other approved charges are calculated correctly.
+- The calculation engine validates material-service compatibility.
+- Estimates can be generated and saved.
+- Estimate breakdowns are understandable.
+- Estimate history is preserved.
+- Revised estimates do not overwrite historical records.
+- Customer and contractor access restrictions work correctly.
+- Historical estimates retain their original pricing snapshots.
+- Backend tests pass.
+- Frontend production build passes.
+- Live database persistence is verified.
+- Documentation and completion review are updated.
+
+# 15. Phase Governance
+
+Follow the established project governance:
+
+**Read Specification → Implement → Test → Fix → Verify → Document → Commit → Sync → Stop → Wait for Explicit Approval.**
+
+Avoid unnecessary repository-wide inspections, duplicate documentation, unrelated refactoring, or infrastructure changes.
+
+Use existing project architecture and reusable components.
+
+Do not start Phase 7 automatically.
+
+**Phase 6 must stop after implementation and verification. Wait for explicit user approval before proceeding to Phase 7.**

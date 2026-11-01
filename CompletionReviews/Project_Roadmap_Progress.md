@@ -16,8 +16,8 @@
 | **Phase 3** | Authentication & Authorization (Hardened) | ✅ Completed | [Phase-03-Review.md](./Phase-03-Review.md) |
 | **Phase 4** | Deck Input Management & Secure File Uploads | ✅ Completed | [Phase-04-Review.md](./Phase-04-Review.md) |
 | **Phase 5** | Material & Service Catalog Management | ✅ Completed | [Phase-05-Review.md](./Phase-05-Review.md) |
-| **Phase 6** | Pricing Calculation Engine & Estimate Management | ⏳ **Next (Pending Approval)** | Pending |
-| **Phase 7** | AI-Based Deck Condition Analysis | ⏳ Upcoming | Pending |
+| **Phase 6** | Pricing Calculation Engine & Estimate Management | ✅ Completed | [Phase-06-Review.md](./Phase-06-Review.md) |
+| **Phase 7** | AI-Based Deck Condition Analysis | ⏳ **Next (Pending Approval)** | Pending |
 | **Phase 8** | Contractor Verification & Lead Management | ⏳ Upcoming | Pending |
 | **Phase 9** | Contractor Discounts & Commission Management | ⏳ Upcoming | Pending |
 | **Phase 10** | Administrative Dashboard & Platform Management | ⏳ Upcoming | Pending |

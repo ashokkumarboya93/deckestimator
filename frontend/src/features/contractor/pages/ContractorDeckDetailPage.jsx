@@ -97,13 +97,31 @@ export default function ContractorDeckDetailPage() {
           <p style={styles.address}>Client Property: {addressStr}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate(`/contractor/decks/${deck.id}/edit`)}
-          style={styles.editBtn}
-        >
-          ✎ Edit Specifications
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(`/contractor/decks/${deck.id || deck._id}/estimate/new`)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            💰 Calculate Estimate
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/contractor/decks/${deck.id || deck._id}/edit`)}
+            style={styles.editBtn}
+          >
+            ✎ Edit Specifications
+          </button>
+        </div>
       </div>
 
       {deck.projectDescription && (

@@ -13,6 +13,8 @@ import ContractorDashboardPage from '../features/contractor/pages/ContractorDash
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
 import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
+import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
+import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
 
 const router = createBrowserRouter([
@@ -81,6 +83,26 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
+      {
+        path: 'customer/decks/:deckId/estimate/new',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['customer', 'admin']}>
+              <EstimateBuilderPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'customer/estimates/:estimateId',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['customer', 'admin']}>
+              <EstimateDetailPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
       // Contractor Routes
       {
         path: 'contractor/dashboard',
@@ -118,6 +140,26 @@ const router = createBrowserRouter([
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
               <ContractorDeckEstimatorPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'contractor/decks/:deckId/estimate/new',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <EstimateBuilderPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'contractor/estimates/:estimateId',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <EstimateDetailPage />
             </RequireRole>
           </RequireAuth>
         ),
