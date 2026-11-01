@@ -1,0 +1,2456 @@
+# DECK ESTIMATOR
+# PHASE 8 – CONTRACTOR VERIFICATION AND LEAD MANAGEMENT
+
+**Document Type:** Functional and Technical Implementation Specification  
+**Phase:** 08 of 12  
+**Module:** Contractor Verification and Lead Management  
+**Status:** Development Specification  
+**Primary Roles:** Admin, Contractor, Customer
+
+---
+
+# 1. PHASE OVERVIEW
+
+## 1.1 Objective
+
+The objective of Phase 8 is to implement a complete contractor verification and lead management system.
+
+The platform has three primary users:
+
+1. Customers who create deck projects and request restoration estimates.
+2. Contractors who register their businesses and provide deck restoration services.
+3. Administrators who verify contractors, manage leads, and oversee the lead assignment process.
+
+The system must establish a controlled process through which:
+
+- Contractors register their businesses.
+- Administrators review contractor applications.
+- Administrators approve, reject, or request additional information.
+- Approved contractors become eligible for operational access.
+- Customers generate enquiries or express interest in restoration services.
+- The platform creates and manages leads.
+- Administrators review and assign leads to eligible contractors.
+- Contractors receive and manage their assigned leads.
+- Administrators track lead progress and verify outcomes.
+
+The system must maintain proper ownership, authorization, auditability, and data isolation.
+
+## 1.2 Relationship With Previous Phases
+
+Phase 8 must integrate with the existing application.
+
+Reuse the following functionality:
+
+| Previous Phase | Existing Functionality Used |
+|---|---|
+| Phase 3 | Authentication, roles, JWT, authorization, contractor profiles |
+| Phase 4 | Customer decks, deck information, property locations, photographs |
+| Phase 5 | Material and service catalog |
+| Phase 6 | Pricing engine, estimates, estimate history |
+| Phase 7 | Optional deck condition analysis results |
+
+Do not recreate authentication, deck management, catalog management, or estimate calculation.
+
+Phase 8 adds contractor verification and lead management on top of these existing modules.
+
+---
+
+# 2. SCOPE AND BOUNDARIES
+
+## 2.1 Included Functionality
+
+### Contractor Verification
+
+- Contractor registration integration.
+- Contractor business profile management.
+- Contractor application submission.
+- Admin verification dashboard.
+- Application review.
+- Document review.
+- Approval and rejection.
+- Request additional information.
+- Contractor status management.
+- Verification history.
+- Admin audit records.
+
+### Lead Management
+
+- Customer enquiry submission.
+- Lead creation.
+- Lead source tracking.
+- Lead information management.
+- Admin lead dashboard.
+- Lead assignment.
+- Contractor lead inbox.
+- Lead status updates.
+- Lead notes and activity history.
+- Lead reassignment.
+- Lead closure.
+- Lead reporting.
+
+### Security and Governance
+
+- Role-based access control.
+- Contractor eligibility validation.
+- Lead ownership validation.
+- Customer data protection.
+- Audit logging.
+- Input validation.
+- API security.
+- Duplicate enquiry protection.
+
+## 2.2 Explicitly Excluded
+
+The following features belong to other phases and must not be implemented here:
+
+- Contractor discounts.
+- Commission calculations.
+- Referral payments.
+- Contractor payouts.
+- Commission approvals.
+- AI model improvements.
+- AI-based automatic contractor matching.
+- Payment gateway integration.
+- Subscription billing.
+- Advanced marketing automation.
+- SMS, WhatsApp, or email campaign automation.
+
+Contractor discounts and commissions belong to Phase 9.
+
+---
+
+# 3. USER ROLES AND RESPONSIBILITIES
+
+## 3.1 Customer
+
+A customer can:
+
+- Create and manage their own deck projects.
+- View their own estimates.
+- Submit an enquiry for a deck restoration project.
+- Select an estimate when submitting an enquiry, where applicable.
+- Provide additional enquiry information.
+- View their enquiry submission status.
+- View appropriate updates about their enquiries.
+
+A customer cannot:
+
+- Approve contractors.
+- Assign leads.
+- View other customers' enquiries.
+- Access internal contractor verification documents.
+- Modify lead assignment.
+- Change internal lead statuses.
+
+## 3.2 Contractor
+
+A contractor can:
+
+- Register a contractor business profile.
+- Submit their business details for verification.
+- Upload required verification documents.
+- Update permitted business profile information.
+- View their verification status.
+- Respond to requests for additional information.
+- Access assigned leads after approval.
+- View the customer and deck information necessary to handle assigned leads.
+- Update permitted lead progress statuses.
+- Add notes and activity updates.
+- Mark a lead as completed or not interested, subject to the defined workflow.
+
+A contractor cannot:
+
+- Approve their own account.
+- Modify verification decisions.
+- Access another contractor's assigned leads.
+- Assign leads to themselves.
+- Modify customer-owned deck information.
+- Change estimate calculations or pricing configurations.
+- Access administrative verification controls.
+
+**Important:** A contractor's approval status and their lead access must be checked independently. Being authenticated does not automatically grant lead access.
+
+## 3.3 Administrator
+
+An administrator can:
+
+- View contractor applications.
+- Review contractor business information.
+- Review uploaded documents.
+- Approve applications.
+- Reject applications with reasons.
+- Request additional information.
+- Suspend or reactivate contractors, where permitted.
+- View all platform leads.
+- Review lead information.
+- Assign leads to approved contractors.
+- Reassign leads.
+- Monitor lead progress.
+- Review contractor responses.
+- Close or cancel leads under authorized conditions.
+- View lead history and audit records.
+- Generate lead management reports.
+
+All administrative operations must be protected by server-side authorization.
+
+---
+
+# 4. CONTRACTOR VERIFICATION MODULE
+
+## 4.1 Contractor Registration
+
+Phase 3 already contains contractor registration and contractor profile functionality.
+
+Phase 8 must extend the existing implementation.
+
+Do not create a second contractor registration system or duplicate contractor profile model.
+
+The contractor registration process should collect the following information.
+
+### A. Personal Information
+
+- First Name
+- Last Name
+- Business Email
+- Contact Number
+
+### B. Business Information
+
+- Business Name
+- Business Registration Number, if applicable
+- Contractor License Number
+- Business Phone Number
+- Business Email
+- Business Website, optional
+- Business Address
+- City
+- State
+- ZIP / Postal Code
+- Country
+
+### C. Service Information
+
+- Business Description
+- Years of Experience
+- Services Offered
+- Supported Deck Surface Types
+- Service Coverage Areas
+
+The service and surface selections should reference existing Phase 5 catalog information wherever appropriate.
+
+### D. Verification Documents
+
+The system should support configurable document requirements.
+
+Potential document categories:
+
+- Contractor License
+- Business Registration Certificate
+- Insurance Certificate
+- Identity or Business Verification Document
+- Other Supporting Document
+
+These are possible document categories, not mandatory legal requirements for every jurisdiction.
+
+The administrator must be able to review uploaded documents.
+
+### Document Upload Rules
+
+- Accept only explicitly supported file types.
+- Validate file extensions and actual file signatures.
+- Enforce configurable file-size limits.
+- Generate server-side unique file names.
+- Store files using the existing secure storage architecture where possible.
+- Prevent unauthorized public access.
+- Validate ownership before allowing replacement or deletion.
+- Never trust a client-provided file path.
+- Record document metadata and verification status.
+
+Do not expose sensitive verification documents through public URLs.
+
+## 4.2 Contractor Verification Status
+
+Use a clearly defined verification lifecycle.
+
+Recommended statuses:
+
+| Status | Meaning |
+|---|---|
+| DRAFT | Contractor has not submitted the application |
+| PENDING | Application submitted and awaiting review |
+| UNDER_REVIEW | Administrator is reviewing the application |
+| ADDITIONAL_INFORMATION_REQUIRED | Administrator needs more information |
+| APPROVED | Contractor has passed verification |
+| REJECTED | Application has been rejected |
+| SUSPENDED | Previously approved contractor has been suspended |
+
+### Status Transition Rules
+
+**DRAFT → PENDING**
+
+Contractor submits a complete application.
+
+**PENDING → UNDER_REVIEW**
+
+Administrator begins reviewing the application.
+
+**UNDER_REVIEW → APPROVED**
+
+Administrator approves the application.
+
+**UNDER_REVIEW → REJECTED**
+
+Administrator rejects the application.
+
+**UNDER_REVIEW → ADDITIONAL_INFORMATION_REQUIRED**
+
+Administrator requests additional information.
+
+**ADDITIONAL_INFORMATION_REQUIRED → PENDING**
+
+Contractor submits the requested information.
+
+**APPROVED → SUSPENDED**
+
+Administrator suspends an approved contractor.
+
+**SUSPENDED → APPROVED**
+
+Administrator restores contractor approval after review.
+
+These transitions must be validated by the backend.
+
+Do not allow arbitrary status updates through generic profile-editing APIs.
+
+## 4.3 Verification Review
+
+The Admin verification interface must provide:
+
+- Contractor personal information.
+- Business information.
+- License information.
+- Business address.
+- Services offered.
+- Service coverage areas.
+- Uploaded documents.
+- Application submission date.
+- Previous verification history.
+- Current status.
+- Admin review notes.
+
+### Admin Actions
+
+**Approve**
+
+The administrator confirms that the application meets the configured verification requirements.
+
+The system must:
+
+1. Validate the current application state.
+2. Confirm required information is present.
+3. Record the administrator who approved it.
+4. Record the approval timestamp.
+5. Update the verification status.
+6. Create an audit record.
+7. Notify the contractor through the existing notification mechanism, if available.
+
+**Reject**
+
+The administrator must provide a rejection reason.
+
+The system must:
+
+1. Validate the rejection reason.
+2. Record the administrator.
+3. Record the rejection timestamp.
+4. Change the verification status.
+5. Preserve previous application data.
+6. Create an audit record.
+
+**Request Additional Information**
+
+The administrator must provide a clear explanation of what is missing.
+
+The contractor should be able to:
+
+1. View the request.
+2. Update the permitted application fields.
+3. Upload the requested documents.
+4. Resubmit the application.
+
+All changes must be retained in the verification history.
+
+## 4.4 Contractor Eligibility
+
+A contractor is eligible for lead assignment only when:
+
+- The contractor account is active.
+- Verification status is APPROVED.
+- The contractor has not been suspended.
+- The contractor profile meets the required operational conditions.
+- The contractor is otherwise eligible under configured platform rules.
+
+The backend must enforce this condition.
+
+Hiding a button in the frontend is not sufficient.
+
+---
+
+# 5. LEAD MANAGEMENT MODULE
+
+## 5.1 What Is a Lead?
+
+A lead represents a customer's genuine interest in obtaining deck restoration services.
+
+A lead is not simply a deck record or an estimate record.
+
+A customer may have:
+
+- Multiple decks.
+- Multiple estimates for a deck.
+- Multiple enquiries over time.
+
+The system must distinguish these records.
+
+A lead should represent a specific customer enquiry or service opportunity.
+
+## 5.2 Lead Sources
+
+The system should support the following lead sources:
+
+- CUSTOMER_ESTIMATOR
+- ESTIMATE_ENQUIRY
+- CONTACT_FORM
+- ADMIN_CREATED
+- OTHER
+
+These sources identify how the lead entered the platform.
+
+Do not assume that every estimate automatically becomes a lead.
+
+A lead should be created only when the customer performs an explicit enquiry action or when an authorized administrator creates one.
+
+## 5.3 Customer Enquiry Flow
+
+Recommended workflow:
+
+1. Customer logs in.
+2. Customer opens their deck.
+3. Customer views the generated estimate.
+4. Customer selects an enquiry or request-service action.
+5. The platform displays the enquiry form.
+6. Customer confirms contact information.
+7. Customer provides additional details.
+8. Customer submits the enquiry.
+9. Backend validates customer ownership of the deck and estimate.
+10. Backend creates the lead.
+11. Lead appears in the Admin dashboard.
+12. Admin reviews the lead.
+13. Admin assigns an eligible contractor.
+14. Assigned contractor receives the lead in their dashboard.
+
+The enquiry form should collect only the information necessary to process the request.
+
+### Suggested Enquiry Fields
+
+- Deck ID
+- Estimate ID, optional
+- Enquiry Subject
+- Customer Message
+- Preferred Contact Method
+- Preferred Contact Time, optional
+- Additional Information, optional
+
+Customer name, email, and phone should be retrieved from the authenticated customer profile wherever possible.
+
+Do not rely on unverified client-submitted identity information.
+
+## 5.4 Lead Creation Rules
+
+The backend must validate:
+
+- Authenticated customer.
+- Customer owns the referenced deck.
+- Referenced estimate belongs to the customer and relevant deck.
+- Referenced estimate is valid for the enquiry workflow.
+- Required enquiry fields are present.
+- Customer is allowed to submit the enquiry.
+- Duplicate submission protection is applied.
+
+### Duplicate Enquiry Protection
+
+Implement an appropriate duplicate-submission strategy.
+
+For example:
+
+- Use an idempotency key for repeated requests.
+- Detect repeated submissions within a configurable period.
+- Prevent accidental duplicate creation caused by repeated button clicks.
+
+Do not permanently block legitimate future enquiries for the same deck.
+
+A customer may legitimately create another enquiry later.
+
+## 5.5 Lead Information Structure
+
+Each lead should contain:
+
+### Customer Information
+
+- Customer ID
+- Customer Name snapshot, if needed
+- Customer Email snapshot, if needed
+- Customer Contact Number snapshot, if needed
+
+### Deck Information
+
+- Deck ID
+- Project Name
+- Property Address or approved location summary
+- Deck Area
+- Surface Material
+- Visible Condition Information
+- Related Photograph References
+
+### Estimate Information
+
+- Estimate ID, optional
+- Estimate Reference
+- Estimate Amount Snapshot, if applicable
+- Estimate Version
+
+The estimate snapshot must be treated as historical information.
+
+Do not recalculate or overwrite a historical estimate amount simply because the current pricing configuration changes.
+
+### Enquiry Information
+
+- Lead Source
+- Enquiry Subject
+- Customer Message
+- Preferred Contact Method
+- Preferred Contact Time
+- Additional Information
+
+### Assignment Information
+
+- Assigned Contractor ID
+- Assigned By Admin ID
+- Assignment Timestamp
+- Assignment Notes
+- Previous Assignment History
+
+### Lead Tracking Information
+
+- Lead Status
+- Created At
+- Updated At
+- Last Activity At
+- Closed At
+- Closure Reason, when applicable
+
+---
+
+# 6. LEAD STATUS AND WORKFLOW
+
+## 6.1 Recommended Lead Statuses
+
+| Status | Meaning |
+|---|---|
+| NEW | Lead has been created |
+| UNDER_REVIEW | Admin is reviewing the lead |
+| ASSIGNED | Lead has been assigned to a contractor |
+| ACCEPTED | Contractor accepted the lead |
+| CONTACTED | Contractor contacted the customer |
+| SITE_VISIT_SCHEDULED | A site visit has been scheduled |
+| QUOTE_IN_PROGRESS | Contractor is preparing a quotation |
+| CONVERTED | Lead resulted in a confirmed business conversion |
+| NOT_INTERESTED | Customer or contractor is not proceeding |
+| CLOSED | Lead has been closed |
+| CANCELLED | Lead has been cancelled |
+
+These statuses represent suggested workflow states. Final business terminology and transition policies should be configurable or confirmed before implementation.
+
+## 6.2 Lead Lifecycle
+
+```text
+CUSTOMER SUBMITS ENQUIRY
+          |
+          v
+       NEW LEAD
+          |
+          v
+     ADMIN REVIEW
+          |
+          +----------------------+
+          |                      |
+          v                      v
+      ASSIGNED              NOT ELIGIBLE
+          |                      |
+          v                      v
+   CONTRACTOR INBOX             CLOSED
+          |
+          v
+       ACCEPTED
+          |
+          v
+       CONTACTED
+          |
+          v
+ SITE VISIT SCHEDULED
+          |
+          v
+    QUOTE IN PROGRESS
+          |
+          +-----------------------+
+          |                       |
+          v                       v
+      CONVERTED              NOT INTERESTED
+          |                       |
+          v                       v
+        CLOSED                  CLOSED
+```
+
+The backend must enforce valid state transitions.
+
+Do not allow contractors to change arbitrary lead statuses.
+
+## 6.3 Assignment Rules
+
+Only authorized administrators can assign or reassign leads.
+
+Before assignment, the backend must verify:
+
+1. Contractor exists.
+2. Contractor account is active.
+3. Contractor verification status is APPROVED.
+4. Contractor is not suspended.
+5. Contractor is eligible under platform rules.
+6. Lead is in an assignable state.
+7. Contractor is eligible for the lead's location and service requirements, when those rules are configured.
+
+### Assignment Information
+
+Every assignment must record:
+
+- Lead ID
+- Contractor ID
+- Assigned By
+- Assigned At
+- Assignment Status
+- Assignment Notes
+- Previous Contractor ID, when reassigned
+
+Never silently overwrite assignment history.
+
+## 6.4 Reassignment
+
+An administrator may reassign a lead when:
+
+- Contractor rejects the lead.
+- Contractor does not respond within an approved response period.
+- Contractor becomes suspended.
+- Contractor is unable to serve the location.
+- Customer requests another contractor.
+- Administrator identifies an operational reason.
+
+The system must:
+
+- Preserve the previous assignment.
+- Record the reassignment reason.
+- Record the new contractor.
+- Update the current assignment.
+- Create an audit record.
+- Notify relevant users through the available notification system.
+
+Response deadlines and automatic reassignment rules must not be invented. Keep them configurable until the business confirms the policy.
+
+---
+
+# 7. CONTRACTOR LEAD MANAGEMENT
+
+## 7.1 Contractor Dashboard
+
+Approved contractors should have a dedicated lead management area.
+
+Recommended dashboard sections:
+
+- New Assigned Leads
+- Accepted Leads
+- Contacted Leads
+- Site Visits
+- Quotes in Progress
+- Converted Leads
+- Closed Leads
+
+### Lead List Information
+
+Each lead card or row should display:
+
+- Lead Reference Number
+- Customer Name
+- Project Name
+- Property City or Location Summary
+- Deck Area
+- Surface Type
+- Enquiry Date
+- Lead Status
+- Related Estimate Reference
+- Last Updated Date
+
+Avoid exposing unnecessary customer personal information in list views.
+
+## 7.2 Contractor Lead Details
+
+When a contractor opens an assigned lead, the details page may display:
+
+- Customer contact information needed to handle the enquiry.
+- Property location.
+- Deck information.
+- Relevant photographs.
+- Existing condition details.
+- Related estimate snapshot.
+- Customer enquiry message.
+- Assignment information.
+- Lead activity history.
+
+Access must be restricted to the currently assigned contractor.
+
+A contractor must not access another contractor's lead by modifying the URL or API request.
+
+## 7.3 Contractor Actions
+
+Depending on the current status, the contractor may:
+
+- Accept the lead.
+- Reject the lead with a reason.
+- Mark the customer as contacted.
+- Schedule a site visit.
+- Update quotation progress.
+- Mark the lead as converted.
+- Mark the lead as not interested.
+- Add an activity note.
+
+All actions must be validated by the backend.
+
+Contractors must not be allowed to:
+
+- Change the customer ID.
+- Change the deck ID.
+- Change the lead owner.
+- Change the assigned contractor ID.
+- Modify assignment history.
+- Modify administrative review information.
+- Change the estimate's original calculation.
+
+## 7.4 Lead Activity Timeline
+
+Every important lead action should create an activity entry.
+
+Examples:
+
+- Lead created.
+- Lead reviewed.
+- Lead assigned.
+- Assignment changed.
+- Contractor accepted.
+- Contractor rejected.
+- Customer contacted.
+- Site visit scheduled.
+- Quote preparation started.
+- Lead converted.
+- Lead closed.
+- Admin added a note.
+
+Activity entries should include:
+
+- Lead ID
+- Actor ID
+- Actor Role
+- Activity Type
+- Description
+- Previous Status, if applicable
+- New Status, if applicable
+- Timestamp
+
+Historical activity records should not be silently overwritten.
+
+---
+
+# 8. ADMIN DASHBOARD
+
+## 8.1 Contractor Verification Dashboard
+
+Create an Admin page for contractor applications.
+
+### Summary Cards
+
+- Total Contractors
+- Pending Applications
+- Under Review
+- Additional Information Required
+- Approved Contractors
+- Rejected Applications
+- Suspended Contractors
+
+### Application Filters
+
+- Verification Status
+- Business Name
+- City
+- State
+- Country
+- Submission Date
+- License Number
+
+### Application Detail Page
+
+Include:
+
+- Contractor profile.
+- Business information.
+- Service coverage.
+- Submitted documents.
+- Verification history.
+- Admin notes.
+- Approve action.
+- Reject action.
+- Request Additional Information action.
+- Suspend or reactivate action where authorized.
+
+Use pagination and server-side filtering.
+
+## 8.2 Lead Management Dashboard
+
+Create a centralized Admin lead dashboard.
+
+### Summary Cards
+
+- Total Leads
+- New Leads
+- Leads Under Review
+- Assigned Leads
+- Accepted Leads
+- Contacted Leads
+- Converted Leads
+- Closed Leads
+
+### Lead Filters
+
+- Lead Status
+- Lead Source
+- Assigned Contractor
+- Customer
+- Location
+- Created Date
+- Last Updated Date
+- Conversion Status
+
+### Lead Detail Page
+
+Display:
+
+- Customer information.
+- Deck information.
+- Related estimate.
+- Enquiry details.
+- Lead source.
+- Current status.
+- Current contractor.
+- Assignment history.
+- Activity timeline.
+- Admin notes.
+
+### Admin Actions
+
+- Review lead.
+- Assign contractor.
+- Reassign contractor.
+- Add internal note.
+- Update permitted administrative status.
+- Close lead.
+- Cancel lead.
+- View history.
+
+---
+
+# 9. CONTRACTOR MATCHING AND ELIGIBILITY
+
+Phase 8 should support basic eligibility checks for contractor assignment.
+
+It should not introduce an unnecessary AI recommendation system.
+
+## 9.1 Eligibility Criteria
+
+Potential matching criteria:
+
+1. Contractor is approved.
+2. Contractor account is active.
+3. Contractor supports the property's location.
+4. Contractor offers the required restoration service.
+5. Contractor supports the deck surface type.
+6. Contractor is not suspended.
+
+Use existing contractor profile and Phase 5 catalog references wherever possible.
+
+## 9.2 Matching Behavior
+
+The initial implementation should provide:
+
+- A list of eligible contractors.
+- Basic filtering by location.
+- Basic filtering by service.
+- Basic filtering by surface compatibility.
+- Admin-controlled manual assignment.
+
+Do not automatically assign leads unless the business explicitly approves an automatic assignment policy.
+
+Do not invent travel-distance limits, service-area radius, contractor capacity, or assignment priority.
+
+If a required matching attribute is unavailable, show that the information is unavailable rather than assuming eligibility.
+
+---
+
+# 10. DATABASE DESIGN
+
+Follow the existing Mongoose model conventions and modular backend architecture.
+
+Before creating models, inspect existing User, ContractorProfile, Deck, Estimate, AuditLog, and upload-related schemas.
+
+Reuse existing fields where appropriate.
+
+Do not create duplicate collections for information already maintained by existing modules.
+
+## 10.1 ContractorProfile Extension
+
+Extend the existing contractor profile only where necessary.
+
+Potential fields:
+
+```javascript
+{
+  userId: ObjectId,
+
+  businessName: String,
+  businessEmail: String,
+  businessPhone: String,
+
+  licenseNumber: String,
+  registrationNumber: String,
+
+  businessAddress: {
+    addressLine1: String,
+    addressLine2: String,
+    city: String,
+    state: String,
+    postalCode: String,
+    country: String
+  },
+
+  website: String,
+  businessDescription: String,
+
+  yearsOfExperience: Number,
+
+  servicesOffered: [
+    ObjectId
+  ],
+
+  supportedSurfaceTypes: [
+    String
+  ],
+
+  serviceAreas: [
+    {
+      city: String,
+      state: String,
+      postalCode: String,
+      country: String
+    }
+  ],
+
+  verificationStatus: String,
+
+  submittedAt: Date,
+  reviewedAt: Date,
+  reviewedBy: ObjectId,
+
+  rejectionReason: String,
+  additionalInformationRequest: String,
+
+  approvedAt: Date,
+  suspendedAt: Date
+}
+```
+
+This is a conceptual schema.
+
+Use existing naming conventions and fields where they already exist.
+
+Do not duplicate account status and contractor verification status. They represent different concepts.
+
+## 10.2 ContractorVerificationDocument
+
+Create a dedicated document model if the existing application does not already provide equivalent functionality.
+
+Suggested structure:
+
+```javascript
+{
+  contractorId: ObjectId,
+
+  documentType: String,
+
+  originalFileName: String,
+  storedFileName: String,
+
+  storageKey: String,
+
+  mimeType: String,
+  fileSize: Number,
+
+  documentStatus: String,
+
+  uploadedAt: Date,
+
+  reviewedAt: Date,
+  reviewedBy: ObjectId,
+
+  reviewNotes: String
+}
+```
+
+Suggested document statuses:
+
+- PENDING_REVIEW
+- VERIFIED
+- REJECTED
+- REPLACED
+
+Never store sensitive document contents directly in a public-facing API response.
+
+## 10.3 ContractorVerificationHistory
+
+Maintain an immutable record of important verification changes.
+
+Suggested structure:
+
+```javascript
+{
+  contractorId: ObjectId,
+
+  previousStatus: String,
+  newStatus: String,
+
+  action: String,
+
+  reason: String,
+
+  performedBy: ObjectId,
+
+  performedByRole: String,
+
+  createdAt: Date
+}
+```
+
+Use the existing audit infrastructure if it already provides the required history and query capabilities. Do not duplicate audit systems unnecessarily.
+
+## 10.4 Lead Model
+
+Create a dedicated Lead model.
+
+Suggested structure:
+
+```javascript
+{
+  leadNumber: String,
+
+  customerId: ObjectId,
+
+  deckId: ObjectId,
+
+  estimateId: ObjectId,
+
+  leadSource: String,
+
+  enquiry: {
+    subject: String,
+    message: String,
+    preferredContactMethod: String,
+    preferredContactTime: Date
+  },
+
+  customerSnapshot: {
+    name: String,
+    email: String,
+    phone: String
+  },
+
+  deckSnapshot: {
+    projectName: String,
+    location: Object,
+    area: Number,
+    surfaceMaterial: String
+  },
+
+  estimateSnapshot: {
+    estimateId: ObjectId,
+    estimateVersion: Number,
+    totalAmount: Number,
+    currency: String
+  },
+
+  assignedContractorId: ObjectId,
+
+  assignedBy: ObjectId,
+
+  assignedAt: Date,
+
+  status: String,
+
+  closureReason: String,
+
+  lastActivityAt: Date,
+
+  closedAt: Date,
+
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+All snapshots must be generated by the backend using trusted database records.
+
+Do not accept customer snapshots, estimate totals, or assignment information directly from the client.
+
+Optional references must support enquiries that do not have an associated estimate.
+
+## 10.5 LeadAssignmentHistory
+
+Use a separate assignment history collection if assignment history is not already maintained reliably within the existing activity/audit architecture.
+
+Suggested structure:
+
+```javascript
+{
+  leadId: ObjectId,
+
+  previousContractorId: ObjectId,
+
+  newContractorId: ObjectId,
+
+  assignedBy: ObjectId,
+
+  assignmentReason: String,
+
+  assignedAt: Date,
+
+  assignmentStatus: String
+}
+```
+
+## 10.6 LeadActivity
+
+Use a dedicated activity collection or the existing audit/activity system, depending on current architecture.
+
+Suggested structure:
+
+```javascript
+{
+  leadId: ObjectId,
+
+  actorId: ObjectId,
+
+  actorRole: String,
+
+  activityType: String,
+
+  description: String,
+
+  previousStatus: String,
+
+  newStatus: String,
+
+  visibility: String,
+
+  createdAt: Date
+}
+```
+
+Support two visibility levels:
+
+- CUSTOMER_VISIBLE
+- INTERNAL
+
+A contractor must not see internal Admin-only notes.
+
+## 10.7 Database Indexes
+
+Implement indexes based on actual query patterns.
+
+Potential indexes:
+
+**Contractor Profile**
+- `userId` unique.
+- `verificationStatus`.
+- Business location fields.
+
+**Verification Documents**
+- `contractorId`.
+- `documentType`.
+- `documentStatus`.
+
+**Lead**
+- `leadNumber` unique.
+- `customerId`.
+- `deckId`.
+- `assignedContractorId`.
+- `status`.
+- `leadSource`.
+- `createdAt`.
+- Compound indexes for common Admin and contractor dashboard filters.
+
+**Lead Assignment History**
+- `leadId`.
+- `newContractorId`.
+- `assignedAt`.
+
+**Lead Activity**
+- `leadId`.
+- `createdAt`.
+
+Use appropriate uniqueness, optional-field handling, and compound indexes.
+
+Do not add excessive indexes without a query requirement.
+
+---
+
+# 11. BACKEND ARCHITECTURE
+
+Follow the existing backend architecture.
+
+Keep business logic separate from HTTP controllers.
+
+Suggested module structure:
+
+```text
+backend/
+  src/
+    modules/
+      contractors/
+        contractor.model.js
+        contractor.validation.js
+        contractor.service.js
+        contractor.controller.js
+        contractor.routes.js
+
+      contractor-verification/
+        verification-document.model.js
+        verification-history.model.js
+        verification.validation.js
+        verification.service.js
+        verification.controller.js
+        verification.routes.js
+
+      leads/
+        lead.model.js
+        lead-assignment-history.model.js
+        lead-activity.model.js
+        lead.validation.js
+        lead.service.js
+        lead.controller.js
+        lead.routes.js
+```
+
+This is a logical structure, not an instruction to move existing modules unnecessarily.
+
+If the repository already has an established module structure, follow it.
+
+## 11.1 Service Layer Responsibilities
+
+### Contractor Service
+
+- Retrieve contractor profile.
+- Update permitted business fields.
+- Retrieve contractor verification state.
+- Retrieve eligible contractors.
+
+### Verification Service
+
+- Submit contractor application.
+- Validate required information.
+- Manage document records.
+- Approve contractor.
+- Reject contractor.
+- Request additional information.
+- Resubmit application.
+- Suspend contractor.
+- Reactivate contractor.
+- Record verification history.
+
+### Lead Service
+
+- Create customer enquiry.
+- Retrieve customer leads.
+- Retrieve Admin lead list.
+- Retrieve assigned contractor leads.
+- Assign lead.
+- Reassign lead.
+- Accept lead.
+- Reject lead.
+- Update lead status.
+- Add activity.
+- Close lead.
+- Retrieve lead history.
+
+Controllers should not contain substantial business logic.
+
+---
+
+# 12. API SPECIFICATION
+
+Use the existing API versioning, response format, authentication middleware, error handling, and route conventions.
+
+Suggested base path:
+
+`/api/v1`
+
+The endpoint names below are proposed contracts. Adapt them to existing routes without creating duplicate endpoints.
+
+## 12.1 Contractor Profile APIs
+
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/contractors/me` | Contractor |
+| PATCH | `/contractors/me` | Contractor |
+| GET | `/contractors/:id` | Admin / Authorized access |
+| GET | `/contractors` | Admin |
+
+Contractors can update only permitted profile fields.
+
+They cannot update verification status, account status, approval information, or administrative fields.
+
+## 12.2 Verification APIs
+
+| Method | Endpoint | Access |
+|---|---|---|
+| POST | `/contractors/me/verification/submit` | Contractor |
+| GET | `/contractors/me/verification` | Contractor |
+| POST | `/contractors/me/verification/documents` | Contractor |
+| GET | `/contractors/me/verification/documents` | Contractor |
+| GET | `/admin/contractor-verifications` | Admin |
+| GET | `/admin/contractor-verifications/:contractorId` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/start-review` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/approve` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/reject` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/request-information` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/suspend` | Admin |
+| POST | `/admin/contractor-verifications/:contractorId/reactivate` | Admin |
+| GET | `/admin/contractor-verifications/:contractorId/history` | Admin |
+
+## 12.3 Customer Lead APIs
+
+| Method | Endpoint | Access |
+|---|---|---|
+| POST | `/leads` | Customer |
+| GET | `/leads/my-leads` | Customer |
+| GET | `/leads/:leadId` | Lead owner / Authorized Admin |
+
+The POST endpoint must validate ownership of referenced deck and estimate records.
+
+## 12.4 Admin Lead APIs
+
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/admin/leads` | Admin |
+| GET | `/admin/leads/:leadId` | Admin |
+| POST | `/admin/leads` | Admin |
+| POST | `/admin/leads/:leadId/assign` | Admin |
+| POST | `/admin/leads/:leadId/reassign` | Admin |
+| PATCH | `/admin/leads/:leadId/status` | Admin |
+| POST | `/admin/leads/:leadId/close` | Admin |
+| POST | `/admin/leads/:leadId/cancel` | Admin |
+| POST | `/admin/leads/:leadId/notes` | Admin |
+| GET | `/admin/leads/:leadId/history` | Admin |
+| GET | `/admin/leads/analytics` | Admin |
+
+## 12.5 Contractor Lead APIs
+
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/contractor/leads` | Approved Contractor |
+| GET | `/contractor/leads/:leadId` | Assigned Contractor |
+| POST | `/contractor/leads/:leadId/accept` | Assigned Contractor |
+| POST | `/contractor/leads/:leadId/reject` | Assigned Contractor |
+| PATCH | `/contractor/leads/:leadId/status` | Assigned Contractor |
+| POST | `/contractor/leads/:leadId/activities` | Assigned Contractor |
+| GET | `/contractor/leads/:leadId/activities` | Assigned Contractor |
+
+Every endpoint must perform authorization at the backend.
+
+A route being hidden in the frontend does not make it secure.
+
+---
+
+# 13. API REQUEST AND RESPONSE EXAMPLES
+
+All examples in this section are illustrative API contracts, not actual business data.
+
+## 13.1 Submit Customer Enquiry
+
+`POST /api/v1/leads`
+
+Example request:
+
+```json
+{
+  "deckId": "DECK_OBJECT_ID",
+  "estimateId": "ESTIMATE_OBJECT_ID",
+  "leadSource": "ESTIMATE_ENQUIRY",
+  "enquiry": {
+    "subject": "Deck Restoration Enquiry",
+    "message": "I would like to discuss restoration of my deck.",
+    "preferredContactMethod": "PHONE"
+  }
+}
+```
+
+The backend must retrieve the customer ID from the authenticated session.
+
+It must retrieve the deck and estimate from the database and verify ownership.
+
+Example response:
+
+```json
+{
+  "success": true,
+  "message": "Enquiry submitted successfully",
+  "data": {
+    "leadId": "LEAD_OBJECT_ID",
+    "leadNumber": "LEAD-REFERENCE",
+    "status": "NEW",
+    "createdAt": "ISO_DATE"
+  }
+}
+```
+
+## 13.2 Approve Contractor
+
+`POST /api/v1/admin/contractor-verifications/:contractorId/approve`
+
+Example request:
+
+```json
+{
+  "reviewNotes": "Verification requirements have been satisfied."
+}
+```
+
+Example response:
+
+```json
+{
+  "success": true,
+  "message": "Contractor approved successfully",
+  "data": {
+    "contractorId": "CONTRACTOR_OBJECT_ID",
+    "verificationStatus": "APPROVED",
+    "approvedAt": "ISO_DATE"
+  }
+}
+```
+
+## 13.3 Assign Lead
+
+`POST /api/v1/admin/leads/:leadId/assign`
+
+Example request:
+
+```json
+{
+  "contractorId": "CONTRACTOR_OBJECT_ID",
+  "assignmentNotes": "Assigned based on service and location eligibility."
+}
+```
+
+Example response:
+
+```json
+{
+  "success": true,
+  "message": "Lead assigned successfully",
+  "data": {
+    "leadId": "LEAD_OBJECT_ID",
+    "assignedContractorId": "CONTRACTOR_OBJECT_ID",
+    "status": "ASSIGNED",
+    "assignedAt": "ISO_DATE"
+  }
+}
+```
+
+The backend must reject the request if the contractor is not eligible.
+
+## 13.4 Contractor Accepts Lead
+
+`POST /api/v1/contractor/leads/:leadId/accept`
+
+Example response:
+
+```json
+{
+  "success": true,
+  "message": "Lead accepted successfully",
+  "data": {
+    "leadId": "LEAD_OBJECT_ID",
+    "status": "ACCEPTED"
+  }
+}
+```
+
+---
+
+# 14. FRONTEND IMPLEMENTATION
+
+Follow the existing React/Vite application structure, routing, state management, component library, styling conventions, and API client.
+
+Do not introduce another frontend architecture.
+
+## 14.1 Contractor Pages
+
+### A. Contractor Verification Page
+
+Display:
+
+- Application status.
+- Business profile.
+- Required information.
+- Document upload section.
+- Verification history.
+- Admin feedback.
+- Resubmission action.
+
+The interface should clearly explain whether the contractor is:
+
+- Completing an application.
+- Waiting for review.
+- Under review.
+- Required to submit more information.
+- Approved.
+- Rejected.
+- Suspended.
+
+### B. Contractor Dashboard
+
+Display:
+
+- Verification status.
+- Lead summary.
+- Recent assigned leads.
+- Lead activity.
+- Important updates.
+
+Pending, rejected, or suspended contractors must not access operational lead-management functionality.
+
+### C. Contractor Lead Inbox
+
+Provide:
+
+- Lead listing.
+- Search.
+- Status filters.
+- Pagination.
+- Lead detail navigation.
+
+### D. Contractor Lead Detail
+
+Display:
+
+- Customer enquiry.
+- Deck details.
+- Relevant images.
+- Estimate information, where available.
+- Assignment information.
+- Activity timeline.
+- Permitted lead actions.
+
+## 14.2 Admin Pages
+
+### A. Admin Contractor Verification
+
+Pages/components:
+
+- Verification dashboard.
+- Application list.
+- Application details.
+- Document viewer.
+- Verification history.
+- Approval dialog.
+- Rejection dialog.
+- Additional-information request dialog.
+- Suspension/reactivation controls.
+
+### B. Admin Lead Management
+
+Pages/components:
+
+- Lead dashboard.
+- Lead list.
+- Lead details.
+- Assignment interface.
+- Reassignment interface.
+- Contractor eligibility results.
+- Activity timeline.
+- Internal notes.
+- Lead analytics.
+
+### C. Contractor Assignment Interface
+
+The Admin should be able to:
+
+1. Open an unassigned lead.
+2. View eligible contractors.
+3. Filter by supported service and location.
+4. Review contractor information.
+5. Select a contractor.
+6. Confirm assignment.
+7. View assignment success or validation errors.
+
+Do not display ineligible contractors as assignable options.
+
+## 14.3 Customer Pages
+
+Add a customer enquiry workflow.
+
+The customer should be able to:
+
+1. Open their deck.
+2. View an estimate, if available.
+3. Select Request Service or Submit Enquiry.
+4. Review their contact information.
+5. Enter enquiry details.
+6. Submit the enquiry.
+7. View the generated lead reference.
+8. View permitted enquiry status updates.
+
+Do not allow customers to view internal Admin notes or contractor-only activity.
+
+---
+
+# 15. AUTHORIZATION AND SECURITY
+
+Security is a critical part of this phase.
+
+The backend is the authority for all role, ownership, assignment, and status decisions.
+
+## 15.1 Authentication
+
+Reuse Phase 3 authentication middleware.
+
+Do not create a second authentication system.
+
+## 15.2 Role Authorization
+
+Use the existing role system.
+
+Required access categories:
+
+- CUSTOMER
+- CONTRACTOR
+- ADMIN
+
+Use existing role constants rather than introducing inconsistent role names.
+
+## 15.3 Contractor Authorization
+
+Before allowing contractor lead access, validate:
+
+```text
+Authenticated User
+        |
+        v
+User Role = CONTRACTOR?
+        |
+        v
+Account Active?
+        |
+        v
+Verification Status = APPROVED?
+        |
+        v
+Lead Assigned To This Contractor?
+        |
+        v
+Allow Access
+```
+
+Every check must occur on the backend.
+
+## 15.4 Lead Ownership
+
+For customer access:
+
+```text
+lead.customerId === authenticatedUser.id
+```
+
+For contractor access:
+
+```text
+lead.assignedContractorId === authenticatedUser.id
+```
+
+Use the actual existing user-to-profile relationship when implementing these checks.
+
+Do not assume a contractor profile ID and user ID are interchangeable.
+
+## 15.5 Mass Assignment Protection
+
+Never allow users to submit protected fields through generic updates.
+
+Protected fields include:
+
+- customerId
+- assignedContractorId
+- assignedBy
+- verificationStatus
+- approvedAt
+- reviewedBy
+- lead status outside permitted transitions
+- assignment history
+- audit information
+- internal notes
+
+Use explicit field allowlists.
+
+## 15.6 Sensitive Information
+
+Protect:
+
+- Contractor verification documents.
+- Customer phone numbers.
+- Customer email addresses.
+- Property addresses.
+- Internal Admin notes.
+
+Return only information necessary for the requesting role.
+
+## 15.7 File Security
+
+Use the secure upload practices established in Phase 4.
+
+Validate actual file content, not just extensions.
+
+Do not expose private files through unrestricted public storage paths.
+
+---
+
+# 16. VALIDATION AND ERROR HANDLING
+
+Use the existing validation framework and error response structure.
+
+## 16.1 Contractor Validation
+
+Validate:
+
+- Business name.
+- Business email.
+- Phone number.
+- License number, where required.
+- Business address.
+- Required documents.
+- Service selections.
+- Coverage area fields.
+- Allowed application status transitions.
+
+Do not assume all jurisdictions have identical license requirements.
+
+## 16.2 Lead Validation
+
+Validate:
+
+- Customer authentication.
+- Deck existence.
+- Deck ownership.
+- Estimate existence when supplied.
+- Estimate ownership.
+- Estimate/deck relationship.
+- Enquiry subject.
+- Enquiry message.
+- Lead source.
+- Preferred contact method.
+- Duplicate request protection.
+
+## 16.3 Assignment Validation
+
+Validate:
+
+- Lead existence.
+- Contractor existence.
+- Contractor approval.
+- Contractor account status.
+- Contractor service eligibility.
+- Location eligibility when configured.
+- Current lead status.
+- Assignment permissions.
+
+## 16.4 Expected Error Conditions
+
+Use meaningful application errors for:
+
+- Contractor not found.
+- Verification not approved.
+- Contractor suspended.
+- Application already submitted.
+- Invalid verification transition.
+- Required document missing.
+- Lead not found.
+- Unauthorized lead access.
+- Lead already assigned.
+- Contractor not eligible.
+- Invalid lead transition.
+- Duplicate enquiry.
+- Invalid estimate reference.
+- Invalid deck ownership.
+
+Do not expose database stack traces or sensitive internal implementation details.
+
+---
+
+# 17. AUDIT LOGGING
+
+Reuse the existing AuditLog infrastructure.
+
+Record important administrative and operational actions.
+
+Required events should include:
+
+### Contractor Verification
+
+- APPLICATION_SUBMITTED
+- VERIFICATION_STARTED
+- VERIFICATION_APPROVED
+- VERIFICATION_REJECTED
+- ADDITIONAL_INFORMATION_REQUESTED
+- DOCUMENT_UPLOADED
+- DOCUMENT_REVIEWED
+- CONTRACTOR_SUSPENDED
+- CONTRACTOR_REACTIVATED
+
+### Lead Management
+
+- LEAD_CREATED
+- LEAD_REVIEWED
+- LEAD_ASSIGNED
+- LEAD_REASSIGNED
+- LEAD_ACCEPTED
+- LEAD_REJECTED
+- LEAD_STATUS_UPDATED
+- LEAD_ACTIVITY_ADDED
+- LEAD_CONVERTED
+- LEAD_CLOSED
+- LEAD_CANCELLED
+
+Each audit event should identify:
+
+- Actor.
+- Actor role.
+- Action.
+- Affected resource.
+- Resource ID.
+- Timestamp.
+- Relevant before/after values where appropriate.
+- Reason, when required.
+
+Do not store passwords, authentication tokens, or sensitive document contents in audit records.
+
+Audit records must not be editable by ordinary users.
+
+---
+
+# 18. NOTIFICATION INTEGRATION
+
+Phase 8 should support important workflow notifications.
+
+Use an existing notification system if available.
+
+Potential notification events:
+
+### Contractor Notifications
+
+- Application submitted.
+- Application approved.
+- Application rejected.
+- Additional information requested.
+- Application suspended.
+- New lead assigned.
+- Lead assignment changed.
+
+### Customer Notifications
+
+- Enquiry submitted.
+- Lead assigned or accepted, where customer-facing policy permits.
+- Important lead progress updates.
+- Lead closed.
+
+### Admin Notifications
+
+- New contractor application.
+- New customer enquiry.
+- Contractor resubmission.
+- Lead requiring administrative attention.
+
+If email or SMS transport is not already configured, implement the notification interface or event records without pretending delivery has occurred.
+
+Do not add a new external messaging provider without approval.
+
+Notification delivery must not cause the underlying verification or lead transaction to become inconsistent.
+
+---
+
+# 19. LEAD ANALYTICS AND REPORTING
+
+The Admin dashboard should provide basic operational reporting.
+
+Suggested metrics:
+
+- Total Leads.
+- New Leads.
+- Assigned Leads.
+- Accepted Leads.
+- Rejected Leads.
+- Converted Leads.
+- Closed Leads.
+- Unassigned Leads.
+- Leads by Source.
+- Leads by Location.
+- Leads by Contractor.
+- Lead Status Distribution.
+
+## 19.1 Conversion Rate
+
+A possible definition:
+
+```text
+Conversion Rate =
+(Number of Converted Leads / Number of Eligible Leads) × 100
+```
+
+The business must define whether cancelled, duplicate, or otherwise excluded leads count in the denominator.
+
+Do not silently choose a business definition.
+
+## 19.2 Lead Response Time
+
+A possible definition:
+
+```text
+Lead Response Time =
+First Contractor Contact Timestamp - Lead Assignment Timestamp
+```
+
+Only calculate this when both timestamps exist.
+
+## 19.3 Reporting Rules
+
+- Use database aggregation where appropriate.
+- Apply role-based data filtering.
+- Avoid loading every lead into frontend memory.
+- Support date-range filters.
+- Handle empty datasets.
+- Clearly distinguish current counts from historical counts.
+- Do not invent conversion or response-time data.
+
+---
+
+# 20. BUSINESS RULES REQUIRING CONFIRMATION
+
+Some operational rules depend on the actual business model.
+
+The implementation must not invent these values or policies.
+
+The following decisions must be confirmed or made configurable.
+
+## 20.1 Contractor Verification
+
+1. Which documents are mandatory?
+2. Is a license number mandatory in every service region?
+3. Is insurance verification mandatory?
+4. Can a contractor edit an application after submission?
+5. Can rejected contractors reapply?
+6. Can suspended contractors appeal?
+7. Does approval expire?
+8. Is periodic reverification required?
+
+## 20.2 Lead Assignment
+
+1. Can one lead be assigned to multiple contractors?
+2. Is assignment manual only or automatic?
+3. Can contractors reject assigned leads?
+4. How long can a contractor take to accept a lead?
+5. Should unaccepted leads be automatically reassigned?
+6. Can a customer request a specific contractor?
+7. Can Admin assign leads outside a contractor's normal service area?
+8. Are there limits on active leads per contractor?
+
+## 20.3 Lead Management
+
+1. What qualifies as a converted lead?
+2. Who can mark a lead as converted?
+3. Does Admin need to verify conversion?
+4. Can a closed lead be reopened?
+5. Can customers cancel enquiries?
+6. What is the expected lead response period?
+7. Which updates should customers see?
+
+## 20.4 Customer Contact and Privacy
+
+1. At what point should contractor contact information become visible?
+2. Which customer details should the contractor receive?
+3. Should customer contact information remain visible after lead closure?
+4. What is the retention policy for closed leads and verification documents?
+
+**Implementation rule:** Where a business decision is not confirmed, use a configurable policy, a clearly documented temporary behavior, or block the dependent workflow. Never invent a commercial or legal rule.
+
+---
+
+# 21. TESTING STRATEGY
+
+Testing must cover business behavior, integration, security, and regressions.
+
+Reuse the existing test framework and testing conventions.
+
+## 21.1 Contractor Verification Tests
+
+Test:
+
+- Contractor can submit a valid application.
+- Contractor cannot submit an invalid application.
+- Duplicate submission is handled correctly.
+- Contractor cannot approve themselves.
+- Contractor cannot change verification status directly.
+- Admin can start a review.
+- Admin can approve a valid application.
+- Admin can reject an application with a reason.
+- Admin can request additional information.
+- Contractor can resubmit information.
+- Suspended contractors cannot access operational features.
+- Verification history is retained.
+- Unauthorized users cannot access private documents.
+
+## 21.2 Lead Creation Tests
+
+Test:
+
+- Customer can submit a valid enquiry.
+- Customer can create a lead without an estimate if the workflow allows it.
+- Customer cannot create a lead for another customer's deck.
+- Customer cannot reference another customer's estimate.
+- Estimate must belong to the referenced deck.
+- Duplicate submission protection works.
+- Lead snapshots are generated from trusted database records.
+- Invalid lead sources are rejected.
+
+## 21.3 Lead Assignment Tests
+
+Test:
+
+- Admin can assign an eligible contractor.
+- Non-admin cannot assign a lead.
+- Pending contractor cannot receive a lead.
+- Rejected contractor cannot receive a lead.
+- Suspended contractor cannot receive a lead.
+- Inactive contractor cannot receive a lead.
+- Ineligible contractor cannot receive a lead.
+- Assignment history is retained.
+- Reassignment history is retained.
+
+## 21.4 Contractor Lead Tests
+
+Test:
+
+- Approved contractor can view their assigned leads.
+- Contractor cannot access another contractor's leads.
+- Contractor cannot access unassigned leads.
+- Contractor cannot modify protected fields.
+- Contractor can accept an assigned lead.
+- Contractor can reject an assigned lead with a reason.
+- Contractor can update only permitted statuses.
+- Contractor can add permitted activity entries.
+- Internal Admin notes are not exposed.
+
+## 21.5 Customer Access Tests
+
+Test:
+
+- Customer can view their own leads.
+- Customer cannot view another customer's leads.
+- Customer cannot view internal notes.
+- Customer cannot change assignment.
+- Customer cannot approve contractors.
+- Customer sees only permitted lead updates.
+
+## 21.6 Admin Tests
+
+Test:
+
+- Admin can list contractor applications.
+- Admin can review contractor details.
+- Admin can manage verification status.
+- Admin can list all leads.
+- Admin can assign and reassign leads.
+- Admin can view lead history.
+- Admin can access analytics.
+- Admin actions generate audit records.
+
+## 21.7 Regression Tests
+
+All previously implemented functionality must continue working.
+
+Run:
+
+- Phase 3 authentication and authorization tests.
+- Phase 4 deck and upload tests.
+- Phase 5 catalog tests.
+- Phase 6 pricing and estimate tests.
+- Phase 7 condition analysis integration tests.
+- Complete backend test suite.
+- Frontend lint.
+- Frontend production build.
+
+Do not reduce existing test coverage or disable failing tests to achieve a passing result.
+
+---
+
+# 22. PERFORMANCE AND RELIABILITY
+
+The system should support efficient operational use.
+
+Requirements:
+
+- Server-side pagination.
+- Database-level filtering.
+- Appropriate indexes.
+- Efficient population of related documents.
+- Avoid N+1 database queries.
+- Limit activity-history retrieval.
+- Use safe file streaming.
+- Avoid unnecessary full-document updates.
+- Use atomic database operations where appropriate.
+- Use transactions for related multi-document changes where supported.
+
+For assignment and verification operations, ensure the primary record, history, and audit data remain consistent.
+
+If the existing MongoDB deployment supports transactions, use them appropriately.
+
+Do not introduce Redis, queues, microservices, or additional infrastructure without a demonstrated requirement.
+
+---
+
+# 23. DOCUMENTATION AND CODE QUALITY REQUIREMENTS
+
+The implementation must follow the existing repository standards.
+
+### Code Quality
+
+- Use the established naming conventions.
+- Keep controllers thin.
+- Keep business logic in services.
+- Validate all incoming data.
+- Use explicit field allowlists.
+- Reuse existing middleware.
+- Reuse existing database models.
+- Avoid duplicated logic.
+- Avoid large unrelated refactors.
+- Keep API response structures consistent.
+- Use centralized error handling.
+
+### Documentation
+
+Update only relevant existing documentation.
+
+Required documentation updates:
+
+1. Phase 8 implementation summary.
+2. Contractor verification workflow.
+3. Lead lifecycle and status transitions.
+4. API endpoint reference.
+5. Database model changes.
+6. Role and permission matrix.
+7. Environment variables, only if new ones are necessary.
+8. Testing and verification results.
+9. Unresolved business decisions.
+10. Known limitations.
+
+Do not create multiple duplicate Phase 8 completion documents.
+
+Use the existing project documentation conventions.
+
+---
+
+# 24. IMPLEMENTATION SEQUENCE
+
+Follow this order to reduce integration risk.
+
+## Stage 1 – Existing Architecture Review
+
+Inspect only the files relevant to Phase 8.
+
+Review:
+
+- Existing User model.
+- Existing ContractorProfile model.
+- Authentication and authorization middleware.
+- Existing Admin routes.
+- Existing deck model and ownership logic.
+- Existing estimate model and pricing service.
+- Existing upload/storage service.
+- Existing AuditLog.
+- Existing frontend routes and dashboard layouts.
+
+Identify reusable functionality.
+
+Do not recreate existing modules.
+
+## Stage 2 – Contractor Verification Backend
+
+Implement:
+
+- Contractor profile extensions.
+- Verification document handling.
+- Verification status transitions.
+- Verification history.
+- Admin review APIs.
+- Contractor application APIs.
+- Authorization checks.
+
+Test these before moving forward.
+
+## Stage 3 – Contractor Verification Frontend
+
+Implement:
+
+- Contractor application status page.
+- Business profile update interface.
+- Document upload interface.
+- Admin application list.
+- Admin application detail.
+- Approval/rejection/request-information actions.
+
+Test the complete verification workflow.
+
+## Stage 4 – Lead Management Backend
+
+Implement:
+
+- Lead model.
+- Lead validation.
+- Lead creation service.
+- Customer lead APIs.
+- Admin lead APIs.
+- Assignment service.
+- Assignment history.
+- Activity tracking.
+- Status transition validation.
+
+Test customer ownership and assignment security.
+
+## Stage 5 – Contractor Lead Backend
+
+Implement:
+
+- Contractor lead listing.
+- Assigned lead detail.
+- Accept/reject actions.
+- Permitted status updates.
+- Contractor activity APIs.
+
+Test cross-contractor isolation.
+
+## Stage 6 – Lead Management Frontend
+
+Implement:
+
+- Customer enquiry form.
+- Customer enquiry history.
+- Admin lead dashboard.
+- Admin lead detail.
+- Contractor lead inbox.
+- Contractor lead detail.
+- Assignment and reassignment interface.
+- Activity timeline.
+
+## Stage 7 – Integration
+
+Integrate:
+
+- Contractor verification with Phase 3 authentication.
+- Lead creation with Phase 4 deck records.
+- Lead snapshots with Phase 6 estimates.
+- Service eligibility with Phase 5 catalog.
+- Optional condition information with Phase 7 analysis.
+- Audit logging with existing infrastructure.
+
+## Stage 8 – Quality Assurance
+
+Run:
+
+- Unit tests.
+- Integration tests.
+- Authorization tests.
+- Ownership tests.
+- Frontend lint.
+- Frontend build.
+- Full regression suite.
+- Live database verification using safe test data.
+
+Fix genuine defects rather than hiding or bypassing them.
+
+## Stage 9 – Final Review
+
+Prepare one Phase 8 completion report containing:
+
+- Implemented modules.
+- Changed files.
+- New database collections or schema changes.
+- API endpoints.
+- Frontend pages.
+- Contractor verification workflow.
+- Lead workflow.
+- Authorization coverage.
+- Audit coverage.
+- Test results.
+- Build and lint results.
+- Database verification results.
+- Git commit and synchronization status.
+- Known limitations.
+- Unresolved business decisions.
+
+Stop after reporting completion.
+
+Do not begin Phase 9 without explicit approval.
+
+---
+
+# 25. PHASE 8 ACCEPTANCE CRITERIA
+
+Phase 8 is complete only when the following conditions are satisfied.
+
+## Contractor Verification
+
+- [ ] Existing contractor registration is reused.
+- [ ] Business information can be submitted.
+- [ ] Required verification documents can be uploaded securely.
+- [ ] Admin can review applications.
+- [ ] Admin can approve applications.
+- [ ] Admin can reject applications with reasons.
+- [ ] Admin can request additional information.
+- [ ] Contractors can resubmit applications.
+- [ ] Contractor verification history is retained.
+- [ ] Suspended contractors are blocked from operational access.
+
+## Lead Creation
+
+- [ ] Customer can submit an enquiry.
+- [ ] Lead is linked to the correct customer.
+- [ ] Lead is linked to the correct deck.
+- [ ] Estimate reference is optional where permitted.
+- [ ] Estimate ownership is validated when supplied.
+- [ ] Lead snapshots are generated securely.
+- [ ] Duplicate submission protection works.
+- [ ] Lead appears in the Admin dashboard.
+
+## Lead Assignment
+
+- [ ] Admin can review leads.
+- [ ] Admin can view eligible contractors.
+- [ ] Admin can assign leads.
+- [ ] Ineligible contractors cannot receive leads.
+- [ ] Admin can reassign leads.
+- [ ] Assignment history is retained.
+- [ ] Assignment actions are audited.
+
+## Contractor Lead Management
+
+- [ ] Approved contractors can view assigned leads.
+- [ ] Contractors cannot view other contractors' leads.
+- [ ] Contractors can accept or reject assigned leads.
+- [ ] Contractors can update permitted statuses.
+- [ ] Contractors can add activity entries.
+- [ ] Internal notes remain private.
+
+## Customer Experience
+
+- [ ] Customers can view their own enquiries.
+- [ ] Customers cannot view other customers' leads.
+- [ ] Customers cannot modify assignment or internal status.
+- [ ] Customers see appropriate enquiry updates.
+
+## Quality and Security
+
+- [ ] Backend authorization is enforced.
+- [ ] Ownership checks are enforced.
+- [ ] Mass assignment is prevented.
+- [ ] Sensitive documents are protected.
+- [ ] Audit records are generated.
+- [ ] Existing Phase 3–7 functionality remains operational.
+- [ ] Backend tests pass.
+- [ ] Frontend lint passes.
+- [ ] Frontend production build passes.
+- [ ] Database verification passes.
+- [ ] Changes are committed and synchronized to the intended branch.
+
+---
+
+# 26. IMPORTANT DEVELOPMENT RULES
+
+These rules apply throughout Phase 8.
+
+1. Do not rebuild existing authentication or contractor registration.
+2. Do not duplicate existing models or services.
+3. Do not bypass backend authorization.
+4. Do not trust frontend role checks.
+5. Do not allow contractors to approve themselves.
+6. Do not assign leads to unapproved or suspended contractors.
+7. Do not expose one contractor's leads to another contractor.
+8. Do not expose private verification documents.
+9. Do not create leads automatically for every estimate.
+10. Do not overwrite historical estimate snapshots.
+11. Do not silently overwrite assignment history.
+12. Do not expose Admin-only notes to customers or contractors.
+13. Do not invent legal verification requirements.
+14. Do not invent response deadlines or automatic assignment policies.
+15. Do not implement discounts or commissions in Phase 8.
+16. Do not introduce unnecessary external services or infrastructure.
+17. Do not modify unrelated modules.
+18. Do not create duplicate documentation.
+19. Do not claim functionality is tested unless the relevant tests were executed.
+20. Do not proceed to Phase 9 without explicit approval.
+
+---
+
+# 27. FINAL EXPECTED RESULT
+
+At the end of Phase 8, the Deck Estimator platform should have two fully integrated operational capabilities.
+
+**Capability 1 – Contractor Verification**
+
+A contractor can submit business information and verification documents. An administrator can review the application, approve or reject it, request additional information, and manage contractor eligibility.
+
+**Capability 2 – Lead Management**
+
+A customer can submit a restoration enquiry connected to their deck and, where applicable, their estimate. An administrator can review the enquiry and assign it to an eligible contractor. The contractor can manage the assigned lead and update its progress. The administrator can monitor the entire lifecycle.
+
+The system must maintain:
+
+- Correct ownership.
+- Secure document access.
+- Verified contractor eligibility.
+- Controlled lead assignment.
+- Historical assignment records.
+- Status transition validation.
+- Auditability.
+- Customer privacy.
+- Integration with previous phases.
+
+**Phase 8 Completion Gate:** Complete implementation, testing, security verification, documentation, and Git synchronization. Produce the final completion report and stop. Wait for explicit approval before beginning Phase 9 – Contractor Discounts and Commission Management.

@@ -1,5 +1,5 @@
 // =============================================
-// DECK PRO — Rate Limiting Middleware
+// Deck Estimator — Rate Limiting Middleware
 // =============================================
 // Protects authentication and abuse-prone endpoints.
 
@@ -41,5 +41,24 @@ const authLimiter = rateLimit({
   },
 });
 
-module.exports = { apiLimiter, authLimiter };
+/**
+ * Upload rate limiter to prevent denial of service and storage exhaustion.
+ * 30 upload requests per 15 minutes per IP (bypassed in test environment).
+ */
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  skip: () => process.env.NODE_ENV === 'test',
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many upload attempts. Please try again later.',
+    },
+  },
+});
+
+module.exports = { apiLimiter, authLimiter, uploadLimiter };
 

@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Public Layout
+﻿// =============================================
+// Deck Estimator — Public Layout
 // =============================================
 // Layout for unauthenticated pages (home, about, login, register).
 

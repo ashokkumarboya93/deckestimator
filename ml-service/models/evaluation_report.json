@@ -1,0 +1,139 @@
+{
+  "evaluationDataset": "pilot-v1 (Held-out Test Split)",
+  "testSamples": 25,
+  "overallConditionAccuracy": 0.8,
+  "meanConditionConfidence": 0.9545,
+  "lowConfidenceCount": 0,
+  "manualReviewFlagRate": 0.0,
+  "conditionPerClassMetrics": {
+    "Level_1_GOOD": {
+      "precision": 0.625,
+      "recall": 1.0,
+      "f1": 0.7692,
+      "support": 5
+    },
+    "Level_2_MILD_WEAR": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 5
+    },
+    "Level_3_MODERATE_DETERIORATION": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "Level_4_SEVERE_DETERIORATION": {
+      "precision": 0.7143,
+      "recall": 1.0,
+      "f1": 0.8333,
+      "support": 5
+    },
+    "Level_5_SIGNIFICANT_WOOD_DAMAGE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    }
+  },
+  "confusionMatrix": [
+    [
+      5,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      3,
+      0,
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      0,
+      5,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      5,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      5
+    ]
+  ],
+  "defectMetrics": {
+    "PEELING_COATING": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 10
+    },
+    "FADING_DISCOLORATION": {
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "support": 10
+    },
+    "SURFACE_WEAR": {
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "support": 10
+    },
+    "CRACKS": {
+      "precision": 0.8333,
+      "recall": 1.0,
+      "f1": 0.9091,
+      "support": 10
+    },
+    "SPLINTERING": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "DARK_STAINING": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "VISIBLE_WOOD_DAMAGE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "COATING_LOSS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 5
+    },
+    "OTHER_VISIBLE_DEFECT": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    }
+  },
+  "modelDetails": {
+    "name": "MobileNetV3-DeckCondition",
+    "version": "1.0.0",
+    "architecture": "MobileNetV3-Small (Multi-Task)",
+    "weightsPath": "E:\\DeckEstimator\\ml-service\\models\\deck_condition_mobilenet_v3.pth"
+  }
+}

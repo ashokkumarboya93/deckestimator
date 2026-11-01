@@ -1,0 +1,1697 @@
+# DECK ESTIMATOR
+# Phase 7 — AI-Based Deck Condition Analysis
+
+**Project:** Deck Estimator  
+**Phase:** 7 of 12  
+**Phase Name:** AI-Based Deck Condition Analysis  
+**Architecture:** MERN Modular Monolith + Isolated ML Inference Component  
+**Frontend:** React 19  
+**Backend:** Node.js + Express  
+**Database:** MongoDB Atlas  
+**ML Framework:** Python-based Computer Vision  
+**Proposed Model Approach:** Transfer Learning using MobileNetV3 or EfficientNet  
+**Proposed ML API:** Python FastAPI  
+**Branch:** dev2  
+**Status:** Specification — Awaiting Phase 7 Authorization  
+
+---
+
+# 1. Phase Objective
+
+The objective of Phase 7 is to introduce an AI-assisted deck condition analysis capability into Deck Estimator.
+
+Customers and authorized contractors already have the ability to upload deck photographs through Phase 4.
+
+Phase 7 will use these photographs to identify visible deck surface conditions, classify visible defects, and provide an estimated condition severity level.
+
+The system should help users understand the visible condition of their decks before proceeding with restoration estimates.
+
+The AI model should analyze photographs and produce structured results containing:
+
+- Overall visible deck condition level.
+- Predicted defect labels.
+- Confidence scores.
+- Image-quality assessment.
+- Analysis status.
+- Manual-review recommendation when necessary.
+- Model version and analysis metadata.
+
+**Important:** The AI system is an advisory inspection assistant. It must not claim to determine structural safety, hidden damage, load-bearing capacity, or the actual physical condition of areas that cannot be seen in photographs.
+
+The AI result must not independently determine the final restoration price.
+
+---
+
+# 2. Business Problem
+
+Currently, customers provide deck information and photographs manually.
+
+However, customers may not know how to identify:
+
+- Peeling coatings.
+- Fading or discoloration.
+- Surface deterioration.
+- Cracks.
+- Splintering.
+- Visible wood damage.
+- Other visible surface defects.
+
+This creates three problems:
+
+1. Customers may provide incomplete or inaccurate descriptions.
+2. Contractors may need additional time to understand the deck's visible condition.
+3. The estimator may lack consistent condition information when preparing restoration estimates.
+
+Phase 7 introduces AI-assisted visual analysis to help address these problems.
+
+### Expected workflow
+
+1. Customer creates a deck project.
+2. Customer uploads deck photographs.
+3. Customer requests AI condition analysis.
+4. The system validates the uploaded photographs.
+5. The ML model analyzes suitable images.
+6. The model predicts condition severity and visible defects.
+7. Backend stores the analysis result.
+8. Customer views the analysis report.
+9. Authorized contractors can view the analysis for decks they are permitted to access.
+10. The information can support subsequent restoration discussions and estimate preparation.
+
+---
+
+# 3. Scope of Phase 7
+
+## 3.1 Included Scope
+
+Phase 7 must implement:
+
+1. Deck image retrieval and validation.
+2. Image-quality assessment.
+3. Five-level deck condition classification.
+4. Visible-defect classification.
+5. Confidence scoring.
+6. Uncertain prediction handling.
+7. Manual-review recommendations.
+8. ML model training and evaluation.
+9. Model version management.
+10. Python inference API.
+11. Express backend integration.
+12. MongoDB analysis persistence.
+13. Customer analysis interface.
+14. Authorized contractor analysis interface.
+15. Analysis history.
+16. Error handling and audit logging.
+17. Model and API integration testing.
+
+## 3.2 Explicitly Excluded
+
+Do not implement the following in Phase 7:
+
+- Automatic deck measurement from photographs.
+- Structural safety certification.
+- Hidden rot detection.
+- Load-bearing capacity assessment.
+- Automatic restoration recommendations that claim professional certainty.
+- Automatic material selection.
+- Automatic material or labor pricing.
+- Contractor lead assignment.
+- Contractor discounts or commissions.
+- Admin commission management.
+- Automatic estimate approval.
+
+These belong to other project phases or require separate business and engineering decisions.
+
+---
+
+# 4. Five-Level Deck Condition Classification
+
+The system must support exactly five primary condition levels.
+
+Each level represents the visible condition of the deck surface based on the available photographs.
+
+## Level 1 — Good
+
+**Definition:**
+
+The deck surface appears to be in good visible condition, with no significant visible deterioration.
+
+Possible observations:
+
+- Coating appears intact.
+- Surface appearance is generally consistent.
+- No significant peeling.
+- No obvious cracks or splintering.
+- No major visible surface deterioration.
+
+Expected interpretation:
+
+The visible deck surface appears to be in good condition.
+
+Example:
+
+A wooden deck with an intact coating and relatively uniform appearance.
+
+## Level 2 — Mild Wear
+
+**Definition:**
+
+The deck shows minor visible surface wear but does not exhibit substantial deterioration.
+
+Possible defects:
+
+- Mild fading.
+- Slight discoloration.
+- Minor coating wear.
+- Small isolated areas of coating loss.
+- Minor surface scratches.
+
+Expected interpretation:
+
+The deck may require routine maintenance or surface treatment.
+
+Example:
+
+A deck with slight color fading caused by outdoor exposure.
+
+## Level 3 — Moderate Deterioration
+
+**Definition:**
+
+The deck exhibits noticeable visible surface deterioration that may require restoration work.
+
+Possible defects:
+
+- Peeling coating.
+- Noticeable fading or discoloration.
+- Moderate surface wear.
+- Localized cracks.
+- Visible coating deterioration.
+- Dark staining.
+- Localized surface damage.
+
+Expected interpretation:
+
+The visible condition suggests that restoration or more substantial surface preparation may be required.
+
+Example:
+
+A wooden deck with peeling coating and noticeable discoloration across several boards.
+
+## Level 4 — Severe Deterioration
+
+**Definition:**
+
+The deck shows extensive visible surface deterioration.
+
+Possible defects:
+
+- Extensive peeling.
+- Significant coating loss.
+- Deep visible surface cracks.
+- Extensive discoloration.
+- Heavy surface wear.
+- Widespread deterioration.
+- Multiple visible damaged areas.
+
+Expected interpretation:
+
+The visible condition suggests substantial restoration work may be required.
+
+Example:
+
+A deck with widespread coating failure, substantial wear, and multiple visible cracks.
+
+## Level 5 — Significant Visible Wood Damage
+
+**Definition:**
+
+The photographs show significant visible wood damage, rather than only coating deterioration.
+
+Possible defects:
+
+- Visible splintering.
+- Broken or visibly damaged wood sections.
+- Severe cracking in wooden boards.
+- Missing or visibly deteriorated wood portions.
+- Significant surface deterioration involving the wood itself.
+
+Expected interpretation:
+
+The visible wood damage requires closer inspection by a qualified professional.
+
+Example:
+
+A wooden deck with visibly splintered and damaged boards.
+
+**Important classification rule:**
+
+Level 5 must not simply represent the next step after Level 4.
+
+Level 4 represents severe visible deterioration, which may primarily involve surface and coating conditions.
+
+Level 5 specifically represents significant visible wood damage.
+
+A deck with severely peeling coating but no significant visible wood damage should not automatically be classified as Level 5.
+
+The model must learn this distinction from properly labeled examples.
+
+---
+
+# 5. Visible Defect Classification
+
+Condition severity and defect identification are separate prediction tasks.
+
+The system must not confuse them.
+
+For example:
+
+A photograph may contain peeling coating and discoloration, while the overall deck condition is classified as Level 3.
+
+Therefore:
+
+- Severity classification determines the overall condition level.
+- Defect classification identifies the visible problems.
+
+## 5.1 Required Defect Labels
+
+The initial defect taxonomy must include:
+
+1. Peeling Coating
+2. Fading / Discoloration
+3. Surface Wear
+4. Cracks
+5. Splintering
+6. Dark Staining
+7. Visible Wood Damage
+8. Coating Loss
+9. Other Visible Defect
+
+The model must also support the possibility that no significant visible defect is detected.
+
+## 5.2 Multi-Label Classification
+
+Defect classification must support multiple labels for one image.
+
+Example:
+
+Input photograph:
+
+A wooden deck showing peeling coating and discoloration.
+
+Expected output:
+
+- Peeling Coating: Detected.
+- Fading / Discoloration: Detected.
+- Surface Wear: Not confidently detected.
+- Cracks: Not confidently detected.
+
+Do not force the model to select only one defect.
+
+## 5.3 Severity and Defect Relationship
+
+The model must not assume that each defect always belongs to one severity level.
+
+For example:
+
+- Fading can appear in Level 2 or Level 3.
+- Peeling can appear in Level 2, Level 3, or Level 4.
+- Cracks can range in appearance and severity.
+- Significant visible wood damage is particularly relevant to Level 5.
+
+The final severity should consider the overall visible condition, not just the presence of one defect label.
+
+---
+
+# 6. Image Quality Assessment
+
+Image quality is a mandatory part of Phase 7.
+
+A classification model cannot reliably assess a deck when the photograph is unclear.
+
+The system must evaluate whether an image is suitable for analysis.
+
+## 6.1 Image Quality Categories
+
+### Good
+
+The photograph has sufficient:
+
+- Lighting.
+- Focus.
+- Visibility.
+- Resolution.
+- Deck surface coverage.
+
+The model can proceed with condition analysis.
+
+### Fair
+
+The photograph is partially suitable.
+
+Possible problems:
+
+- Slight blur.
+- Uneven lighting.
+- Partial surface visibility.
+- Minor obstruction.
+
+The system may proceed with analysis if the visible portion is sufficient, but must communicate the limitation.
+
+### Poor
+
+The photograph is unsuitable for reliable analysis.
+
+Possible problems:
+
+- Heavy blur.
+- Very low lighting.
+- Excessive shadows.
+- Very low resolution.
+- Major obstruction.
+- Deck surface not clearly visible.
+
+Expected behavior:
+
+- Do not produce an authoritative condition classification.
+- Return an image-quality failure or unable-to-assess result.
+- Ask the user to upload a better photograph.
+
+## 6.2 Unable-to-Assess State
+
+The system must support an explicit state:
+
+`UNABLE_TO_ASSESS`
+
+Use it when:
+
+- The image is too poor.
+- The deck surface is not identifiable.
+- The model confidence is insufficient.
+- The image is outside the supported analysis scope.
+- The model cannot distinguish the visible condition reliably.
+
+Never force a prediction simply because the API expects a condition level.
+
+---
+
+# 7. Machine Learning Development Strategy
+
+## 7.1 Model Objective
+
+The model must perform two primary tasks:
+
+**Task A: Condition Severity Classification**
+
+Predict one of five condition levels.
+
+Output:
+
+- Level 1
+- Level 2
+- Level 3
+- Level 4
+- Level 5
+
+**Task B: Visible Defect Classification**
+
+Predict one or more visible defects.
+
+Output:
+
+- Peeling Coating
+- Fading / Discoloration
+- Surface Wear
+- Cracks
+- Splintering
+- Dark Staining
+- Visible Wood Damage
+- Coating Loss
+- Other Visible Defect
+
+These tasks must remain logically separate.
+
+A multi-task model may be used if technically justified. Separate models are also acceptable if they provide better reliability and maintainability.
+
+The developer must document the selected approach and its reasoning.
+
+## 7.2 Recommended Model Approach
+
+Use transfer learning rather than building a CNN architecture entirely from scratch.
+
+Candidate architectures:
+
+- MobileNetV3
+- EfficientNet
+
+Selection should be based on:
+
+- Validation performance.
+- Model size.
+- Inference latency.
+- Deployment resource requirements.
+- Performance on real outdoor deck photographs.
+
+Do not select a model based only on its popularity.
+
+## 7.3 Training Pipeline
+
+The ML pipeline should contain:
+
+1. Dataset ingestion.
+2. Image validation.
+3. Duplicate detection.
+4. Label validation.
+5. Dataset splitting.
+6. Image preprocessing.
+7. Data augmentation.
+8. Model training.
+9. Validation.
+10. Performance evaluation.
+11. Confidence calibration.
+12. Model artifact versioning.
+13. Inference testing.
+
+The training pipeline must be reproducible.
+
+Record:
+
+- Dataset version.
+- Training configuration.
+- Model architecture.
+- Hyperparameters.
+- Training date.
+- Evaluation metrics.
+- Model version.
+- Class distribution.
+
+---
+
+# 8. Dataset Collection and Annotation Strategy
+
+Dataset quality is one of the most important success factors.
+
+A model trained on incorrectly labeled images will produce unreliable results regardless of its architecture.
+
+## 8.1 Dataset Sources
+
+Use two types of image sources.
+
+### Source A: Public Datasets
+
+Public image datasets may be used for:
+
+- Understanding outdoor surface conditions.
+- Experimenting with image preprocessing.
+- Testing the training pipeline.
+- Initial model experimentation.
+- Transfer learning where licensing and domain suitability permit.
+
+Public datasets must not automatically be treated as verified deck-condition datasets.
+
+### Source B: Real Deck Photographs
+
+Collect permissioned photographs of actual decks.
+
+The dataset should represent:
+
+- Different wooden deck types.
+- Different lighting conditions.
+- Different weather exposure.
+- Different coating conditions.
+- Different camera devices.
+- Different shooting angles.
+- Different levels of deterioration.
+- Different outdoor environments.
+
+This source should become the primary domain-specific dataset.
+
+## 8.2 Initial Dataset Targets
+
+Recommended initial pilot target:
+
+**100–200 images per condition level.**
+
+Recommended longer-term target:
+
+**300–500+ images per condition level.**
+
+These are collection targets, not guarantees of model quality.
+
+The final dataset size must be determined by validation performance, class diversity, and data quality.
+
+Do not create artificial or duplicated images to satisfy image-count targets.
+
+## 8.3 Dataset Balance
+
+Avoid training a model where Level 1 has thousands of images while Level 5 has only a few examples.
+
+Maintain reasonable class balance.
+
+Track:
+
+- Number of images per level.
+- Number of images per defect.
+- Number of images per deck type.
+- Number of images per lighting condition.
+- Number of images rejected during quality validation.
+
+## 8.4 Annotation Requirements
+
+Every training image must have an annotation record.
+
+Recommended annotation structure:
+
+```json
+{
+  "imageId": "dataset-image-001",
+  "deckType": "wood",
+  "conditionLevel": 3,
+  "conditionLabel": "MODERATE_DETERIORATION",
+  "defects": [
+    "PEELING_COATING",
+    "FADING_DISCOLORATION"
+  ],
+  "imageQuality": "GOOD",
+  "annotationStatus": "APPROVED",
+  "annotatorId": "annotator-001",
+  "reviewerId": "reviewer-001"
+}
+```
+
+This is an illustrative structure, not a production database record.
+
+## 8.5 Annotation Quality Control
+
+Each image must be labeled using the approved five-level rubric.
+
+For important or ambiguous examples:
+
+- Obtain a second annotation.
+- Resolve disagreements.
+- Record the final approved label.
+- Exclude unresolved examples from training.
+
+Do not use unverified predictions generated by the model as ground-truth training labels.
+
+## 8.6 Data Leakage Prevention
+
+Images from the same physical deck or photo session should not be randomly distributed across training and test datasets.
+
+Otherwise, the model may learn deck-specific visual characteristics and appear more accurate than it really is.
+
+Use deck-level or property-level grouping when splitting datasets.
+
+Recommended split:
+
+- Training: approximately 70%.
+- Validation: approximately 15%.
+- Test: approximately 15%.
+
+Keep the test set separate until final evaluation.
+
+---
+
+# 9. Image Preprocessing and Augmentation
+
+The ML pipeline must implement consistent image preprocessing.
+
+Possible operations:
+
+- Image decoding.
+- Orientation correction.
+- Resizing.
+- Normalization.
+- Color-channel handling.
+- Resolution validation.
+
+Training augmentation may include:
+
+- Small rotations.
+- Horizontal flips when appropriate.
+- Brightness variation.
+- Contrast variation.
+- Mild zoom.
+- Cropping.
+
+Augmentation must preserve the original defect meaning.
+
+Do not apply transformations that create unrealistic surface defects or remove important visual evidence.
+
+The same model-specific preprocessing must be used during training and inference.
+
+---
+
+# 10. Confidence and Uncertainty Management
+
+Confidence handling is mandatory.
+
+A model should not present every prediction as equally reliable.
+
+The system must retain confidence scores for:
+
+- Overall condition level.
+- Each predicted defect.
+- Image quality, where supported by the selected quality-assessment approach.
+
+Example internal output:
+
+```json
+{
+  "conditionLevel": 3,
+  "conditionConfidence": 0.87,
+  "defects": [
+    {
+      "label": "PEELING_COATING",
+      "confidence": 0.93
+    },
+    {
+      "label": "FADING_DISCOLORATION",
+      "confidence": 0.82
+    }
+  ]
+}
+```
+
+These values are illustrative, not actual model predictions.
+
+## 10.1 Confidence Thresholds
+
+The ML developer must determine thresholds using validation data.
+
+Do not randomly choose a threshold such as 0.80 and call it reliable.
+
+Document:
+
+- Threshold selection method.
+- Per-class performance.
+- Confidence calibration.
+- False-positive behavior.
+- False-negative behavior.
+
+If confidence is insufficient, return:
+
+`UNABLE_TO_ASSESS`
+
+or:
+
+`REQUIRES_MANUAL_REVIEW`
+
+## 10.2 Manual Review
+
+Manual review should be recommended when:
+
+- Confidence is below the approved threshold.
+- Condition classification and defect predictions conflict.
+- Images show ambiguous damage.
+- Image quality is borderline.
+- The photograph contains an unusual surface type.
+- The model detects a potentially significant visible wood-damage condition.
+
+The model must not hide uncertainty.
+
+---
+
+# 11. ML Inference Architecture
+
+## 11.1 Proposed Architecture
+
+The existing MERN application remains the primary business application.
+
+The ML inference component should be isolated from the Express backend.
+
+Proposed flow:
+
+```text
+React Frontend
+      |
+      v
+Express Backend
+      |
+      | Authentication
+      | Ownership Validation
+      | Image Validation
+      | Analysis Request
+      |
+      v
+Python FastAPI Inference API
+      |
+      v
+Image Preprocessing
+      |
+      v
+Image Quality Assessment
+      |
+      v
+Condition Classification Model
+      |
+      v
+Defect Classification Model
+      |
+      v
+Confidence and Uncertainty Evaluation
+      |
+      v
+Structured Prediction Response
+      |
+      v
+Express Backend
+      |
+      v
+MongoDB Atlas
+      |
+      v
+React Analysis Report
+```
+
+The Python service must not independently manage customer accounts, deck ownership, or application permissions.
+
+Those responsibilities remain with Express.
+
+## 11.2 Service Responsibilities
+
+### Express Backend
+
+Responsible for:
+
+- Authentication.
+- Authorization.
+- Deck ownership verification.
+- Image ownership verification.
+- Analysis request creation.
+- Calling the ML service.
+- Validating inference responses.
+- Saving analysis records.
+- Returning results to the frontend.
+- Managing analysis history.
+
+### Python FastAPI Service
+
+Responsible for:
+
+- Loading the approved model.
+- Receiving permitted image input.
+- Preprocessing images.
+- Assessing image quality.
+- Running condition inference.
+- Running defect inference.
+- Evaluating confidence.
+- Returning structured results.
+- Reporting model version and inference status.
+
+### MongoDB
+
+Responsible for:
+
+- Analysis records.
+- Prediction snapshots.
+- Model version references.
+- Analysis status.
+- Image references.
+- Error and review metadata.
+
+Do not store large image binaries directly inside analysis documents.
+
+Use the existing Phase 4 media-storage mechanism and store image references.
+
+---
+
+# 12. ML API Specification
+
+## 12.1 Health Endpoint
+
+`GET /health`
+
+Purpose:
+
+Check whether the ML inference service is available.
+
+Example:
+
+```json
+{
+  "status": "healthy",
+  "service": "deck-condition-analysis",
+  "modelLoaded": true,
+  "modelVersion": "1.0.0"
+}
+```
+
+## 12.2 Prediction Endpoint
+
+`POST /api/v1/analyze`
+
+Purpose:
+
+Analyze one deck photograph.
+
+The service should receive an authorized image reference or image data through a controlled backend-to-ML integration.
+
+Do not expose unrestricted private image-storage URLs.
+
+Example request:
+
+```json
+{
+  "analysisId": "analysis-001",
+  "imageReference": "internal-image-reference",
+  "deckSurface": "wood"
+}
+```
+
+The image reference is illustrative. The final transport mechanism must be selected after reviewing Phase 4 storage.
+
+## 12.3 Example Successful Response
+
+```json
+{
+  "analysisId": "analysis-001",
+  "status": "COMPLETED",
+  "imageQuality": {
+    "label": "GOOD",
+    "confidence": 0.96
+  },
+  "condition": {
+    "level": 3,
+    "label": "MODERATE_DETERIORATION",
+    "confidence": 0.87
+  },
+  "defects": [
+    {
+      "label": "PEELING_COATING",
+      "confidence": 0.93
+    },
+    {
+      "label": "FADING_DISCOLORATION",
+      "confidence": 0.82
+    }
+  ],
+  "manualReview": {
+    "required": false,
+    "reason": null
+  },
+  "model": {
+    "name": "deck-condition-model",
+    "version": "1.0.0"
+  },
+  "limitations": [
+    "Assessment is based only on visible image content.",
+    "Structural safety cannot be determined from this photograph."
+  ]
+}
+```
+
+All confidence values are examples, not real predictions.
+
+## 12.4 Example Poor Image Response
+
+```json
+{
+  "analysisId": "analysis-002",
+  "status": "UNABLE_TO_ASSESS",
+  "imageQuality": {
+    "label": "POOR"
+  },
+  "condition": null,
+  "defects": [],
+  "manualReview": {
+    "required": true,
+    "reason": "Image is too blurry for reliable assessment."
+  },
+  "model": {
+    "name": "deck-condition-model",
+    "version": "1.0.0"
+  }
+}
+```
+
+## 12.5 Example Uncertain Prediction
+
+```json
+{
+  "analysisId": "analysis-003",
+  "status": "REQUIRES_MANUAL_REVIEW",
+  "imageQuality": {
+    "label": "FAIR"
+  },
+  "condition": null,
+  "defects": [
+    {
+      "label": "CRACKS",
+      "confidence": 0.58
+    }
+  ],
+  "manualReview": {
+    "required": true,
+    "reason": "Condition classification confidence is below the approved threshold."
+  },
+  "model": {
+    "name": "deck-condition-model",
+    "version": "1.0.0"
+  }
+}
+```
+
+These examples define response structure only. The developer must implement actual model inference rather than returning hardcoded examples.
+
+---
+
+# 13. Express Backend API Design
+
+All application-facing analysis endpoints must be protected by existing authentication and authorization middleware.
+
+Proposed routes:
+
+### Create Analysis
+
+`POST /api/v1/decks/:deckId/analyses`
+
+Purpose:
+
+- Validate deck ownership or contractor authorization.
+- Retrieve eligible uploaded images.
+- Create analysis request.
+- Call the ML inference component.
+- Persist results.
+
+### List Deck Analyses
+
+`GET /api/v1/decks/:deckId/analyses`
+
+Purpose:
+
+Return analysis history for a deck.
+
+### Get Analysis Details
+
+`GET /api/v1/analyses/:analysisId`
+
+Purpose:
+
+Return the complete analysis report.
+
+### Retry Analysis
+
+`POST /api/v1/analyses/:analysisId/retry`
+
+Purpose:
+
+Retry an eligible failed analysis.
+
+Do not create duplicate records unnecessarily.
+
+### Get Analysis Status
+
+`GET /api/v1/analyses/:analysisId/status`
+
+Purpose:
+
+Return processing status when analysis is asynchronous.
+
+The developer must first inspect the existing backend architecture and decide whether synchronous or asynchronous execution is appropriate.
+
+Do not introduce a queue system or additional infrastructure without a demonstrated requirement.
+
+---
+
+# 14. MongoDB Data Model
+
+Create an analysis model that preserves the original prediction result.
+
+Proposed collection:
+
+`deckConditionAnalyses`
+
+## 14.1 Required Fields
+
+### Identification
+
+- `_id`
+- `deckId`
+- `ownerId`
+- `requestedBy`
+- `imageReferences`
+
+### Analysis
+
+- `analysisStatus`
+- `conditionLevel`
+- `conditionLabel`
+- `conditionConfidence`
+- `imageQuality`
+- `defects`
+
+### Manual Review
+
+- `manualReviewRequired`
+- `manualReviewReason`
+- `reviewStatus`
+- `reviewedBy`
+- `reviewedAt`
+- `reviewNotes`
+
+### Model Metadata
+
+- `modelName`
+- `modelVersion`
+- `datasetVersion`
+- `analysisStartedAt`
+- `analysisCompletedAt`
+- `inferenceDuration`
+
+### System Metadata
+
+- `createdAt`
+- `updatedAt`
+- `errorCode`
+- `errorMessage`
+
+Use nullable fields when the analysis has not completed.
+
+## 14.2 Defect Structure
+
+Each detected defect should contain:
+
+- `label`
+- `confidence`
+- `detected`
+
+Example:
+
+```json
+{
+  "label": "PEELING_COATING",
+  "confidence": 0.93,
+  "detected": true
+}
+```
+
+## 14.3 Analysis Statuses
+
+Recommended lifecycle:
+
+- `PENDING`
+- `PROCESSING`
+- `COMPLETED`
+- `REQUIRES_MANUAL_REVIEW`
+- `UNABLE_TO_ASSESS`
+- `FAILED`
+
+Do not confuse a failed technical request with a poor-quality photograph.
+
+They represent different outcomes.
+
+## 14.4 Historical Preservation
+
+Once an analysis is completed, preserve the original prediction snapshot.
+
+If the same image is analyzed again using a newer model, create a new analysis record.
+
+Do not silently overwrite an earlier model's prediction.
+
+This allows the system to compare results across model versions.
+
+---
+
+# 15. Frontend Requirements
+
+## 15.1 Customer Interface
+
+Provide an AI condition analysis section on the deck details page.
+
+The customer should be able to:
+
+1. View uploaded photographs.
+2. Request condition analysis.
+3. View analysis progress.
+4. View the predicted condition level.
+5. View detected defects.
+6. View confidence information where appropriate.
+7. View image-quality feedback.
+8. View manual-review messages.
+9. View analysis history.
+10. Upload a better photograph when necessary.
+
+### Condition Level Display
+
+Use a clear visual representation of Levels 1–5.
+
+Example:
+
+- Level 1 — Good
+- Level 2 — Mild Wear
+- Level 3 — Moderate Deterioration
+- Level 4 — Severe Deterioration
+- Level 5 — Significant Visible Wood Damage
+
+Do not communicate that the AI has certified the deck as safe.
+
+## 15.2 Contractor Interface
+
+Approved contractors should be able to:
+
+- View analysis results for authorized customer decks.
+- Review detected defects.
+- View condition severity.
+- View image-quality limitations.
+- Identify analyses requiring manual review.
+- Compare available analysis history.
+
+Contractors must not access unauthorized customer decks or photographs.
+
+## 15.3 Admin Interface
+
+Admin capabilities should include:
+
+- View analysis records.
+- View analysis status.
+- View model version.
+- View failed analyses.
+- View manual-review cases.
+- View analysis activity and audit information.
+
+Do not create an unnecessarily large ML administration dashboard.
+
+Model training and model deployment management can remain developer/ML operations workflows unless the business requires an application-facing interface.
+
+---
+
+# 16. Security and Privacy Requirements
+
+The developer must preserve the existing Phase 3 authentication and authorization rules.
+
+Required controls:
+
+1. Only authenticated users can request analysis.
+2. Customers can analyze only their own decks.
+3. Contractors can analyze only decks they are authorized to access.
+4. Only approved contractors may use contractor operational features.
+5. Admin access must follow the established role policy.
+6. Never trust frontend-supplied image ownership or deck ownership.
+7. Validate every image reference on the backend.
+8. Do not expose private storage credentials or unrestricted image URLs.
+9. Validate ML service responses before saving them.
+10. Use authenticated internal communication between Express and FastAPI.
+11. Add request timeouts and controlled retries.
+12. Prevent duplicate analysis requests where appropriate.
+13. Avoid storing unnecessary personal information in ML logs.
+14. Do not expose internal stack traces to customers.
+
+The ML service must not become an alternative route around the application's authorization system.
+
+---
+
+# 17. Error Handling and Reliability
+
+The system must distinguish between the following conditions:
+
+### Image Validation Failure
+
+The uploaded image is invalid or unsupported.
+
+### Poor Image Quality
+
+The image exists but cannot support reliable analysis.
+
+### Model Uncertainty
+
+The model cannot confidently classify the deck condition.
+
+### ML Service Unavailable
+
+The Python inference service cannot be reached.
+
+### Model Loading Failure
+
+The model artifact is unavailable or cannot be loaded.
+
+### Database Persistence Failure
+
+The inference result was generated but could not be saved.
+
+### Internal Analysis Failure
+
+An unexpected processing error occurred.
+
+Each failure must have:
+
+- A meaningful internal error code.
+- A safe user-facing message.
+- Appropriate logging.
+- Correct analysis status.
+- Retry behavior only where appropriate.
+
+Do not return a successful analysis response when the model has not actually completed inference.
+
+---
+
+# 18. Testing Strategy
+
+Phase 7 must include ML tests, backend integration tests, frontend validation, and full regression testing.
+
+## 18.1 Dataset Tests
+
+Verify:
+
+- Invalid images are rejected.
+- Duplicate images are identified.
+- Missing labels are detected.
+- Unsupported labels are rejected.
+- Dataset splits do not leak images from the same deck.
+- Class distributions are reported.
+- Annotation status is validated.
+
+## 18.2 ML Model Tests
+
+Evaluate:
+
+- Five-level classification.
+- Multi-label defect classification.
+- Image-quality assessment.
+- Confidence scoring.
+- Uncertain predictions.
+- Poor-quality photographs.
+- Unseen deck examples.
+
+### Required Evaluation Metrics
+
+For severity classification:
+
+- Accuracy.
+- Precision.
+- Recall.
+- F1-score.
+- Confusion matrix.
+- Per-class performance.
+
+For defect classification:
+
+- Precision per defect.
+- Recall per defect.
+- F1-score per defect.
+- Multi-label evaluation metrics.
+
+For confidence:
+
+- Calibration evaluation.
+- Coverage versus error when abstaining.
+- Manual-review rate.
+
+Do not report accuracy alone.
+
+A model can achieve high overall accuracy while performing poorly on Level 5.
+
+The developer must report the performance of every condition level separately.
+
+## 18.3 Backend Tests
+
+Test:
+
+- Authentication.
+- Customer ownership.
+- Contractor authorization.
+- Admin permissions.
+- Analysis creation.
+- Image-reference validation.
+- ML API communication.
+- Invalid ML response handling.
+- Analysis persistence.
+- Analysis history.
+- Retry behavior.
+- Duplicate request protection.
+- Failure handling.
+
+## 18.4 Frontend Tests
+
+Test:
+
+- Analysis request.
+- Loading state.
+- Successful results.
+- Poor image response.
+- Unable-to-assess response.
+- Manual-review response.
+- Failed request.
+- Analysis history.
+- Role-based visibility.
+
+## 18.5 Regression Tests
+
+All previous phases must continue working.
+
+Run:
+
+- Complete backend test suite.
+- Frontend lint.
+- Frontend production build.
+- Relevant MongoDB Atlas verification.
+
+Do not modify earlier phase behavior unless a genuine integration defect requires it.
+
+---
+
+# 19. Phase 7 Acceptance Criteria
+
+Phase 7 can be considered complete only when the following requirements are satisfied.
+
+### ML Model
+
+- [ ] Five condition levels are implemented.
+- [ ] Required defect labels are implemented.
+- [ ] Severity and defect predictions are logically separate.
+- [ ] Multi-label defect prediction works.
+- [ ] Image-quality handling is implemented.
+- [ ] Uncertain predictions are supported.
+- [ ] Manual-review recommendations are supported.
+- [ ] Model version is recorded.
+- [ ] Training and evaluation results are documented.
+
+### Dataset
+
+- [ ] Dataset sources are documented.
+- [ ] Image licensing and permissions are checked.
+- [ ] Annotation format is standardized.
+- [ ] Dataset quality checks are implemented.
+- [ ] Dataset leakage is prevented.
+- [ ] Class distribution is reported.
+- [ ] Test dataset remains separate.
+
+### Backend
+
+- [ ] Express integrates with the ML service.
+- [ ] Deck ownership is validated.
+- [ ] Image references are validated.
+- [ ] Analysis records are persisted.
+- [ ] Analysis history works.
+- [ ] Error handling works.
+- [ ] Role-based access is tested.
+
+### Frontend
+
+- [ ] Customers can request analysis.
+- [ ] Customers can view results.
+- [ ] Contractors can view authorized results.
+- [ ] Image-quality feedback is displayed.
+- [ ] Manual-review messages are displayed.
+- [ ] Analysis history is available.
+
+### Security and Reliability
+
+- [ ] ML service communication is protected.
+- [ ] Private image URLs are not exposed.
+- [ ] Invalid requests are rejected.
+- [ ] ML service failure is handled.
+- [ ] Previous analysis records remain unchanged.
+
+### Final Verification
+
+- [ ] ML tests pass.
+- [ ] Backend tests pass.
+- [ ] Frontend lint passes.
+- [ ] Frontend production build passes.
+- [ ] Full regression suite passes.
+- [ ] Database persistence is verified.
+- [ ] Phase 7 completion review is prepared.
+- [ ] Changes are committed and synchronized with `dev2`.
+
+---
+
+# 20. Developer Implementation Instructions
+
+This section is mandatory for the developer implementing Phase 7.
+
+## 20.1 Before Development
+
+Follow this sequence:
+
+1. Read the official 12-phase roadmap.
+2. Read the Phase 7 specification.
+3. Read the Phase 4 image-upload and storage implementation.
+4. Read the Phase 5 catalog and compatibility implementation only where integration requires it.
+5. Read the Phase 6 estimate implementation only to understand how condition results may be consumed later.
+6. Inspect existing backend architecture and frontend deck pages relevant to analysis.
+7. Check whether any ML code, datasets, models, or Python services already exist.
+
+Do not inspect the entire repository repeatedly.
+
+Do not recreate existing functionality.
+
+Do not duplicate authentication, file storage, or deck management.
+
+## 20.2 Architecture Decisions Before Implementation
+
+Prepare a short technical implementation plan covering:
+
+- Model architecture selection.
+- Severity classification strategy.
+- Defect classification strategy.
+- Image-quality assessment approach.
+- Dataset source and availability.
+- Dataset annotation requirements.
+- ML service integration.
+- Analysis persistence.
+- Frontend integration.
+- Testing strategy.
+
+Identify decisions that require real data or business approval.
+
+Do not block the whole implementation merely because the final production dataset is not yet available.
+
+However, distinguish clearly between:
+
+- Working ML pipeline.
+- Experimental model.
+- Validated model.
+- Production-ready model.
+
+These are different maturity levels.
+
+## 20.3 Dataset and Model Development
+
+The developer must not fabricate training data or claim model accuracy without actual evaluation.
+
+If a complete domain-specific dataset is unavailable:
+
+1. Establish the dataset directory structure.
+2. Define the annotation schema.
+3. Implement dataset validation.
+4. Build the preprocessing pipeline.
+5. Build the training pipeline.
+6. Establish reproducible train/validation/test splits.
+7. Document dataset gaps.
+8. Train only when suitable labeled data is available.
+
+If public datasets are used, document their source, license, and relevance.
+
+Do not represent unrelated outdoor surface photographs as verified deck-condition examples.
+
+## 20.4 Model Evaluation Gate
+
+Before integrating a model into the customer-facing application, evaluate:
+
+- Every severity class.
+- Every defect label.
+- Confusion between Level 4 and Level 5.
+- False positives.
+- False negatives.
+- Poor image handling.
+- Confidence calibration.
+- Performance on photographs not used during training.
+
+The developer must provide actual evaluation results.
+
+If the model does not meet the documented quality requirements, keep it in experimental or review-only status.
+
+Do not disguise weak model performance with a successful API response.
+
+## 20.5 Backend Development
+
+Implement the ML integration using the existing modular backend conventions.
+
+Keep responsibilities separated:
+
+- Controller: HTTP request and response handling.
+- Service: application workflow.
+- ML client: communication with FastAPI.
+- Model: database persistence.
+- Validation: request and response validation.
+- Middleware: authentication and authorization.
+
+Do not put the complete ML workflow inside a route controller.
+
+Do not allow the ML service to access MongoDB directly unless a separate, justified architecture decision is approved.
+
+## 20.6 Frontend Development
+
+Reuse the existing design system and deck-management pages.
+
+Do not redesign the complete application.
+
+Implement only the necessary analysis components and states.
+
+The interface must clearly distinguish:
+
+- Completed analysis.
+- Poor image quality.
+- Unable to assess.
+- Manual review required.
+- Processing.
+- Technical failure.
+
+Never display a fabricated prediction as a real AI result.
+
+## 20.7 Performance and Resource Management
+
+The developer must consider:
+
+- Model loading time.
+- Inference latency.
+- Image resolution.
+- Memory usage.
+- Concurrent analysis requests.
+- API timeouts.
+- Model artifact size.
+- Retry behavior.
+
+Load the model once per inference process rather than reloading it for every request.
+
+Do not introduce GPUs, paid cloud inference, or expensive infrastructure without a measured need and approval.
+
+## 20.8 Documentation
+
+Update only relevant existing documentation.
+
+Create:
+
+`CompletionReviews/Phase-07-Review.md`
+
+The completion review must include:
+
+1. Executive summary.
+2. Implemented features.
+3. Architecture and data flow.
+4. Dataset sources and permissions.
+5. Dataset size and class distribution.
+6. Annotation methodology.
+7. Model architecture and version.
+8. Actual evaluation metrics.
+9. API endpoints and examples.
+10. Database schema changes.
+11. Frontend implementation.
+12. Security verification.
+13. Automated test results.
+14. Integration test results.
+15. Known limitations.
+16. Unresolved issues.
+17. Git commit and synchronization details.
+
+Do not claim that the model is production-ready merely because the API and frontend work.
+
+---
+
+# 21. Recommended Development Sequence
+
+Implement Phase 7 in controlled stages.
+
+### Stage 1 — Existing System Inspection
+
+Understand the existing image upload, storage, deck, authentication, and authorization implementation.
+
+### Stage 2 — ML Architecture and Dataset Preparation
+
+Finalize the model approach, dataset structure, annotation format, and image-quality strategy.
+
+### Stage 3 — Dataset Validation Pipeline
+
+Implement image validation, annotation validation, duplicate checks, and dataset splitting.
+
+### Stage 4 — Model Training
+
+Train the severity and defect classification model or justified multi-task alternative.
+
+### Stage 5 — Model Evaluation
+
+Evaluate all five levels, all defect classes, confidence, and uncertainty.
+
+### Stage 6 — Python Inference API
+
+Implement health checks, image processing, inference, confidence handling, and structured responses.
+
+### Stage 7 — Express Backend Integration
+
+Implement protected analysis endpoints, ML communication, validation, and persistence.
+
+### Stage 8 — Frontend Integration
+
+Implement customer and authorized contractor analysis workflows.
+
+### Stage 9 — Security and Regression Testing
+
+Test authorization, image privacy, inference failures, database persistence, and existing application functionality.
+
+### Stage 10 — Final Review and Commit
+
+Document actual results, run final tests, commit changes, synchronize the branch, and stop.
+
+---
+
+# 22. Mandatory Development Rules
+
+The following rules must not be violated.
+
+1. Do not fabricate model predictions.
+2. Do not fabricate training data.
+3. Do not fabricate evaluation metrics.
+4. Do not claim that a model is accurate without test results.
+5. Do not treat Level 5 as simply a more severe Level 4.
+6. Do not combine severity classification and defect classification into one mutually exclusive output.
+7. Do not force predictions for poor-quality photographs.
+8. Do not hide uncertainty.
+9. Do not claim structural safety based on photographs.
+10. Do not allow AI predictions to modify official estimate prices automatically.
+11. Do not bypass Phase 3 authorization.
+12. Do not duplicate Phase 4 image storage.
+13. Do not rewrite completed phases unnecessarily.
+14. Do not introduce unnecessary infrastructure.
+15. Do not start Phase 8 automatically.
+
+---
+
+# 23. Phase Completion Governance
+
+The mandatory workflow is:
+
+**Read Documentation → Inspect Relevant Code → Plan → Implement → Test → Fix → Verify → Document → Commit → Sync → Stop.**
+
+At the end of Phase 7:
+
+- Provide the completion report.
+- Provide actual ML evaluation results.
+- Provide test results.
+- Provide database verification.
+- Provide Git synchronization details.
+- List unresolved issues honestly.
+- Stop and wait for explicit approval.
+
+**Phase 7 is not approved merely because implementation is complete.**
+
+The user must review and explicitly approve the phase before Phase 8 begins.
+
+---
+
+# Final Phase 7 Objective
+
+At the end of this phase, Deck Estimator should have a functioning AI-assisted visual condition analysis capability that can:
+
+1. Accept existing deck photographs.
+2. Assess image quality.
+3. Classify the deck into one of five visible condition levels.
+4. Identify multiple visible defects.
+5. Provide confidence information.
+6. Recognize uncertain or unsuitable images.
+7. Recommend manual review when appropriate.
+8. Preserve analysis history and model versions.
+9. Integrate securely with the existing MERN application.
+
+The final objective is not simply to build an AI API.
+
+It is to build a **reproducible, testable, transparent, and responsibly integrated deck-condition analysis system.**

@@ -1,5 +1,5 @@
 // =============================================
-// DECK PRO — Express Application
+// Deck Estimator — Express Application
 // =============================================
 // Configures Express middleware and mounts API routes.
 // Does NOT start the server — that is server.js's job.
@@ -61,6 +61,43 @@ const userRoutes = require('./modules/users/users.routes');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+
+// Phase 4: Decks & Images routes
+const deckRoutes = require('./modules/decks/deck.routes');
+
+app.use('/api/v1/decks', deckRoutes);
+
+// Phase 5: Catalog Management routes (Materials, Services, Compatibilities)
+const catalogRoutes = require('./modules/catalogs/catalog.routes');
+
+app.use('/api/v1/catalog', catalogRoutes);
+app.use('/api/v1/catalogs', catalogRoutes);
+
+// Phase 6: Pricing Engine & Estimate Management routes
+const pricingRoutes = require('./modules/pricing/pricing.routes');
+const estimateRoutes = require('./modules/estimates/estimate.routes');
+
+app.use('/api/v1/pricing', pricingRoutes);
+app.use('/api/v1/estimates', estimateRoutes);
+
+// Phase 7: AI-Based Condition Analysis routes
+const conditionAnalysisRoutes = require('./modules/condition-analysis/conditionAnalysis.routes');
+
+app.use('/api/v1/condition-analyses', conditionAnalysisRoutes);
+
+// Phase 8: Contractor Verification & Lead Management routes
+const contractorRoutes = require('./modules/contractors/contractor.routes');
+const leadRoutes = require('./modules/leads/lead.routes');
+
+app.use('/api/v1/contractors', contractorRoutes);
+app.use('/api/v1/leads', leadRoutes);
+
+// Phase 9: Contractor Discounts & Commission Management routes
+const discountRoutes = require('./modules/discounts/discount.routes');
+const commissionRoutes = require('./modules/commissions/commission.routes');
+
+app.use('/api/v1/discounts', discountRoutes);
+app.use('/api/v1/commissions', commissionRoutes);
 
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:

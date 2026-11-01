@@ -1,8 +1,8 @@
-# DECK PRO — System Architecture and Project Structure
+﻿# Deck Estimator — System Architecture and Project Structure
 
 ## 1. Purpose
 
-This document defines the system architecture, application boundaries, folder structure, module responsibilities, security rules, and development conventions for DECK PRO.
+This document defines the system architecture, application boundaries, folder structure, module responsibilities, security rules, and development conventions for Deck Estimator.
 
 The existing project specification remains the primary source for business requirements. This document explains how those requirements should be organized technically.
 
@@ -67,7 +67,7 @@ The backend is the source of truth for permissions, pricing, discounts, estimate
 ## 4. Root Project Structure
 
 ```text
-deck-pro/
+deck-estimator/
 ├── frontend/
 ├── backend/
 ├── docs/
@@ -416,7 +416,7 @@ Never claim that code, tests, database connectivity, or deployment succeeded unl
 
 
 Follow this archtecture : 
-DECK PRO --- Expanded Project Structure
+Deck Estimator --- Expanded Project Structure
 Status: Proposed architecture; not yet implemented or verified
 against the actual repository.
 Architecture: Modular monolith with separate React frontend and
@@ -446,7 +446,7 @@ Stack: React + Vite, Node.js + Express, MongoDB Atlas + Mongoose.
 - Never commit .env secrets. .env.example contains names and
   placeholders only.
 2. Proposed root tree
-deck-pro/
+deck-estimator/
 ├── frontend/
 ├── backend/
 ├── docs/
@@ -593,7 +593,7 @@ Frontend file responsibilities
   request defaults. Do not hardcode secrets.
 - api/apiErrors.js: turns API error responses into predictable UI
   messages.
-- components/ui/: generic reusable controls without DECK PRO
+- components/ui/: generic reusable controls without Deck Estimator
   business logic.
 - features/*/api/: API calls used by that feature.
 - features/*/components/: feature-specific UI pieces.

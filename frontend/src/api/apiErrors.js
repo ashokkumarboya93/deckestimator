@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — API Error Normalizer
+﻿// =============================================
+// Deck Estimator — API Error Normalizer
 // =============================================
 // Turns API error responses into predictable UI messages.
 

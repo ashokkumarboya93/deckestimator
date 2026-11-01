@@ -1,0 +1,2225 @@
+# Phase 5 – Material and Service Catalog Management
+
+**Project:** Deck Estimator  
+**Phase:** 5 of 12  
+**Phase Name:** Material and Service Catalog Management  
+**Technology Stack:** MERN (MongoDB, Express.js, React.js, Node.js)  
+**Architecture:** Modular Monolith  
+**Status:** Development Specification  
+**Prerequisite:** Phase 4 must be explicitly approved and completed.
+
+---
+
+# 1. Phase Overview
+
+## 1.1 Purpose
+
+Phase 5 introduces the Material and Service Catalog Management module.
+
+The purpose of this phase is to create a centralized catalog where platform administrators can manage all materials, products, services, categories, units of measurement, product specifications, costs, coverage rates, and compatibility information required for deck restoration.
+
+The catalog will act as the source of truth for material and service information used by future phases.
+
+The system must allow administrators to:
+
+- Create material categories.
+- Create and manage materials.
+- Create service categories.
+- Create and manage restoration services.
+- Define material specifications.
+- Define product coverage rates.
+- Define material and service compatibility.
+- Configure material and service availability.
+- Update catalog information.
+- Activate and deactivate catalog items.
+- Search, filter, sort, and paginate catalog records.
+
+Customers and contractors must not be allowed to modify the platform catalog.
+
+## 1.2 Business Objective
+
+Deck Estimator needs a structured catalog before implementing the pricing calculation engine.
+
+For example:
+
+A customer provides these deck details:
+
+- Deck surface: Wood.
+- Deck area: 500 sq. ft.
+- Existing coating: Old stain.
+- Visible condition: Peeling coating.
+
+The application must eventually be able to identify suitable materials and restoration services for this project.
+
+However, Phase 5 will only provide the catalog information.
+
+**Actual material quantity calculation, labor calculation, service pricing, discounts, taxes, and final estimate generation belong to Phase 6.**
+
+---
+
+# 2. Phase Scope
+
+## 2.1 Features Included
+
+Phase 5 must implement:
+
+1. Material category management.
+2. Material management.
+3. Material product specifications.
+4. Material measurement units.
+5. Material coverage information.
+6. Material cost information.
+7. Surface compatibility management.
+8. Service category management.
+9. Service management.
+10. Service measurement units.
+11. Material-service compatibility.
+12. Catalog search and filtering.
+13. Admin catalog dashboard.
+14. Catalog activation and deactivation.
+15. Backend validation.
+16. Role-based access control.
+17. Database models and indexes.
+18. API integration.
+19. Frontend integration.
+20. Automated testing.
+
+## 2.2 Features Not Included
+
+Do not implement the following in Phase 5:
+
+- Final estimate generation.
+- Automatic material quantity calculation.
+- Labor cost calculation.
+- Final project price calculation.
+- Customer quotations.
+- Contractor discounts.
+- Commission calculation.
+- Tax calculation.
+- AI-based material recommendations.
+- AI-based deck condition assessment.
+- Payment processing.
+- Inventory management.
+- Warehouse management.
+- Supplier purchasing workflows.
+
+These features belong to later phases.
+
+**Important:** Do not accidentally implement Phase 6 functionality while developing Phase 5.
+
+---
+
+# 3. User Roles and Permissions
+
+The platform currently has three primary roles:
+
+- Customer
+- Contractor
+- Admin
+
+## 3.1 Admin
+
+Admin has complete catalog management permissions.
+
+Admin can:
+
+- View all material categories.
+- Create material categories.
+- Edit material categories.
+- Activate or deactivate material categories.
+- View all materials.
+- Create materials.
+- Edit materials.
+- Activate or deactivate materials.
+- Archive eligible materials.
+- View all service categories.
+- Create service categories.
+- Edit service categories.
+- Activate or deactivate service categories.
+- View all services.
+- Create services.
+- Edit services.
+- Activate or deactivate services.
+- Manage material compatibility.
+- Manage service compatibility.
+- Search and filter catalog information.
+
+## 3.2 Customer
+
+Customers have no catalog management permissions.
+
+During Phase 5, customers should not receive catalog editing interfaces.
+
+Future phases may use catalog information while creating estimates.
+
+## 3.3 Contractor
+
+Contractors have no catalog management permissions.
+
+Contractors must not be able to:
+
+- Create materials.
+- Modify material costs.
+- Modify coverage rates.
+- Create services.
+- Change service information.
+- Modify material compatibility.
+- Activate or deactivate catalog records.
+
+Future phases may allow contractors to view selected catalog information when working with authorized projects.
+
+## 3.4 Authorization Rules
+
+All catalog write operations must require:
+
+- Valid authentication.
+- Admin role.
+- Backend authorization.
+
+Frontend route protection is not sufficient.
+
+Every write operation must be independently protected by backend middleware.
+
+Never trust a role or user ID supplied by the frontend.
+
+---
+
+# 4. Material Category Management
+
+## 4.1 Purpose
+
+Material categories organize restoration products into logical groups.
+
+Examples:
+
+1. Wood Stains
+2. Paints
+3. Protective Coatings
+4. Sealers
+5. Primers
+6. Cleaning Products
+7. Surface Preparation Products
+8. Repair Materials
+9. Composite Deck Products
+10. Other Materials
+
+These are suggested initial categories, not a mandatory fixed list.
+
+Admin must be able to manage categories dynamically.
+
+## 4.2 Material Category Fields
+
+Each material category should contain:
+
+| Field | Description | Validation |
+|---|---|---|
+| name | Category name | Required, unique |
+| slug | URL-friendly identifier | Required, unique |
+| description | Category description | Optional |
+| displayOrder | Display position | Non-negative integer |
+| status | Category status | active/inactive |
+| createdAt | Creation timestamp | System-generated |
+| updatedAt | Last update timestamp | System-generated |
+| createdBy | Admin who created it | System-generated |
+| updatedBy | Admin who updated it | System-generated |
+
+## 4.3 Category Rules
+
+- Category names must be unique after normalization.
+- Slugs must be unique.
+- Category names must be trimmed.
+- Empty names must be rejected.
+- Inactive categories must not be available for new material assignments.
+- Existing materials must not be silently deleted when a category becomes inactive.
+- A category with associated materials should not be permanently deleted.
+- Prefer deactivation or archival.
+
+---
+
+# 5. Material Management
+
+## 5.1 Purpose
+
+Materials represent the physical products used in deck restoration.
+
+The catalog must support different types of materials, product specifications, coverage rates, and compatible deck surfaces.
+
+## 5.2 Material Categories
+
+Suggested material examples:
+
+### A. Wood Stains
+
+Examples:
+
+- Transparent Wood Stain
+- Semi-Transparent Wood Stain
+- Semi-Solid Wood Stain
+- Solid Wood Stain
+
+### B. Paints
+
+Examples:
+
+- Exterior Deck Paint
+- Acrylic Deck Paint
+- Water-Based Deck Paint
+
+### C. Protective Coatings
+
+Examples:
+
+- Exterior Protective Coating
+- Anti-Slip Deck Coating
+- UV-Resistant Coating
+
+### D. Sealers
+
+Examples:
+
+- Water-Based Sealer
+- Oil-Based Sealer
+- Waterproof Deck Sealer
+
+### E. Primers
+
+Examples:
+
+- Exterior Wood Primer
+- Bonding Primer
+- Composite-Compatible Primer
+
+### F. Cleaning Products
+
+Examples:
+
+- Deck Cleaner
+- Wood Brightener
+- Mold and Mildew Cleaner
+
+### G. Surface Preparation Products
+
+Examples:
+
+- Paint Stripper
+- Stain Remover
+- Wood Restoration Cleaner
+
+### H. Repair Materials
+
+Examples:
+
+- Exterior Wood Filler
+- Deck Crack Filler
+- Wood Repair Compound
+
+These examples are for initial catalog planning. Product availability, specifications, and compatibility must be configured using verified product information.
+
+---
+
+# 6. Material Data Specification
+
+Every material must contain the following structured information.
+
+## 6.1 Basic Information
+
+| Field | Description | Required |
+|---|---|---|
+| materialName | Material display name | Yes |
+| materialCode | Unique internal material code | Yes |
+| description | Product description | No |
+| categoryId | Associated material category | Yes |
+| brandName | Manufacturer or brand | No |
+| productName | Actual product name | No |
+| productModel | Product model or variant | No |
+| productImage | Product image reference | No |
+| technicalDocument | Product specification document reference | No |
+
+The material code must be unique and generated or validated by the backend.
+
+## 6.2 Material Type
+
+The system should support material classifications such as:
+
+- stain
+- paint
+- coating
+- sealer
+- primer
+- cleaner
+- surface_preparation
+- repair_material
+- other
+
+Do not assume every material belongs to only one restoration process.
+
+The category and material type should remain separate fields.
+
+## 6.3 Surface Compatibility
+
+Materials must define which deck surfaces they support.
+
+Suggested surface values:
+
+- wood
+- composite
+- other
+
+For example:
+
+Material: Exterior Wood Stain
+
+Compatible surfaces:
+
+- Wood
+
+Material: Composite Deck Cleaner
+
+Compatible surfaces:
+
+- Composite
+
+Compatibility must be explicitly configured by Admin using manufacturer specifications or approved business information.
+
+Do not automatically assume that a material is suitable for every deck surface.
+
+## 6.4 Product Specifications
+
+Material specifications should support:
+
+- Base type.
+- Application method.
+- Finish type.
+- Color availability.
+- Drying time.
+- Number of recommended coats.
+- Indoor/outdoor suitability.
+- Weather resistance.
+- UV resistance.
+- Water resistance.
+- Additional specifications.
+
+Use structured fields where possible.
+
+Avoid storing every specification in one unstructured string.
+
+A flexible specifications object can support product-specific information without requiring a database schema change for every new specification.
+
+## 6.5 Measurement Units
+
+The material catalog must support appropriate measurement units.
+
+Examples:
+
+- gallon
+- liter
+- quart
+- milliliter
+- kilogram
+- pound
+- piece
+- pack
+- square_foot
+- square_meter
+
+The selected unit must be stored consistently.
+
+The system must not silently convert between different units.
+
+Any conversion logic required for estimating must be implemented and tested in Phase 6.
+
+## 6.6 Coverage Information
+
+Coverage represents the amount of surface area a material can cover using a defined quantity.
+
+Example:
+
+Material: Exterior Wood Stain
+
+- Coverage: 200
+- Coverage unit: sq. ft.
+- Product quantity: 1
+- Product quantity unit: gallon
+
+Meaning:
+
+One gallon covers approximately 200 sq. ft. under the specified product conditions.
+
+Required fields:
+
+- coverageValue
+- coverageAreaUnit
+- coverageQuantity
+- coverageQuantityUnit
+- coverageNotes
+
+Coverage must be configurable because different products have different coverage rates.
+
+Important:
+
+- Do not hardcode 200 sq. ft. for every stain.
+- Do not assume every material has coverage information.
+- Some materials are measured per piece, pack, or other unit.
+- Store manufacturer-provided coverage values accurately.
+- Coverage must not automatically generate project quantities in Phase 5.
+
+## 6.7 Material Cost Information
+
+The catalog should support optional product cost information.
+
+Fields:
+
+- unitCost
+- currency
+- costUnit
+- costNotes
+- costLastUpdatedAt
+
+Example:
+
+Material: Exterior Wood Stain
+
+- Unit cost: 45
+- Currency: USD
+- Cost unit: gallon
+
+This is catalog reference information.
+
+It is not the final customer price.
+
+Important rules:
+
+- Admin controls material cost information.
+- Customer and Contractor cannot modify costs.
+- Do not hardcode currency.
+- Use the configured currency.
+- Do not calculate final estimates in this phase.
+- Do not add tax, labor, markup, discounts, or commissions.
+- Keep cost fields optional when actual business data is unavailable.
+
+Never invent actual brand prices, coverage rates, or product specifications.
+
+Use clearly identified sample data for development and testing.
+
+## 6.8 Material Status
+
+Each material must support:
+
+- active
+- inactive
+- archived
+
+Rules:
+
+- Active materials can be selected in future workflows.
+- Inactive materials remain in historical records but cannot be selected for new work.
+- Archived materials are retained for historical reference.
+- Do not physically delete materials that are referenced by estimates or other business records.
+
+---
+
+# 7. Service Category Management
+
+## 7.1 Purpose
+
+Service categories organize deck restoration operations.
+
+Suggested service categories:
+
+1. Cleaning
+2. Surface Preparation
+3. Repair
+4. Staining
+5. Painting
+6. Coating
+7. Sealing
+8. Maintenance
+9. Other Services
+
+Admin must be able to add and manage categories dynamically.
+
+## 7.2 Service Category Fields
+
+- name
+- slug
+- description
+- displayOrder
+- status
+- createdAt
+- updatedAt
+- createdBy
+- updatedBy
+
+Apply the same category validation and lifecycle rules used for material categories.
+
+---
+
+# 8. Service Management
+
+## 8.1 Purpose
+
+Services represent restoration activities that can be performed on a deck.
+
+Examples:
+
+### Cleaning Services
+
+- Basic Deck Cleaning
+- Pressure Washing
+- Deep Deck Cleaning
+- Mold and Mildew Treatment
+
+### Surface Preparation
+
+- Surface Sanding
+- Old Paint Removal
+- Old Stain Removal
+- Surface Preparation
+
+### Repair Services
+
+- Minor Wood Repair
+- Crack Filling
+- Board Replacement
+- Railing Repair
+
+### Finishing Services
+
+- Deck Staining
+- Deck Painting
+- Protective Coating
+- Deck Sealing
+
+These are suggested catalog examples.
+
+The Admin must be able to configure the actual service catalog.
+
+## 8.2 Service Data Fields
+
+### Basic Information
+
+- serviceName
+- serviceCode
+- description
+- categoryId
+- serviceType
+- serviceImage
+- status
+
+### Service Type
+
+Suggested values:
+
+- cleaning
+- preparation
+- repair
+- staining
+- painting
+- coating
+- sealing
+- maintenance
+- other
+
+### Measurement Information
+
+Each service must support a configurable measurement unit.
+
+Examples:
+
+- square_foot
+- square_meter
+- linear_foot
+- linear_meter
+- hour
+- day
+- piece
+- fixed_job
+
+Example:
+
+Service: Deck Sanding
+
+- Measurement unit: square_foot
+
+Service: Railing Repair
+
+- Measurement unit: linear_foot
+
+Service: Board Replacement
+
+- Measurement unit: piece
+
+The service unit describes how the service is measured.
+
+It does not calculate the final service price in Phase 5.
+
+## 8.3 Labor Reference Information
+
+The service catalog may contain optional operational information:
+
+- estimatedDuration
+- durationUnit
+- laborNotes
+- requiredEquipment
+- preparationInstructions
+- safetyNotes
+
+Example:
+
+Service: Pressure Washing
+
+- Estimated duration: 2
+- Duration unit: hours
+- Required equipment: Pressure washer
+
+These are reference details, not a labor calculation engine.
+
+Actual labor rates and labor costs belong to Phase 6.
+
+## 8.4 Service Status
+
+Each service must support:
+
+- active
+- inactive
+- archived
+
+Inactive services must not be available for new estimates in future phases.
+
+Historical records must remain intact.
+
+---
+
+# 9. Material and Service Compatibility
+
+## 9.1 Purpose
+
+Material and service compatibility establishes which materials can be used with which services.
+
+Example:
+
+Material: Exterior Wood Stain
+
+Compatible service:
+
+- Deck Staining
+
+Material: Deck Cleaner
+
+Compatible service:
+
+- Deck Cleaning
+
+Material: Wood Filler
+
+Compatible service:
+
+- Wood Repair
+
+This relationship must be configurable by Admin.
+
+## 9.2 Compatibility Data
+
+The relationship should include:
+
+- materialId
+- serviceId
+- compatibilityStatus
+- compatibilityNotes
+- createdAt
+- updatedAt
+- createdBy
+- updatedBy
+
+Suggested compatibility status:
+
+- compatible
+- incompatible
+- requires_review
+
+The implementation must prevent contradictory duplicate relationships.
+
+For example, the same material-service pair must not simultaneously be marked compatible and incompatible.
+
+## 9.3 Compatibility Rules
+
+- Both referenced material and service must exist.
+- Both records must belong to the appropriate catalog.
+- Only Admin can create or modify compatibility.
+- Inactive or archived records must not be newly assigned to active compatibility relationships.
+- Existing historical relationships must be preserved when a record is deactivated.
+- Compatibility must not be inferred automatically from material names.
+- Admin must explicitly approve compatibility.
+
+## 9.4 Surface Compatibility and Service Compatibility Are Different
+
+Do not confuse these two concepts.
+
+Surface compatibility:
+
+Determines whether a material is suitable for a deck surface.
+
+Example:
+
+Wood Stain → Wood.
+
+Service compatibility:
+
+Determines whether a material can be used with a service.
+
+Example:
+
+Wood Stain → Deck Staining.
+
+Both relationships must be managed independently.
+
+---
+
+# 10. Database Architecture
+
+Before creating new models, inspect the existing MongoDB database and Phase 1–4 implementation.
+
+Existing collections may include:
+
+- users
+- contractorProfiles
+- estimates
+- materials
+- materialCategories
+- pricingConfigurations
+- leads
+- mediaFiles
+- auditLogs
+- notifications
+- estimateActivities
+- commissions
+
+Do not create duplicate collections or duplicate models.
+
+Inspect existing `materials` and `materialCategories` collections before implementing new schemas.
+
+Reuse existing collections when appropriate.
+
+## 10.1 MaterialCategory Model
+
+Suggested location:
+
+`backend/src/modules/catalog/materialCategory.model.js`
+
+Fields:
+
+- name
+- slug
+- description
+- displayOrder
+- status
+- createdBy
+- updatedBy
+- timestamps
+
+Indexes:
+
+- Unique normalized category name.
+- Unique slug.
+- Status index.
+
+## 10.2 Material Model
+
+Suggested location:
+
+`backend/src/modules/catalog/material.model.js`
+
+Suggested structure:
+
+```javascript
+{
+  materialName: String,
+  materialCode: String,
+  description: String,
+
+  categoryId: ObjectId,
+
+  materialType: String,
+
+  brandName: String,
+  productName: String,
+  productModel: String,
+
+  productImage: String,
+  technicalDocument: String,
+
+  compatibleSurfaces: [String],
+
+  specifications: {
+    baseType: String,
+    applicationMethod: String,
+    finishType: String,
+    colors: [String],
+    dryingTime: Number,
+    recommendedCoats: Number,
+    uvResistance: Boolean,
+    waterResistance: Boolean,
+    weatherResistance: Boolean,
+    additionalSpecifications: Object
+  },
+
+  measurement: {
+    quantityUnit: String
+  },
+
+  coverage: {
+    coverageValue: Number,
+    coverageAreaUnit: String,
+    coverageQuantity: Number,
+    coverageQuantityUnit: String,
+    coverageNotes: String
+  },
+
+  cost: {
+    unitCost: Number,
+    currency: String,
+    costUnit: String,
+    costNotes: String,
+    costLastUpdatedAt: Date
+  },
+
+  status: String,
+
+  createdBy: ObjectId,
+  updatedBy: ObjectId
+}
+```
+
+Use appropriate Mongoose sub-schemas, enums, validation, timestamps, and indexes.
+
+Do not blindly copy this sample structure if an existing model already provides equivalent functionality.
+
+## 10.3 ServiceCategory Model
+
+Suggested location:
+
+`backend/src/modules/catalog/serviceCategory.model.js`
+
+Fields:
+
+- name
+- slug
+- description
+- displayOrder
+- status
+- createdBy
+- updatedBy
+- timestamps
+
+Indexes:
+
+- Unique normalized category name.
+- Unique slug.
+- Status index.
+
+## 10.4 Service Model
+
+Suggested location:
+
+`backend/src/modules/catalog/service.model.js`
+
+Suggested structure:
+
+```javascript
+{
+  serviceName: String,
+  serviceCode: String,
+  description: String,
+
+  categoryId: ObjectId,
+
+  serviceType: String,
+
+  measurement: {
+    unit: String
+  },
+
+  operationalDetails: {
+    estimatedDuration: Number,
+    durationUnit: String,
+    laborNotes: String,
+    requiredEquipment: [String],
+    preparationInstructions: String,
+    safetyNotes: String
+  },
+
+  serviceImage: String,
+
+  status: String,
+
+  createdBy: ObjectId,
+  updatedBy: ObjectId
+}
+```
+
+Do not implement labor pricing or service estimate calculations in this model.
+
+## 10.5 Material-Service Compatibility Model
+
+Suggested location:
+
+`backend/src/modules/catalog/materialServiceCompatibility.model.js`
+
+Fields:
+
+- materialId
+- serviceId
+- compatibilityStatus
+- compatibilityNotes
+- createdBy
+- updatedBy
+- timestamps
+
+Indexes:
+
+- Unique compound index on materialId + serviceId.
+- Index on materialId.
+- Index on serviceId.
+- Index on compatibilityStatus.
+
+Use references to the Material and Service models.
+
+## 10.6 Database Integrity
+
+The application must enforce:
+
+- Valid category references.
+- Valid material references.
+- Valid service references.
+- Unique material codes.
+- Unique service codes.
+- Unique compatibility pairs.
+- Valid enum values.
+- Valid cost and coverage values.
+- Valid status transitions.
+
+MongoDB references do not automatically provide relational foreign-key enforcement.
+
+Therefore, validate referenced records in the service layer.
+
+---
+
+# 11. Backend Module Architecture
+
+Follow the existing modular architecture.
+
+Suggested structure:
+
+```text
+backend/
+  src/
+    modules/
+      catalog/
+        materialCategory.model.js
+        material.model.js
+        serviceCategory.model.js
+        service.model.js
+        materialServiceCompatibility.model.js
+
+        catalog.validation.js
+
+        catalog.service.js
+        catalog.controller.js
+        catalog.routes.js
+
+        materialCategory.service.js
+        materialCategory.controller.js
+
+        serviceCategory.service.js
+        serviceCategory.controller.js
+
+        material.service.js
+        material.controller.js
+
+        service.service.js
+        service.controller.js
+
+        compatibility.service.js
+        compatibility.controller.js
+
+    middleware/
+    config/
+    shared/
+```
+
+This is a suggested structure.
+
+The developer must inspect the existing codebase and follow its established naming, routing, validation, and error-handling conventions.
+
+Avoid unnecessary files and duplicate abstractions.
+
+## 11.1 Separation of Responsibilities
+
+Model:
+
+- Defines database structure.
+- Defines indexes.
+- Defines schema-level validation.
+
+Validation:
+
+- Validates request payloads.
+- Rejects unknown fields.
+- Validates IDs and enums.
+- Prevents invalid values.
+
+Service:
+
+- Contains business logic.
+- Checks category references.
+- Checks duplicate records.
+- Handles compatibility.
+- Enforces catalog lifecycle rules.
+
+Controller:
+
+- Handles HTTP requests and responses.
+- Calls service functions.
+- Uses existing response conventions.
+
+Routes:
+
+- Defines endpoints.
+- Applies authentication.
+- Applies Admin authorization.
+- Applies request validation.
+
+---
+
+# 12. Backend API Specification
+
+Use the existing API prefix:
+
+`/api/v1`
+
+Follow the existing authentication mechanism and response structure.
+
+## 12.1 Material Category APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/catalog/material-categories` | Create category |
+| GET | `/catalog/material-categories` | List categories |
+| GET | `/catalog/material-categories/:id` | Get category |
+| PATCH | `/catalog/material-categories/:id` | Update category |
+| PATCH | `/catalog/material-categories/:id/status` | Activate/deactivate category |
+
+## 12.2 Material APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/catalog/materials` | Create material |
+| GET | `/catalog/materials` | List materials |
+| GET | `/catalog/materials/:id` | Get material |
+| PATCH | `/catalog/materials/:id` | Update material |
+| PATCH | `/catalog/materials/:id/status` | Change material status |
+
+## 12.3 Service Category APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/catalog/service-categories` | Create category |
+| GET | `/catalog/service-categories` | List categories |
+| GET | `/catalog/service-categories/:id` | Get category |
+| PATCH | `/catalog/service-categories/:id` | Update category |
+| PATCH | `/catalog/service-categories/:id/status` | Activate/deactivate category |
+
+## 12.4 Service APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/catalog/services` | Create service |
+| GET | `/catalog/services` | List services |
+| GET | `/catalog/services/:id` | Get service |
+| PATCH | `/catalog/services/:id` | Update service |
+| PATCH | `/catalog/services/:id/status` | Change service status |
+
+## 12.5 Compatibility APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/catalog/compatibilities` | Create compatibility |
+| GET | `/catalog/compatibilities` | List compatibility relationships |
+| GET | `/catalog/compatibilities/:id` | Get compatibility |
+| PATCH | `/catalog/compatibilities/:id` | Update compatibility |
+| DELETE | `/catalog/compatibilities/:id` | Remove compatibility relationship |
+
+Deletion must be restricted to Admin.
+
+Before deleting a compatibility relationship, verify that it is not referenced by an existing business record that requires historical preservation.
+
+## 12.6 API Query Parameters
+
+List APIs should support:
+
+- page
+- limit
+- search
+- status
+- categoryId
+- sortBy
+- sortOrder
+
+Material lists may additionally support:
+
+- materialType
+- compatibleSurface
+- brandName
+
+Service lists may additionally support:
+
+- serviceType
+- measurementUnit
+
+Compatibility lists may support:
+
+- materialId
+- serviceId
+- compatibilityStatus
+
+Validation rules:
+
+- Page must be a positive integer.
+- Limit must have a safe maximum.
+- Sort fields must come from an allowlist.
+- Search input must be bounded.
+- Invalid IDs must return a controlled validation error.
+
+Never allow unrestricted MongoDB query objects from the client.
+
+---
+
+# 13. API Request and Response Examples
+
+## 13.1 Create Material Category
+
+Request:
+
+```json
+{
+  "name": "Wood Stains",
+  "description": "Exterior wood staining products",
+  "displayOrder": 1
+}
+```
+
+Response example:
+
+```json
+{
+  "success": true,
+  "message": "Material category created successfully",
+  "data": {
+    "id": "CATEGORY_ID",
+    "name": "Wood Stains",
+    "slug": "wood-stains",
+    "status": "active"
+  }
+}
+```
+
+## 13.2 Create Material
+
+Request:
+
+```json
+{
+  "materialName": "Exterior Wood Stain",
+  "materialCode": "MAT-STAIN-001",
+  "description": "Exterior wood stain product",
+  "categoryId": "CATEGORY_ID",
+  "materialType": "stain",
+  "brandName": "Example Brand",
+  "productName": "Exterior Wood Stain",
+  "compatibleSurfaces": [
+    "wood"
+  ],
+  "measurement": {
+    "quantityUnit": "gallon"
+  },
+  "coverage": {
+    "coverageValue": 200,
+    "coverageAreaUnit": "square_foot",
+    "coverageQuantity": 1,
+    "coverageQuantityUnit": "gallon",
+    "coverageNotes": "Illustrative development data"
+  },
+  "cost": {
+    "unitCost": 45,
+    "currency": "USD",
+    "costUnit": "gallon"
+  }
+}
+```
+
+The example values are not approved commercial pricing or manufacturer specifications.
+
+They must only be used as sample data unless verified.
+
+## 13.3 Create Service
+
+Request:
+
+```json
+{
+  "serviceName": "Deck Sanding",
+  "serviceCode": "SRV-PREP-001",
+  "description": "Preparation of deck surfaces through sanding",
+  "categoryId": "SERVICE_CATEGORY_ID",
+  "serviceType": "preparation",
+  "measurement": {
+    "unit": "square_foot"
+  },
+  "operationalDetails": {
+    "estimatedDuration": 2,
+    "durationUnit": "hour",
+    "laborNotes": "Illustrative operational information",
+    "requiredEquipment": [
+      "Sanding machine",
+      "Dust collection equipment"
+    ]
+  }
+}
+```
+
+## 13.4 Create Material-Service Compatibility
+
+Request:
+
+```json
+{
+  "materialId": "MATERIAL_ID",
+  "serviceId": "SERVICE_ID",
+  "compatibilityStatus": "compatible",
+  "compatibilityNotes": "Approved for the specified restoration process"
+}
+```
+
+The backend must verify that both records exist and satisfy the compatibility lifecycle rules.
+
+---
+
+# 14. Frontend Development
+
+## 14.1 Admin Catalog Dashboard
+
+Create a dedicated Admin Catalog Management section.
+
+Suggested route:
+
+`/admin/catalog`
+
+The dashboard should provide navigation to:
+
+1. Material Categories
+2. Materials
+3. Service Categories
+4. Services
+5. Compatibility Management
+
+The UI must follow the existing frontend design system.
+
+Do not introduce an unrelated design framework.
+
+## 14.2 Material Category Management Page
+
+Suggested route:
+
+`/admin/catalog/material-categories`
+
+Features:
+
+- View categories.
+- Search categories.
+- Create category.
+- Edit category.
+- Activate/deactivate category.
+- Display associated material count.
+- Display category status.
+
+## 14.3 Material Management Page
+
+Suggested route:
+
+`/admin/catalog/materials`
+
+Features:
+
+- View materials in a paginated list.
+- Search by name or material code.
+- Filter by category.
+- Filter by material type.
+- Filter by surface compatibility.
+- Filter by status.
+- Create material.
+- Edit material.
+- View material details.
+- Activate/deactivate material.
+
+## 14.4 Material Form
+
+The material form should be organized into sections.
+
+### Section A: Basic Information
+
+- Material name.
+- Material code.
+- Description.
+- Category.
+- Material type.
+- Brand.
+- Product name.
+- Product model.
+
+### Section B: Surface Compatibility
+
+- Wood.
+- Composite.
+- Other.
+
+### Section C: Product Specifications
+
+- Base type.
+- Application method.
+- Finish.
+- Available colors.
+- Drying time.
+- Recommended coats.
+- Weather resistance.
+- UV resistance.
+- Water resistance.
+- Additional specifications.
+
+### Section D: Measurement and Coverage
+
+- Quantity unit.
+- Coverage value.
+- Coverage area unit.
+- Coverage quantity.
+- Coverage quantity unit.
+- Coverage notes.
+
+### Section E: Cost Information
+
+- Unit cost.
+- Currency.
+- Cost unit.
+- Cost notes.
+
+### Section F: Product Media
+
+- Product image.
+- Technical document reference.
+
+### Section G: Status
+
+- Active.
+- Inactive.
+- Archived.
+
+Use conditional validation.
+
+For example, if coverage is not applicable, the form must allow the material to be saved without fabricated coverage values.
+
+## 14.5 Service Category Management Page
+
+Suggested route:
+
+`/admin/catalog/service-categories`
+
+Features:
+
+- View categories.
+- Create category.
+- Edit category.
+- Search categories.
+- Activate/deactivate categories.
+- Display associated service count.
+
+## 14.6 Service Management Page
+
+Suggested route:
+
+`/admin/catalog/services`
+
+Features:
+
+- View services.
+- Search services.
+- Filter by category.
+- Filter by service type.
+- Filter by measurement unit.
+- Filter by status.
+- Create service.
+- Edit service.
+- View service details.
+- Activate/deactivate service.
+
+## 14.7 Service Form
+
+Organize the form into sections.
+
+### Section A: Basic Information
+
+- Service name.
+- Service code.
+- Description.
+- Category.
+- Service type.
+
+### Section B: Measurement
+
+- Measurement unit.
+
+### Section C: Operational Details
+
+- Estimated duration.
+- Duration unit.
+- Labor notes.
+- Required equipment.
+- Preparation instructions.
+- Safety notes.
+
+### Section D: Media and Status
+
+- Service image.
+- Status.
+
+Do not add final service pricing fields or labor calculation logic.
+
+## 14.8 Compatibility Management Page
+
+Suggested route:
+
+`/admin/catalog/compatibilities`
+
+Features:
+
+- Select material.
+- Select service.
+- Set compatibility status.
+- Add compatibility notes.
+- View existing relationships.
+- Filter by material.
+- Filter by service.
+- Edit relationship.
+- Delete relationship when safe.
+
+Display material and service names rather than requiring Admin to understand raw MongoDB IDs.
+
+Prevent duplicate material-service relationships.
+
+## 14.9 Frontend UX Requirements
+
+All catalog pages must support:
+
+- Loading states.
+- Empty states.
+- Error states.
+- Success notifications.
+- Form validation.
+- Confirmation before destructive actions.
+- Responsive layouts.
+- Pagination.
+- Search and filters.
+- Accessible labels.
+- Keyboard navigation.
+- Clear active/inactive status indicators.
+
+Do not silently fail when an API request fails.
+
+Display meaningful error messages.
+
+---
+
+# 15. Image and Document Handling
+
+Phase 4 already introduced secure file handling.
+
+Before adding new media functionality, inspect and reuse the existing upload infrastructure.
+
+For Phase 5:
+
+- Product images may be supported.
+- Service images may be supported.
+- Technical documents may be supported if required by the existing architecture.
+
+Security requirements:
+
+- Validate file extension.
+- Validate MIME type.
+- Validate file signature where applicable.
+- Enforce file-size limits.
+- Generate unique storage names.
+- Store metadata and references.
+- Do not trust original filenames.
+- Restrict access to authorized users.
+- Prevent path traversal.
+- Prevent unauthorized file replacement.
+
+Do not store large binary files directly inside MongoDB documents.
+
+If product media is not required for the first implementation, do not allow it to delay the core catalog module. Document the limitation and keep the architecture extensible.
+
+---
+
+# 16. Validation Rules
+
+Backend validation is mandatory.
+
+Frontend validation improves usability but must never replace backend validation.
+
+## 16.1 General Validation
+
+- Required strings must not be empty.
+- Strings must be trimmed.
+- Unknown request properties must be rejected.
+- MongoDB IDs must be validated.
+- Enum values must be restricted.
+- Numeric fields must be finite.
+- Negative values must be rejected where inappropriate.
+- Text fields must have maximum lengths.
+- Duplicate names and codes must be handled safely.
+
+## 16.2 Material Validation
+
+- Material name is required.
+- Material code is required and unique.
+- Category must exist.
+- Category must be active for new material creation.
+- Material type must be valid.
+- Compatible surfaces must use supported values.
+- Coverage values must be positive when supplied.
+- Coverage units must be valid.
+- Cost must be non-negative when supplied.
+- Currency must be a supported configured value.
+- Status must be valid.
+
+## 16.3 Service Validation
+
+- Service name is required.
+- Service code is required and unique.
+- Category must exist.
+- Category must be active for new service creation.
+- Service type must be valid.
+- Measurement unit must be valid.
+- Estimated duration must be positive when supplied.
+- Status must be valid.
+
+## 16.4 Compatibility Validation
+
+- Material ID is required.
+- Service ID is required.
+- Both referenced records must exist.
+- Duplicate pairs must be rejected.
+- Compatibility status must be valid.
+- Compatibility notes must have a maximum length.
+
+## 16.5 Update Validation
+
+PATCH requests must support partial updates.
+
+However:
+
+- Immutable fields must not be changed by unauthorized payloads.
+- Unknown properties must be rejected.
+- Category references must be revalidated.
+- Status transitions must be validated.
+- A partial update must not unintentionally erase unrelated fields.
+
+---
+
+# 17. Audit Logging
+
+Catalog changes affect future business estimates.
+
+Therefore, important Admin operations should be auditable.
+
+Use the existing audit logging infrastructure if available.
+
+Record:
+
+- Admin user ID.
+- Action.
+- Entity type.
+- Entity ID.
+- Timestamp.
+- Relevant changed fields.
+- Request correlation ID if supported.
+
+Important actions:
+
+- Material created.
+- Material updated.
+- Material deactivated.
+- Material activated.
+- Service created.
+- Service updated.
+- Service deactivated.
+- Category changes.
+- Compatibility changes.
+- Material cost updates.
+- Coverage updates.
+
+Do not log passwords, tokens, credentials, or unnecessary sensitive information.
+
+Avoid duplicating an existing audit logging mechanism.
+
+---
+
+# 18. Error Handling
+
+Follow the project's existing standardized error response format.
+
+Expected error cases:
+
+- 400: Invalid request payload.
+- 401: Unauthenticated request.
+- 403: Insufficient permissions.
+- 404: Catalog record not found.
+- 409: Duplicate category, material code, service code, or compatibility relationship.
+- 500: Unexpected server error.
+
+Examples:
+
+- Duplicate material code.
+- Inactive category selected.
+- Invalid material ID.
+- Invalid service ID.
+- Negative coverage.
+- Invalid measurement unit.
+- Duplicate compatibility pair.
+- Customer attempting to create material.
+- Contractor attempting to modify product cost.
+
+Never expose internal stack traces or database credentials in production responses.
+
+---
+
+# 19. Testing Strategy
+
+Phase 5 must have independent tests.
+
+Do not rely only on successful frontend builds.
+
+## 19.1 Material Category Tests
+
+Test:
+
+1. Admin creates a category.
+2. Admin retrieves categories.
+3. Admin retrieves one category.
+4. Admin updates a category.
+5. Admin deactivates a category.
+6. Duplicate category names are rejected.
+7. Invalid category data is rejected.
+8. Non-admin users cannot create categories.
+
+## 19.2 Material Tests
+
+Test:
+
+1. Admin creates a material.
+2. Admin retrieves materials.
+3. Admin retrieves one material.
+4. Admin updates material information.
+5. Admin updates coverage.
+6. Admin updates cost.
+7. Admin updates compatible surfaces.
+8. Admin deactivates a material.
+9. Duplicate material codes are rejected.
+10. Invalid category references are rejected.
+11. Negative coverage is rejected.
+12. Invalid units are rejected.
+13. Customer cannot create materials.
+14. Contractor cannot update material costs.
+15. Unknown fields are rejected.
+
+## 19.3 Service Category Tests
+
+Test:
+
+1. Admin creates service category.
+2. Admin retrieves service categories.
+3. Admin updates a category.
+4. Admin deactivates a category.
+5. Duplicate category names are rejected.
+6. Non-admin users cannot modify categories.
+
+## 19.4 Service Tests
+
+Test:
+
+1. Admin creates a service.
+2. Admin retrieves services.
+3. Admin retrieves one service.
+4. Admin updates service information.
+5. Admin updates measurement unit.
+6. Admin updates operational details.
+7. Admin deactivates a service.
+8. Duplicate service codes are rejected.
+9. Invalid category references are rejected.
+10. Invalid units are rejected.
+11. Customer cannot create services.
+12. Contractor cannot modify services.
+
+## 19.5 Compatibility Tests
+
+Test:
+
+1. Admin creates a compatible material-service relationship.
+2. Admin retrieves compatibility records.
+3. Admin updates compatibility status.
+4. Admin deletes an eligible relationship.
+5. Invalid material IDs are rejected.
+6. Invalid service IDs are rejected.
+7. Duplicate material-service relationships are rejected.
+8. Customer cannot modify compatibility.
+9. Contractor cannot modify compatibility.
+
+## 19.6 Integration Tests
+
+Verify:
+
+- Material references resolve to correct categories.
+- Service references resolve to correct categories.
+- Compatibility references resolve correctly.
+- Inactive materials are excluded from active catalog queries.
+- Inactive services are excluded from active catalog queries.
+- Pagination works.
+- Search works.
+- Filtering works.
+- Sorting works.
+- Audit events are generated where expected.
+- Existing Phase 3 and Phase 4 functionality remains unaffected.
+
+## 19.7 Frontend Tests
+
+Verify:
+
+- Admin can access catalog pages.
+- Customer cannot access Admin catalog pages.
+- Contractor cannot access Admin catalog pages.
+- Forms display validation errors.
+- Search and filters work.
+- Pagination works.
+- Status changes are reflected correctly.
+- API errors are displayed properly.
+- Loading and empty states work.
+- Responsive layout is usable.
+
+---
+
+# 20. Performance and Security Requirements
+
+The implementation must follow these rules:
+
+1. Use pagination for catalog listing.
+2. Avoid loading the entire catalog into memory.
+3. Create appropriate database indexes.
+4. Use lean queries where suitable.
+5. Select only necessary fields.
+6. Validate all request parameters.
+7. Restrict all write operations to Admin.
+8. Reject mass-assignment attempts.
+9. Do not expose internal database fields unnecessarily.
+10. Prevent unrestricted MongoDB query injection.
+11. Validate file uploads if media is implemented.
+12. Prevent duplicate records.
+13. Handle database errors consistently.
+14. Preserve historical catalog references.
+15. Avoid unnecessary database queries.
+
+Do not introduce Redis, microservices, queues, or other unnecessary infrastructure for this phase.
+
+---
+
+# 21. Integration with Phase 4
+
+Phase 4 stores deck information such as:
+
+- Surface material.
+- Deck measurements.
+- Deck shape.
+- Existing coating status.
+- Visible deck conditions.
+- Photographs.
+
+Phase 5 introduces the material and service catalog.
+
+These modules must remain separate.
+
+Do not modify Phase 4 deck schemas unnecessarily.
+
+Do not automatically change a customer's selected surface material based on catalog entries.
+
+Do not automatically assign materials or services to a deck.
+
+Future phases will connect the deck data with catalog information through controlled business logic.
+
+---
+
+# 22. Integration Preparation for Phase 6
+
+Phase 5 must provide clean catalog data for Phase 6.
+
+Phase 6 will use:
+
+Material information:
+- Material ID.
+- Material category.
+- Material type.
+- Compatible surfaces.
+- Measurement unit.
+- Coverage rate.
+- Product cost.
+- Currency.
+
+Service information:
+- Service ID.
+- Service category.
+- Service type.
+- Measurement unit.
+- Operational details.
+
+Compatibility information:
+- Material ID.
+- Service ID.
+- Compatibility status.
+
+Phase 6 will implement:
+
+- Material quantity calculation.
+- Coverage-based quantity calculation.
+- Labor pricing.
+- Service pricing.
+- Minimum job price.
+- Travel charges.
+- Waste allowance.
+- Taxes.
+- Discounts.
+- Final estimate generation.
+
+Do not implement those calculations in Phase 5.
+
+The catalog must expose consistent and validated data so Phase 6 can consume it reliably.
+
+---
+
+# 23. Development Sequence
+
+The developer must implement Phase 5 in the following order.
+
+### Step 1: Inspect Existing Project
+
+Inspect:
+
+- Phase 1 architecture documentation.
+- Phase 2 application structure.
+- Phase 3 authentication and authorization.
+- Phase 4 deck and file modules.
+- Existing Material model.
+- Existing MaterialCategory model.
+- Existing MongoDB collections and indexes.
+- Existing Admin layout and routes.
+- Existing API conventions.
+- Existing audit logging.
+
+Do not create duplicate models or collections.
+
+### Step 2: Finalize Catalog Data Models
+
+Design and implement:
+
+- MaterialCategory.
+- Material.
+- ServiceCategory.
+- Service.
+- MaterialServiceCompatibility.
+
+Validate all relationships and indexes.
+
+### Step 3: Implement Backend Validation
+
+Implement request schemas for:
+
+- Material categories.
+- Materials.
+- Service categories.
+- Services.
+- Compatibility.
+
+Reject unknown fields.
+
+### Step 4: Implement Backend Services
+
+Implement:
+
+- Category management.
+- Material management.
+- Service management.
+- Compatibility management.
+- Search and filtering.
+- Pagination.
+- Status management.
+- Audit logging.
+
+### Step 5: Implement Controllers and Routes
+
+Create the API endpoints.
+
+Apply:
+
+- Authentication middleware.
+- Admin authorization.
+- Request validation.
+- Existing error handling.
+
+### Step 6: Test Backend Independently
+
+Run all Phase 5 backend tests.
+
+Fix failures before frontend development.
+
+### Step 7: Implement Admin Frontend
+
+Build:
+
+- Catalog dashboard.
+- Material category page.
+- Material management page.
+- Material creation/edit form.
+- Service category page.
+- Service management page.
+- Service creation/edit form.
+- Compatibility management page.
+
+### Step 8: Integrate Frontend and Backend
+
+Verify every CRUD operation against the real API.
+
+Do not use hardcoded frontend data as the final implementation.
+
+### Step 9: Perform Security and Regression Testing
+
+Verify Admin authorization and ensure Phase 3 and Phase 4 functionality remains intact.
+
+### Step 10: Final Verification
+
+Run:
+
+- Backend test suite.
+- Phase 5 integration tests.
+- Frontend lint.
+- Frontend production build.
+- Database index verification.
+- Live MongoDB Atlas persistence verification.
+
+### Step 11: Update Documentation
+
+Update:
+
+`CompletionReviews/Phase-05-Review.md`
+
+Include implementation details, tests, evidence, limitations, and acceptance status.
+
+### Step 12: Stop for Approval
+
+Do not start Phase 6.
+
+Wait for explicit user approval.
+
+---
+
+# 24. Required Deliverables
+
+At the end of Phase 5, the following must exist:
+
+## Backend
+
+- Material category model.
+- Material model.
+- Service category model.
+- Service model.
+- Material-service compatibility model.
+- Validation schemas.
+- Service-layer business logic.
+- Controllers.
+- Routes.
+- Database indexes.
+- Audit logging integration.
+- Automated tests.
+
+## Frontend
+
+- Admin catalog dashboard.
+- Material category management.
+- Material management.
+- Material creation/edit form.
+- Service category management.
+- Service management.
+- Service creation/edit form.
+- Compatibility management.
+- API integration.
+- Loading, error, and empty states.
+- Responsive UI.
+
+## Documentation
+
+- Updated Phase 5 completion review.
+- Database schema documentation.
+- API documentation.
+- Test execution results.
+- Known limitations.
+- Phase 6 integration notes.
+
+---
+
+# 25. Phase 5 Acceptance Criteria
+
+Phase 5 can only be marked complete when all applicable criteria are verified.
+
+### Material Categories
+
+- [ ] Admin can create material categories.
+- [ ] Admin can view material categories.
+- [ ] Admin can update material categories.
+- [ ] Admin can activate/deactivate categories.
+- [ ] Duplicate categories are rejected.
+
+### Materials
+
+- [ ] Admin can create materials.
+- [ ] Admin can view materials.
+- [ ] Admin can update materials.
+- [ ] Admin can manage material types.
+- [ ] Admin can manage product specifications.
+- [ ] Admin can manage surface compatibility.
+- [ ] Admin can manage measurement units.
+- [ ] Admin can manage coverage information.
+- [ ] Admin can manage optional cost information.
+- [ ] Admin can activate/deactivate materials.
+- [ ] Duplicate material codes are rejected.
+
+### Service Categories
+
+- [ ] Admin can create service categories.
+- [ ] Admin can view service categories.
+- [ ] Admin can update service categories.
+- [ ] Admin can activate/deactivate categories.
+- [ ] Duplicate categories are rejected.
+
+### Services
+
+- [ ] Admin can create services.
+- [ ] Admin can view services.
+- [ ] Admin can update services.
+- [ ] Admin can manage service types.
+- [ ] Admin can manage measurement units.
+- [ ] Admin can manage operational details.
+- [ ] Admin can activate/deactivate services.
+- [ ] Duplicate service codes are rejected.
+
+### Compatibility
+
+- [ ] Admin can create material-service compatibility.
+- [ ] Admin can view compatibility relationships.
+- [ ] Admin can update compatibility.
+- [ ] Admin can delete eligible relationships.
+- [ ] Duplicate relationships are rejected.
+- [ ] Invalid material and service references are rejected.
+
+### Security
+
+- [ ] Only Admin can modify the catalog.
+- [ ] Customer cannot create or modify catalog records.
+- [ ] Contractor cannot create or modify catalog records.
+- [ ] Backend authorization is enforced.
+- [ ] Unknown payload properties are rejected.
+- [ ] Mass assignment is prevented.
+
+### Quality
+
+- [ ] Backend tests pass.
+- [ ] Frontend lint passes.
+- [ ] Frontend production build passes.
+- [ ] MongoDB indexes are verified.
+- [ ] Live Atlas persistence is verified.
+- [ ] Phase 3 regression tests pass.
+- [ ] Phase 4 regression tests pass.
+- [ ] No unresolved critical or high-severity defects remain.
+- [ ] Completion review is created.
+
+---
+
+# 26. Important Development Rules
+
+The following rules are mandatory.
+
+1. Read this complete Phase 5 document before writing code.
+2. Inspect the existing repository before modifying anything.
+3. Do not replace the approved MERN architecture.
+4. Do not create duplicate collections.
+5. Do not modify completed Phase 3 or Phase 4 functionality unnecessarily.
+6. Reuse existing authentication, authorization, validation, error handling, and audit infrastructure.
+7. Admin must control all catalog changes.
+8. Never hardcode real material prices or coverage values.
+9. Clearly distinguish sample data from verified product information.
+10. Do not implement estimate calculation logic.
+11. Do not implement contractor discounts or commissions.
+12. Do not implement AI functionality.
+13. Do not use mock frontend data as a substitute for backend implementation.
+14. Do not skip automated tests.
+15. Do not claim a feature is complete without implementation and verification evidence.
+16. Fix confirmed issues before marking the phase complete.
+17. Keep the implementation maintainable and consistent with the existing codebase.
+18. Do not start Phase 6 without explicit approval.
+
+---
+
+# 27. Mandatory Phase Governance
+
+Follow this exact workflow:
+
+**Read Documentation → Inspect Existing Implementation → Plan → Implement → Test → Fix → Verify → Review → Stop → Wait for Approval.**
+
+The developer must work only on Phase 5.
+
+When Phase 5 is completed:
+
+1. Run the full backend test suite.
+2. Run frontend lint.
+3. Run frontend production build.
+4. Verify MongoDB Atlas persistence.
+5. Verify catalog indexes.
+6. Verify Admin authorization.
+7. Verify Phase 3 regression tests.
+8. Verify Phase 4 regression tests.
+9. Update `CompletionReviews/Phase-05-Review.md`.
+10. Include actual test results.
+11. List any remaining limitations honestly.
+12. Commit the completed Phase 5 work to the existing development branch, following the repository's commit conventions.
+13. Stop development.
+
+**Phase 6 must remain blocked until the user explicitly approves Phase 5.**
+
+---
+
+# 28. Definition of Done
+
+Phase 5 is complete when Deck Estimator has a fully functional, secure, Admin-controlled Material and Service Catalog Management system.
+
+Admin must be able to manage material categories, materials, service categories, services, product specifications, coverage information, reference costs, and material-service compatibility through the frontend.
+
+All catalog information must be stored and retrieved through the backend and MongoDB.
+
+The system must be validated through automated tests and live database verification.
+
+The catalog must be ready for Phase 6 to consume without implementing Phase 6 pricing calculations prematurely.
+
+**Final objective: Build a reliable, maintainable catalog foundation for the Deck Estimator pricing engine.**

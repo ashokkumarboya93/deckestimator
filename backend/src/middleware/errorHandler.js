@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Centralized Error Handler
+﻿// =============================================
+// Deck Estimator — Centralized Error Handler
 // =============================================
 // Catches all errors and returns safe, consistent responses.
 // NEVER exposes stack traces, credentials, or internal details in production.

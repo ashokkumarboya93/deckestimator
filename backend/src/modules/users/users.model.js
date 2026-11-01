@@ -1,5 +1,5 @@
 // =============================================
-// DECK PRO — User Model
+// Deck Estimator — User Model
 // =============================================
 
 const mongoose = require('mongoose');

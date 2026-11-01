@@ -1,5 +1,5 @@
 // =============================================
-// DECK PRO — Contractor Profile Model
+// Deck Estimator — Contractor Profile Model
 // =============================================
 
 const mongoose = require('mongoose');
@@ -40,12 +40,54 @@ const contractorProfileSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    registrationNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     businessAddress: {
       street: { type: String, trim: true, default: '' },
       city: { type: String, trim: true, default: '' },
       state: { type: String, trim: true, default: '' },
       zipCode: { type: String, trim: true, default: '' },
+      country: { type: String, trim: true, default: 'USA' },
     },
+    website: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    businessDescription: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: [1000, 'Business description cannot exceed 1000 characters'],
+    },
+    yearsOfExperience: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    servicesOffered: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+      },
+    ],
+    supportedSurfaceTypes: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    serviceAreas: [
+      {
+        city: { type: String, trim: true },
+        state: { type: String, trim: true },
+        postalCode: { type: String, trim: true },
+        country: { type: String, trim: true, default: 'USA' },
+      },
+    ],
     verificationStatus: {
       type: String,
       enum: Object.values(VERIFICATION_STATUS),
@@ -64,7 +106,19 @@ const contractorProfileSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
     rejectionReason: {
+      type: String,
+      default: '',
+    },
+    additionalInformationRequest: {
       type: String,
       default: '',
     },

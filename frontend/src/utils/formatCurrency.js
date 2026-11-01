@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Currency Formatting
+﻿// =============================================
+// Deck Estimator — Currency Formatting
 // =============================================
 // Presentation formatting ONLY.
 // Must NOT calculate authoritative estimate totals.

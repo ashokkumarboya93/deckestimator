@@ -1,0 +1,1485 @@
+# 1. Phase Overview
+
+**Phase Name:** Contractor Discounts and Commission Management  
+**Project:** DECK PRO – Deck Restoration Estimator  
+**Phase Number:** 09  
+**Status:** Development Specification  
+**Depends On:** Phases 3, 5, 6 and 8
+
+## 1.1 Objective
+
+Implement an Admin-controlled system that allows DECK PRO to manage contractor discounts and commission incentives.
+
+The system must support:
+
+1. Configurable contractor discount policies.
+2. Percentage-based and fixed-amount discounts.
+3. Contractor eligibility rules.
+4. Discount limits and effective dates.
+5. Discount application during estimate calculation.
+6. Transparent discount breakdowns.
+7. Lead conversion verification.
+8. Commission calculation and approval.
+9. Contractor commission history.
+10. Admin commission management and reporting.
+11. Complete audit history.
+
+The implementation must integrate with the existing estimate engine and lead-management system.
+
+## 1.2 Business Objective
+
+DECK PRO has two important contractor-related financial workflows.
+
+**Workflow A – Contractor Discount**
+
+An eligible contractor receives a discount on an estimate according to an Admin-approved policy.
+
+**Workflow B – Contractor Commission**
+
+A contractor may earn a commission or referral incentive when an eligible lead results in a verified business conversion.
+
+These workflows must remain separate.
+
+A contractor discount reduces an applicable estimate amount. A commission represents an incentive earned under an approved business policy.
+
+One must not automatically create or modify the other.
+
+---
+
+# 2. Existing System Integration
+
+Phase 9 must reuse existing functionality.
+
+| Existing Phase | Integration |
+|---|---|
+| Phase 3 – Authentication | User roles and authorization |
+| Phase 4 – Deck Management | Deck ownership and measurements |
+| Phase 5 – Catalog | Material and service information |
+| Phase 6 – Pricing Engine | Estimate calculations and historical snapshots |
+| Phase 8 – Contractor Verification | Contractor approval and eligibility |
+| Phase 8 – Lead Management | Lead assignment, conversion, and activity history |
+
+Do not recreate existing functionality.
+
+Do not create another authentication system, estimate engine, contractor verification workflow, or lead-management system.
+
+## 2.1 Roles
+
+### Admin
+
+Admin can:
+
+- Create discount policies.
+- Edit discount policies.
+- Activate or deactivate policies.
+- Configure contractor eligibility.
+- Configure discount limits.
+- Configure effective dates.
+- View all contractor discounts.
+- Review converted leads.
+- Verify commission eligibility.
+- Calculate commissions.
+- Approve or reject commissions.
+- Reverse commissions with a recorded reason.
+- View financial reports.
+- View audit history.
+
+### Contractor
+
+An eligible contractor can:
+
+- View their applicable discount policy.
+- View discount information on estimates they are authorized to access.
+- View original and discounted estimate amounts.
+- View their commission records.
+- View commission status.
+- View the lead or conversion associated with a commission, subject to ownership permissions.
+- View commission history.
+
+Contractors must not:
+
+- Create or modify discount policies.
+- Change discount percentages or fixed amounts.
+- Modify commission rates.
+- Approve their own commissions.
+- Change commission statuses.
+- Modify historical financial calculations.
+
+### Customer
+
+Customers can:
+
+- View their own estimates.
+- See applicable estimate adjustments where relevant.
+- View the final estimate amount.
+
+Customers must not see:
+
+- Contractor commission amounts.
+- Internal commission policies.
+- Other contractors' discount information.
+- Admin-only financial records.
+
+---
+
+# 3. Contractor Discount Management
+
+## 3.1 Discount Policy
+
+Admin must be able to create multiple discount policies.
+
+Each policy should contain:
+
+- Policy Name
+- Policy Code
+- Description
+- Discount Type
+- Discount Value
+- Eligibility Rules
+- Applicable Estimate Components
+- Minimum Estimate Amount
+- Maximum Discount Amount
+- Effective Start Date
+- Effective End Date
+- Usage Limit, if applicable
+- Status
+- Created By
+- Updated By
+- Created At
+- Updated At
+
+Example policy:
+
+Policy Name: Approved Contractor Discount  
+Policy Code: CONTRACTOR-10  
+Discount Type: PERCENTAGE  
+Discount Value: 10  
+Status: ACTIVE
+
+This is an illustrative example only. It is not an approved commercial value.
+
+## 3.2 Supported Discount Types
+
+The system must support two discount types.
+
+### A. Percentage Discount
+
+Formula:
+
+Discount Amount = Eligible Amount × Discount Percentage / 100
+
+Example:
+
+Eligible Estimate Amount = $2,500  
+Discount Percentage = 10%
+
+Discount Amount = $250
+
+Final Amount = $2,250
+
+### B. Fixed Amount Discount
+
+Formula:
+
+Discount Amount = Minimum of:
+
+- Configured Fixed Discount
+- Eligible Estimate Amount
+
+Example:
+
+Eligible Estimate Amount = $2,500  
+Configured Fixed Discount = $200
+
+Discount Amount = $200
+
+Final Amount = $2,300
+
+All numerical values above are examples.
+
+## 3.3 Discount Applicability
+
+Admin must control which estimate components are eligible.
+
+Possible applicability options:
+
+- Entire eligible estimate
+- Materials only
+- Services only
+- Selected material categories
+- Selected services
+- Other explicitly configured estimate components
+
+The implementation must use the existing Phase 6 estimate breakdown.
+
+Do not apply discounts to components that are not explicitly eligible.
+
+The same amount must not receive multiple discounts unintentionally.
+
+If multiple policies can apply, Admin must configure the stacking rule. Until a stacking policy is approved, only one discount policy should be applied to an estimate.
+
+## 3.4 Contractor Eligibility
+
+A discount policy must support configurable eligibility rules.
+
+Possible conditions:
+
+- Contractor account is approved.
+- Contractor account is active.
+- Contractor belongs to an eligible contractor category or group.
+- Contractor has a valid policy assignment.
+- Contractor satisfies minimum business requirements configured by Admin.
+- Contractor is within the policy's effective dates.
+- Contractor has not exceeded applicable usage limits.
+
+Important:
+
+Only approved and active contractors should receive contractor discounts.
+
+The backend must validate eligibility every time a discount is applied.
+
+Never trust the frontend to decide whether a contractor qualifies.
+
+## 3.5 Discount Limits
+
+Admin should be able to configure:
+
+- Minimum eligible estimate amount.
+- Maximum discount amount.
+- Maximum discount percentage, if required.
+- Per-estimate usage.
+- Per-contractor usage limit.
+- Total policy usage limit.
+- Policy effective dates.
+
+All limits are optional unless enabled by Admin.
+
+If a limit is not configured, the application must not invent one.
+
+## 3.6 Discount Policy Lifecycle
+
+Recommended policy statuses:
+
+- DRAFT
+- ACTIVE
+- INACTIVE
+- EXPIRED
+- ARCHIVED
+
+Expected behavior:
+
+DRAFT:
+Policy is being configured and cannot be applied.
+
+ACTIVE:
+Policy is eligible for application when all conditions pass.
+
+INACTIVE:
+Policy cannot be applied.
+
+EXPIRED:
+Policy has passed its configured end date.
+
+ARCHIVED:
+Policy is retained for historical reference and cannot be applied.
+
+The backend must enforce valid status transitions.
+
+---
+
+# 4. Discount Calculation Integration
+
+## 4.1 Integration With Phase 6
+
+The existing Phase 6 pricing engine remains the source of truth for base estimate calculations.
+
+Phase 9 adds a discount layer to the existing calculation process.
+
+Expected sequence:
+
+1. Retrieve the authorized deck.
+2. Retrieve the selected materials and services.
+3. Validate material and service compatibility.
+4. Calculate material quantities.
+5. Calculate service charges.
+6. Calculate labor and other approved charges.
+7. Apply existing minimum-price and tax rules.
+8. Identify the eligible discount base according to the approved policy.
+9. Calculate the discount.
+10. Apply the approved discount treatment.
+11. Calculate the final amount using the approved tax and minimum-price rules.
+12. Save the complete calculation snapshot.
+
+The exact position of the minimum-price and tax operations relative to discounts must be configurable or explicitly confirmed by the business.
+
+Do not assume discounts can bypass a minimum job price.
+
+Do not silently change the Phase 6 pricing formula.
+
+## 4.2 Required Calculation Breakdown
+
+Every estimate with a discount must clearly record:
+
+- Base material amount.
+- Base service amount.
+- Labor amount.
+- Other approved charges.
+- Original subtotal.
+- Applicable discount policy.
+- Discount type.
+- Discount value.
+- Eligible discount amount.
+- Calculated discount amount.
+- Minimum-price adjustment, if applicable.
+- Taxable amount.
+- Tax amount.
+- Final estimate amount.
+
+Example:
+
+Original Estimate: $3,000  
+Discount Policy: CONTRACTOR-10  
+Discount Type: Percentage  
+Discount Value: 10%
+
+Discount Amount: $300
+
+Final Estimate: $2,700
+
+This example does not define the actual DECK PRO pricing or tax policy.
+
+## 4.3 Backend Calculation Rules
+
+The backend must:
+
+- Retrieve the policy from the database.
+- Verify contractor eligibility.
+- Validate effective dates.
+- Validate usage limits.
+- Calculate the discount.
+- Prevent negative estimate totals.
+- Apply approved rounding rules.
+- Prevent duplicate discount application.
+- Store a complete financial snapshot.
+
+The frontend must never submit a trusted final discount amount.
+
+The frontend may request a recalculation, but the backend must independently calculate all financial values.
+
+## 4.4 Estimate Snapshot and Historical Accuracy
+
+Every estimate must preserve the financial rules used when it was generated or revised.
+
+Store:
+
+- Policy ID.
+- Policy name.
+- Policy code.
+- Discount type.
+- Discount value.
+- Eligibility information used.
+- Eligible components.
+- Discount amount.
+- Original estimate amount.
+- Final estimate amount.
+- Calculation timestamp.
+- Pricing configuration reference or snapshot.
+- Tax and minimum-price treatment.
+
+If Admin changes a policy later, previously generated estimates must not change automatically.
+
+If an estimate is recalculated, the new version must use the currently applicable policy and preserve the previous version.
+
+Historical estimates must remain reproducible.
+
+---
+
+# 5. Commission Management
+
+## 5.1 Objective
+
+Commission management allows eligible contractors to receive financial incentives for verified business conversions.
+
+Commission eligibility must be based on an explicit business event, not merely on lead assignment or lead acceptance.
+
+A commission must not be generated just because a contractor receives a lead.
+
+## 5.2 Commission Eligibility
+
+A commission may become eligible when:
+
+1. A lead exists in the Phase 8 lead-management system.
+2. The lead is assigned to a contractor.
+3. The contractor is approved and active.
+4. The lead reaches an Admin-approved conversion condition.
+5. The conversion is verified.
+6. An applicable commission policy exists.
+7. The same conversion has not already generated a commission.
+
+Admin must define what qualifies as a conversion.
+
+Possible conversion conditions:
+
+- Lead marked as CONVERTED.
+- Admin verifies the conversion.
+- Customer confirms the completed business transaction.
+- Other business-approved conversion evidence.
+
+Do not automatically treat all converted leads as commissionable without an approved policy.
+
+## 5.3 Commission Policy
+
+Admin should be able to configure commission policies.
+
+Policy fields:
+
+- Policy Name
+- Policy Code
+- Description
+- Commission Type
+- Commission Value
+- Eligibility Conditions
+- Applicable Contractor Groups
+- Eligible Lead Sources
+- Conversion Requirements
+- Commission Calculation Basis
+- Minimum Commission Amount
+- Maximum Commission Amount
+- Effective Start Date
+- Effective End Date
+- Status
+- Created By
+- Updated By
+- Created At
+- Updated At
+
+## 5.4 Commission Types
+
+Support the following calculation types.
+
+### A. Percentage-Based Commission
+
+Commission Amount = Approved Commission Base × Commission Percentage / 100
+
+Example:
+
+Approved Commission Base = $5,000  
+Commission Percentage = 5%
+
+Commission Amount = $250
+
+### B. Fixed Commission
+
+Commission Amount = Configured Fixed Amount
+
+Example:
+
+Configured Fixed Commission = $150
+
+Commission Amount = $150
+
+Both examples are illustrative.
+
+## 5.5 Commission Calculation Basis
+
+Admin must configure what amount is used as the commission base.
+
+Possible bases:
+
+- Converted estimate amount.
+- Final approved estimate amount.
+- Verified contract amount.
+- Verified completed job amount.
+- Another explicitly approved financial basis.
+
+The commission calculation must not assume that an estimate amount equals actual revenue.
+
+If the selected basis requires a value that has not been recorded or verified, the commission must remain pending review.
+
+## 5.6 Commission Policy Lifecycle
+
+Recommended commission policy statuses:
+
+- DRAFT
+- ACTIVE
+- INACTIVE
+- EXPIRED
+- ARCHIVED
+
+Only active policies within their effective dates can generate new commission calculations.
+
+Historical commissions must retain the policy snapshot used when they were created.
+
+---
+
+# 6. Commission Lifecycle
+
+## 6.1 Commission Record Statuses
+
+Recommended statuses:
+
+- PENDING
+- UNDER_REVIEW
+- APPROVED
+- REJECTED
+- PAYABLE
+- PAID
+- DISPUTED
+- REVERSED
+
+These statuses represent commission management, not payment gateway integration.
+
+### Status Definitions
+
+PENDING:
+Commission eligibility has been identified, but the record requires verification.
+
+UNDER_REVIEW:
+Admin is reviewing the conversion and commission calculation.
+
+APPROVED:
+Admin has approved the commission amount.
+
+REJECTED:
+Admin rejected the commission with a recorded reason.
+
+PAYABLE:
+The commission is approved and eligible for payment according to the business process.
+
+PAID:
+Payment has been confirmed and recorded by an authorized Admin.
+
+DISPUTED:
+The commission is under dispute.
+
+REVERSED:
+An approved or recorded commission has been reversed with a documented reason and appropriate audit history.
+
+The application must enforce valid transitions.
+
+Do not allow contractors to change commission status.
+
+## 6.2 Commission Approval Workflow
+
+Expected workflow:
+
+1. Contractor receives an assigned lead.
+2. Contractor works on the lead.
+3. Lead is marked as converted according to Phase 8.
+4. Admin reviews conversion evidence.
+5. Backend checks contractor and policy eligibility.
+6. Commission is calculated.
+7. Commission record is created as PENDING or UNDER_REVIEW.
+8. Admin reviews the commission.
+9. Admin approves or rejects it.
+10. Approved commission becomes PAYABLE according to the configured workflow.
+11. Admin records payment when payment is made.
+12. The commission history is preserved.
+
+The exact transition from APPROVED to PAYABLE must follow the business-approved payment process.
+
+## 6.3 Commission Approval Restrictions
+
+- Contractors cannot approve their own commissions.
+- Customers cannot access commission records.
+- Admin approval must be audited.
+- Rejection requires a reason.
+- Reversal requires a reason.
+- Payment confirmation must record who confirmed it and when.
+- A commission cannot be paid twice.
+- Repeated requests must not create duplicate commissions.
+
+---
+
+# 7. Commission History and Contractor Dashboard
+
+## 7.1 Contractor Dashboard
+
+Add a Commission section to the existing contractor dashboard.
+
+Display:
+
+- Total commission records.
+- Pending commissions.
+- Under-review commissions.
+- Approved commissions.
+- Payable commissions.
+- Paid commissions.
+- Rejected or reversed commissions.
+- Commission history.
+
+## 7.2 Commission Record Details
+
+Each record should show:
+
+- Commission Reference Number.
+- Related Lead.
+- Related Estimate, if applicable.
+- Commission Policy.
+- Commission Type.
+- Calculation Basis.
+- Commission Percentage or Fixed Value.
+- Calculated Commission Amount.
+- Current Status.
+- Created Date.
+- Last Updated Date.
+- Admin remarks visible to the contractor.
+- Payment reference, if recorded.
+
+Do not expose internal Admin notes or private information.
+
+## 7.3 Commission History
+
+Contractors must be able to filter their commission history by:
+
+- Status.
+- Date range.
+- Lead reference.
+- Commission reference.
+
+Contractors must only access records belonging to their own account.
+
+---
+
+# 8. Admin Dashboard
+
+Add two main sections to the Admin dashboard.
+
+## 8.1 Discount Management
+
+Admin pages:
+
+1. Discount Overview
+2. Discount Policy List
+3. Create Discount Policy
+4. Edit Discount Policy
+5. Contractor Eligibility Management
+6. Discount Usage History
+7. Discount Application Details
+
+Admin should be able to:
+
+- Create and update policies.
+- Activate and deactivate policies.
+- Assign eligible contractor groups or individual contractors.
+- View discount usage.
+- View estimates using a discount.
+- Inspect the historical discount snapshot.
+
+## 8.2 Commission Management
+
+Admin pages:
+
+1. Commission Overview
+2. Commission Policies
+3. Pending Commissions
+4. Commission Review
+5. Approved Commissions
+6. Payable Commissions
+7. Paid Commissions
+8. Disputed and Reversed Commissions
+9. Commission Reports
+
+Admin should be able to:
+
+- Configure commission policies.
+- Review converted leads.
+- Verify conversion eligibility.
+- Calculate or recalculate a pending commission under controlled rules.
+- Approve commissions.
+- Reject commissions with reasons.
+- Record payment confirmation.
+- Resolve disputes.
+- Reverse commissions with reasons.
+- View full commission history.
+
+## 8.3 Admin Financial Summary
+
+Display relevant financial metrics:
+
+- Total discounts applied.
+- Number of discounted estimates.
+- Total commission generated.
+- Pending commission amount.
+- Approved commission amount.
+- Payable commission amount.
+- Paid commission amount.
+- Reversed commission amount.
+
+All totals must be calculated from persisted financial records.
+
+Do not calculate financial dashboard totals from untrusted frontend values.
+
+---
+
+# 9. Database Design
+
+Use the existing MongoDB/Mongoose architecture.
+
+Reuse existing models wherever possible.
+
+The following are logical data entities. Before implementation, inspect existing schemas and extend them instead of creating duplicates.
+
+## 9.1 DiscountPolicy
+
+Suggested fields:
+
+- name
+- code
+- description
+- discountType
+- discountValue
+- applicability
+- eligibilityRules
+- minimumEstimateAmount
+- maximumDiscountAmount
+- usageLimits
+- effectiveStartDate
+- effectiveEndDate
+- status
+- createdBy
+- updatedBy
+- timestamps
+
+Validation:
+
+- Discount type must be PERCENTAGE or FIXED.
+- Discount value must be positive.
+- Percentage must be within the valid percentage range.
+- Fixed discount must not exceed the eligible estimate amount.
+- Effective end date must not precede the start date.
+- Policy code must be unique.
+- Inactive policies cannot be applied.
+
+## 9.2 ContractorDiscountAssignment
+
+Suggested fields:
+
+- contractorId
+- discountPolicyId
+- assignmentType
+- assignedBy
+- effectiveStartDate
+- effectiveEndDate
+- status
+- notes
+- timestamps
+
+Purpose:
+
+Stores the relationship between a contractor and an eligible discount policy.
+
+Assignment types may include:
+
+- INDIVIDUAL
+- GROUP
+- GENERAL_ELIGIBILITY
+
+Use only the assignment types required by the approved business workflow.
+
+## 9.3 DiscountApplication
+
+Suggested fields:
+
+- estimateId
+- estimateVersion
+- contractorId
+- discountPolicyId
+- policySnapshot
+- eligibleAmount
+- discountAmount
+- originalEstimateAmount
+- finalEstimateAmount
+- appliedComponents
+- calculationSnapshot
+- appliedAt
+- appliedBy
+- timestamps
+
+Purpose:
+
+Preserves the discount applied to a particular estimate version.
+
+Historical discount applications must not be overwritten.
+
+## 9.4 CommissionPolicy
+
+Suggested fields:
+
+- name
+- code
+- description
+- commissionType
+- commissionValue
+- calculationBasis
+- eligibilityRules
+- applicableContractorGroups
+- eligibleLeadSources
+- minimumCommissionAmount
+- maximumCommissionAmount
+- effectiveStartDate
+- effectiveEndDate
+- status
+- createdBy
+- updatedBy
+- timestamps
+
+## 9.5 Commission
+
+Suggested fields:
+
+- commissionReference
+- contractorId
+- leadId
+- estimateId
+- commissionPolicyId
+- policySnapshot
+- conversionReference
+- calculationBasis
+- basisAmount
+- commissionType
+- commissionValue
+- calculatedAmount
+- approvedAmount
+- status
+- currency
+- reviewNotes
+- rejectionReason
+- reversalReason
+- createdAt
+- updatedAt
+
+The currency must be inherited from the configured business/pricing environment. Do not hardcode a currency based on the developer's location.
+
+## 9.6 CommissionHistory
+
+Suggested fields:
+
+- commissionId
+- previousStatus
+- newStatus
+- action
+- reason
+- performedBy
+- performedByRole
+- timestamp
+- metadata
+
+Purpose:
+
+Maintains an immutable record of commission lifecycle changes.
+
+## 9.7 CommissionPaymentRecord
+
+Suggested fields:
+
+- commissionId
+- contractorId
+- paymentReference
+- amount
+- currency
+- paymentDate
+- paymentMethod
+- recordedBy
+- notes
+- timestamps
+
+This records payment confirmation only.
+
+Do not implement a payment gateway or automatic fund transfer unless separately approved.
+
+## 9.8 AuditLog
+
+Reuse the existing AuditLog implementation.
+
+Record events such as:
+
+- DISCOUNT_POLICY_CREATED
+- DISCOUNT_POLICY_UPDATED
+- DISCOUNT_POLICY_ACTIVATED
+- DISCOUNT_POLICY_DEACTIVATED
+- CONTRACTOR_DISCOUNT_ASSIGNED
+- DISCOUNT_APPLIED
+- COMMISSION_POLICY_CREATED
+- COMMISSION_POLICY_UPDATED
+- COMMISSION_GENERATED
+- COMMISSION_APPROVED
+- COMMISSION_REJECTED
+- COMMISSION_MARKED_PAYABLE
+- COMMISSION_PAYMENT_RECORDED
+- COMMISSION_DISPUTED
+- COMMISSION_REVERSED
+
+Audit entries must identify the actor, action, target record, timestamp, and relevant change metadata.
+
+---
+
+# 10. API Design
+
+Follow the existing API conventions and versioning.
+
+Base path:
+
+`/api/v1`
+
+All endpoints must use the existing authentication and authorization middleware.
+
+## 10.1 Discount Policy APIs
+
+Admin:
+
+- POST `/admin/discount-policies`
+- GET `/admin/discount-policies`
+- GET `/admin/discount-policies/:id`
+- PATCH `/admin/discount-policies/:id`
+- PATCH `/admin/discount-policies/:id/status`
+
+Contractor:
+
+- GET `/contractor/discounts`
+- GET `/contractor/discounts/:id`
+
+The contractor endpoints must return only policies applicable to the authenticated contractor.
+
+## 10.2 Discount Assignment APIs
+
+Admin:
+
+- POST `/admin/discount-assignments`
+- GET `/admin/discount-assignments`
+- GET `/admin/discount-assignments/:id`
+- PATCH `/admin/discount-assignments/:id`
+- DELETE `/admin/discount-assignments/:id`
+
+Deletion should be restricted where historical records depend on an assignment. Prefer deactivation or archival over destructive deletion.
+
+## 10.3 Discount Application APIs
+
+Estimate recalculation must use the existing Phase 6 estimate API wherever possible.
+
+If a dedicated endpoint is necessary:
+
+- POST `/estimates/:estimateId/apply-discount`
+- GET `/estimates/:estimateId/discount-history`
+
+The backend must verify:
+
+- Estimate ownership or contractor authorization.
+- Contractor eligibility.
+- Policy status and dates.
+- Discount applicability.
+- Usage limits.
+- Estimate version.
+- Duplicate application prevention.
+
+Do not expose an endpoint that allows a user to submit an arbitrary discount amount.
+
+## 10.4 Commission Policy APIs
+
+Admin:
+
+- POST `/admin/commission-policies`
+- GET `/admin/commission-policies`
+- GET `/admin/commission-policies/:id`
+- PATCH `/admin/commission-policies/:id`
+- PATCH `/admin/commission-policies/:id/status`
+
+## 10.5 Commission Management APIs
+
+Admin:
+
+- GET `/admin/commissions`
+- GET `/admin/commissions/:id`
+- POST `/admin/commissions/generate`
+- POST `/admin/commissions/:id/approve`
+- POST `/admin/commissions/:id/reject`
+- POST `/admin/commissions/:id/mark-payable`
+- POST `/admin/commissions/:id/record-payment`
+- POST `/admin/commissions/:id/dispute`
+- POST `/admin/commissions/:id/reverse`
+- GET `/admin/commissions/:id/history`
+
+Contractor:
+
+- GET `/contractor/commissions`
+- GET `/contractor/commissions/:id`
+- GET `/contractor/commissions/summary`
+
+Every contractor request must be scoped to the authenticated contractor.
+
+## 10.6 API Standards
+
+All APIs must include:
+
+- Request validation.
+- Authentication.
+- Role authorization.
+- Ownership checks.
+- Consistent response structure.
+- Pagination for list endpoints.
+- Search and filters where needed.
+- Error handling.
+- Audit logging for financial actions.
+
+Use database transactions or equivalent safeguards for multi-record financial operations where supported.
+
+Use idempotency protection for commission generation and payment recording.
+
+---
+
+# 11. Frontend Implementation
+
+Follow the existing React application architecture and design system.
+
+Do not rebuild the dashboard.
+
+## 11.1 Contractor Interface
+
+Add:
+
+**Discount Section**
+- Applicable discount policies.
+- Discount eligibility status.
+- Policy description.
+- Effective dates.
+- Applied discount information on estimates.
+
+**Commission Section**
+- Commission summary.
+- Commission history.
+- Commission detail page.
+- Status indicators.
+- Related lead and estimate references.
+- Payment confirmation details when available.
+
+Contractors must not see Admin-only controls.
+
+## 11.2 Admin Interface
+
+Add:
+
+**Discount Management**
+- Policy list.
+- Policy creation form.
+- Policy editing form.
+- Eligibility configuration.
+- Discount assignment.
+- Usage history.
+
+**Commission Management**
+- Commission policy list.
+- Commission policy creation and editing.
+- Pending commission list.
+- Commission review page.
+- Approval and rejection actions.
+- Payment recording.
+- Dispute and reversal workflows.
+- Commission reports.
+
+## 11.3 Customer Interface
+
+Update estimate presentation only where required.
+
+If a contractor discount is applicable to an estimate that the customer is authorized to view, show the approved customer-facing breakdown.
+
+Do not expose contractor commission details.
+
+---
+
+# 12. Business Rules and Financial Integrity
+
+The following rules are mandatory.
+
+## 12.1 No Invented Commercial Values
+
+Do not invent:
+
+- Discount percentages.
+- Fixed discount amounts.
+- Commission percentages.
+- Commission fixed amounts.
+- Contractor eligibility requirements.
+- Commission conversion conditions.
+- Minimum commission amounts.
+- Maximum discount limits.
+- Payment deadlines.
+- Tax treatment.
+- Currency.
+
+If business values are unavailable, implement configurable fields and validation without inserting fake production values.
+
+Test fixtures must be clearly identified as test data.
+
+## 12.2 No Duplicate Discounts
+
+The backend must prevent unintended repeated application of the same discount to the same estimate version.
+
+A recalculation must not compound a previously applied discount.
+
+Always calculate from the correct original eligible amount.
+
+## 12.3 No Duplicate Commissions
+
+A lead conversion must not generate multiple commissions accidentally.
+
+Implement a database-backed uniqueness or idempotency strategy based on the approved commission policy and conversion reference.
+
+A legitimate new conversion must remain possible if the business explicitly permits it.
+
+## 12.4 No Self-Approval
+
+A contractor must never approve their own commission.
+
+Only authorized Admin users can approve or reject commissions.
+
+## 12.5 Immutable Financial History
+
+Do not silently rewrite:
+
+- Historical estimates.
+- Historical discount applications.
+- Approved commission amounts.
+- Recorded payment details.
+- Reversal records.
+
+Corrections must create traceable history.
+
+## 12.6 Concurrency Protection
+
+The system must handle simultaneous requests safely.
+
+Examples:
+
+- Two requests attempting to consume the last policy usage.
+- Two requests attempting to generate the same commission.
+- Two Admin actions attempting to approve the same commission.
+- Repeated payment-recording requests.
+
+Use database constraints, atomic updates, transactions, or equivalent controls.
+
+---
+
+# 13. Security Requirements
+
+Implement:
+
+- Role-based access control.
+- Contractor ownership isolation.
+- Estimate ownership checks.
+- Lead-to-contractor authorization checks.
+- Admin-only financial configuration.
+- Server-side financial calculations.
+- Mass-assignment protection.
+- Input validation.
+- Rate limiting on sensitive endpoints where appropriate.
+- Audit logging.
+- Secure error responses.
+- Protection against duplicate requests.
+- Protection against unauthorized status transitions.
+
+Never trust:
+
+- Contractor ID submitted by the frontend.
+- Discount amount submitted by the frontend.
+- Commission amount submitted by the frontend.
+- Lead conversion status without verification.
+- Estimate totals submitted by the frontend.
+- Payment status submitted by the contractor.
+
+Derive identity and authorization from the authenticated session and trusted database records.
+
+---
+
+# 14. Testing Requirements
+
+## 14.1 Discount Tests
+
+Test:
+
+- Admin can create a discount policy.
+- Non-admin cannot create or modify policies.
+- Percentage discount calculation.
+- Fixed discount calculation.
+- Maximum discount limit.
+- Minimum estimate condition.
+- Effective date validation.
+- Inactive policy rejection.
+- Expired policy rejection.
+- Contractor eligibility validation.
+- Unauthorized contractor discount access.
+- Duplicate discount prevention.
+- Discount snapshot preservation.
+- Recalculation behavior.
+- Concurrent usage-limit protection.
+
+## 14.2 Commission Tests
+
+Test:
+
+- Eligible converted lead can generate a commission.
+- Unconverted lead cannot generate a commission.
+- Unverified conversion cannot generate an approved commission.
+- Unapproved contractor cannot receive a commission.
+- Missing commission policy is handled safely.
+- Percentage commission calculation.
+- Fixed commission calculation.
+- Minimum and maximum commission limits.
+- Duplicate commission prevention.
+- Commission approval.
+- Commission rejection with reason.
+- Contractor cannot approve commissions.
+- Contractor cannot access another contractor's commissions.
+- Payment cannot be recorded twice.
+- Reversal requires a reason.
+- Commission history remains intact.
+
+## 14.3 Integration Tests
+
+Test:
+
+- Phase 6 estimate calculation remains correct without discounts.
+- Discounted estimates preserve original amounts.
+- Phase 8 lead conversion integrates with commission eligibility.
+- Contractor verification status is respected.
+- Existing customer and contractor ownership isolation remains intact.
+- Admin dashboard totals match persisted records.
+- Existing Phases 3–8 regression tests continue to pass.
+
+## 14.4 Frontend Tests
+
+Test:
+
+- Admin policy creation and editing.
+- Contractor discount visibility.
+- Contractor commission history.
+- Admin commission review.
+- Approval and rejection actions.
+- Loading and error states.
+- Role-based route access.
+- Responsive layouts.
+
+---
+
+# 15. Performance and Reliability
+
+- Use indexed fields for policy status, effective dates, contractor references, lead references, estimate references, and commission status.
+- Use pagination for financial history.
+- Avoid loading every commission into memory for dashboard totals.
+- Use database aggregation for financial summaries.
+- Avoid repeated queries when calculating policy eligibility.
+- Use atomic updates or transactions for financial operations.
+- Preserve historical snapshots.
+- Ensure failed financial operations do not leave partially updated records.
+
+Do not introduce Redis, message queues, microservices, or external payment infrastructure unless a demonstrated requirement exists.
+
+---
+
+# 16. Out of Scope
+
+The following are not included in Phase 9 unless explicitly approved:
+
+- Payment gateway integration.
+- Automatic bank transfers.
+- Contractor wallet.
+- Automated tax filing.
+- Automated invoice generation.
+- Complex multi-level referral trees.
+- Multi-tier commission hierarchies.
+- AI-based contractor ranking.
+- Automatic lead assignment changes.
+- Changes to Phase 7 AI analysis.
+- Rebuilding the Phase 6 pricing engine.
+- Phase 10 platform-wide administration and reporting expansion.
+
+Commission payment recording is included; automatic money transfer is not.
+
+---
+
+# 17. Business Decisions Requiring Confirmation
+
+Before enabling real financial policies, Admin or the business owner must confirm the following.
+
+## Discount Decisions
+
+1. Are discounts available to all approved contractors or only selected contractors?
+2. Are discounts percentage-based, fixed, or both?
+3. Do discounts apply to materials, services, labor, or the entire eligible estimate?
+4. Can multiple discount policies be combined?
+5. Is there a maximum discount amount?
+6. Is there a minimum estimate amount?
+7. Are discounts limited by usage or time?
+8. How should discounts interact with minimum job price and tax?
+
+## Commission Decisions
+
+1. What business event qualifies as a conversion?
+2. Does commission depend on a converted lead, signed contract, or completed job?
+3. Is commission percentage-based, fixed, or both?
+4. What is the commission calculation basis?
+5. Can different contractor groups have different commission policies?
+6. Does the Admin need to verify supporting evidence?
+7. When does an approved commission become payable?
+8. Who confirms that payment has been made?
+9. Can commissions be disputed or reversed?
+10. What happens if a lead is reassigned before conversion?
+
+## Financial Decisions
+
+1. What currency should be used?
+2. What rounding rules apply?
+3. What tax treatment applies to discounts and commissions?
+4. What financial retention requirements apply?
+5. What information must appear in contractor and Admin reports?
+
+Do not make these decisions on behalf of the business.
+
+Where decisions are unavailable, implement safe configurable workflows and keep the relevant financial operations disabled or pending approval.
+
+---
+
+# 18. Implementation Sequence
+
+Antigravity must implement Phase 9 in the following order.
+
+### Step 1 – Existing Architecture Review
+
+Inspect only relevant existing files:
+
+- Phase 6 estimate and pricing modules.
+- Phase 8 contractor profile and verification modules.
+- Phase 8 lead and conversion modules.
+- Existing AuditLog.
+- Existing Admin and Contractor dashboards.
+- Existing API and validation conventions.
+
+Identify missing business decisions and integration risks.
+
+Do not perform a full repository rewrite.
+
+### Step 2 – Discount Backend
+
+Implement:
+
+- Discount policy management.
+- Contractor eligibility.
+- Discount assignment.
+- Discount calculation integration.
+- Discount application snapshots.
+- Audit logging.
+
+### Step 3 – Discount Frontend
+
+Implement:
+
+- Admin discount policy management.
+- Contractor discount visibility.
+- Estimate discount breakdown.
+
+### Step 4 – Commission Backend
+
+Implement:
+
+- Commission policy management.
+- Conversion verification integration.
+- Commission calculation.
+- Commission lifecycle.
+- Approval and rejection.
+- Payment recording.
+- Commission history.
+- Audit logging.
+
+### Step 5 – Commission Frontend
+
+Implement:
+
+- Admin commission dashboard.
+- Commission review workflow.
+- Contractor commission dashboard.
+- Commission history and details.
+
+### Step 6 – Integration and Security
+
+Verify:
+
+- Phase 6 integration.
+- Phase 8 integration.
+- Role authorization.
+- Ownership isolation.
+- Financial snapshots.
+- Duplicate prevention.
+- Concurrency protection.
+
+### Step 7 – Testing
+
+Run:
+
+- Phase 9 unit tests.
+- Phase 9 integration tests.
+- Existing backend regression tests.
+- Frontend lint.
+- Frontend production build.
+- Live database verification using safe test records and cleanup.
+
+### Step 8 – Documentation and Completion Review
+
+Update the Phase 9 completion report.
+
+Include:
+
+- Implemented features.
+- Database changes.
+- API endpoints.
+- Frontend pages.
+- Financial calculation examples.
+- Business decisions still pending.
+- Test results.
+- Database verification.
+- Security verification.
+- Known limitations.
+- Git commit and synchronization status.
+
+---
+
+# 19. Acceptance Criteria
+
+Phase 9 is complete only when:
+
+1. Admin can manage discount policies.
+2. Admin can configure contractor eligibility.
+3. Eligible contractors receive only authorized discounts.
+4. Discount calculations are performed by the backend.
+5. Discounted estimates preserve original financial values.
+6. Admin can manage commission policies.
+7. Eligible conversions can generate commission records.
+8. Commission calculations follow approved policy rules.
+9. Admin can approve or reject commissions.
+10. Contractors can view only their own commission records.
+11. Payment confirmation can be recorded without automatic transfers.
+12. Financial history is preserved.
+13. Duplicate discount and commission creation is prevented.
+14. Financial actions are audited.
+15. Security and ownership isolation tests pass.
+16. Existing Phases 3–8 functionality remains operational.
+17. Backend tests pass.
+18. Frontend lint and production build pass.
+19. Database verification passes.
+20. Git changes are committed and synchronized.
+
+A feature is not complete merely because its UI exists. The backend, database, authorization, calculations, and tests must all work.
+
+---
+
+# 20. Final Phase Gate
+
+After Phase 9 implementation:
+
+1. Generate `CompletionReviews/Phase-09-Review.md`.
+2. Include actual test results, not estimated or invented results.
+3. Include unresolved business decisions.
+4. Include financial-integrity and security verification.
+5. Confirm the Git branch and remote synchronization.
+6. List any known limitations.
+7. Do not begin Phase 10 automatically.
+
+**STOP after Phase 9. Wait for explicit approval before proceeding to Phase 10 – Administrative Dashboard and Platform Management.**

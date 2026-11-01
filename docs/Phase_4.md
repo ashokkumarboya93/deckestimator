@@ -1,4 +1,4 @@
-# PHASE 04: DECK INPUT MANAGEMENT AND SECURE FILE UPLOADS
+﻿# PHASE 04: DECK INPUT MANAGEMENT AND SECURE FILE UPLOADS
 
 **Project:** Deck Estimator  
 **Phase:** 04 of 12  
@@ -11,7 +11,7 @@
 
 # 1. PHASE OBJECTIVE
 
-The objective of Phase 4 is to develop a complete Deck Input Management system that allows Customers and Contractors to enter, manage, and maintain deck project information.
+The objective of Phase 4 is to develop a complete Deck Input Management system that allows Customers and Contractors to enter, manage, and maintain Deck Estimatorject information.
 
 The system must also support secure image uploads so users can upload photographs of their decks for documentation and future AI-based condition analysis.
 
@@ -32,16 +32,16 @@ There are exactly three primary application roles.
 
 Customers must be able to:
 
-- Create a new deck project.
+- Create a new Deck Estimatorject.
 - Enter deck information.
 - Save deck information.
 - Edit their own deck information.
-- View their own deck projects.
+- View their own Deck Estimatorjects.
 - Upload multiple deck photographs.
 - View uploaded photographs.
 - Delete their own uploaded photographs.
-- Delete their own deck project, subject to business rules.
-- Maintain multiple deck projects.
+- Delete their own Deck Estimatorject, subject to business rules.
+- Maintain multiple Deck Estimatorjects.
 - View project creation and update timestamps.
 
 Customers must never access another customer's deck information or photographs.
@@ -50,12 +50,12 @@ Customers must never access another customer's deck information or photographs.
 
 Contractors must be able to:
 
-- Create deck project records for authorized business purposes.
+- Create Deck Estimatorject records for authorized business purposes.
 - Enter deck measurements and project details.
 - Save and edit their own authorized deck records.
 - Upload multiple photographs.
 - View and manage photographs belonging to their authorized records.
-- Maintain multiple deck projects.
+- Maintain multiple Deck Estimatorjects.
 
 Contractor access must follow the existing contractor account verification and authorization rules.
 
@@ -347,7 +347,7 @@ The deletion policy must be documented and consistent.
 
 Photograph upload is a major requirement of Phase 4.
 
-Users must be able to upload multiple photographs associated with a deck project.
+Users must be able to upload multiple photographs associated with a Deck Estimatorject.
 
 ## 6.1 Supported File Types
 
