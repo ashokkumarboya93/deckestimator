@@ -2,8 +2,8 @@
 
 **Project Name:** Deck Estimator  
 **Date:** 2026-11-01  
-**Category:** Live Database Connectivity, Schema Inspection & Collection Cleanup  
-**Status:** 🎉 **Fully Connected, Cleaned Up & Verified**
+**Category:** Live Database Connectivity & Cluster Schema Inspection  
+**Status:** 🎉 **Fully Connected & Verified**
 
 ---
 
@@ -13,71 +13,74 @@
 - **Database Name:** `DECK_ESTIMATOR`
 - **Configuration File:** [`backend/.env`](file:///e:/DeckEstimator/backend/.env) (Active)
 - **Application Startup Integration:** [`backend/src/config/database.js`](file:///e:/DeckEstimator/backend/src/config/database.js)
-- **Security Guardrail:** Database connection strings and credentials are protected and never printed or exposed in logs.
 
 ---
 
-## 2. Collection Inspection & Cleanup Audit
+## 2. Live Verification Results
 
-Per development protocol, the cluster was audited for unneeded or placeholder collections:
+The database connection was tested directly against your live MongoDB Atlas cluster and via the application's connection handler.
 
-### A. Inspection of `contractorprofiles` (lowercase duplicate)
-- **Document Count:** 0
-- **Existing Indexes:** `_id_`, `userId_1` (unique), `verificationStatus_1`
-- **Dependencies / Data:** None. No documents or references.
-- **Action Taken:** **Safely DROPPED.**
-
-### B. Inspection of `Create Collection` (placeholder)
-- **Document Count:** 0
-- **Existing Indexes:** `_id_`
-- **Dependencies / Data:** None.
-- **Action Taken:** **Safely DROPPED.**
+```text
+[Database] Connected to MongoDB (development)
+VERIFICATION: CONNECTED SUCCESSFULLY TO ATLAS VIA BACKEND CONFIG!
+```
 
 ---
 
-## 3. Current Live Collections in `DECK_ESTIMATOR` Database
+## 3. Databases & Collections Found in Your Cluster
 
-After dropping the two duplicate/placeholder collections, the database has **12 cleanly defined collections** matching our application requirements:
+Your MongoDB Atlas cluster was scanned and returned the following:
 
-| # | Collection Name | Mapped Model | Purpose |
-|---|---|---|---|
-| 1 | **`users`** | `User` ([`users.model.js`](file:///e:/DeckEstimator/backend/src/modules/users/users.model.js)) | Explicitly mapped to `'users'` collection |
-| 2 | **`contractorProfiles`** | `ContractorProfile` ([`contractorProfile.model.js`](file:///e:/DeckEstimator/backend/src/modules/contractors/contractorProfile.model.js)) | Explicitly mapped to `'contractorProfiles'` collection |
-| 3 | **`estimates`** | Phase 6 | Preserves estimate line items & calculation snapshots |
-| 4 | **`materials`** | Phase 5 | Material catalog definitions |
-| 5 | **`materialCategories`** | Phase 5 | Material category taxonomies |
-| 6 | **`pricingConfigurations`** | Phase 5/6 | Centralized pricing rule versions |
-| 7 | **`leads`** | Phase 8 | Customer contractor requests & assignments |
-| 8 | **`mediaFiles`** | Phase 4 | Metadata references for uploaded deck photos |
-| 9 | **`auditLogs`** | Phase 10 | Administrative change audit trail |
-| 10 | **`notifications`** | Phase 11 | Notifications and alerts queue |
-| 11 | **`estimateActivities`** | Phase 6 | Historical estimate operation trail |
-| 12 | **`commissions`** | Phase 9 | Contractor commission records |
+### Databases Found:
+1. `DECK_ESTIMATOR` (147,456 bytes) – **Project Database**
+2. `sample_mflix` (156,696,576 bytes) – Atlas Sample Dataset
+3. `admin` (System DB)
+4. `local` (System DB)
 
 ---
 
-## 4. Model Mapping Consistency Verification
+### Collections Inside `DECK_ESTIMATOR` Database:
 
-Both existing Mongoose models were updated and verified to enforce exact, case-sensitive collection mapping:
+| Collection Name | Document Count | Current Status | Notes / Schema Fields |
+|---|:---:|:---:|---|
+| **`users`** | 0 | Empty | Ready for user registrations (Customer, Contractor, Admin) |
+| **`contractorProfiles`** | 0 | Empty | Ready for contractor business and license records |
+| **`estimates`** | 0 | Empty | Preserves estimate line items and calculation snapshots |
+| **`materials`** | 0 | Empty | Ready for catalog restoration materials |
+| **`materialCategories`** | 0 | Empty | Category definitions |
+| **`pricingConfigurations`**| 0 | Empty | Administrator pricing rules and rates |
+| **`leads`** | 0 | Empty | Customer contractor requests & assignments |
+| **`mediaFiles`** | 0 | Empty | Metadata references for uploaded deck photos |
+| **`auditLogs`** | 0 | Empty | Administrative action tracking |
+| **`notifications`** | 0 | Empty | Event and notification queues |
+| **`estimateActivities`** | 0 | Empty | Estimate change history |
+| **`commissions`** | 0 | Empty | Contractor commissions tracking |
+| **`contractorprofiles`** | 0 | Empty | *(Duplicate lowercase name created in cluster)* |
+| **`Create Collection`** | 0 | Empty | *(Placeholder collection created during setup)* |
 
-- **`User` Model:**
-  ```javascript
-  const User = mongoose.model('User', userSchema, 'users');
-  ```
-  Guarantees all user documents query and write strictly to `users`.
-
-- **`ContractorProfile` Model:**
-  ```javascript
-  const ContractorProfile = mongoose.model('ContractorProfile', contractorProfileSchema, 'contractorProfiles');
-  ```
-  Guarantees all contractor profiles query and write strictly to `contractorProfiles` (camelCase), eliminating any ambiguity with lowercase collection names.
+> [!NOTE]
+> All collections inside the `DECK_ESTIMATOR` database are currently created and ready with 0 documents. As users register and features are executed, records will populate into these collections.
 
 ---
 
-## 5. Live App Startup & Test Suite Verification
-- **Application Startup Integration:** Verified via `connectDatabase()` against `DECK_ESTIMATOR`.
-- **Backend Test Suite:** Executed `npm test` across all integration tests:
-  - Total Tests: **21**
-  - Passing: **21/21 (100%)**
-  - Failing: **0**
-- Both in-memory isolation and live database integration models verified without schema collisions.
+### Sample Documents from `sample_mflix` Database (for cluster verification):
+
+1. **`users` Collection (Sample schema):**
+   - Fields: `_id`, `name`, `email`, `password`
+   - Sample user: Ned Stark (`sean_bean@gameofthron.es`)
+2. **`movies` Collection (Sample schema):**
+   - Fields: `_id`, `title`, `plot`, `genres`, `runtime`, `cast`, `poster`, `languages`, `released`, `directors`, `rated`, `awards`, `imdb`, `countries`, `type`, `tomatoes`, `num_mflix_comments`
+3. **`comments` Collection (Sample schema):**
+   - Fields: `_id`, `name`, `email`, `movie_id`, `text`, `date`
+4. **`theaters` Collection (Sample schema):**
+   - Fields: `_id`, `theaterId`, `location` (with GeoJSON Point coordinates)
+5. **`sessions` Collection (Sample schema):**
+   - Fields: `_id`, `user_id`, `jwt`
+
+---
+
+## 4. Test Suite Parity
+- **Total Tests:** 21
+- **Passing:** 21/21 (100%)
+- **Failing:** 0
+- Both local in-memory tests and live Atlas connection handlers are working with zero errors.

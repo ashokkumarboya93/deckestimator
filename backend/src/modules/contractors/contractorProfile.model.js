@@ -84,6 +84,6 @@ const contractorProfileSchema = new mongoose.Schema(
 
 contractorProfileSchema.index({ verificationStatus: 1 });
 
-const ContractorProfile = mongoose.model('ContractorProfile', contractorProfileSchema, 'contractorProfiles');
+const ContractorProfile = mongoose.model('ContractorProfile', contractorProfileSchema);
 
 module.exports = ContractorProfile;

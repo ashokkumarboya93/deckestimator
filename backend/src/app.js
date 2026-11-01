@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Express Application
 // =============================================
 // Configures Express middleware and mounts API routes.
@@ -61,6 +61,11 @@ const userRoutes = require('./modules/users/users.routes');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+
+// Phase 4: Decks & Images routes
+const deckRoutes = require('./modules/decks/deck.routes');
+
+app.use('/api/v1/decks', deckRoutes);
 
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:

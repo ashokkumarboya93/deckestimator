@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — API Endpoint Constants
 // =============================================
 // Central location for all API endpoint paths.
@@ -23,10 +23,12 @@ export const ENDPOINTS = {
     ME: '/users/me',
   },
 
-  // Decks (Phase 6)
+  // Decks (Phase 4)
   DECKS: {
     BASE: '/decks',
     BY_ID: (id) => `/decks/${id}`,
+    IMAGES: (deckId) => `/decks/${deckId}/images`,
+    IMAGE_BY_ID: (deckId, imageId) => `/decks/${deckId}/images/${imageId}`,
   },
 
   // Files (Phase 6)

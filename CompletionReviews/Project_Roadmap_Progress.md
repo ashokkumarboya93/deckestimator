@@ -11,11 +11,11 @@
 
 | Phase | Description | Status | Review Reference |
 |---|---|---|---|
-| **Phase 1** | Project Inspection, Requirements Analysis & Architecture | ✅ Completed | [Phase_1_Completion_Review.md](./Phase_1_Completion_Review.md) |
-| **Phase 2** | Project Structure, Application Skeleton & Backend Foundation | ✅ Completed | [Phase_2_Completion_Review.md](./Phase_2_Completion_Review.md) |
-| **Phase 3** | Authentication & Authorization (Hardened) | ✅ Completed | [Phase_3_Completion_Review.md](./Phase_3_Completion_Review.md) |
-| **Phase 4** | Deck Input Management & Secure File Uploads | ⏳ **Next** | Pending |
-| **Phase 5** | Material & Service Catalog Management | ⏳ Upcoming | Pending |
+| **Phase 1** | Project Inspection, Requirements Analysis & Architecture | ✅ Completed | [Phase-01-Review.md](./Phase-01-Review.md) |
+| **Phase 2** | Project Structure, Application Skeleton & Backend Foundation | ✅ Completed | [Phase-02-Review.md](./Phase-02-Review.md) |
+| **Phase 3** | Authentication & Authorization (Hardened) | ✅ Completed | [Phase-03-Review.md](./Phase-03-Review.md) |
+| **Phase 4** | Deck Input Management & Secure File Uploads | ✅ Completed | [Phase-04-Review.md](./Phase-04-Review.md) |
+| **Phase 5** | Material & Service Catalog Management | ⏳ **Next (Pending Approval)** | Pending |
 | **Phase 6** | Pricing Calculation Engine & Estimate Management | ⏳ Upcoming | Pending |
 | **Phase 7** | AI-Based Deck Condition Analysis | ⏳ Upcoming | Pending |
 | **Phase 8** | Contractor Verification & Lead Management | ⏳ Upcoming | Pending |
