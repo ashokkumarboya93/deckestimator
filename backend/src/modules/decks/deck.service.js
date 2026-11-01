@@ -10,15 +10,21 @@ const { ROLES } = require('../../shared/constants');
 
 /**
  * Calculate rectangle/square area automatically when dimensions are provided.
+ * Preserves unit accuracy (ft vs m) and rounds to 2 decimal places.
  */
 function normalizeDimensions(dimensions, deckShape) {
   if (!dimensions) return undefined;
-  
+
   const dim = { ...dimensions };
   if ((deckShape === 'rectangle' || deckShape === 'square') && dim.length && dim.width) {
-    // Round to 2 decimal places
+    // Exact rectangular calculation rounded to 2 decimal places
     dim.area = Math.round(dim.length * dim.width * 100) / 100;
     dim.isManualArea = false;
+  } else if (deckShape === 'l_shaped' || deckShape === 'custom' || deckShape === 'other') {
+    if (dim.area !== undefined && dim.area !== null) {
+      dim.area = Math.round(Number(dim.area) * 100) / 100;
+      dim.isManualArea = true;
+    }
   }
   return dim;
 }

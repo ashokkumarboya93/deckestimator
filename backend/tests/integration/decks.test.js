@@ -24,9 +24,12 @@ describe('Phase 4 — Deck Input Management & Secure File Uploads', () => {
   let customerBId;
   let pendingContractorToken;
   let approvedContractorToken;
+  let contractor2Token;
   let adminToken;
   let customerADeckId;
+  let contractor1DeckId;
   let uploadedImageId;
+  let imageToProtectId;
 
   // Minimal genuine headers for test image buffers
   const jpegHeader = Buffer.from([
@@ -104,7 +107,7 @@ describe('Phase 4 — Deck Input Management & Secure File Uploads', () => {
     const dataC1 = await resC1.json();
     pendingContractorToken = dataC1.data.token;
 
-    // 4. Setup Approved Contractor
+    // 4. Setup Approved Contractor 1
     const resC2 = await fetch(`${baseUrl}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -123,6 +126,28 @@ describe('Phase 4 — Deck Input Management & Secure File Uploads', () => {
     approvedContractorToken = dataC2.data.token;
     await ContractorProfile.findOneAndUpdate(
       { userId: dataC2.data.user.id },
+      { verificationStatus: VERIFICATION_STATUS.APPROVED }
+    );
+
+    // 4b. Setup Approved Contractor 2 (for cross-contractor isolation)
+    const resC3 = await fetch(`${baseUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: 'Eve Approved Contractor',
+        email: 'eve.approved@deckestimator.com',
+        password: 'Password123!',
+        role: ROLES.CONTRACTOR,
+        phone: '987-654-3211',
+        businessName: 'Eve Premier Decks',
+        licenseNumber: 'LIC-APPROVED-003',
+        licenseJurisdiction: 'IL',
+      }),
+    });
+    const dataC3 = await resC3.json();
+    contractor2Token = dataC3.data.token;
+    await ContractorProfile.findOneAndUpdate(
+      { userId: dataC3.data.user.id },
       { verificationStatus: VERIFICATION_STATUS.APPROVED }
     );
 
@@ -359,6 +384,7 @@ describe('Phase 4 — Deck Input Management & Secure File Uploads', () => {
     assert.equal(data.data.images[2].mimeType, 'image/webp');
 
     uploadedImageId = data.data.images[0].id;
+    imageToProtectId = data.data.images[1].id;
   });
 
   it('9. POST /decks/:deckId/images - Rejects disguised non-image files with fake signatures', async () => {
@@ -545,13 +571,125 @@ describe('Phase 4 — Deck Input Management & Secure File Uploads', () => {
     assert.equal(data.success, true);
     assert.equal(data.data.deck.projectName, 'Commercial Boardwalk Renovation');
     assert.equal(data.data.deck.dimensions.area, 800);
+    contractor1DeckId = data.data.deck.id;
+  });
+
+  // ----------------------------------------------------
+  // EXTENDED SECURITY AUDIT TESTS
+  // ----------------------------------------------------
+
+  it('20. Security: Customer B cannot retrieve Customer A private image binary (403 Forbidden)', async () => {
+    const res = await fetch(
+      `${baseUrl}/decks/${customerADeckId}/images/${imageToProtectId}`,
+      {
+        headers: { Authorization: `Bearer ${customerBToken}` },
+      }
+    );
+
+    const data = await res.json();
+    assert.equal(res.status, 403);
+    assert.equal(data.success, false);
+  });
+
+  it('21. Security: Customer B cannot delete Customer A private image (403 Forbidden)', async () => {
+    const res = await fetch(
+      `${baseUrl}/decks/${customerADeckId}/images/${imageToProtectId}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${customerBToken}` },
+      }
+    );
+
+    const data = await res.json();
+    assert.equal(res.status, 403);
+    assert.equal(data.success, false);
+  });
+
+  it('22. Security: Cross-contractor isolation blocks Contractor 2 from Contractor 1 deck (403 Forbidden)', async () => {
+    // Contractor 2 attempts to read Contractor 1's deck
+    const res = await fetch(`${baseUrl}/decks/${contractor1DeckId}`, {
+      headers: { Authorization: `Bearer ${contractor2Token}` },
+    });
+
+    const data = await res.json();
+    assert.equal(res.status, 403);
+    assert.equal(data.success, false);
+  });
+
+  it('23. Security: Rejects client attempt to assign ownerId in POST /decks with 400', async () => {
+    const res = await fetch(`${baseUrl}/decks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${customerAToken}`,
+      },
+      body: JSON.stringify({
+        projectName: 'Spoofed Owner Project',
+        ownerId: customerBId, // Malicious injection attempt
+        dimensions: { length: 10, width: 10 },
+      }),
+    });
+
+    const data = await res.json();
+    assert.equal(res.status, 400);
+    assert.equal(data.success, false);
+    assert.equal(data.error.code, 'VALIDATION_ERROR');
+  });
+
+  it('24. Security: Rejects client attempt to inject ownerId in PATCH /decks/:deckId with 400', async () => {
+    const res = await fetch(`${baseUrl}/decks/${customerADeckId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${customerAToken}`,
+      },
+      body: JSON.stringify({
+        ownerId: customerBId, // Attempt to reassign ownership
+      }),
+    });
+
+    const data = await res.json();
+    assert.equal(res.status, 400);
+    assert.equal(data.success, false);
+    assert.equal(data.error.code, 'VALIDATION_ERROR');
+  });
+
+  it('25. Security: Rejects disguised text/HTML file with image/png mimetype', async () => {
+    const fakeHtmlBuffer = Buffer.from('<html><script>alert("xss")</script></html>');
+    const formData = new FormData();
+    formData.append(
+      'images',
+      new Blob([fakeHtmlBuffer], { type: 'image/png' }),
+      'xss.png'
+    );
+
+    const res = await fetch(`${baseUrl}/decks/${customerADeckId}/images`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${customerAToken}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+    assert.equal(res.status, 400);
+    assert.equal(data.success, false);
+  });
+
+  it('26. Admin Authorization: Admin can view user deck and image for platform oversight', async () => {
+    const res = await fetch(`${baseUrl}/decks/${customerADeckId}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+
+    const data = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(data.success, true);
+    assert.equal(data.data.deck.id, customerADeckId);
   });
 
   // ----------------------------------------------------
   // DECK DELETION & CASCADE CLEANUP
   // ----------------------------------------------------
 
-  it('20. DELETE /decks/:deckId - Owner deletes deck and cascades cleanup of all remaining images', async () => {
+  it('27. DELETE /decks/:deckId - Owner deletes deck and cascades cleanup of all remaining images', async () => {
     // Check images remain before delete
     const remainingBefore = await DeckImage.countDocuments({ deckId: customerADeckId });
     assert.ok(remainingBefore > 0);

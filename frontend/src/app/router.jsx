@@ -9,6 +9,9 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardPage';
 import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
 import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
+import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
+import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
+import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
 
 const router = createBrowserRouter([
@@ -36,11 +39,12 @@ const router = createBrowserRouter([
           </GuestOnly>
         ),
       },
+      // Customer Routes
       {
         path: 'customer/dashboard',
         element: (
           <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'contractor', 'admin']}>
+            <RequireRole allowedRoles={['customer', 'admin']}>
               <CustomerDashboardPage />
             </RequireRole>
           </RequireAuth>
@@ -50,7 +54,7 @@ const router = createBrowserRouter([
         path: 'customer/decks/new',
         element: (
           <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'contractor', 'admin']}>
+            <RequireRole allowedRoles={['customer', 'admin']}>
               <DeckEstimatorPage />
             </RequireRole>
           </RequireAuth>
@@ -60,7 +64,7 @@ const router = createBrowserRouter([
         path: 'customer/decks/:deckId',
         element: (
           <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'contractor', 'admin']}>
+            <RequireRole allowedRoles={['customer', 'admin']}>
               <DeckDetailPage />
             </RequireRole>
           </RequireAuth>
@@ -70,8 +74,49 @@ const router = createBrowserRouter([
         path: 'customer/decks/:deckId/edit',
         element: (
           <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'contractor', 'admin']}>
+            <RequireRole allowedRoles={['customer', 'admin']}>
               <DeckEstimatorPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      // Contractor Routes
+      {
+        path: 'contractor/dashboard',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <ContractorDashboardPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'contractor/decks/new',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <ContractorDeckEstimatorPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'contractor/decks/:deckId',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <ContractorDeckDetailPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'contractor/decks/:deckId/edit',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <ContractorDeckEstimatorPage />
             </RequireRole>
           </RequireAuth>
         ),

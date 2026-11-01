@@ -180,3 +180,4 @@ deckSchema.index({ ownerId: 1, createdAt: -1 });
 const Deck = mongoose.model('Deck', deckSchema);
 
 module.exports = Deck;
+

@@ -37,42 +37,53 @@ async function uploadDeckImages(deckId, files, user, description = '') {
   }
 
   const createdImages = [];
+  const savedStorageKeys = [];
 
-  for (const file of files) {
-    if (file.size > MAX_FILE_SIZE) {
-      throw new BadRequestError(
-        `File "${file.originalname}" exceeds the 10MB size limit.`
+  try {
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        throw new BadRequestError(
+          `File "${file.originalname}" exceeds the 10MB size limit.`
+        );
+      }
+
+      const detectedMimeType = validateImageBuffer(file.buffer);
+      if (!detectedMimeType || !ALLOWED_MIME_TYPES.includes(detectedMimeType)) {
+        throw new BadRequestError(
+          `File "${file.originalname}" is not a valid JPEG, PNG, or WebP image.`
+        );
+      }
+
+      const saved = await storageProvider.saveFile(
+        file.buffer,
+        file.originalname,
+        detectedMimeType
       );
+      savedStorageKeys.push(saved.storageKey);
+
+      const deckImage = await DeckImage.create({
+        deckId,
+        ownerId: user.id,
+        originalFilename: file.originalname,
+        storageKey: saved.storageKey,
+        storageProvider: saved.storageProvider,
+        mimeType: detectedMimeType,
+        fileSize: saved.fileSize,
+        imageDescription: description || '',
+      });
+
+      createdImages.push(deckImage.toJSON());
     }
 
-    const detectedMimeType = validateImageBuffer(file.buffer);
-    if (!detectedMimeType || !ALLOWED_MIME_TYPES.includes(detectedMimeType)) {
-      throw new BadRequestError(
-        `File "${file.originalname}" is not a valid JPEG, PNG, or WebP image.`
-      );
+    return createdImages;
+  } catch (err) {
+    // Rollback any files saved in this transaction to prevent orphaned storage
+    await Promise.all(savedStorageKeys.map((key) => storageProvider.deleteFile(key).catch(() => {})));
+    if (createdImages.length > 0) {
+      await DeckImage.deleteMany({ _id: { $in: createdImages.map((img) => img.id) } }).catch(() => {});
     }
-
-    const saved = await storageProvider.saveFile(
-      file.buffer,
-      file.originalname,
-      detectedMimeType
-    );
-
-    const deckImage = await DeckImage.create({
-      deckId,
-      ownerId: user.id,
-      originalFilename: file.originalname,
-      storageKey: saved.storageKey,
-      storageProvider: saved.storageProvider,
-      mimeType: detectedMimeType,
-      fileSize: saved.fileSize,
-      imageDescription: description || '',
-    });
-
-    createdImages.push(deckImage.toJSON());
+    throw err;
   }
-
-  return createdImages;
 }
 
 /**
@@ -145,3 +156,4 @@ module.exports = {
   getImageFile,
   deleteDeckImage,
 };
+

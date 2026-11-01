@@ -36,13 +36,13 @@ function App() {
           {isAuthenticated && (
             <nav style={{ display: 'flex', gap: '16px' }}>
               <Link
-                to="/customer/dashboard"
+                to={user?.role === 'contractor' ? '/contractor/dashboard' : '/customer/dashboard'}
                 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-text)' }}
               >
                 Projects Dashboard
               </Link>
               <Link
-                to="/customer/decks/new"
+                to={user?.role === 'contractor' ? '/contractor/decks/new' : '/customer/decks/new'}
                 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-primary)' }}
               >
                 + New Deck

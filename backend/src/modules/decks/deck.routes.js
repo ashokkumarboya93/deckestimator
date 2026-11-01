@@ -41,3 +41,4 @@ router.patch('/:deckId', validate(updateDeckSchema), deckController.updateDeck);
 router.delete('/:deckId', validate(deckIdParamSchema), deckController.deleteDeck);
 
 module.exports = router;
+
