@@ -65,3 +65,4 @@ serviceCategorySchema.index({ status: 1, displayOrder: 1 });
 const ServiceCategory = mongoose.model('ServiceCategory', serviceCategorySchema, 'serviceCategories');
 
 module.exports = ServiceCategory;
+

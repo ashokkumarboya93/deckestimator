@@ -922,3 +922,4 @@ module.exports = {
   updateCompatibility,
   deleteCompatibility,
 };
+

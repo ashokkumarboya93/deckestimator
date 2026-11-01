@@ -199,3 +199,4 @@ export async function deleteCompatibility(id) {
   });
   return res.data;
 }
+

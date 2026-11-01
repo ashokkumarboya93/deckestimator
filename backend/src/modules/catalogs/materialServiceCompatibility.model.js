@@ -66,3 +66,4 @@ const MaterialServiceCompatibility = mongoose.model(
 );
 
 module.exports = MaterialServiceCompatibility;
+
