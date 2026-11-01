@@ -8,22 +8,35 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const UPLOADS_DIR = path.resolve(__dirname, '../../../uploads/decks');
+const BASE_UPLOADS_DIR = path.resolve(__dirname, '../../../uploads');
+const DECKS_DIR = path.join(BASE_UPLOADS_DIR, 'decks');
+const DOCS_DIR = path.join(BASE_UPLOADS_DIR, 'contractor-documents');
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+// Ensure upload directories exist
+[DECKS_DIR, DOCS_DIR].forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 const storageProvider = {
   /**
    * Save buffer or stream to storage.
    * Generates a collision-resistant UUID filename to prevent path traversal.
    */
-  async saveFile(buffer, originalname, mimeType) {
-    const ext = path.extname(originalname).toLowerCase() || (mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg');
+  async saveFile(buffer, originalname, mimeType, subDir = 'decks') {
+    const ext =
+      path.extname(originalname).toLowerCase() ||
+      (mimeType === 'application/pdf'
+        ? '.pdf'
+        : mimeType === 'image/png'
+        ? '.png'
+        : mimeType === 'image/webp'
+        ? '.webp'
+        : '.jpg');
     const filename = `${crypto.randomUUID()}${ext}`;
-    const destinationPath = path.join(UPLOADS_DIR, filename);
+    const targetDir = subDir === 'contractor-documents' ? DOCS_DIR : DECKS_DIR;
+    const destinationPath = path.join(targetDir, filename);
 
     await fs.promises.writeFile(destinationPath, buffer);
 
@@ -31,30 +44,39 @@ const storageProvider = {
       storageKey: filename,
       storageProvider: 'local',
       fileSize: buffer.length,
+      subDir,
     };
   },
 
   /**
    * Get absolute filepath for local file serving.
    */
-  getFilePath(storageKey) {
+  getFilePath(storageKey, subDir = null) {
     // Prevent directory traversal
     const safeKey = path.basename(storageKey);
-    const resolvedPath = path.join(UPLOADS_DIR, safeKey);
-    if (!fs.existsSync(resolvedPath)) {
-      return null;
+    if (subDir === 'contractor-documents') {
+      const p = path.join(DOCS_DIR, safeKey);
+      return fs.existsSync(p) ? p : null;
     }
-    return resolvedPath;
+    // Check default DECKS_DIR first, then DOCS_DIR
+    const deckPath = path.join(DECKS_DIR, safeKey);
+    if (fs.existsSync(deckPath)) {
+      return deckPath;
+    }
+    const docPath = path.join(DOCS_DIR, safeKey);
+    if (fs.existsSync(docPath)) {
+      return docPath;
+    }
+    return null;
   },
 
   /**
    * Delete file from storage.
    */
-  async deleteFile(storageKey) {
+  async deleteFile(storageKey, subDir = null) {
     try {
-      const safeKey = path.basename(storageKey);
-      const filePath = path.join(UPLOADS_DIR, safeKey);
-      if (fs.existsSync(filePath)) {
+      const filePath = this.getFilePath(storageKey, subDir);
+      if (filePath && fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);
       }
       return true;

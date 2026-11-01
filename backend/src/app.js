@@ -85,6 +85,13 @@ const conditionAnalysisRoutes = require('./modules/condition-analysis/conditionA
 
 app.use('/api/v1/condition-analyses', conditionAnalysisRoutes);
 
+// Phase 8: Contractor Verification & Lead Management routes
+const contractorRoutes = require('./modules/contractors/contractor.routes');
+const leadRoutes = require('./modules/leads/lead.routes');
+
+app.use('/api/v1/contractors', contractorRoutes);
+app.use('/api/v1/leads', leadRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //

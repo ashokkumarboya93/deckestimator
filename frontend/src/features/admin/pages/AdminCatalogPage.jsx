@@ -3,6 +3,7 @@
 // =============================================
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MaterialCategoriesTab from '../components/MaterialCategoriesTab';
 import MaterialsTab from '../components/MaterialsTab';
 import ServiceCategoriesTab from '../components/ServiceCategoriesTab';
@@ -21,6 +22,7 @@ const TABS = [
 ];
 
 export default function AdminCatalogPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('materials');
   const { user } = useAuth();
 
@@ -32,6 +34,40 @@ export default function AdminCatalogPage() {
           <div style={styles.badgeRow}>
             <span style={styles.adminBadge}>Admin Portal</span>
             <span style={styles.phaseBadge}>Phase 5 Catalog</span>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/contractor-verifications')}
+              style={{
+                marginLeft: '12px',
+                padding: '4px 10px',
+                backgroundColor: '#e0f2fe',
+                color: '#0369a1',
+                border: '1px solid #bae6fd',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              🛡 Contractor Verifications →
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/leads')}
+              style={{
+                marginLeft: '6px',
+                padding: '4px 10px',
+                backgroundColor: '#dcfce7',
+                color: '#15803d',
+                border: '1px solid #bbf7d0',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              📥 Leads Hub →
+            </button>
           </div>
           <h1 style={styles.pageTitle}>Material & Service Catalog Management</h1>
           <p style={styles.subtitle}>

@@ -13,6 +13,8 @@ import ContractorDashboardPage from '../features/contractor/pages/ContractorDash
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
 import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
+import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
+import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
@@ -164,13 +166,33 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // Admin Routes (Phase 5)
+      // Admin Routes (Phase 5 & 8)
       {
         path: 'admin/catalog',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['admin']}>
               <AdminCatalogPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/contractor-verifications',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['admin']}>
+              <AdminContractorVerificationPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/leads',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['admin']}>
+              <AdminLeadManagementPage />
             </RequireRole>
           </RequireAuth>
         ),

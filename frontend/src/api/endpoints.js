@@ -87,20 +87,37 @@ export const ENDPOINTS = {
     ML_HEALTH: '/condition-analyses/ml-health',
   },
 
-  // Leads (Phase 10)
+  // Leads (Phase 8)
   LEADS: {
     BASE: '/leads',
+    MY_LEADS: '/leads/my-leads',
     BY_ID: (id) => `/leads/${id}`,
+    ACTIVITIES: (id) => `/leads/${id}/activities`,
+    NOTES: (id) => `/leads/${id}/notes`,
+    ADMIN_ALL: '/leads/admin/all',
+    ADMIN_ANALYTICS: '/leads/admin/analytics',
+    ADMIN_ASSIGN: (id) => `/leads/admin/${id}/assign`,
+    ADMIN_CLOSE: (id) => `/leads/admin/${id}/close`,
+    ADMIN_HISTORY: (id) => `/leads/admin/${id}/history`,
+    CONTRACTOR_INBOX: '/leads/contractor/inbox',
+    CONTRACTOR_ACCEPT: (id) => `/leads/contractor/${id}/accept`,
+    CONTRACTOR_REJECT: (id) => `/leads/contractor/${id}/reject`,
+    CONTRACTOR_STATUS: (id) => `/leads/contractor/${id}/status`,
   },
 
-  // Contractors (Phase 10)
+  // Contractors & Verification (Phase 8)
   CONTRACTORS: {
     ME: '/contractors/me',
-    APPLICATION: '/contractors/application',
-    STATUS: '/contractors/me/status',
+    SUBMIT_VERIFICATION: '/contractors/me/verification/submit',
+    DOCUMENTS: '/contractors/me/verification/documents',
+    DOCUMENT_FILE: (id) => `/contractors/documents/${id}/file`,
+    ELIGIBLE: '/contractors/eligible',
+    ADMIN_VERIFICATIONS: '/contractors/admin/verifications',
+    ADMIN_VERIFICATION_BY_ID: (id) => `/contractors/admin/verifications/${id}`,
+    ADMIN_VERIFICATION_REVIEW: (id) => `/contractors/admin/verifications/${id}/review`,
   },
 
-  // Admin (Phase 11)
+  // Admin (Phase 10/11)
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
     USERS: '/admin/users',

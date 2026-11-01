@@ -48,20 +48,50 @@ function App() {
                 + New Deck
               </Link>
               {user?.role === 'admin' && (
-                <Link
-                  to="/admin/catalog"
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#d32f2f',
-                    backgroundColor: '#ffebee',
-                    padding: '3px 10px',
-                    borderRadius: '4px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Catalog Management
-                </Link>
+                <>
+                  <Link
+                    to="/admin/catalog"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#d32f2f',
+                      backgroundColor: '#ffebee',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Catalog
+                  </Link>
+                  <Link
+                    to="/admin/contractor-verifications"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#0369a1',
+                      backgroundColor: '#e0f2fe',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Verifications
+                  </Link>
+                  <Link
+                    to="/admin/leads"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#15803d',
+                      backgroundColor: '#dcfce7',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Leads Hub
+                  </Link>
+                </>
               )}
             </nav>
           )}
