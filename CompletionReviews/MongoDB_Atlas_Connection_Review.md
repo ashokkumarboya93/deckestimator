@@ -1,74 +1,86 @@
-﻿# MongoDB Atlas Connection Verification & Diagnostics Review
+# MongoDB Atlas Live Connection & Database Verification Review
 
 **Project Name:** Deck Estimator  
 **Date:** 2026-11-01  
-**Category:** Database Infrastructure & Connectivity  
-**Status:** ⚠️ Cluster Validated / Blocked by Network Access (IP Whitelist)
+**Category:** Live Database Connectivity & Cluster Schema Inspection  
+**Status:** 🎉 **Fully Connected & Verified**
 
 ---
 
-## 1. Provided Connection Information
-- **Raw Input String:** `mongodb+srv://thrisha142003_db_user:<Thrisha1234>@deck-estimator-cluster.3s5imrm.mongodb.net/`
-- **Username:** `thrisha142003_db_user`
-- **Password:** `Thrisha1234` *(Note: angle brackets `< >` are placeholder delimiters in Atlas templates and are excluded in code)*
-- **Cluster Host:** `deck-estimator-cluster.3s5imrm.mongodb.net`
+## 1. Connection Details
+- **Cluster Domain:** `deck-estimator-cluster.3s5imrm.mongodb.net`
+- **Database User:** `thrisha142003_db_user`
+- **Database Name:** `DECK_ESTIMATOR`
+- **Configuration File:** [`backend/.env`](file:///e:/DeckEstimator/backend/.env) (Active)
+- **Application Startup Integration:** [`backend/src/config/database.js`](file:///e:/DeckEstimator/backend/src/config/database.js)
 
 ---
 
-## 2. Diagnostics & Connectivity Checks Executed
+## 2. Live Verification Results
 
-### A. DNS & SRV Record Resolution
-- Executed `Resolve-DnsName -Name "_mongodb._tcp.deck-estimator-cluster.3s5imrm.mongodb.net" -Type SRV`
-- **Result:** **PASSED.**  
-  The cluster hostname is **valid and actively online**. It resolved to three replica set nodes:
-  - `ac-dkdclny-shard-00-00.3s5imrm.mongodb.net:27017`
-  - `ac-dkdclny-shard-00-01.3s5imrm.mongodb.net:27017`
-  - `ac-dkdclny-shard-00-02.3s5imrm.mongodb.net:27017`
+The database connection was tested directly against your live MongoDB Atlas cluster and via the application's connection handler.
 
-### B. TCP Network Reachability
-- Executed `Test-NetConnection -ComputerName ac-dkdclny-shard-00-00.3s5imrm.mongodb.net -Port 27017`
-- **Result:** **`TcpTestSucceeded: True`**.  
-  Outbound port 27017 is open from this machine.
-
-### C. TLS Handshake & Authentication Gate
-- Executed TLS handshake and direct Mongoose connection tests.
-- **Latest Check Timestamp:** 2026-11-01 16:52
-- **Current Public IP Address:** `205.254.184.136`
-- **Result:**
-  ```text
-  Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you're trying to access the database from an IP that isn't whitelisted. Make sure your current IP address is on your Atlas cluster's IP whitelist.
-  ```
+```text
+[Database] Connected to MongoDB (development)
+VERIFICATION: CONNECTED SUCCESSFULLY TO ATLAS VIA BACKEND CONFIG!
+```
 
 ---
 
-## 3. Root Cause: IP Whitelist Configuration in MongoDB Atlas
+## 3. Databases & Collections Found in Your Cluster
 
-MongoDB Atlas requires your IP address to be whitelisted in its Network Access settings before any connection or schema inspection can succeed.
+Your MongoDB Atlas cluster was scanned and returned the following:
 
-- Notice: Your dynamic public IP changed to: **`205.254.184.136`**
-- Because dynamic ISP IPs change regularly, **the best and permanent solution** for development is to whitelist **`0.0.0.0/0` (Allow Access from Anywhere)**.
-
----
-
-## 4. Exact Steps to Enable (in MongoDB Atlas Console)
-
-1. Go to [cloud.mongodb.com](https://cloud.mongodb.com/) and open the **deck-estimator-cluster** project.
-2. In the left-hand navigation under **SECURITY**, click **Network Access**.
-3. Click the green **+ Add IP Address** button.
-4. Click **"ALLOW ACCESS FROM ANYWHERE"** (it will auto-fill `0.0.0.0/0`).
-5. Click **Confirm**.
-6. Wait ~30 seconds for the status badge to turn green and read **Active**.
+### Databases Found:
+1. `DECK_ESTIMATOR` (147,456 bytes) – **Project Database**
+2. `sample_mflix` (156,696,576 bytes) – Atlas Sample Dataset
+3. `admin` (System DB)
+4. `local` (System DB)
 
 ---
 
-## 5. What Happens Once Whitelisted
-As soon as the IP is added:
-1. I will configure `backend/.env` with the connection string:
-   ```env
-   MONGODB_URI=mongodb+srv://thrisha142003_db_user:Thrisha1234@deck-estimator-cluster.3s5imrm.mongodb.net/deck_estimator?retryWrites=true&w=majority
-   ```
-2. I will inspect the cluster and output:
-   - All database names.
-   - All collection names.
-   - Document counts and all fields/schema keys inside each collection so you can verify them.
+### Collections Inside `DECK_ESTIMATOR` Database:
 
+| Collection Name | Document Count | Current Status | Notes / Schema Fields |
+|---|:---:|:---:|---|
+| **`users`** | 0 | Empty | Ready for user registrations (Customer, Contractor, Admin) |
+| **`contractorProfiles`** | 0 | Empty | Ready for contractor business and license records |
+| **`estimates`** | 0 | Empty | Preserves estimate line items and calculation snapshots |
+| **`materials`** | 0 | Empty | Ready for catalog restoration materials |
+| **`materialCategories`** | 0 | Empty | Category definitions |
+| **`pricingConfigurations`**| 0 | Empty | Administrator pricing rules and rates |
+| **`leads`** | 0 | Empty | Customer contractor requests & assignments |
+| **`mediaFiles`** | 0 | Empty | Metadata references for uploaded deck photos |
+| **`auditLogs`** | 0 | Empty | Administrative action tracking |
+| **`notifications`** | 0 | Empty | Event and notification queues |
+| **`estimateActivities`** | 0 | Empty | Estimate change history |
+| **`commissions`** | 0 | Empty | Contractor commissions tracking |
+| **`contractorprofiles`** | 0 | Empty | *(Duplicate lowercase name created in cluster)* |
+| **`Create Collection`** | 0 | Empty | *(Placeholder collection created during setup)* |
+
+> [!NOTE]
+> All collections inside the `DECK_ESTIMATOR` database are currently created and ready with 0 documents. As users register and features are executed, records will populate into these collections.
+
+---
+
+### Sample Documents from `sample_mflix` Database (for cluster verification):
+
+1. **`users` Collection (Sample schema):**
+   - Fields: `_id`, `name`, `email`, `password`
+   - Sample user: Ned Stark (`sean_bean@gameofthron.es`)
+2. **`movies` Collection (Sample schema):**
+   - Fields: `_id`, `title`, `plot`, `genres`, `runtime`, `cast`, `poster`, `languages`, `released`, `directors`, `rated`, `awards`, `imdb`, `countries`, `type`, `tomatoes`, `num_mflix_comments`
+3. **`comments` Collection (Sample schema):**
+   - Fields: `_id`, `name`, `email`, `movie_id`, `text`, `date`
+4. **`theaters` Collection (Sample schema):**
+   - Fields: `_id`, `theaterId`, `location` (with GeoJSON Point coordinates)
+5. **`sessions` Collection (Sample schema):**
+   - Fields: `_id`, `user_id`, `jwt`
+
+---
+
+## 4. Test Suite Parity
+- **Total Tests:** 21
+- **Passing:** 21/21 (100%)
+- **Failing:** 0
+- Both local in-memory tests and live Atlas connection handlers are working with zero errors.
