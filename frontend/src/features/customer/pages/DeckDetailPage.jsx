@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getDeckById } from '../api/decksApi';
 import PhotoUploader from '../components/PhotoUploader';
 import ImageGallery from '../components/ImageGallery';
+import DeckAnalysisSection from '../components/DeckAnalysisSection';
 
 export default function DeckDetailPage() {
   const navigate = useNavigate();
@@ -231,6 +232,9 @@ export default function DeckDetailPage() {
           }}
         />
       </div>
+
+      {/* AI Visual Condition Analysis (Phase 7) */}
+      <DeckAnalysisSection deckId={deck.id || deck._id} />
     </div>
   );
 }

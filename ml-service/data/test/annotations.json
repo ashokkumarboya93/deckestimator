@@ -1,0 +1,407 @@
+[
+  {
+    "imageId": "img-test-L1-000",
+    "filename": "condition_L1_test_000.jpg",
+    "deckId": "deck_test_001",
+    "deckType": "wood",
+    "conditionLevel": 1,
+    "conditionLabel": "GOOD",
+    "defects": [],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L1-001",
+    "filename": "condition_L1_test_001.jpg",
+    "deckId": "deck_test_002",
+    "deckType": "wood",
+    "conditionLevel": 1,
+    "conditionLabel": "GOOD",
+    "defects": [],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L1-002",
+    "filename": "condition_L1_test_002.jpg",
+    "deckId": "deck_test_003",
+    "deckType": "wood",
+    "conditionLevel": 1,
+    "conditionLabel": "GOOD",
+    "defects": [],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L1-003",
+    "filename": "condition_L1_test_003.jpg",
+    "deckId": "deck_test_004",
+    "deckType": "wood",
+    "conditionLevel": 1,
+    "conditionLabel": "GOOD",
+    "defects": [],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L1-004",
+    "filename": "condition_L1_test_004.jpg",
+    "deckId": "deck_test_005",
+    "deckType": "wood",
+    "conditionLevel": 1,
+    "conditionLabel": "GOOD",
+    "defects": [],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L2-000",
+    "filename": "condition_L2_test_000.jpg",
+    "deckId": "deck_test_006",
+    "deckType": "wood",
+    "conditionLevel": 2,
+    "conditionLabel": "MILD_WEAR",
+    "defects": [
+      "FADING_DISCOLORATION",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L2-001",
+    "filename": "condition_L2_test_001.jpg",
+    "deckId": "deck_test_007",
+    "deckType": "wood",
+    "conditionLevel": 2,
+    "conditionLabel": "MILD_WEAR",
+    "defects": [
+      "FADING_DISCOLORATION",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L2-002",
+    "filename": "condition_L2_test_002.jpg",
+    "deckId": "deck_test_008",
+    "deckType": "wood",
+    "conditionLevel": 2,
+    "conditionLabel": "MILD_WEAR",
+    "defects": [
+      "FADING_DISCOLORATION",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L2-003",
+    "filename": "condition_L2_test_003.jpg",
+    "deckId": "deck_test_009",
+    "deckType": "wood",
+    "conditionLevel": 2,
+    "conditionLabel": "MILD_WEAR",
+    "defects": [
+      "FADING_DISCOLORATION",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L2-004",
+    "filename": "condition_L2_test_004.jpg",
+    "deckId": "deck_test_010",
+    "deckType": "wood",
+    "conditionLevel": 2,
+    "conditionLabel": "MILD_WEAR",
+    "defects": [
+      "FADING_DISCOLORATION",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L3-000",
+    "filename": "condition_L3_test_000.jpg",
+    "deckId": "deck_test_011",
+    "deckType": "wood",
+    "conditionLevel": 3,
+    "conditionLabel": "MODERATE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "FADING_DISCOLORATION",
+      "DARK_STAINING"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L3-001",
+    "filename": "condition_L3_test_001.jpg",
+    "deckId": "deck_test_012",
+    "deckType": "wood",
+    "conditionLevel": 3,
+    "conditionLabel": "MODERATE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "FADING_DISCOLORATION",
+      "DARK_STAINING"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L3-002",
+    "filename": "condition_L3_test_002.jpg",
+    "deckId": "deck_test_013",
+    "deckType": "wood",
+    "conditionLevel": 3,
+    "conditionLabel": "MODERATE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "FADING_DISCOLORATION",
+      "DARK_STAINING"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L3-003",
+    "filename": "condition_L3_test_003.jpg",
+    "deckId": "deck_test_014",
+    "deckType": "wood",
+    "conditionLevel": 3,
+    "conditionLabel": "MODERATE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "FADING_DISCOLORATION",
+      "DARK_STAINING"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L3-004",
+    "filename": "condition_L3_test_004.jpg",
+    "deckId": "deck_test_015",
+    "deckType": "wood",
+    "conditionLevel": 3,
+    "conditionLabel": "MODERATE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "FADING_DISCOLORATION",
+      "DARK_STAINING"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L4-000",
+    "filename": "condition_L4_test_000.jpg",
+    "deckId": "deck_test_016",
+    "deckType": "wood",
+    "conditionLevel": 4,
+    "conditionLabel": "SEVERE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "CRACKS",
+      "COATING_LOSS",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L4-001",
+    "filename": "condition_L4_test_001.jpg",
+    "deckId": "deck_test_017",
+    "deckType": "wood",
+    "conditionLevel": 4,
+    "conditionLabel": "SEVERE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "CRACKS",
+      "COATING_LOSS",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L4-002",
+    "filename": "condition_L4_test_002.jpg",
+    "deckId": "deck_test_018",
+    "deckType": "wood",
+    "conditionLevel": 4,
+    "conditionLabel": "SEVERE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "CRACKS",
+      "COATING_LOSS",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L4-003",
+    "filename": "condition_L4_test_003.jpg",
+    "deckId": "deck_test_019",
+    "deckType": "wood",
+    "conditionLevel": 4,
+    "conditionLabel": "SEVERE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "CRACKS",
+      "COATING_LOSS",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L4-004",
+    "filename": "condition_L4_test_004.jpg",
+    "deckId": "deck_test_020",
+    "deckType": "wood",
+    "conditionLevel": 4,
+    "conditionLabel": "SEVERE_DETERIORATION",
+    "defects": [
+      "PEELING_COATING",
+      "CRACKS",
+      "COATING_LOSS",
+      "SURFACE_WEAR"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L5-000",
+    "filename": "condition_L5_test_000.jpg",
+    "deckId": "deck_test_021",
+    "deckType": "wood",
+    "conditionLevel": 5,
+    "conditionLabel": "SIGNIFICANT_WOOD_DAMAGE",
+    "defects": [
+      "SPLINTERING",
+      "VISIBLE_WOOD_DAMAGE",
+      "CRACKS"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L5-001",
+    "filename": "condition_L5_test_001.jpg",
+    "deckId": "deck_test_022",
+    "deckType": "wood",
+    "conditionLevel": 5,
+    "conditionLabel": "SIGNIFICANT_WOOD_DAMAGE",
+    "defects": [
+      "SPLINTERING",
+      "VISIBLE_WOOD_DAMAGE",
+      "CRACKS"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L5-002",
+    "filename": "condition_L5_test_002.jpg",
+    "deckId": "deck_test_023",
+    "deckType": "wood",
+    "conditionLevel": 5,
+    "conditionLabel": "SIGNIFICANT_WOOD_DAMAGE",
+    "defects": [
+      "SPLINTERING",
+      "VISIBLE_WOOD_DAMAGE",
+      "CRACKS"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L5-003",
+    "filename": "condition_L5_test_003.jpg",
+    "deckId": "deck_test_024",
+    "deckType": "wood",
+    "conditionLevel": 5,
+    "conditionLabel": "SIGNIFICANT_WOOD_DAMAGE",
+    "defects": [
+      "SPLINTERING",
+      "VISIBLE_WOOD_DAMAGE",
+      "CRACKS"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  },
+  {
+    "imageId": "img-test-L5-004",
+    "filename": "condition_L5_test_004.jpg",
+    "deckId": "deck_test_025",
+    "deckType": "wood",
+    "conditionLevel": 5,
+    "conditionLabel": "SIGNIFICANT_WOOD_DAMAGE",
+    "defects": [
+      "SPLINTERING",
+      "VISIBLE_WOOD_DAMAGE",
+      "CRACKS"
+    ],
+    "imageQuality": "GOOD",
+    "annotationStatus": "APPROVED",
+    "annotatorId": "pilot-generator-001",
+    "reviewerId": "lead-cv-engineer"
+  }
+]

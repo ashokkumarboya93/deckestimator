@@ -14,6 +14,11 @@ const {
   deckIdParamSchema,
 } = require('./deck.validation');
 const fileRoutes = require('../files/file.routes');
+const conditionAnalysisController = require('../condition-analysis/conditionAnalysis.controller');
+const {
+  createAnalysisSchema,
+  deckIdParamSchema: analysisDeckIdParamSchema,
+} = require('../condition-analysis/conditionAnalysis.validation');
 
 const router = express.Router();
 
@@ -32,6 +37,18 @@ router.use(deckRoleCheck);
 
 // Mount nested file/image endpoints: /api/v1/decks/:deckId/images
 router.use('/:deckId/images', fileRoutes);
+
+// Mount nested analysis endpoints: /api/v1/decks/:deckId/analyses (Phase 7)
+router.post(
+  '/:deckId/analyses',
+  validate(createAnalysisSchema),
+  conditionAnalysisController.createAnalysis
+);
+router.get(
+  '/:deckId/analyses',
+  validate(analysisDeckIdParamSchema),
+  conditionAnalysisController.getDeckAnalyses
+);
 
 // CRUD Endpoints for Decks
 router.post('/', validate(createDeckSchema), deckController.createDeck);

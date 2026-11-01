@@ -77,6 +77,16 @@ export const ENDPOINTS = {
     REPORT: (id) => `/estimates/${id}/report`,
   },
 
+  // Condition Analysis (Phase 7)
+  ANALYSES: {
+    BASE: '/condition-analyses',
+    DECK_ANALYSES: (deckId) => `/condition-analyses/decks/${deckId}/analyses`,
+    BY_ID: (id) => `/condition-analyses/${id}`,
+    RETRY: (id) => `/condition-analyses/${id}/retry`,
+    REVIEW: (id) => `/condition-analyses/${id}/review`,
+    ML_HEALTH: '/condition-analyses/ml-health',
+  },
+
   // Leads (Phase 10)
   LEADS: {
     BASE: '/leads',

@@ -1,0 +1,52 @@
+{
+  "modelName": "MobileNetV3-DeckCondition",
+  "modelVersion": "1.0.0",
+  "architecture": "MobileNetV3-Small (Multi-Task)",
+  "datasetVersion": "pilot-v1",
+  "trainSamples": 75,
+  "valSamples": 25,
+  "testSamples": 25,
+  "epochs": 5,
+  "batchSize": 8,
+  "learningRate": 0.001,
+  "bestValLoss": 1.4643,
+  "finalValAccuracy": 0.8,
+  "durationSeconds": 38.62,
+  "history": [
+    {
+      "epoch": 1,
+      "trainLoss": 2.1807,
+      "trainAcc": 0.4933,
+      "valLoss": 1.9976,
+      "valAcc": 0.44
+    },
+    {
+      "epoch": 2,
+      "trainLoss": 1.3215,
+      "trainAcc": 0.7467,
+      "valLoss": 2.1278,
+      "valAcc": 0.28
+    },
+    {
+      "epoch": 3,
+      "trainLoss": 0.6914,
+      "trainAcc": 0.92,
+      "valLoss": 3.9189,
+      "valAcc": 0.36
+    },
+    {
+      "epoch": 4,
+      "trainLoss": 0.837,
+      "trainAcc": 0.8933,
+      "valLoss": 2.0378,
+      "valAcc": 0.72
+    },
+    {
+      "epoch": 5,
+      "trainLoss": 0.337,
+      "trainAcc": 0.9467,
+      "valLoss": 1.4643,
+      "valAcc": 0.8
+    }
+  ]
+}

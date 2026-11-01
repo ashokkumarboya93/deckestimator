@@ -3,9 +3,9 @@
 **Project Name:** Deck Estimator  
 **Repository:** https://github.com/ashokkumarboya93/deckestimator.git  
 **Active Branch:** `dev2`  
-**Target Architecture:** Modular Monolithic Architecture (MERN Stack: React 19 + Express + MongoDB Atlas)  
+**Target Architecture:** Modular Monolithic Architecture (MERN Stack: React 19 + Express + MongoDB Atlas) + Isolated ML Component (Python FastAPI)  
 **Database Cluster:** `deck-estimator-cluster.3s5imrm.mongodb.net` (`DECK_ESTIMATOR`)  
-**Backend Automated Test Suite:** 94 / 94 Passing (100% Pass Rate)  
+**Backend Automated Test Suite:** 108 / 108 Passing (100% Pass Rate)  
 **Frontend Production Build:** Vite v8.3.5 (0 Errors)  
 **Last Updated:** November 1, 2026  
 
@@ -21,8 +21,8 @@
 | **Phase 4** | Deck Input Management & Secure File Uploads | ✅ Completed | [Phase-04-Review.md](./Phase-04-Review.md) | 22/22 deck CRUD, unit conversion & gallery tests |
 | **Phase 5** | Material & Service Catalog Management | ✅ Completed | [Phase-05-Review.md](./Phase-05-Review.md) | 36/36 catalog tests + live Atlas verification |
 | **Phase 6** | Pricing Calculation Engine & Estimate Management | ✅ Completed | [Phase-06-Review.md](./Phase-06-Review.md) | 16/16 pricing & estimate tests + live Atlas verification |
-| **Phase 7** | AI-Based Deck Condition Analysis | ⏳ **Next (Awaiting Explicit Approval)** | Pending | To be started upon user instruction |
-| **Phase 8** | Contractor Verification & Lead Management | ⏳ Upcoming | Pending | Pending |
+| **Phase 7** | AI-Based Deck Condition Analysis | ✅ Completed | [Phase-07-Review.md](./Phase-07-Review.md) | 14/14 AI condition analysis tests + ML evaluation + live Atlas verification |
+| **Phase 8** | Contractor Verification & Lead Management | ⏳ **Next (Awaiting Explicit Approval)** | Pending | To be started upon user instruction |
 | **Phase 9** | Contractor Discounts & Commission Management | ⏳ Upcoming | Pending | Pending |
 | **Phase 10** | Administrative Dashboard & Platform Management | ⏳ Upcoming | Pending | Pending |
 | **Phase 11** | Integration, Security & Quality Assurance | ⏳ Upcoming | Pending | Pending |
@@ -63,8 +63,20 @@
   - **Estimate Management** (`/api/v1/estimates`): Creation from deck specifications, detailed transparent breakdowns, status lifecycle (`DRAFT`, `SUBMITTED`, `COMPLETED`, `CANCELLED`), customer and approved-contractor isolation.
   - **Historical Revision Preservation** (`EstimateRevision`): On recalculation, preserves previous pricing snapshots and material/service line items while incrementing estimate version (`v1` -> `v2` -> `v3`).
   - **Frontend Experience**: Estimate Builder (`EstimateBuilderPage.jsx`), detailed breakdown with transparent formulas (`EstimateDetailPage.jsx`), and Admin pricing rules portal (`PricingConfigTab.jsx`).
-- **Tests:** 16 integration tests (Total backend suite: 94/94 passing) + live MongoDB Atlas script (`verify-phase6-atlas.js`).
+- **Tests:** 16 integration tests + live MongoDB Atlas script (`verify-phase6-atlas.js`).
 - **Review:** [Phase-06-Review.md](./Phase-06-Review.md)
+
+### Phase 7: AI-Based Deck Condition Analysis
+- **Deliverables:**
+  - **Isolated Python FastAPI Inference Service** (`ml-service/`): Health check (`GET /health`) and inference (`POST /api/v1/analyze`).
+  - **MobileNetV3 Multi-Task Deep Learning Model**: Transfer learning on MobileNetV3-Small predicting 5 condition severity levels and 9 visible defect categories.
+  - **Optical Image Quality Assessment**: Pre-inference mathematical assessment of blur (Laplacian variance), exposure (brightness histogram), and resolution, returning explicit `UNABLE_TO_ASSESS` state on poor quality photographs.
+  - **Uncertainty & Manual Review Safeguards**: Low confidence (<55%) or Level 5 wood damage detections automatically flag `REQUIRES_MANUAL_REVIEW`.
+  - **Express Backend Module** (`/api/v1/condition-analyses`): Protected routes, deck ownership checks, physical image retrieval, ML client communication, and MongoDB persistence (`deckConditionAnalyses`).
+  - **Frontend Experience**: Embeddable `DeckAnalysisSection.jsx` and `AnalysisReportCard.jsx` displaying condition level badges, defect tags, optical sharpness metrics, and advisory limitations.
+  - **Reproducible ML Pipeline**: Train/val/test split verification without deck leakage, training script (`train.py`), and test evaluation report (`evaluate.py`) recording 80.0% accuracy on held-out test data.
+- **Tests:** 14 integration tests (Total backend suite: 108/108 passing) + live MongoDB Atlas script (`verify-phase7-atlas.js`).
+- **Review:** [Phase-07-Review.md](./Phase-07-Review.md)
 
 ---
 
@@ -80,16 +92,39 @@ DeckEstimator/
 │   ├── Phase-04-Review.md
 │   ├── Phase-05-Review.md
 │   ├── Phase-06-Review.md
+│   ├── Phase-07-Review.md
 │   └── Project_Roadmap_Progress.md
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── Phase_4.md
 │   ├── Phase_5
-│   └── Phase-6
+│   ├── Phase-6
+│   └── phase_7
+├── ml-service/
+│   ├── app/
+│   │   ├── image_quality.py
+│   │   ├── model.py
+│   │   └── preprocessing.py
+│   ├── data/
+│   │   ├── train/ (annotations.json & sample images)
+│   │   ├── val/
+│   │   └── test/
+│   ├── models/
+│   │   ├── deck_condition_mobilenet_v3.pth
+│   │   ├── training_metadata.json
+│   │   └── evaluation_report.json
+│   ├── training/
+│   │   ├── dataset.py
+│   │   ├── pilot_dataset_generator.py
+│   │   ├── train.py
+│   │   └── evaluate.py
+│   ├── main.py
+│   └── requirements.txt
 ├── backend/
 │   ├── scripts/
 │   │   ├── verify-phase5-atlas.js
-│   │   └── verify-phase6-atlas.js
+│   │   ├── verify-phase6-atlas.js
+│   │   └── verify-phase7-atlas.js
 │   ├── src/
 │   │   ├── config/
 │   │   ├── middleware/
@@ -100,6 +135,7 @@ DeckEstimator/
 │   │   │   ├── catalogs/
 │   │   │   ├── pricing/
 │   │   │   ├── estimates/
+│   │   │   ├── condition-analysis/
 │   │   │   └── contractors/
 │   │   ├── shared/
 │   │   │   ├── constants/
@@ -112,7 +148,8 @@ DeckEstimator/
 │           ├── auth.test.js
 │           ├── decks.test.js
 │           ├── catalog.test.js
-│           └── estimates.test.js
+│           ├── estimates.test.js
+│           └── conditionAnalysis.test.js
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
@@ -131,7 +168,7 @@ DeckEstimator/
 
 ## 4. Quality & Compliance Metrics
 
-- **Unit & Integration Test Pass Rate:** 94 / 94 (100%)
+- **Unit & Integration Test Pass Rate:** 108 / 108 (100%)
 - **Static Analysis & Linting:** 0 Errors (`oxlint`)
 - **Frontend Production Build:** Success (`vite build`)
 - **Live Database Compatibility:** Verified against strict `$jsonSchema` validators on live MongoDB Atlas cluster
@@ -142,4 +179,4 @@ DeckEstimator/
 ## 5. Next Immediate Step
 
 **HALTED AT MANDATORY STOP GATE.**  
-Awaiting explicit user authorization before commencing **Phase 7: AI-Based Deck Condition Analysis**.
+Awaiting explicit user authorization before commencing **Phase 8: Contractor Verification & Lead Management**.

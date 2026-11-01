@@ -7,6 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getDeckById } from '../../customer/api/decksApi';
 import PhotoUploader from '../../customer/components/PhotoUploader';
 import ImageGallery from '../../customer/components/ImageGallery';
+import DeckAnalysisSection from '../../customer/components/DeckAnalysisSection';
 
 export default function ContractorDeckDetailPage() {
   const navigate = useNavigate();
@@ -231,6 +232,9 @@ export default function ContractorDeckDetailPage() {
           }}
         />
       </div>
+
+      {/* AI Visual Condition Analysis (Phase 7) */}
+      <DeckAnalysisSection deckId={deck.id || deck._id} isContractor={true} />
     </div>
   );
 }

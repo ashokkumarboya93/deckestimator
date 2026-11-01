@@ -80,6 +80,11 @@ const estimateRoutes = require('./modules/estimates/estimate.routes');
 app.use('/api/v1/pricing', pricingRoutes);
 app.use('/api/v1/estimates', estimateRoutes);
 
+// Phase 7: AI-Based Condition Analysis routes
+const conditionAnalysisRoutes = require('./modules/condition-analysis/conditionAnalysis.routes');
+
+app.use('/api/v1/condition-analyses', conditionAnalysisRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //
