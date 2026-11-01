@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Contractor Layout
+﻿// =============================================
+// Deck Estimator — Contractor Layout
 // =============================================
 // Layout with contractor navigation and sidebar.
 

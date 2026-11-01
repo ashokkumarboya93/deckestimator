@@ -1,7 +1,7 @@
 {
-  "name": "deck-pro-backend",
+  "name": "deck-estimator-backend",
   "version": "0.1.0",
-  "description": "DECK PRO — Deck Restoration Estimator Backend API",
+  "description": "Deck Estimator — Deck Restoration Estimator Backend API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

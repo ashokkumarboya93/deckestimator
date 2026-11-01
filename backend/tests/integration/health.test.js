@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Health Endpoint Test
+﻿// =============================================
+// Deck Estimator — Health Endpoint Test
 // =============================================
 // Verifies the server starts and the health endpoint responds.
 

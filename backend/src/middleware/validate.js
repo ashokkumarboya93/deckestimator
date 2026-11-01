@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Request Validation Middleware
+﻿// =============================================
+// Deck Estimator — Request Validation Middleware
 // =============================================
 // Validates request body, params, and query using Joi schemas.
 

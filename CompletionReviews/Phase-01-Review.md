@@ -1,6 +1,6 @@
-# Phase 1 Completion Review: Project Skeleton, Architecture & Baseline Infrastructure
+﻿# Phase 1 Completion Review: Project Skeleton, Architecture & Baseline Infrastructure
 
-**Project Name:** DECK PRO — Deck Restoration Estimator  
+**Project Name:** Deck Estimator — Deck Restoration Estimator  
 **Phase:** 1 — Project Skeleton, Environment & Middleware Pipeline  
 **Completion Date:** 2026-10-29  
 **Repository:** https://github.com/ashokkumarboya93/deckestimator.git  

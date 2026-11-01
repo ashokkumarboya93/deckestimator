@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Admin Layout
+﻿// =============================================
+// Deck Estimator — Admin Layout
 // =============================================
 // Layout with admin navigation and sidebar.
 

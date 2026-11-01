@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Root Application Component
+﻿// =============================================
+// Deck Estimator — Root Application Component
 // =============================================
 
 import { Outlet } from 'react-router-dom';
@@ -9,7 +9,7 @@ function App() {
     <div className="app">
       <header style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--color-border)' }}>
         <h1 style={{ fontSize: '1.5rem', color: 'var(--color-primary)' }}>
-          DECK PRO
+          Deck Estimator
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
           Deck Restoration Estimator
@@ -30,7 +30,7 @@ function App() {
         }}>
           <h2 style={{ marginBottom: '0.5rem' }}>✅ Phase 1 Complete</h2>
           <p style={{ color: 'var(--color-text-muted)' }}>
-            The DECK PRO frontend skeleton is running successfully.
+            The Deck Estimator frontend skeleton is running successfully.
           </p>
           <p style={{ color: 'var(--color-text-muted)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
             Next: Phase 2 — Authentication &amp; Authorization

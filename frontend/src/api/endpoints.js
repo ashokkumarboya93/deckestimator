@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — API Endpoint Constants
+﻿// =============================================
+// Deck Estimator — API Endpoint Constants
 // =============================================
 // Central location for all API endpoint paths.
 

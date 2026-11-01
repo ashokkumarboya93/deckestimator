@@ -1,6 +1,6 @@
-# Phase 2 Completion Review: Authentication & Authorization
+﻿# Phase 2 Completion Review: Authentication & Authorization
 
-**Project Name:** DECK PRO — Deck Restoration Estimator  
+**Project Name:** Deck Estimator — Deck Restoration Estimator  
 **Phase:** 2 — User & Contractor Authentication & Authorization  
 **Completion Date:** 2026-10-29  
 **Repository:** https://github.com/ashokkumarboya93/deckestimator.git  

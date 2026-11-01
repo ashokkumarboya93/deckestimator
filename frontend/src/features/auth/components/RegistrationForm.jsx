@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Registration Form Component
+﻿// =============================================
+// Deck Estimator — Registration Form Component
 // =============================================
 
 import { useState } from 'react';

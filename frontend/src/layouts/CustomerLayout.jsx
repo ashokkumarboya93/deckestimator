@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Customer Layout
+﻿// =============================================
+// Deck Estimator — Customer Layout
 // =============================================
 // Layout with customer navigation and sidebar.
 

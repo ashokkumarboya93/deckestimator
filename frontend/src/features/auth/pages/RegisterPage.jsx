@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Register Page
+﻿// =============================================
+// Deck Estimator — Register Page
 // =============================================
 
 import { RegistrationForm } from '../components/RegistrationForm';

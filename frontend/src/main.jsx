@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — React Entry Point
+﻿// =============================================
+// Deck Estimator — React Entry Point
 // =============================================
 
 import { StrictMode } from 'react';

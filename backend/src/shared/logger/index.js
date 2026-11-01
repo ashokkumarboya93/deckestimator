@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Logger
+﻿// =============================================
+// Deck Estimator — Logger
 // =============================================
 // Simple structured logger. Replace with winston/pino in production if needed.
 

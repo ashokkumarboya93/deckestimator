@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Rate Limiting Middleware
+﻿// =============================================
+// Deck Estimator — Rate Limiting Middleware
 // =============================================
 // Protects authentication and abuse-prone endpoints.
 

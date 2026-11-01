@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Auth Controller
+﻿// =============================================
+// Deck Estimator — Auth Controller
 // =============================================
 
 const authService = require('./auth.service');

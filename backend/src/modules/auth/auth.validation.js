@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Auth Validation Schemas
+﻿// =============================================
+// Deck Estimator — Auth Validation Schemas
 // =============================================
 
 const Joi = require('joi');

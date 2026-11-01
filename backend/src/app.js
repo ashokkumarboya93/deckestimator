@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Express Application
+﻿// =============================================
+// Deck Estimator — Express Application
 // =============================================
 // Configures Express middleware and mounts API routes.
 // Does NOT start the server — that is server.js's job.

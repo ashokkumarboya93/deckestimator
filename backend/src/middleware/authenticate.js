@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Authentication Middleware
+﻿// =============================================
+// Deck Estimator — Authentication Middleware
 // =============================================
 // Verifies JWT tokens and establishes the authenticated principal.
 // Full implementation in Phase 5 (Authentication).

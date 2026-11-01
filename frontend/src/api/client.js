@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — API Client
+﻿// =============================================
+// Deck Estimator — API Client
 // =============================================
 // Shared HTTP client with safe defaults.
 // All API calls go through this module.

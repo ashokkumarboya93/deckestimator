@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Shared React Providers
+﻿// =============================================
+// Deck Estimator — Shared React Providers
 // =============================================
 
 import { AuthProvider } from '../features/auth/hooks/useAuth';

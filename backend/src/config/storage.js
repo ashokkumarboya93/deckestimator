@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Object Storage Configuration
+﻿// =============================================
+// Deck Estimator — Object Storage Configuration
 // =============================================
 // Placeholder for object storage adapter configuration.
 // Will be implemented when file upload module is built (Phase 6).

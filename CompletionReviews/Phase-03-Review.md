@@ -1,4 +1,4 @@
-# Phase 3 Completion Review: Authentication & Authorization
+﻿# Phase 3 Completion Review: Authentication & Authorization
 
 **Project Name:** Deck Estimator  
 **Phase:** 3 — Authentication & Authorization  
@@ -39,7 +39,7 @@
 ## 3. Test Evidence
 
 ```
-> deck-pro-backend@0.1.0 test
+> deck-estimator-backend@0.1.0 test
 > node --test tests/**/*.test.js
 
 ◇ injected env (6) from .env

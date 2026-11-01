@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Login Form Component
+﻿// =============================================
+// Deck Estimator — Login Form Component
 // =============================================
 
 import { useState } from 'react';
@@ -47,7 +47,7 @@ export function LoginForm() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '2rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-      <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Sign In to DECK PRO</h2>
+      <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Sign In to Deck Estimator</h2>
 
       {error && (
         <div style={{ padding: '0.75rem', marginBottom: '1rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '0.875rem' }}>

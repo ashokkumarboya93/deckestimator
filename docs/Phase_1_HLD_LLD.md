@@ -1,6 +1,6 @@
-# DECK PRO — Complete High-Level Design (HLD) and Low-Level Design (LLD)
+﻿# Deck Estimator — Complete High-Level Design (HLD) and Low-Level Design (LLD)
 
-**Document purpose:** Complete technical blueprint for developing the DECK PRO application using the MERN stack.
+**Document purpose:** Complete technical blueprint for developing the Deck Estimator application using the MERN stack.
 
 **Intended reader:** Antigravity AI coding agent and the development team.
 
@@ -12,7 +12,7 @@
 
 ## 1. Project Overview
 
-DECK PRO is a deck restoration estimation and lead-generation platform. It helps customers estimate deck restoration costs, understand visible deck conditions from photographs when AI analysis is available, save estimates, and request contractor contact.
+Deck Estimator is a deck restoration estimation and lead-generation platform. It helps customers estimate deck restoration costs, understand visible deck conditions from photographs when AI analysis is available, save estimates, and request contractor contact.
 
 Contractors can manage their business profiles, access assigned leads, review authorized estimate information, and perform permitted follow-up activities.
 
@@ -206,7 +206,7 @@ AI analysis must not be a prerequisite for pricing unless the business explicitl
 Use a modular structure. The exact filenames can be adjusted, but module boundaries must remain clear.
 
 ```text
-deck-pro/
+deck-estimator/
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
@@ -281,7 +281,7 @@ Controllers must not duplicate business logic. Pricing calculations, ownership c
 
 ### 8.1 General database conventions
 
-- Database name: `DECK_PRO`.
+- Database name: `deck_estimator`.
 - Use MongoDB ObjectIds for internal document identifiers by default.
 - Use timestamps for records that need creation/update history.
 - Normalize email addresses and other identifiers before uniqueness checks.
@@ -839,7 +839,7 @@ Do not invent pricing formulas. The client must approve actual rates, calculatio
 
 ### Example only
 
-If an approved hypothetical rule uses area multiplied by a material rate, the material subtotal can be calculated from those values. This example is not an approved DECK PRO price.
+If an approved hypothetical rule uses area multiplied by a material rate, the material subtotal can be calculated from those values. This example is not an approved Deck Estimator price.
 
 The final estimate must be calculated by the backend and must not be accepted from a browser-supplied total.
 
@@ -1102,7 +1102,7 @@ If a decision blocks implementation, Antigravity must document the question and 
 
 ## 25. Mandatory Instructions for the AI Coding Agent
 
-You are the development agent responsible for implementing DECK PRO according to this HLD and LLD.
+You are the development agent responsible for implementing Deck Estimator according to this HLD and LLD.
 
 ### Before coding
 1. Inspect the existing workspace and identify the actual project structure.

@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Environment Configuration
+﻿// =============================================
+// Deck Estimator — Environment Configuration
 // =============================================
 // Reads and validates required environment variables.
 // Fails fast at startup if critical variables are missing.

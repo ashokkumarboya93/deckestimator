@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — CORS Configuration
+﻿// =============================================
+// Deck Estimator — CORS Configuration
 // =============================================
 // Defines allowed origins for cross-origin requests.
 

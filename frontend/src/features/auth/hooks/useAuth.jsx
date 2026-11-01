@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Auth Context & Hook
+﻿// =============================================
+// Deck Estimator — Auth Context & Hook
 // =============================================
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';

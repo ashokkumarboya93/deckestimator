@@ -1,4 +1,4 @@
-// =============================================
+﻿// =============================================
 // Deck Estimator — Auth & Authorization Comprehensive Tests (Phase 3)
 // =============================================
 
@@ -293,7 +293,7 @@ describe('Phase 3 — Authentication & Authorization Full Validation', () => {
     });
     await ContractorProfile.create({
       userId: approvedUser._id,
-      businessName: 'Charlie Deck Pros',
+      businessName: 'Charlie Deck Estimators',
       licenseNumber: 'LIC-APP-77',
       verificationStatus: VERIFICATION_STATUS.APPROVED,
     });

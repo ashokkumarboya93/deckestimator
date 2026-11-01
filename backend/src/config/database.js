@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — MongoDB Connection
+﻿// =============================================
+// Deck Estimator — MongoDB Connection
 // =============================================
 // Connects to MongoDB Atlas (or local) using Mongoose.
 // Logs connection events and handles errors.
@@ -14,7 +14,7 @@ const { env } = require('./env');
 async function connectDatabase() {
   try {
     await mongoose.connect(env.MONGODB_URI, {
-      dbName: 'DECK_PRO',
+      dbName: 'deck_estimator',
     });
     console.log(`[Database] Connected to MongoDB (${env.isDev ? 'development' : env.NODE_ENV})`);
   } catch (error) {

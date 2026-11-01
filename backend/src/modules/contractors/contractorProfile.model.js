@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Contractor Profile Model
+﻿// =============================================
+// Deck Estimator — Contractor Profile Model
 // =============================================
 
 const mongoose = require('mongoose');

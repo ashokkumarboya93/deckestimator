@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Login Page
+﻿// =============================================
+// Deck Estimator — Login Page
 // =============================================
 
 import { LoginForm } from '../components/LoginForm';

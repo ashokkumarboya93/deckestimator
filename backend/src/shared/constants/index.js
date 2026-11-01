@@ -1,5 +1,5 @@
-// =============================================
-// DECK PRO — Application Constants
+﻿// =============================================
+// Deck Estimator — Application Constants
 // =============================================
 
 /** User roles used throughout the application */
