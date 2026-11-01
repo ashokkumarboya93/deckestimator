@@ -31,6 +31,28 @@ export const ENDPOINTS = {
     IMAGE_BY_ID: (deckId, imageId) => `/decks/${deckId}/images/${imageId}`,
   },
 
+  // Catalog Management (Phase 5)
+  CATALOG: {
+    MATERIAL_CATEGORIES: '/catalog/material-categories',
+    MATERIAL_CATEGORY_BY_ID: (id) => `/catalog/material-categories/${id}`,
+    MATERIAL_CATEGORY_STATUS: (id) => `/catalog/material-categories/${id}/status`,
+
+    MATERIALS: '/catalog/materials',
+    MATERIAL_BY_ID: (id) => `/catalog/materials/${id}`,
+    MATERIAL_STATUS: (id) => `/catalog/materials/${id}/status`,
+
+    SERVICE_CATEGORIES: '/catalog/service-categories',
+    SERVICE_CATEGORY_BY_ID: (id) => `/catalog/service-categories/${id}`,
+    SERVICE_CATEGORY_STATUS: (id) => `/catalog/service-categories/${id}/status`,
+
+    SERVICES: '/catalog/services',
+    SERVICE_BY_ID: (id) => `/catalog/services/${id}`,
+    SERVICE_STATUS: (id) => `/catalog/services/${id}/status`,
+
+    COMPATIBILITIES: '/catalog/compatibilities',
+    COMPATIBILITY_BY_ID: (id) => `/catalog/compatibilities/${id}`,
+  },
+
   // Files (Phase 6)
   FILES: {
     UPLOAD: '/files/upload',

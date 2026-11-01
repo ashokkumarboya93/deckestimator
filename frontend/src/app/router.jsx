@@ -12,6 +12,7 @@ import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
 import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
+import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
 
 const router = createBrowserRouter([
@@ -117,6 +118,17 @@ const router = createBrowserRouter([
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
               <ContractorDeckEstimatorPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      // Admin Routes (Phase 5)
+      {
+        path: 'admin/catalog',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['admin']}>
+              <AdminCatalogPage />
             </RequireRole>
           </RequireAuth>
         ),

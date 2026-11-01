@@ -67,6 +67,12 @@ const deckRoutes = require('./modules/decks/deck.routes');
 
 app.use('/api/v1/decks', deckRoutes);
 
+// Phase 5: Catalog Management routes (Materials, Services, Compatibilities)
+const catalogRoutes = require('./modules/catalogs/catalog.routes');
+
+app.use('/api/v1/catalog', catalogRoutes);
+app.use('/api/v1/catalogs', catalogRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //

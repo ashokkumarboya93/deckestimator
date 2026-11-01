@@ -47,6 +47,22 @@ function App() {
               >
                 + New Deck
               </Link>
+              {user?.role === 'admin' && (
+                <Link
+                  to="/admin/catalog"
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#d32f2f',
+                    backgroundColor: '#ffebee',
+                    padding: '3px 10px',
+                    borderRadius: '4px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Catalog Management
+                </Link>
+              )}
             </nav>
           )}
         </div>
