@@ -96,3 +96,4 @@ const VerificationDocument = mongoose.model(
 );
 
 module.exports = VerificationDocument;
+

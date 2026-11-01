@@ -132,6 +132,64 @@ const DISCOUNT_TYPE = Object.freeze({
   FIXED: 'fixed',
 });
 
+/** Discount policy status */
+const DISCOUNT_POLICY_STATUS = Object.freeze({
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  EXPIRED: 'expired',
+  ARCHIVED: 'archived',
+});
+
+/** Discount applicability components */
+const DISCOUNT_APPLICABILITY = Object.freeze({
+  ALL: 'all',
+  MATERIALS: 'materials',
+  SERVICES: 'services',
+  LABOR: 'labor',
+});
+
+/** Discount assignment type */
+const DISCOUNT_ASSIGNMENT_TYPE = Object.freeze({
+  INDIVIDUAL: 'individual',
+  GROUP: 'group',
+  GENERAL_ELIGIBILITY: 'general_eligibility',
+});
+
+/** Commission calculation types */
+const COMMISSION_TYPE = Object.freeze({
+  PERCENTAGE: 'percentage',
+  FIXED: 'fixed',
+});
+
+/** Commission policy status */
+const COMMISSION_POLICY_STATUS = Object.freeze({
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  EXPIRED: 'expired',
+  ARCHIVED: 'archived',
+});
+
+/** Commission calculation basis */
+const COMMISSION_CALCULATION_BASIS = Object.freeze({
+  CONVERTED_ESTIMATE: 'converted_estimate',
+  VERIFIED_CONTRACT: 'verified_contract',
+  JOB_TOTAL: 'job_total',
+});
+
+/** Commission record lifecycle status */
+const COMMISSION_STATUS = Object.freeze({
+  PENDING: 'pending',
+  UNDER_REVIEW: 'under_review',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  PAYABLE: 'payable',
+  PAID: 'paid',
+  DISPUTED: 'disputed',
+  REVERSED: 'reversed',
+});
+
 module.exports = {
   ROLES,
   ACCOUNT_STATUS,
@@ -147,5 +205,12 @@ module.exports = {
   UPLOAD_STATUS,
   ANALYSIS_STATUS,
   DISCOUNT_TYPE,
+  DISCOUNT_POLICY_STATUS,
+  DISCOUNT_APPLICABILITY,
+  DISCOUNT_ASSIGNMENT_TYPE,
+  COMMISSION_TYPE,
+  COMMISSION_POLICY_STATUS,
+  COMMISSION_CALCULATION_BASIS,
+  COMMISSION_STATUS,
 };
 

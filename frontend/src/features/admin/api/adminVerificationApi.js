@@ -28,3 +28,4 @@ export const adminVerificationApi = {
     return `/api/v1/contractors/documents/${documentId}/file`;
   },
 };
+

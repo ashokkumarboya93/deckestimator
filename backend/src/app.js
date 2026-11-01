@@ -92,6 +92,13 @@ const leadRoutes = require('./modules/leads/lead.routes');
 app.use('/api/v1/contractors', contractorRoutes);
 app.use('/api/v1/leads', leadRoutes);
 
+// Phase 9: Contractor Discounts & Commission Management routes
+const discountRoutes = require('./modules/discounts/discount.routes');
+const commissionRoutes = require('./modules/commissions/commission.routes');
+
+app.use('/api/v1/discounts', discountRoutes);
+app.use('/api/v1/commissions', commissionRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //

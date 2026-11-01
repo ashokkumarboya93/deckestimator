@@ -63,3 +63,4 @@ const LeadAssignmentHistory = mongoose.model(
 );
 
 module.exports = LeadAssignmentHistory;
+

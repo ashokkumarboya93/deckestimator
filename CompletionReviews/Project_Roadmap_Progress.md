@@ -5,7 +5,7 @@
 **Active Branch:** `dev2`  
 **Target Architecture:** Modular Monolithic Architecture (MERN Stack: React 19 + Express + MongoDB Atlas) + Isolated ML Component (Python FastAPI)  
 **Database Cluster:** `deck-estimator-cluster.3s5imrm.mongodb.net` (`DECK_ESTIMATOR`)  
-**Backend Automated Test Suite:** 132 / 132 Passing (100% Pass Rate across 28 suites)  
+**Backend Automated Test Suite:** 158 / 158 Passing (100% Pass Rate across 36 suites)  
 **Frontend Production Build:** Vite v8.3.5 (0 Errors)  
 **Last Updated:** November 1, 2026  
 
@@ -23,8 +23,8 @@
 | **Phase 6** | Pricing Calculation Engine & Estimate Management | ✅ Completed | [Phase-06-Review.md](./Phase-06-Review.md) | 16/16 pricing & estimate tests + live Atlas verification |
 | **Phase 7** | AI-Based Deck Condition Analysis | ✅ Completed | [Phase-07-Review.md](./Phase-07-Review.md) | 14/14 AI condition analysis tests + ML evaluation + live Atlas verification |
 | **Phase 8** | Contractor Verification & Lead Management | ✅ Completed | [Phase-08-Review.md](./Phase-08-Review.md) | 24/24 contractor verification & lead tests + live Atlas verification |
-| **Phase 9** | Contractor Discounts & Commission Management | ⏳ **Next (Awaiting Explicit Approval)** | Pending | To be started upon user instruction |
-| **Phase 10** | Administrative Dashboard & Platform Management | ⏳ Upcoming | Pending | Pending |
+| **Phase 9** | Contractor Discounts & Commission Management | ✅ Completed | [Phase-09-Review.md](./Phase-09-Review.md) | 26/26 discount & commission tests + live Atlas verification |
+| **Phase 10** | Administrative Dashboard & Platform Management | ⏳ **Next (Awaiting Explicit Approval)** | Pending | To be started upon user instruction |
 | **Phase 11** | Integration, Security & Quality Assurance | ⏳ Upcoming | Pending | Pending |
 | **Phase 12** | Deployment, Documentation & Production Readiness | ⏳ Upcoming | Pending | Pending |
 
@@ -89,6 +89,20 @@
   - **Frontend Portals**: Customer `EnquiryModal.jsx`, Contractor `ContractorDashboardPage.jsx`, and Admin hubs (`AdminContractorVerificationPage.jsx`, `AdminLeadManagementPage.jsx`).
 - **Tests:** 24 integration tests (Total backend suite: 132/132 passing across 28 suites) + live MongoDB Atlas script (`verify-phase8-atlas.js`).
 - **Review:** [Phase-08-Review.md](./Phase-08-Review.md)
+
+### Phase 9: Contractor Discounts and Commission Management
+- **Deliverables:**
+  - **Discount Policy Engine**: Admin CRUD and activation for percentage and fixed dollar amount discounts (`DiscountPolicy`), validity periods, and usage caps.
+  - **Contractor Assignments**: Unique contractor-to-discount policy mapping (`DiscountAssignment`) with compound unique constraints preventing duplicate assignments.
+  - **Pricing Engine Integration**: Layered deterministic calculation (`pricingEngine.js`) applying discounts prior to tax calculations, enforcing minimum job price floors, and non-compounding recalculations.
+  - **Immutable Snapshots**: Estimate version snapshots (`DiscountApplication` and `Estimate.discountBreakdown`) preserving historical financial accuracy.
+  - **Commission Policy Engine**: Standard and tiered rules (`CommissionPolicy`) supporting percentage/fixed rates with basis evaluations and caps.
+  - **Eligibility & Duplicate Protection**: Strictly requires converted lead (`LEAD_STATUS.CONVERTED`) and approved contractor (`VERIFICATION_STATUS.APPROVED`). Compound unique index `(leadId, commissionPolicyId)` prohibits duplicate commission generation.
+  - **Commission Lifecycle & History**: Complete state machine (`PENDING` → `UNDER_REVIEW` → `APPROVED` → `PAYABLE` → `PAID` / `REJECTED` / `DISPUTED` / `REVERSED`) with audit history (`CommissionHistory`).
+  - **Settlement Recording**: Manual payment confirmation records (`CommissionPaymentRecord`) without third-party gateway coupling.
+  - **Frontend Portals**: Contractor earnings ledger and discount tabs (`ContractorDashboardPage.jsx`), Admin financial operations hub (`AdminCommissionsPage.jsx`), and Estimate breakdown enhancements (`EstimateDetailPage.jsx`).
+- **Tests:** 26 integration tests (Total backend suite: 158/158 passing across 36 suites) + live MongoDB Atlas script (`verify-phase9-atlas.js`).
+- **Review:** [Phase-09-Review.md](./Phase-09-Review.md)
 
 ---
 

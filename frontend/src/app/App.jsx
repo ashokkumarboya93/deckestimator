@@ -91,6 +91,20 @@ function App() {
                   >
                     Leads Hub
                   </Link>
+                  <Link
+                    to="/admin/commissions"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#b45309',
+                      backgroundColor: '#fef3c7',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Commissions & Discounts
+                  </Link>
                 </>
               )}
             </nav>

@@ -6,13 +6,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDecks, deleteDeck } from '../../customer/api/decksApi';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { contractorCommissionApi } from '../api/contractorCommissionApi';
+import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 export default function ContractorDashboardPage() {
   const navigate = useNavigate();
   const { user, contractorProfile } = useAuth();
 
-  // Active Tab: 'decks' | 'leads' | 'verification'
+  // Active Tab: 'decks' | 'leads' | 'verification' | 'commissions' | 'discounts'
   const [activeTab, setActiveTab] = useState('leads');
 
   // Decks state
@@ -35,6 +37,13 @@ export default function ContractorDashboardPage() {
   const [docNotes, setDocNotes] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
+  // Phase 9 Commissions & Discounts state
+  const [contractorCommissions, setContractorCommissions] = useState([]);
+  const [commissionSummary, setCommissionSummary] = useState(null);
+  const [eligibleDiscounts, setEligibleDiscounts] = useState([]);
+  const [viewCommission, setViewCommission] = useState(null);
+  const [commissionHistory, setCommissionHistory] = useState([]);
+
   // Common state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,10 +62,54 @@ export default function ContractorDashboardPage() {
       loadLeads(1);
     } else if (activeTab === 'verification') {
       loadVerificationDocs();
+    } else if (activeTab === 'commissions' && isApproved) {
+      loadCommissions();
+    } else if (activeTab === 'discounts' && isApproved) {
+      loadEligibleDiscounts();
     } else {
       setLoading(false);
     }
   }, [activeTab, isApproved]);
+
+  async function loadCommissions() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [commRes, sumRes] = await Promise.all([
+        contractorCommissionApi.getMyCommissions(),
+        contractorCommissionApi.getCommissionSummary(),
+      ]);
+      setContractorCommissions(commRes.data || []);
+      setCommissionSummary(sumRes.data || null);
+    } catch (err) {
+      setError(err?.message || 'Failed to load commissions.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadEligibleDiscounts() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await contractorDiscountApi.getEligibleDiscounts();
+      setEligibleDiscounts(res.data || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load eligible discount policies.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleOpenCommissionHistory(comm) {
+    setViewCommission(comm);
+    try {
+      const histRes = await contractorCommissionApi.getCommissionHistory(comm._id || comm.id);
+      setCommissionHistory(histRes.data || []);
+    } catch {
+      setCommissionHistory([]);
+    }
+  }
 
   async function loadContractorProfile() {
     try {
@@ -276,6 +329,30 @@ export default function ContractorDashboardPage() {
           }}
         >
           📜 Verification & Compliance
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('commissions')}
+          style={{
+            ...styles.tabBtn,
+            borderBottom: activeTab === 'commissions' ? '3px solid #d97706' : '3px solid transparent',
+            color: activeTab === 'commissions' ? '#d97706' : '#64748b',
+            fontWeight: activeTab === 'commissions' ? '700' : '500',
+          }}
+        >
+          💰 Commissions & Earnings
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('discounts')}
+          style={{
+            ...styles.tabBtn,
+            borderBottom: activeTab === 'discounts' ? '3px solid #d97706' : '3px solid transparent',
+            color: activeTab === 'discounts' ? '#d97706' : '#64748b',
+            fontWeight: activeTab === 'discounts' ? '700' : '500',
+          }}
+        >
+          🏷️ Partner Discounts
         </button>
       </div>
 
@@ -637,6 +714,242 @@ export default function ContractorDashboardPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: COMMISSIONS & EARNINGS */}
+      {activeTab === 'commissions' && (
+        !isApproved ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>🔒</div>
+            <h3 style={styles.emptyTitle}>Commissions Locked — Verification Required</h3>
+            <p style={styles.emptyDesc}>
+              Approved contractors earn commissions for converted customer leads and deck builds. Complete verification to unlock payouts.
+            </p>
+          </div>
+        ) : loading ? (
+          <div style={styles.loadingBox}><p>Loading your commissions & payout history...</p></div>
+        ) : (
+          <div>
+            {/* KPI Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ ...styles.profileSection, borderLeft: '4px solid #15803d' }}>
+                <div style={styles.label}>Total Earned (Paid Out)</div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#15803d' }}>
+                  ${Number(commissionSummary?.totalEarned || 0).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  {commissionSummary?.paidCount || 0} commissions settled
+                </div>
+              </div>
+              <div style={{ ...styles.profileSection, borderLeft: '4px solid #0284c7' }}>
+                <div style={styles.label}>Payable Balance (Ready)</div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0284c7' }}>
+                  ${Number(commissionSummary?.pendingPayout || 0).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  Approved & marked payable
+                </div>
+              </div>
+              <div style={{ ...styles.profileSection, borderLeft: '4px solid #d97706' }}>
+                <div style={styles.label}>Under Review / Pending</div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#d97706' }}>
+                  {contractorCommissions.filter((c) => c.status === 'UNDER_REVIEW' || c.status === 'PENDING').length}
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  Awaiting administrative sign-off
+                </div>
+              </div>
+            </div>
+
+            {/* Commissions Table */}
+            <div style={styles.profileSection}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#0f172a' }}>
+                Commission Records & Payout Ledger
+              </h3>
+              {contractorCommissions.length === 0 ? (
+                <div style={styles.emptyBox}>No commission records found for your account yet.</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Commission #</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Lead Code</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Basis Amount</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Rate Applied</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Earned Amount</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Status</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contractorCommissions.map((comm) => (
+                        <tr key={comm._id || comm.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 12px' }}>
+                            <strong>{comm.commissionNumber}</strong>
+                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                              {new Date(comm.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <code>{comm.leadId?.leadCode || comm.leadId}</code>
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>${Number(comm.basisAmount || 0).toFixed(2)}</td>
+                          <td style={{ padding: '10px 12px' }}>
+                            {comm.rateApplied?.type === 'PERCENTAGE'
+                              ? `${comm.rateApplied.value}%`
+                              : `$${comm.rateApplied?.value || 0}`}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <strong style={{ color: '#0284c7' }}>${Number(comm.calculatedAmount || 0).toFixed(2)}</strong>
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <span
+                              style={{
+                                ...styles.verificationBadge,
+                                backgroundColor:
+                                  comm.status === 'PAID'
+                                    ? '#dcfce7'
+                                    : comm.status === 'PAYABLE'
+                                    ? '#e0f2fe'
+                                    : '#fef3c7',
+                                color:
+                                  comm.status === 'PAID'
+                                    ? '#15803d'
+                                    : comm.status === 'PAYABLE'
+                                    ? '#0284c7'
+                                    : '#854d0e',
+                              }}
+                            >
+                              {(comm.status || '').toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCommissionHistory(comm)}
+                              style={styles.viewBtn}
+                            >
+                              Audit Timeline
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      )}
+
+      {/* TAB 5: PARTNER DISCOUNTS */}
+      {activeTab === 'discounts' && (
+        !isApproved ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>🔒</div>
+            <h3 style={styles.emptyTitle}>Discounts Locked — Verification Required</h3>
+            <p style={styles.emptyDesc}>
+              Approved contractors access exclusive wholesale deck material discounts and volume promotions.
+            </p>
+          </div>
+        ) : loading ? (
+          <div style={styles.loadingBox}><p>Loading your assigned discount policies...</p></div>
+        ) : (
+          <div style={styles.profileSection}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: '#0f172a' }}>
+              Your Active Partner Discounts & Promotions
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+              These policies can be applied to customer estimates in the estimate breakdown view. Only one discount policy applies per estimate version.
+            </p>
+
+            {eligibleDiscounts.length === 0 ? (
+              <div style={styles.emptyBox}>No active discounts assigned to your contractor tier at this time.</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                {eligibleDiscounts.map((disc) => (
+                  <div
+                    key={disc._id || disc.id}
+                    style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      backgroundColor: '#f8fafc',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: '#0f172a' }}>{disc.name}</h4>
+                      <span
+                        style={{
+                          backgroundColor: '#dcfce7',
+                          color: '#15803d',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                        }}
+                      >
+                        {disc.discountType === 'PERCENTAGE' ? `${disc.discountValue}% OFF` : `$${disc.discountValue} OFF`}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#475569', marginBottom: '10px' }}>
+                      {disc.description || 'Standard contractor incentive discount.'}
+                    </p>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>
+                      <div><strong>Policy Code:</strong> <code>{disc.code}</code></div>
+                      <div><strong>Applicability:</strong> {disc.applicability?.replace(/_/g, ' ')}</div>
+                      {disc.maxUsageCount && <div><strong>Max Usage:</strong> {disc.maxUsageCount} estimates</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      )}
+
+      {/* Contractor Commission History Modal */}
+      {viewCommission && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalBox, maxWidth: '600px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
+              Commission #{viewCommission.commissionNumber}
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+              Lead: {viewCommission.leadId?.leadCode || viewCommission.leadId} | Total: ${Number(viewCommission.calculatedAmount || 0).toFixed(2)}
+            </p>
+
+            <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+              📜 Lifecycle Audit History
+            </h4>
+            <div style={{ maxHeight: '220px', overflowY: 'auto', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12px' }}>
+              {commissionHistory.length === 0 ? (
+                <div>No timeline events found.</div>
+              ) : (
+                commissionHistory.map((h, idx) => (
+                  <div key={idx} style={{ borderBottom: '1px solid #e2e8f0', padding: '6px 0' }}>
+                    <strong>{h.action}</strong>: {h.fromStatus} &rarr; <strong>{h.toStatus}</strong>
+                    <div style={{ color: '#64748b' }}>{new Date(h.createdAt).toLocaleString()}</div>
+                    {h.notes && <div style={{ color: '#334155' }}>Note: {h.notes}</div>}
+                    {h.reason && <div style={{ color: '#b91c1c' }}>Reason: {h.reason}</div>}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setViewCommission(null)}
+                style={styles.cancelBtn}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

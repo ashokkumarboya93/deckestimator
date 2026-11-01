@@ -34,3 +34,4 @@ export const leadApi = {
     return res.data;
   },
 };
+

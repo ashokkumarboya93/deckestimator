@@ -10,6 +10,7 @@ import {
   getEstimateHistory,
   updateEstimateStatus,
 } from '../api/estimatesApi';
+import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 export default function EstimateDetailPage() {
@@ -27,6 +28,11 @@ export default function EstimateDetailPage() {
   // Recalculate Modal
   const [isRecalcModalOpen, setIsRecalcModalOpen] = useState(false);
   const [recalcReason, setRecalcReason] = useState('');
+
+  // Discount Modal (Phase 9)
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [eligibleDiscounts, setEligibleDiscounts] = useState([]);
+  const [selectedDiscountId, setSelectedDiscountId] = useState('');
 
   const isContractor = user?.role === 'contractor';
   const isAdmin = user?.role === 'admin';
@@ -83,6 +89,54 @@ export default function EstimateDetailPage() {
       loadEstimateData();
     } catch (err) {
       setError(err.message || 'Failed to recalculate estimate.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOpenDiscountModal = async () => {
+    setActionLoading(true);
+    try {
+      const res = await contractorDiscountApi.getEligibleDiscounts();
+      setEligibleDiscounts(res.data || []);
+      setIsDiscountModalOpen(true);
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Failed to fetch discounts.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApplyDiscountSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedDiscountId) return;
+    setActionLoading(true);
+    try {
+      const res = await contractorDiscountApi.applyDiscountToEstimate(estimateId, selectedDiscountId);
+      setEstimate(res.data?.estimate || res.data);
+      setIsDiscountModalOpen(false);
+      setSelectedDiscountId('');
+      setActionMsg('Discount policy successfully applied to estimate.');
+      setTimeout(() => setActionMsg(null), 3000);
+      loadEstimateData();
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Failed to apply discount.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveDiscountClick = async () => {
+    if (!window.confirm('Remove active discount policy from this estimate?')) return;
+    setActionLoading(true);
+    try {
+      const res = await contractorDiscountApi.removeDiscountFromEstimate(estimateId, 'Removed by contractor/admin');
+      setEstimate(res.data?.estimate || res.data);
+      setActionMsg('Discount removed and rates restored.');
+      setTimeout(() => setActionMsg(null), 3000);
+      loadEstimateData();
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Failed to remove discount.');
     } finally {
       setActionLoading(false);
     }
@@ -157,6 +211,28 @@ export default function EstimateDetailPage() {
             🔄 Recalculate Rates
           </button>
 
+          {(isAdmin || isContractor) && currentStatus === 'DRAFT' && (
+            estimate.discountBreakdown?.applied ? (
+              <button
+                type="button"
+                onClick={handleRemoveDiscountClick}
+                style={{ ...styles.recalcBtn, color: '#b91c1c', borderColor: '#fca5a5' }}
+                disabled={actionLoading}
+              >
+                🏷️ Remove Discount
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenDiscountModal}
+                style={{ ...styles.recalcBtn, color: '#15803d', borderColor: '#86efac' }}
+                disabled={actionLoading}
+              >
+                🏷️ Apply Discount
+              </button>
+            )
+          )}
+
           {currentStatus === 'DRAFT' && (
             <button
               type="button"
@@ -201,6 +277,17 @@ export default function EstimateDetailPage() {
           <div style={styles.metricValue}>${Number(snapshot.laborTotal || 0).toFixed(2)}</div>
           <div style={styles.metricHint}>Estimated crew hours</div>
         </div>
+        {estimate.discountBreakdown?.applied && (
+          <div style={{ ...styles.metricCard, borderLeft: '4px solid #16a34a', backgroundColor: '#f0fdf4' }}>
+            <div style={{ ...styles.metricLabel, color: '#15803d' }}>Partner Discount</div>
+            <div style={{ ...styles.metricValue, color: '#16a34a' }}>
+              -${Number(estimate.discountBreakdown.discountAmount || 0).toFixed(2)}
+            </div>
+            <div style={{ ...styles.metricHint, color: '#15803d' }}>
+              {estimate.discountBreakdown.policyName} ({estimate.discountBreakdown.rateDescription})
+            </div>
+          </div>
+        )}
         <div style={{ ...styles.metricCard, borderLeft: '4px solid #0284c7' }}>
           <div style={styles.metricLabel}>Total Amount</div>
           <div style={{ ...styles.metricValue, color: '#0284c7', fontSize: '24px' }}>
@@ -289,6 +376,11 @@ export default function EstimateDetailPage() {
           <div style={styles.formulaItem}>
             <strong>Subtotal:</strong> Materials (${Number(snapshot.materialsTotal || 0).toFixed(2)}) + Services (${Number(snapshot.servicesTotal || 0).toFixed(2)}) + Labor (${Number(snapshot.laborTotal || 0).toFixed(2)}) + Extra Coatings (${Number(snapshot.additionalCoatingTotal || 0).toFixed(2)}) + Travel (${Number(snapshot.travelCharge || 0).toFixed(2)})
           </div>
+          {estimate.discountBreakdown?.applied && (
+            <div style={{ ...styles.formulaItem, color: '#15803d', backgroundColor: '#f0fdf4', padding: '6px 10px', borderRadius: '4px' }}>
+              <strong>Partner Discount ({estimate.discountBreakdown.policyName}):</strong> -${Number(estimate.discountBreakdown.discountAmount || 0).toFixed(2)} ({estimate.discountBreakdown.rateDescription}) &rarr; Adjusted Subtotal: ${Number(estimate.discountBreakdown.discountedSubtotal || 0).toFixed(2)}
+            </div>
+          )}
           {snapshot.taxPercentage > 0 && (
             <div style={styles.formulaItem}>
               <strong>Tax ({snapshot.taxPercentage}%):</strong> ${Number(snapshot.taxAmount || 0).toFixed(2)}
@@ -372,6 +464,71 @@ export default function EstimateDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Apply Discount Modal (Phase 9) */}
+      {isDiscountModalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '18px' }}>Apply Partner Discount</h3>
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+              Select an approved contractor discount policy to apply to this estimate. Applying a discount creates an immutable revision snapshot.
+            </p>
+            {eligibleDiscounts.length === 0 ? (
+              <div>
+                <p style={{ fontSize: '13px', color: '#b91c1c', marginBottom: '16px' }}>
+                  No active discount policies currently eligible for your contractor account.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDiscountModalOpen(false)}
+                    style={styles.cancelBtn}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyDiscountSubmit}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                    Select Discount Policy:
+                  </label>
+                  <select
+                    required
+                    value={selectedDiscountId}
+                    onChange={(e) => setSelectedDiscountId(e.target.value)}
+                    style={styles.input}
+                  >
+                    <option value="">-- Choose Eligible Discount --</option>
+                    {eligibleDiscounts.map((d) => (
+                      <option key={d._id || d.id} value={d._id || d.id}>
+                        {d.name} ({d.code}) — {d.discountType === 'PERCENTAGE' ? `${d.discountValue}% off` : `$${d.discountValue} off`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDiscountModalOpen(false)}
+                    style={styles.cancelBtn}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ ...styles.primaryActionBtn, backgroundColor: '#15803d' }}
+                    disabled={actionLoading || !selectedDiscountId}
+                  >
+                    {actionLoading ? 'Applying...' : 'Apply to Estimate'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

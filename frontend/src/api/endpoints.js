@@ -117,6 +117,35 @@ export const ENDPOINTS = {
     ADMIN_VERIFICATION_REVIEW: (id) => `/contractors/admin/verifications/${id}/review`,
   },
 
+  // Discounts (Phase 9)
+  DISCOUNTS: {
+    POLICIES: '/discounts/policies',
+    POLICY_BY_ID: (id) => `/discounts/policies/${id}`,
+    POLICY_STATUS: (id) => `/discounts/policies/${id}/status`,
+    ASSIGN: (id) => `/discounts/policies/${id}/assign`,
+    ASSIGNMENTS: (id) => `/discounts/policies/${id}/assignments`,
+    REMOVE_ASSIGNMENT: (id, contractorId) => `/discounts/policies/${id}/assignments/${contractorId}`,
+    APPLY_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/apply`,
+    REMOVE_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/remove`,
+    ESTIMATE_HISTORY: (estimateId) => `/discounts/estimates/${estimateId}/history`,
+    CONTRACTOR_ELIGIBLE: '/discounts/contractor/eligible',
+  },
+
+  // Commissions (Phase 9)
+  COMMISSIONS: {
+    POLICIES: '/commissions/policies',
+    POLICY_BY_ID: (id) => `/commissions/policies/${id}`,
+    POLICY_STATUS: (id) => `/commissions/policies/${id}/status`,
+    ADMIN_GENERATE: '/commissions/admin/generate',
+    ADMIN_ALL: '/commissions/admin/all',
+    ADMIN_REVIEW: (id) => `/commissions/admin/${id}/review`,
+    ADMIN_RECORD_PAYMENT: (id) => `/commissions/admin/${id}/record-payment`,
+    CONTRACTOR_MY_COMMISSIONS: '/commissions',
+    CONTRACTOR_SUMMARY: '/commissions/summary',
+    BY_ID: (id) => `/commissions/${id}`,
+    HISTORY: (id) => `/commissions/${id}/history`,
+  },
+
   // Admin (Phase 10/11)
   ADMIN: {
     DASHBOARD: '/admin/dashboard',

@@ -15,6 +15,7 @@ import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDec
 import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
 import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
+import AdminCommissionsPage from '../features/admin/pages/AdminCommissionsPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
@@ -193,6 +194,16 @@ const router = createBrowserRouter([
           <RequireAuth>
             <RequireRole allowedRoles={['admin']}>
               <AdminLeadManagementPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/commissions',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['admin']}>
+              <AdminCommissionsPage />
             </RequireRole>
           </RequireAuth>
         ),

@@ -66,3 +66,4 @@ const VerificationHistory = mongoose.model(
 );
 
 module.exports = VerificationHistory;
+

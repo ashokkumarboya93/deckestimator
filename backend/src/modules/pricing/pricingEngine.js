@@ -288,6 +288,7 @@ function calculateEstimate({
   services = [],
   compatibilityRules = [],
   pricingConfig = null,
+  discountPolicy = null,
 }) {
   // 1. Validate Deck & Area
   const deckArea = validateAndGetDeckArea(deck);
@@ -332,13 +333,74 @@ function calculateEstimate({
     additionalCharges.subtotal
   );
 
-  // 8. Minimum Job Price Adjustment
+  // 7b. Discount Calculation (Phase 9)
+  let discountBreakdown = {
+    applied: false,
+    policyId: null,
+    policyCode: null,
+    policyName: null,
+    discountType: null,
+    discountValue: 0,
+    applicability: 'all',
+    eligibleAmount: 0,
+    discountAmount: 0,
+    originalSubtotal: subtotal,
+    discountedSubtotal: subtotal,
+  };
+
+  let effectiveSubtotal = subtotal;
+
+  if (discountPolicy && discountPolicy.status === 'active') {
+    let eligibleAmount = subtotal;
+    if (discountPolicy.applicability === 'materials') {
+      eligibleAmount = materialsBreakdown.totalCost;
+    } else if (discountPolicy.applicability === 'services') {
+      eligibleAmount = servicesBreakdown.totalCost;
+    } else if (discountPolicy.applicability === 'labor') {
+      eligibleAmount = laborBreakdown.subtotal;
+    }
+
+    eligibleAmount = round2(eligibleAmount);
+
+    const minEst = Number(discountPolicy.minimumEstimateAmount || 0);
+    if (minEst <= 0 || subtotal >= minEst) {
+      let rawDiscount = 0;
+      if (discountPolicy.discountType === 'percentage') {
+        rawDiscount = eligibleAmount * (Number(discountPolicy.discountValue) / 100);
+      } else {
+        rawDiscount = Math.min(Number(discountPolicy.discountValue), eligibleAmount);
+      }
+
+      if (discountPolicy.maximumDiscountAmount && discountPolicy.maximumDiscountAmount > 0) {
+        rawDiscount = Math.min(rawDiscount, Number(discountPolicy.maximumDiscountAmount));
+      }
+
+      const discountAmount = round2(Math.max(0, rawDiscount));
+      effectiveSubtotal = round2(Math.max(0, subtotal - discountAmount));
+
+      discountBreakdown = {
+        applied: discountAmount > 0,
+        policyId: discountPolicy._id || discountPolicy.id || null,
+        policyCode: discountPolicy.code,
+        policyName: discountPolicy.name,
+        discountType: discountPolicy.discountType,
+        discountValue: Number(discountPolicy.discountValue),
+        applicability: discountPolicy.applicability || 'all',
+        eligibleAmount,
+        discountAmount,
+        originalSubtotal: subtotal,
+        discountedSubtotal: effectiveSubtotal,
+      };
+    }
+  }
+
+  // 8. Minimum Job Price Adjustment (applied to effectiveSubtotal)
   const minimumJobPrice = Number(pricingConfig?.minimumJobPrice || 0);
   let minimumAdjustment = 0;
-  let preTaxTotal = subtotal;
+  let preTaxTotal = effectiveSubtotal;
 
-  if (minimumJobPrice > 0 && subtotal < minimumJobPrice) {
-    minimumAdjustment = round2(minimumJobPrice - subtotal);
+  if (minimumJobPrice > 0 && effectiveSubtotal < minimumJobPrice) {
+    minimumAdjustment = round2(minimumJobPrice - effectiveSubtotal);
     preTaxTotal = round2(minimumJobPrice);
   }
 
@@ -369,6 +431,7 @@ function calculateEstimate({
     laborSubtotal: laborBreakdown.subtotal,
     additionalChargesSubtotal: additionalCharges.subtotal,
     calculatedSubtotal: subtotal,
+    discountBreakdown,
     minimumAdjustment,
     preTaxTotal,
     taxAmount,
@@ -383,6 +446,7 @@ function calculateEstimate({
     laborBreakdown,
     additionalCharges,
     subtotal,
+    discountBreakdown,
     minimumAdjustment,
     minimumJobPrice,
     preTaxTotal,
@@ -394,8 +458,101 @@ function calculateEstimate({
   };
 }
 
+/**
+ * Recalculates an existing estimate calculation with an approved discount policy.
+ */
+function applyDiscountToCalculation(baseCalc, discountPolicy, pricingConfig) {
+  const subtotal = Number(baseCalc.subtotal || 0);
+  let effectiveSubtotal = subtotal;
+
+  let discountBreakdown = {
+    applied: false,
+    policyId: null,
+    policyCode: null,
+    policyName: null,
+    discountType: null,
+    discountValue: 0,
+    applicability: 'all',
+    eligibleAmount: 0,
+    discountAmount: 0,
+    originalSubtotal: subtotal,
+    discountedSubtotal: subtotal,
+  };
+
+  if (discountPolicy && discountPolicy.status === 'active') {
+    let eligibleAmount = subtotal;
+    if (discountPolicy.applicability === 'materials') {
+      eligibleAmount = baseCalc.materialsBreakdown?.totalCost ?? baseCalc.materialsSubtotal ?? subtotal;
+    } else if (discountPolicy.applicability === 'services') {
+      eligibleAmount = baseCalc.servicesBreakdown?.totalCost ?? baseCalc.servicesSubtotal ?? subtotal;
+    } else if (discountPolicy.applicability === 'labor') {
+      eligibleAmount = baseCalc.laborBreakdown?.subtotal ?? baseCalc.laborSubtotal ?? subtotal;
+    }
+
+    eligibleAmount = round2(eligibleAmount);
+    const minEst = Number(discountPolicy.minimumEstimateAmount || 0);
+
+    if (minEst <= 0 || subtotal >= minEst) {
+      let rawDiscount = 0;
+      if (discountPolicy.discountType === 'percentage') {
+        rawDiscount = eligibleAmount * (Number(discountPolicy.discountValue) / 100);
+      } else {
+        rawDiscount = Math.min(Number(discountPolicy.discountValue), eligibleAmount);
+      }
+
+      if (discountPolicy.maximumDiscountAmount && discountPolicy.maximumDiscountAmount > 0) {
+        rawDiscount = Math.min(rawDiscount, Number(discountPolicy.maximumDiscountAmount));
+      }
+
+      const discountAmount = round2(Math.max(0, rawDiscount));
+      effectiveSubtotal = round2(Math.max(0, subtotal - discountAmount));
+
+      discountBreakdown = {
+        applied: discountAmount > 0,
+        policyId: discountPolicy._id || discountPolicy.id || null,
+        policyCode: discountPolicy.code,
+        policyName: discountPolicy.name,
+        discountType: discountPolicy.discountType,
+        discountValue: Number(discountPolicy.discountValue),
+        applicability: discountPolicy.applicability || 'all',
+        eligibleAmount,
+        discountAmount,
+        originalSubtotal: subtotal,
+        discountedSubtotal: effectiveSubtotal,
+      };
+    }
+  }
+
+  const minimumJobPrice = Number(pricingConfig?.minimumJobPrice || baseCalc.minimumJobPrice || 0);
+  let minimumAdjustment = 0;
+  let preTaxTotal = effectiveSubtotal;
+
+  if (minimumJobPrice > 0 && effectiveSubtotal < minimumJobPrice) {
+    minimumAdjustment = round2(minimumJobPrice - effectiveSubtotal);
+    preTaxTotal = round2(minimumJobPrice);
+  }
+
+  const taxPercentage = Number(pricingConfig?.taxPercentage || baseCalc.taxPercentage || 0);
+  let taxAmount = 0;
+  if (taxPercentage > 0) {
+    taxAmount = round2(preTaxTotal * (taxPercentage / 100));
+  }
+
+  const totalAmount = round2(preTaxTotal + taxAmount);
+
+  return {
+    ...baseCalc,
+    discountBreakdown,
+    minimumAdjustment,
+    preTaxTotal,
+    taxAmount,
+    totalAmount,
+  };
+}
+
 module.exports = {
   calculateEstimate,
+  applyDiscountToCalculation,
   validateAndGetDeckArea,
   validateCompatibilities,
   calculateMaterialsBreakdown,
