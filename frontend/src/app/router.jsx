@@ -16,6 +16,7 @@ import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
 import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
 import AdminCommissionsPage from '../features/admin/pages/AdminCommissionsPage';
+import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
@@ -167,7 +168,21 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      // Admin Routes (Phase 5 & 8)
+      // Admin Routes (Phase 5, 8, 9, 10)
+      {
+        path: 'admin/dashboard',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['admin']}>
+              <AdminDashboardPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin',
+        element: <Navigate to="/admin/dashboard" replace />,
+      },
       {
         path: 'admin/catalog',
         element: (

@@ -35,6 +35,7 @@ const auditLogSchema = new mongoose.Schema(
         'DISCOUNT',
         'DISCOUNT_POLICY',
         'DISCOUNT_ASSIGNMENT',
+        'PLATFORM_SETTING',
       ],
       index: true,
     },
