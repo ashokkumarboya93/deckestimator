@@ -51,6 +51,13 @@ export default function AdminDashboardPage() {
     value: '',
     isPublic: false,
   });
+  const [isEditSettingModalOpen, setIsEditSettingModalOpen] = useState(false);
+  const [editSettingForm, setEditSettingForm] = useState({
+    key: '',
+    label: '',
+    value: '',
+    valueType: 'STRING',
+  });
 
   // --- Audit Logs State ---
   const [auditLogs, setAuditLogs] = useState([]);
@@ -262,6 +269,54 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // Toggle Setting Status (Activate / Deactivate)
+  async function handleToggleSettingStatus(setting) {
+    setLoading(true);
+    try {
+      await adminApi.updateSetting(setting.key, { isActive: !setting.isActive });
+      setSuccessMsg(`Setting ${setting.key} ${setting.isActive ? 'deactivated' : 'activated'} successfully.`);
+      loadSettings();
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Failed to update setting status.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleOpenEditSetting(setting) {
+    setEditSettingForm({
+      key: setting.key,
+      label: setting.label || '',
+      value: typeof setting.value === 'object' ? JSON.stringify(setting.value) : String(setting.value),
+      valueType: setting.valueType || 'STRING',
+    });
+    setIsEditSettingModalOpen(true);
+  }
+
+  async function handleSaveSetting(e) {
+    e.preventDefault();
+    if (!editSettingForm.key) return;
+    setLoading(true);
+    try {
+      let parsedValue = editSettingForm.value;
+      if (editSettingForm.valueType === 'NUMBER') parsedValue = Number(editSettingForm.value);
+      if (editSettingForm.valueType === 'BOOLEAN') parsedValue = editSettingForm.value === 'true' || editSettingForm.value === true;
+      if (editSettingForm.valueType === 'OBJECT' || editSettingForm.valueType === 'ARRAY' || editSettingForm.valueType === 'JSON') {
+        if (typeof editSettingForm.value === 'string') {
+          parsedValue = JSON.parse(editSettingForm.value);
+        }
+      }
+      await adminApi.updateSetting(editSettingForm.key, { value: parsedValue, label: editSettingForm.label });
+      setSuccessMsg(`Setting ${editSettingForm.key} updated successfully.`);
+      setIsEditSettingModalOpen(false);
+      loadSettings();
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Failed to update setting.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Load Audit Logs
   async function loadAuditLogs(page = 1) {
     setLoading(true);
@@ -411,14 +466,19 @@ export default function AdminDashboardPage() {
                   <div style={styles.metricSub}>{summary.contractors.pending} Pending Review</div>
                 </div>
                 <div style={{ ...styles.card, borderLeft: '4px solid #d97706' }}>
-                  <div style={styles.metricLabel}>Estimates Generated</div>
+                  <div style={styles.metricLabel}>Estimates & Revenue</div>
                   <div style={{ ...styles.metricValue, color: '#d97706' }}>{summary.estimates.totalEstimates}</div>
-                  <div style={styles.metricSub}>Volume: ${Number(summary.estimates.totalVolume || 0).toLocaleString()}</div>
+                  <div style={styles.metricSub}>Completed Rev: ${Number(summary.estimates.completedRevenue || 0).toLocaleString()} | Pipeline: ${Number(summary.estimates.totalVolume || 0).toLocaleString()}</div>
                 </div>
                 <div style={{ ...styles.card, borderLeft: '4px solid #6366f1' }}>
                   <div style={styles.metricLabel}>Customer Leads</div>
                   <div style={{ ...styles.metricValue, color: '#6366f1' }}>{summary.leads.totalLeads}</div>
                   <div style={styles.metricSub}>{summary.leads.converted} Converted ({Math.round((summary.leads.converted / (summary.leads.totalLeads || 1)) * 100)}%)</div>
+                </div>
+                <div style={{ ...styles.card, borderLeft: '4px solid #8b5cf6' }}>
+                  <div style={styles.metricLabel}>Commissions & Discounts</div>
+                  <div style={{ ...styles.metricValue, color: '#8b5cf6' }}>${Number(summary.financials?.paidAmount || 0).toLocaleString()}</div>
+                  <div style={styles.metricSub}>Paid Payouts (Accrued: ${Number(summary.financials?.totalAmountCalculated || 0).toLocaleString()}) | Discounts: ${Number(summary.estimates.totalDiscountGranted || 0).toLocaleString()}</div>
                 </div>
               </div>
 
@@ -557,10 +617,10 @@ export default function AdminDashboardPage() {
               <tbody>
                 {decks.map((d) => (
                   <tr key={d._id || d.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{d.name}</strong></td>
-                    <td style={styles.td}>{d.customerId?.fullName || d.contractorId?.fullName || 'N/A'}</td>
-                    <td style={styles.td}>{d.totalAreaSqFt} sq ft</td>
-                    <td style={styles.td}>{d.surfaceType || 'Wood'}</td>
+                    <td style={styles.td}><strong>{d.projectName || d.name || 'Deck Project'}</strong></td>
+                    <td style={styles.td}>{d.ownerId?.fullName || d.customerId?.fullName || d.contractorId?.fullName || 'N/A'}</td>
+                    <td style={styles.td}>{d.dimensions?.area || d.totalAreaSqFt || 0} sq ft</td>
+                    <td style={styles.td}>{d.surfaceDetails?.material || d.surfaceMaterial || d.surfaceType || 'Wood'}</td>
                     <td style={styles.td}>{new Date(d.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
@@ -612,10 +672,10 @@ export default function AdminDashboardPage() {
                 {estimates.map((e) => (
                   <tr key={e._id || e.id} style={styles.tr}>
                     <td style={styles.td}><strong>{e.estimateNumber || 'N/A'}</strong></td>
-                    <td style={styles.td}>{e.customerId?.fullName || 'N/A'}</td>
-                    <td style={styles.td}>{e.deckId?.name || 'N/A'}</td>
+                    <td style={styles.td}>{e.ownerId?.fullName || e.customerId?.fullName || e.createdFor?.fullName || 'N/A'}</td>
+                    <td style={styles.td}>{e.deckDetails?.projectName || e.deckId?.projectName || e.deckId?.name || 'Deck'}</td>
                     <td style={styles.td}><strong>${Number(e.totalAmount || 0).toFixed(2)}</strong></td>
-                    <td style={styles.td}>{e.status}</td>
+                    <td style={styles.td}>{e.estimateStatus || e.status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -720,6 +780,7 @@ export default function AdminDashboardPage() {
                   <th style={styles.th}>Type</th>
                   <th style={styles.th}>Value</th>
                   <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -731,8 +792,40 @@ export default function AdminDashboardPage() {
                     </td>
                     <td style={styles.td}>{s.category}</td>
                     <td style={styles.td}><code>{s.valueType}</code></td>
-                    <td style={styles.td}><strong>{JSON.stringify(s.value)}</strong></td>
-                    <td style={styles.td}>{s.isActive ? 'Active' : 'Inactive'}</td>
+                    <td style={styles.td}><strong>{typeof s.value === 'object' ? JSON.stringify(s.value) : String(s.value)}</strong></td>
+                    <td style={styles.td}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        backgroundColor: s.isActive ? '#dcfce7' : '#fee2e2',
+                        color: s.isActive ? '#15803d' : '#b91c1c',
+                      }}>
+                        {s.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSettingStatus(s)}
+                        style={{
+                          ...styles.smallActionBtn,
+                          backgroundColor: s.isActive ? '#fee2e2' : '#dcfce7',
+                          color: s.isActive ? '#b91c1c' : '#15803d',
+                          marginRight: '6px',
+                        }}
+                      >
+                        {s.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSetting(s)}
+                        style={styles.smallActionBtn}
+                      >
+                        Edit Value
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1051,6 +1144,54 @@ export default function AdminDashboardPage() {
                 </button>
                 <button type="submit" disabled={loading} style={styles.primaryBtn}>
                   Save Setting
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Setting */}
+      {isEditSettingModalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalBox}>
+            <h3 style={styles.modalTitle}>Update Platform Setting: {editSettingForm.key}</h3>
+            <form onSubmit={handleSaveSetting}>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={styles.label}>Label:</label>
+                <input
+                  type="text"
+                  required
+                  value={editSettingForm.label}
+                  onChange={(e) => setEditSettingForm({ ...editSettingForm, label: e.target.value })}
+                  style={styles.input}
+                />
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={styles.label}>Value Type:</label>
+                <input
+                  type="text"
+                  disabled
+                  value={editSettingForm.valueType}
+                  style={{ ...styles.input, backgroundColor: '#f1f5f9', cursor: 'not-allowed' }}
+                />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={styles.label}>Value:</label>
+                <input
+                  type="text"
+                  required
+                  value={editSettingForm.value}
+                  onChange={(e) => setEditSettingForm({ ...editSettingForm, value: e.target.value })}
+                  style={styles.input}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button type="button" onClick={() => setIsEditSettingModalOpen(false)} style={styles.secondaryBtn}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>
+                  Update Setting
                 </button>
               </div>
             </form>

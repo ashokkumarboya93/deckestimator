@@ -38,7 +38,7 @@ const createSettingSchema = Joi.object({
   category: Joi.string().valid('GENERAL', 'ESTIMATE', 'UPLOAD', 'NOTIFICATION', 'BUSINESS', 'SECURITY').required(),
   label: Joi.string().trim().min(2).max(120).required(),
   description: Joi.string().trim().max(500).allow('').optional(),
-  valueType: Joi.string().valid('STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'ARRAY').required(),
+  valueType: Joi.string().valid('STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'ARRAY', 'JSON').required(),
   value: Joi.any().required(),
   isPublic: Joi.boolean().default(false),
   isActive: Joi.boolean().default(true),
@@ -46,7 +46,7 @@ const createSettingSchema = Joi.object({
 
 // Platform setting update schema
 const updateSettingSchema = Joi.object({
-  value: Joi.any().required(),
+  value: Joi.any().optional(),
   label: Joi.string().trim().max(120).optional(),
   description: Joi.string().trim().max(500).allow('').optional(),
   isPublic: Joi.boolean().optional(),
@@ -66,3 +66,4 @@ module.exports = {
   updateSettingSchema,
   updateSettingStatusSchema,
 };
+

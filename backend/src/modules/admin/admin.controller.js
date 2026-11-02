@@ -115,6 +115,15 @@ async function getSettings(req, res, next) {
   }
 }
 
+async function getPublicSettings(req, res, next) {
+  try {
+    const settings = await adminService.getPublicSettings(req.query.category);
+    res.status(200).json({ success: true, data: settings });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getSettingByKey(req, res, next) {
   try {
     const setting = await adminService.getSettingByKey(req.params.key);
@@ -183,9 +192,11 @@ module.exports = {
   listEstimates,
   listAIAnalyses,
   getSettings,
+  getPublicSettings,
   getSettingByKey,
   createSetting,
   updateSetting,
   listAuditLogs,
   getReport,
 };
+

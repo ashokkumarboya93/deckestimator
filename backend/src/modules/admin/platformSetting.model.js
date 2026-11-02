@@ -38,7 +38,7 @@ const platformSettingSchema = new mongoose.Schema(
     valueType: {
       type: String,
       required: true,
-      enum: ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'ARRAY'],
+      enum: ['STRING', 'NUMBER', 'BOOLEAN', 'OBJECT', 'ARRAY', 'JSON'],
       default: 'STRING',
     },
     value: {
@@ -73,3 +73,4 @@ const platformSettingSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('PlatformSetting', platformSettingSchema);
+

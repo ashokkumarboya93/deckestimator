@@ -18,7 +18,10 @@ const { ROLES } = require('../../shared/constants');
 
 const router = express.Router();
 
-// Strict Admin-Only Guard across all routes
+// Public Platform Settings (Read-only for public/active platform display preferences)
+router.get('/settings/public', adminController.getPublicSettings);
+
+// Strict Admin-Only Guard across all routes below
 router.use(authenticate, authorize(ROLES.ADMIN));
 
 // 1. Dashboard & Activities
@@ -50,3 +53,4 @@ router.get('/audit-logs', adminController.listAuditLogs);
 router.get('/reports/:type', adminController.getReport);
 
 module.exports = router;
+

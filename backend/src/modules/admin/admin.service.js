@@ -17,6 +17,113 @@ const PlatformSetting = require('./platformSetting.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const { ROLES, ACCOUNT_STATUS } = require('../../shared/constants');
 
+// --- Helper: Async Mutex for thread-safe admin role/status changes ---
+class AsyncMutex {
+  constructor() {
+    this._queue = Promise.resolve();
+  }
+  acquire() {
+    let release;
+    const ticket = new Promise((resolve) => {
+      release = resolve;
+    });
+    const current = this._queue;
+    this._queue = current.then(() => ticket);
+    return current.then(() => release);
+  }
+}
+const adminMutationMutex = new AsyncMutex();
+
+// --- Security Helper: Prohibit secrets and credentials in platform settings ---
+const SENSITIVE_KEY_PATTERNS = [
+  /SECRET/i,
+  /PASSWORD/i,
+  /TOKEN/i,
+  /PRIVATE_KEY/i,
+  /CREDENTIAL/i,
+  /DATABASE_URI/i,
+  /MONGODB_URI/i,
+  /API_KEY/i,
+  /AUTH_KEY/i,
+  /SMTP_PASS/i,
+];
+
+function assertNoSecrets(key) {
+  for (const pattern of SENSITIVE_KEY_PATTERNS) {
+    if (pattern.test(key)) {
+      const err = new Error('Security policy violation: Secrets, passwords, tokens, and private keys cannot be stored in platform settings.');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+}
+
+// --- Validation Helper: Strict typed value parser and validator ---
+function validateTypedValue(valueType, value) {
+  switch (valueType) {
+    case 'NUMBER': {
+      const num = Number(value);
+      if (isNaN(num) || !isFinite(num)) {
+        const err = new Error(`Setting value "${value}" is not a valid number for valueType NUMBER.`);
+        err.statusCode = 400;
+        throw err;
+      }
+      return num;
+    }
+    case 'BOOLEAN': {
+      if (typeof value === 'boolean') return value;
+      if (value === 'true' || value === true) return true;
+      if (value === 'false' || value === false) return false;
+      const err = new Error(`Setting value "${value}" is not a valid boolean for valueType BOOLEAN.`);
+      err.statusCode = 400;
+      throw err;
+    }
+    case 'OBJECT':
+    case 'JSON': {
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error();
+          }
+          return parsed;
+        } catch {
+          const err = new Error('Setting value is not a valid JSON object.');
+          err.statusCode = 400;
+          throw err;
+        }
+      }
+      const err = new Error('Setting value is not a valid JSON object.');
+      err.statusCode = 400;
+      throw err;
+    }
+    case 'ARRAY': {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (!Array.isArray(parsed)) throw new Error();
+          return parsed;
+        } catch {
+          const err = new Error('Setting value is not a valid JSON array.');
+          err.statusCode = 400;
+          throw err;
+        }
+      }
+      const err = new Error('Setting value is not a valid JSON array.');
+      err.statusCode = 400;
+      throw err;
+    }
+    case 'STRING':
+    default: {
+      return String(value);
+    }
+  }
+}
+
 // --- Helper: Log administrative audit record ---
 async function logAdminAction(adminUser, action, entityType, entityId, oldValue, newValue, metadata = {}) {
   try {
@@ -85,7 +192,11 @@ async function getDashboardSummary() {
         $group: {
           _id: null,
           totalDecks: { $sum: 1 },
-          totalAreaSqFt: { $sum: '$totalAreaSqFt' },
+          totalAreaSqFt: {
+            $sum: {
+              $ifNull: ['$dimensions.area', { $ifNull: ['$totalAreaSqFt', 0] }],
+            },
+          },
         },
       },
     ]),
@@ -96,15 +207,33 @@ async function getDashboardSummary() {
         $group: {
           _id: null,
           totalEstimates: { $sum: 1 },
-          draft: { $sum: { $cond: [{ $eq: ['$status', 'DRAFT'] }, 1, 0] } },
-          submitted: { $sum: { $cond: [{ $eq: ['$status', 'SUBMITTED'] }, 1, 0] } },
-          completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
-          cancelled: { $sum: { $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0] } },
+          draft: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$estimateStatus', '$status'] }, 'DRAFT'] }, 1, 0] } },
+          submitted: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$estimateStatus', '$status'] }, 'SUBMITTED'] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$estimateStatus', '$status'] }, 'COMPLETED'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $in: [{ $ifNull: ['$estimateStatus', '$status'] }, ['CANCELLED', 'EXPIRED']] }, 1, 0] } },
           totalVolume: { $sum: '$totalAmount' },
+          completedRevenue: {
+            $sum: { $cond: [{ $eq: [{ $ifNull: ['$estimateStatus', '$status'] }, 'COMPLETED'] }, '$totalAmount', 0] },
+          },
+          activePipelineVolume: {
+            $sum: { $cond: [{ $in: [{ $ifNull: ['$estimateStatus', '$status'] }, ['DRAFT', 'SUBMITTED', 'COMPLETED']] }, '$totalAmount', 0] },
+          },
+          cancelledVolume: {
+            $sum: { $cond: [{ $in: [{ $ifNull: ['$estimateStatus', '$status'] }, ['CANCELLED', 'EXPIRED']] }, '$totalAmount', 0] },
+          },
           discountedCount: { $sum: { $cond: [{ $eq: ['$discountBreakdown.applied', true] }, 1, 0] } },
           totalDiscountGranted: {
             $sum: {
-              $cond: [{ $eq: ['$discountBreakdown.applied', true] }, '$discountBreakdown.discountAmount', 0],
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$discountBreakdown.applied', true] },
+                    { $ne: [{ $ifNull: ['$estimateStatus', '$status'] }, 'CANCELLED'] },
+                  ],
+                },
+                '$discountBreakdown.discountAmount',
+                0,
+              ],
             },
           },
         },
@@ -153,6 +282,11 @@ async function getDashboardSummary() {
           paidAmount: {
             $sum: { $cond: [{ $eq: ['$status', 'paid'] }, '$calculatedAmount', 0] },
           },
+          pendingPayableAmount: {
+            $sum: {
+              $cond: [{ $in: ['$status', ['pending', 'under_review', 'approved', 'payable']] }, '$calculatedAmount', 0],
+            },
+          },
         },
       },
     ]),
@@ -184,6 +318,9 @@ async function getDashboardSummary() {
       completed: 0,
       cancelled: 0,
       totalVolume: 0,
+      completedRevenue: 0,
+      activePipelineVolume: 0,
+      cancelledVolume: 0,
       discountedCount: 0,
       totalDiscountGranted: 0,
     },
@@ -209,6 +346,7 @@ async function getDashboardSummary() {
       payableCount: 0,
       paidCount: 0,
       paidAmount: 0,
+      pendingPayableAmount: 0,
     },
   };
 }
@@ -344,28 +482,58 @@ async function updateUser(adminUser, targetUserId, payload) {
 
   const adminId = adminUser.id || adminUser._id;
 
-  // Protect Last-Admin: if target is admin and role/status is changed
+  // Protect Last-Admin & Prevent Self-Demotion
   if (targetUser.role === ROLES.ADMIN) {
     const isDemoting = payload.role && payload.role !== ROLES.ADMIN;
     const isDisabling = payload.accountStatus && payload.accountStatus !== ACCOUNT_STATUS.ACTIVE;
 
     if (isDemoting || isDisabling) {
-      const activeAdminCount = await User.countDocuments({
-        role: ROLES.ADMIN,
-        accountStatus: ACCOUNT_STATUS.ACTIVE,
-      });
-
-      if (activeAdminCount <= 1) {
-        const err = new Error('Cannot demote or deactivate the last remaining active platform administrator.');
-        err.statusCode = 400;
-        throw err;
-      }
-
-      // Self-demotion safeguard
+      // 1. Self-demotion safeguard: An admin can NEVER modify their own admin role or status directly
       if (targetUser._id.toString() === adminId.toString()) {
         const err = new Error('Administrators cannot modify their own administrative role or status directly.');
         err.statusCode = 400;
         throw err;
+      }
+
+      // 2. Concurrency-safe Last-Admin deactivation/demotion check protected by AsyncMutex
+      const release = await adminMutationMutex.acquire();
+      try {
+        const otherActiveAdminCount = await User.countDocuments({
+          role: ROLES.ADMIN,
+          accountStatus: ACCOUNT_STATUS.ACTIVE,
+          _id: { $ne: targetUser._id },
+        });
+
+        if (otherActiveAdminCount < 1) {
+          const err = new Error('Cannot demote or deactivate the last remaining active platform administrator.');
+          err.statusCode = 400;
+          throw err;
+        }
+
+        const oldValue = {
+          fullName: targetUser.fullName,
+          phone: targetUser.phone,
+          role: targetUser.role,
+          accountStatus: targetUser.accountStatus,
+        };
+
+        if (payload.fullName) targetUser.fullName = payload.fullName;
+        if (payload.phone !== undefined) targetUser.phone = payload.phone;
+        if (payload.role) targetUser.role = payload.role;
+        if (payload.accountStatus) targetUser.accountStatus = payload.accountStatus;
+
+        await targetUser.save();
+
+        await logAdminAction(adminUser, 'UPDATE_USER', 'USER', targetUser._id, oldValue, {
+          fullName: targetUser.fullName,
+          phone: targetUser.phone,
+          role: targetUser.role,
+          accountStatus: targetUser.accountStatus,
+        }, { reason: payload.statusReason || '' });
+
+        return targetUser;
+      } finally {
+        release();
       }
     }
   }
@@ -404,12 +572,17 @@ async function updateUserStatus(adminUser, targetUserId, accountStatus, reason =
 
 async function listDecks({ page = 1, limit = 20, search = '', surfaceType, ownerRole }) {
   const query = {};
-  if (surfaceType) query.surfaceType = surfaceType;
+  if (surfaceType) {
+    query.$or = [{ 'surfaceDetails.material': surfaceType }, { surfaceType }];
+  }
 
   if (search) {
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     query.$or = [
+      { projectName: { $regex: escaped, $options: 'i' } },
       { name: { $regex: escaped, $options: 'i' } },
+      { 'propertyAddress.city': { $regex: escaped, $options: 'i' } },
+      { 'propertyAddress.state': { $regex: escaped, $options: 'i' } },
       { 'address.city': { $regex: escaped, $options: 'i' } },
       { 'address.state': { $regex: escaped, $options: 'i' } },
     ];
@@ -422,6 +595,7 @@ async function listDecks({ page = 1, limit = 20, search = '', surfaceType, owner
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate('ownerId', 'fullName email role')
       .populate('customerId', 'fullName email role')
       .populate('contractorId', 'fullName email role'),
     Deck.countDocuments(query),
@@ -440,12 +614,15 @@ async function listDecks({ page = 1, limit = 20, search = '', surfaceType, owner
 
 async function listEstimates({ page = 1, limit = 20, status, search = '' }) {
   const query = {};
-  if (status) query.status = status;
+  if (status) {
+    query.$or = [{ status }, { estimateStatus: status }];
+  }
 
   if (search) {
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     query.$or = [
       { estimateNumber: { $regex: escaped, $options: 'i' } },
+      { 'deckDetails.projectName': { $regex: escaped, $options: 'i' } },
     ];
   }
 
@@ -456,9 +633,12 @@ async function listEstimates({ page = 1, limit = 20, status, search = '' }) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate('ownerId', 'fullName email')
+      .populate('createdBy', 'fullName email')
+      .populate('createdFor', 'fullName email')
       .populate('customerId', 'fullName email')
       .populate('contractorId', 'fullName email')
-      .populate('deckId', 'name surfaceType totalAreaSqFt'),
+      .populate('deckId', 'projectName name surfaceMaterial dimensions'),
     Estimate.countDocuments(query),
   ]);
 
@@ -519,6 +699,15 @@ async function getSettings(category = null) {
   return settings;
 }
 
+async function getPublicSettings(category = null) {
+  const query = { isPublic: true, isActive: true };
+  if (category) query.category = category;
+  const settings = await PlatformSetting.find(query)
+    .sort({ category: 1, key: 1 })
+    .select('key category label description valueType value updatedAt');
+  return settings;
+}
+
 async function getSettingByKey(key) {
   const setting = await PlatformSetting.findOne({ key: key.toUpperCase() });
   if (!setting) {
@@ -531,6 +720,8 @@ async function getSettingByKey(key) {
 
 async function createSetting(adminUser, payload) {
   const key = payload.key.toUpperCase();
+  assertNoSecrets(key);
+
   const existing = await PlatformSetting.findOne({ key });
   if (existing) {
     const err = new Error(`Platform setting "${key}" already exists.`);
@@ -538,13 +729,15 @@ async function createSetting(adminUser, payload) {
     throw err;
   }
 
+  const validatedValue = validateTypedValue(payload.valueType, payload.value);
+
   const setting = await PlatformSetting.create({
     key,
     category: payload.category,
     label: payload.label,
     description: payload.description || '',
     valueType: payload.valueType,
-    value: payload.value,
+    value: validatedValue,
     isPublic: payload.isPublic || false,
     isActive: payload.isActive !== undefined ? payload.isActive : true,
     lastUpdatedBy: adminUser.id || adminUser._id,
@@ -579,7 +772,9 @@ async function updateSetting(adminUser, keyOrId, payload) {
     isPublic: setting.isPublic,
   };
 
-  if (payload.value !== undefined) setting.value = payload.value;
+  if (payload.value !== undefined) {
+    setting.value = validateTypedValue(setting.valueType, payload.value);
+  }
   if (payload.label) setting.label = payload.label;
   if (payload.description !== undefined) setting.description = payload.description;
   if (payload.isPublic !== undefined) setting.isPublic = payload.isPublic;
@@ -738,6 +933,7 @@ module.exports = {
   listEstimates,
   listAIAnalyses,
   getSettings,
+  getPublicSettings,
   getSettingByKey,
   createSetting,
   updateSetting,
