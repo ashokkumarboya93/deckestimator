@@ -17,9 +17,19 @@ function buildQuery(params = {}) {
 }
 
 export async function createEstimate(payload) {
+  const mapped = {
+    deckId: payload.deckId,
+    estimateName: payload.estimateName || '',
+    materialIds: payload.materialIds || (payload.selectedMaterials || []).map((m) => m.materialId || m),
+    serviceIds: payload.serviceIds || (payload.selectedServices || []).map((s) => s.serviceId || s),
+    selectedMaterials: payload.selectedMaterials,
+    selectedServices: payload.selectedServices,
+    numberOfCoats: payload.numberOfCoats,
+    notes: payload.notes || '',
+  };
   const res = await apiClient(ENDPOINTS.ESTIMATES.BASE, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(mapped),
   });
   return res.data?.estimate;
 }

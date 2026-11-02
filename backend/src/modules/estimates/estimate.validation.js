@@ -29,6 +29,22 @@ const createEstimateSchema = {
       .items(Joi.string().pattern(objectIdPattern))
       .default([])
       .optional(),
+    selectedMaterials: Joi.array()
+      .items(
+        Joi.object({
+          materialId: Joi.string().pattern(objectIdPattern).required(),
+          numberOfCoats: Joi.number().min(1).max(5).optional(),
+        })
+      )
+      .optional(),
+    selectedServices: Joi.array()
+      .items(
+        Joi.object({
+          serviceId: Joi.string().pattern(objectIdPattern).required(),
+        })
+      )
+      .optional(),
+    numberOfCoats: Joi.number().min(1).max(5).optional(),
     notes: Joi.string().trim().max(1000).allow('').optional(),
   }).unknown(false),
 };

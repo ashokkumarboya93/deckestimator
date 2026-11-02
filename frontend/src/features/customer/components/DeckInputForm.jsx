@@ -219,20 +219,21 @@ export default function DeckInputForm({ initialData = null, onSubmit, onCancel, 
     }
 
     // Sanitize numerical fields
+    const { images: _ignoredImages, ...cleanData } = formData;
     const payload = {
-      ...formData,
+      ...cleanData,
       completionStatus: status,
       dimensions: {
-        ...formData.dimensions,
-        length: formData.dimensions.length ? Number(formData.dimensions.length) : null,
-        width: formData.dimensions.width ? Number(formData.dimensions.width) : null,
-        area: formData.dimensions.area ? Number(formData.dimensions.area) : null,
+        ...cleanData.dimensions,
+        length: cleanData.dimensions.length ? Number(cleanData.dimensions.length) : null,
+        width: cleanData.dimensions.width ? Number(cleanData.dimensions.width) : null,
+        area: cleanData.dimensions.area ? Number(cleanData.dimensions.area) : null,
       },
       structureDetails: {
-        ...formData.structureDetails,
-        levels: Number(formData.structureDetails.levels) || 1,
-        railingLength: Number(formData.structureDetails.railingLength) || 0,
-        stairStepCount: Number(formData.structureDetails.stairStepCount) || 0,
+        ...cleanData.structureDetails,
+        levels: Number(cleanData.structureDetails.levels) || 1,
+        railingLength: Number(cleanData.structureDetails.railingLength) || 0,
+        stairStepCount: Number(cleanData.structureDetails.stairStepCount) || 0,
       },
     };
 

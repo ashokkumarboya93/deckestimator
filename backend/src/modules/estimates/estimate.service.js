@@ -78,7 +78,16 @@ function assertDeckAccess(deck, user) {
 }
 
 async function createEstimate(data, user, ipAddress) {
-  const { deckId, estimateName, materialIds = [], serviceIds = [], notes = '' } = data;
+  const { deckId, estimateName, notes = '' } = data;
+  let materialIds = data.materialIds || [];
+  let serviceIds = data.serviceIds || [];
+
+  if (materialIds.length === 0 && Array.isArray(data.selectedMaterials) && data.selectedMaterials.length > 0) {
+    materialIds = data.selectedMaterials.map((m) => m.materialId || m);
+  }
+  if (serviceIds.length === 0 && Array.isArray(data.selectedServices) && data.selectedServices.length > 0) {
+    serviceIds = data.selectedServices.map((s) => s.serviceId || s);
+  }
 
   // 1. Fetch & Validate Deck
   const deck = await Deck.findById(deckId);
