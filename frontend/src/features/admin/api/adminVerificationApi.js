@@ -7,21 +7,18 @@ import { ENDPOINTS } from '../../../api/endpoints';
 
 export const adminVerificationApi = {
   getApplications: async (params = {}) => {
-    const res = await client.get(ENDPOINTS.CONTRACTORS.ADMIN_VERIFICATIONS, { params });
-    return res.data;
+    return client.get(ENDPOINTS.CONTRACTORS.ADMIN_VERIFICATIONS, { params });
   },
 
   getApplicationDetails: async (id) => {
-    const res = await client.get(ENDPOINTS.CONTRACTORS.ADMIN_VERIFICATION_BY_ID(id));
-    return res.data;
+    return client.get(ENDPOINTS.CONTRACTORS.ADMIN_VERIFICATION_BY_ID(id));
   },
 
   reviewApplication: async (id, payload) => {
-    const res = await client.post(
+    return client.post(
       ENDPOINTS.CONTRACTORS.ADMIN_VERIFICATION_REVIEW(id),
       payload
     );
-    return res.data;
   },
 
   getDocumentFileUrl: (documentId) => {

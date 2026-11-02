@@ -1,0 +1,156 @@
+module.exports = function getSection6Checklist() {
+  const endpoints = [
+    // Phase 2
+    { id: 'API-001', phase: 'Phase 2', mod: 'Health', m: 'GET', url: '/api/v1/health', auth: 'No', role: 'Public' },
+    // Phase 3
+    { id: 'API-002', phase: 'Phase 3', mod: 'Auth', m: 'POST', url: '/api/v1/auth/register', auth: 'No', role: 'Public' },
+    { id: 'API-003', phase: 'Phase 3', mod: 'Auth', m: 'POST', url: '/api/v1/auth/login', auth: 'No', role: 'Public' },
+    { id: 'API-004', phase: 'Phase 3', mod: 'Auth', m: 'POST', url: '/api/v1/auth/logout', auth: 'Optional', role: 'All' },
+    { id: 'API-005', phase: 'Phase 3', mod: 'Auth', m: 'GET', url: '/api/v1/auth/me', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-006', phase: 'Phase 3', mod: 'Users', m: 'GET', url: '/api/v1/users/me', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-007', phase: 'Phase 3', mod: 'Users', m: 'PATCH', url: '/api/v1/users/me', auth: 'Yes', role: 'Authenticated' },
+    // Phase 4
+    { id: 'API-008', phase: 'Phase 4', mod: 'Decks', m: 'POST', url: '/api/v1/decks', auth: 'Yes', role: 'Customer / Admin' },
+    { id: 'API-009', phase: 'Phase 4', mod: 'Decks', m: 'GET', url: '/api/v1/decks', auth: 'Yes', role: 'Customer / Admin' },
+    { id: 'API-010', phase: 'Phase 4', mod: 'Decks', m: 'GET', url: '/api/v1/decks/:deckId', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-011', phase: 'Phase 4', mod: 'Decks', m: 'PATCH', url: '/api/v1/decks/:deckId', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-012', phase: 'Phase 4', mod: 'Decks', m: 'DELETE', url: '/api/v1/decks/:deckId', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-013', phase: 'Phase 4', mod: 'Files', m: 'POST', url: '/api/v1/decks/:deckId/images', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-014', phase: 'Phase 4', mod: 'Files', m: 'GET', url: '/api/v1/decks/:deckId/images', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-015', phase: 'Phase 4', mod: 'Files', m: 'GET', url: '/api/v1/decks/:deckId/images/:imageId', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-016', phase: 'Phase 4', mod: 'Files', m: 'DELETE', url: '/api/v1/decks/:deckId/images/:imageId', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-017', phase: 'Phase 4', mod: 'Analysis', m: 'POST', url: '/api/v1/decks/:deckId/analyses', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-018', phase: 'Phase 4', mod: 'Analysis', m: 'GET', url: '/api/v1/decks/:deckId/analyses', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    // Phase 5
+    { id: 'API-019', phase: 'Phase 5', mod: 'Catalog', m: 'POST', url: '/api/v1/catalog/material-categories', auth: 'Yes', role: 'Admin' },
+    { id: 'API-020', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/material-categories', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-021', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/material-categories/:id', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-022', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/material-categories/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-023', phase: 'Phase 5', mod: 'Catalog', m: 'PUT', url: '/api/v1/catalog/material-categories/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-024', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/material-categories/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-025', phase: 'Phase 5', mod: 'Catalog', m: 'POST', url: '/api/v1/catalog/materials', auth: 'Yes', role: 'Admin' },
+    { id: 'API-026', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/materials', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-027', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/materials/:id', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-028', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/materials/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-029', phase: 'Phase 5', mod: 'Catalog', m: 'PUT', url: '/api/v1/catalog/materials/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-030', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/materials/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-031', phase: 'Phase 5', mod: 'Catalog', m: 'POST', url: '/api/v1/catalog/service-categories', auth: 'Yes', role: 'Admin' },
+    { id: 'API-032', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/service-categories', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-033', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/service-categories/:id', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-034', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/service-categories/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-035', phase: 'Phase 5', mod: 'Catalog', m: 'PUT', url: '/api/v1/catalog/service-categories/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-036', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/service-categories/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-037', phase: 'Phase 5', mod: 'Catalog', m: 'POST', url: '/api/v1/catalog/services', auth: 'Yes', role: 'Admin' },
+    { id: 'API-038', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/services', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-039', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/services/:id', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-040', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/services/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-041', phase: 'Phase 5', mod: 'Catalog', m: 'PUT', url: '/api/v1/catalog/services/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-042', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/services/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-043', phase: 'Phase 5', mod: 'Catalog', m: 'POST', url: '/api/v1/catalog/compatibilities', auth: 'Yes', role: 'Admin' },
+    { id: 'API-044', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/compatibilities', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-045', phase: 'Phase 5', mod: 'Catalog', m: 'GET', url: '/api/v1/catalog/compatibilities/:id', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-046', phase: 'Phase 5', mod: 'Catalog', m: 'PATCH', url: '/api/v1/catalog/compatibilities/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-047', phase: 'Phase 5', mod: 'Catalog', m: 'PUT', url: '/api/v1/catalog/compatibilities/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-048', phase: 'Phase 5', mod: 'Catalog', m: 'DELETE', url: '/api/v1/catalog/compatibilities/:id', auth: 'Yes', role: 'Admin' },
+    // Phase 6
+    { id: 'API-049', phase: 'Phase 6', mod: 'Pricing', m: 'GET', url: '/api/v1/pricing/configurations/active', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-050', phase: 'Phase 6', mod: 'Pricing', m: 'POST', url: '/api/v1/pricing/configurations', auth: 'Yes', role: 'Admin' },
+    { id: 'API-051', phase: 'Phase 6', mod: 'Pricing', m: 'GET', url: '/api/v1/pricing/configurations', auth: 'Yes', role: 'Admin' },
+    { id: 'API-052', phase: 'Phase 6', mod: 'Pricing', m: 'GET', url: '/api/v1/pricing/configurations/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-053', phase: 'Phase 6', mod: 'Pricing', m: 'PATCH', url: '/api/v1/pricing/configurations/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-054', phase: 'Phase 6', mod: 'Pricing', m: 'PATCH', url: '/api/v1/pricing/configurations/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-055', phase: 'Phase 6', mod: 'Estimates', m: 'POST', url: '/api/v1/estimates', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-056', phase: 'Phase 6', mod: 'Estimates', m: 'GET', url: '/api/v1/estimates', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-057', phase: 'Phase 6', mod: 'Estimates', m: 'GET', url: '/api/v1/estimates/:id', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-058', phase: 'Phase 6', mod: 'Estimates', m: 'POST', url: '/api/v1/estimates/:id/recalculate', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-059', phase: 'Phase 6', mod: 'Estimates', m: 'GET', url: '/api/v1/estimates/:id/history', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-060', phase: 'Phase 6', mod: 'Estimates', m: 'PATCH', url: '/api/v1/estimates/:id/status', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    // Phase 7
+    { id: 'API-061', phase: 'Phase 7', mod: 'AI Vision', m: 'GET', url: '/api/v1/condition-analyses/ml-health', auth: 'Yes', role: 'Authenticated' },
+    { id: 'API-062', phase: 'Phase 7', mod: 'AI Vision', m: 'POST', url: '/api/v1/condition-analyses/decks/:deckId/analyses', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-063', phase: 'Phase 7', mod: 'AI Vision', m: 'GET', url: '/api/v1/condition-analyses/decks/:deckId/analyses', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-064', phase: 'Phase 7', mod: 'AI Vision', m: 'GET', url: '/api/v1/condition-analyses/:id', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-065', phase: 'Phase 7', mod: 'AI Vision', m: 'POST', url: '/api/v1/condition-analyses/:id/retry', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-066', phase: 'Phase 7', mod: 'AI Vision', m: 'PATCH', url: '/api/v1/condition-analyses/:id/review', auth: 'Yes', role: 'Admin' },
+    // Phase 8
+    { id: 'API-067', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/me', auth: 'Yes', role: 'Contractor' },
+    { id: 'API-068', phase: 'Phase 8', mod: 'Contractors', m: 'PATCH', url: '/api/v1/contractors/me', auth: 'Yes', role: 'Contractor' },
+    { id: 'API-069', phase: 'Phase 8', mod: 'Contractors', m: 'POST', url: '/api/v1/contractors/me/verification/submit', auth: 'Yes', role: 'Contractor' },
+    { id: 'API-070', phase: 'Phase 8', mod: 'Contractors', m: 'POST', url: '/api/v1/contractors/me/verification/documents', auth: 'Yes', role: 'Contractor' },
+    { id: 'API-071', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/me/verification/documents', auth: 'Yes', role: 'Contractor' },
+    { id: 'API-072', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/documents/:documentId/file', auth: 'Yes', role: 'Owner / Admin' },
+    { id: 'API-073', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/eligible', auth: 'Yes', role: 'Admin' },
+    { id: 'API-074', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/admin/verifications', auth: 'Yes', role: 'Admin' },
+    { id: 'API-075', phase: 'Phase 8', mod: 'Contractors', m: 'GET', url: '/api/v1/contractors/admin/verifications/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-076', phase: 'Phase 8', mod: 'Contractors', m: 'POST', url: '/api/v1/contractors/admin/verifications/:id/review', auth: 'Yes', role: 'Admin' },
+    { id: 'API-077', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads', auth: 'Yes', role: 'Customer' },
+    { id: 'API-078', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/my-leads', auth: 'Yes', role: 'Customer' },
+    { id: 'API-079', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/admin/all', auth: 'Yes', role: 'Admin' },
+    { id: 'API-080', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/admin/analytics', auth: 'Yes', role: 'Admin' },
+    { id: 'API-081', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads/admin/:id/assign', auth: 'Yes', role: 'Admin' },
+    { id: 'API-082', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads/admin/:id/close', auth: 'Yes', role: 'Admin' },
+    { id: 'API-083', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/admin/:id/history', auth: 'Yes', role: 'Admin' },
+    { id: 'API-084', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/contractor/inbox', auth: 'Yes', role: 'Approved Contractor' },
+    { id: 'API-085', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads/contractor/:id/accept', auth: 'Yes', role: 'Assigned Contractor' },
+    { id: 'API-086', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads/contractor/:id/reject', auth: 'Yes', role: 'Assigned Contractor' },
+    { id: 'API-087', phase: 'Phase 8', mod: 'Leads', m: 'PATCH', url: '/api/v1/leads/contractor/:id/status', auth: 'Yes', role: 'Assigned Contractor' },
+    { id: 'API-088', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/:id', auth: 'Yes', role: 'Owner / Assigned / Admin' },
+    { id: 'API-089', phase: 'Phase 8', mod: 'Leads', m: 'GET', url: '/api/v1/leads/:id/activities', auth: 'Yes', role: 'Stakeholders' },
+    { id: 'API-090', phase: 'Phase 8', mod: 'Leads', m: 'POST', url: '/api/v1/leads/:id/notes', auth: 'Yes', role: 'Stakeholders' },
+    // Phase 9
+    { id: 'API-091', phase: 'Phase 9', mod: 'Discounts', m: 'GET', url: '/api/v1/discounts/contractor', auth: 'Yes', role: 'Approved Contractor' },
+    { id: 'API-092', phase: 'Phase 9', mod: 'Discounts', m: 'POST', url: '/api/v1/discounts/estimates/:estimateId/apply', auth: 'Yes', role: 'Assigned Contractor / Admin' },
+    { id: 'API-093', phase: 'Phase 9', mod: 'Discounts', m: 'GET', url: '/api/v1/discounts/estimates/:estimateId/history', auth: 'Yes', role: 'Stakeholders' },
+    { id: 'API-094', phase: 'Phase 9', mod: 'Discounts', m: 'POST', url: '/api/v1/discounts/admin/policies', auth: 'Yes', role: 'Admin' },
+    { id: 'API-095', phase: 'Phase 9', mod: 'Discounts', m: 'GET', url: '/api/v1/discounts/admin/policies', auth: 'Yes', role: 'Admin' },
+    { id: 'API-096', phase: 'Phase 9', mod: 'Discounts', m: 'GET', url: '/api/v1/discounts/admin/policies/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-097', phase: 'Phase 9', mod: 'Discounts', m: 'PATCH', url: '/api/v1/discounts/admin/policies/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-098', phase: 'Phase 9', mod: 'Discounts', m: 'PATCH', url: '/api/v1/discounts/admin/policies/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-099', phase: 'Phase 9', mod: 'Discounts', m: 'POST', url: '/api/v1/discounts/admin/assignments', auth: 'Yes', role: 'Admin' },
+    { id: 'API-100', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions/summary', auth: 'Yes', role: 'Approved Contractor' },
+    { id: 'API-101', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions', auth: 'Yes', role: 'Approved Contractor' },
+    { id: 'API-102', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions/:id', auth: 'Yes', role: 'Commission Contractor / Admin' },
+    { id: 'API-103', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions/:id/history', auth: 'Yes', role: 'Stakeholders' },
+    { id: 'API-104', phase: 'Phase 9', mod: 'Commissions', m: 'POST', url: '/api/v1/commissions/admin/policies', auth: 'Yes', role: 'Admin' },
+    { id: 'API-105', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions/admin/policies', auth: 'Yes', role: 'Admin' },
+    { id: 'API-106', phase: 'Phase 9', mod: 'Commissions', m: 'GET', url: '/api/v1/commissions/admin/policies/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-107', phase: 'Phase 9', mod: 'Commissions', m: 'PATCH', url: '/api/v1/commissions/admin/policies/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-108', phase: 'Phase 9', mod: 'Commissions', m: 'POST', url: '/api/v1/commissions/admin/generate', auth: 'Yes', role: 'Admin' },
+    { id: 'API-109', phase: 'Phase 9', mod: 'Commissions', m: 'POST', url: '/api/v1/commissions/admin/:id/review', auth: 'Yes', role: 'Admin' },
+    { id: 'API-110', phase: 'Phase 9', mod: 'Commissions', m: 'POST', url: '/api/v1/commissions/admin/:id/record-payment', auth: 'Yes', role: 'Admin' },
+    // Phase 10
+    { id: 'API-111', phase: 'Phase 10', mod: 'Platform', m: 'GET', url: '/api/v1/settings/public', auth: 'No', role: 'Public' },
+    { id: 'API-112', phase: 'Phase 10', mod: 'Admin Dashboard', m: 'GET', url: '/api/v1/admin/dashboard/summary', auth: 'Yes', role: 'Admin' },
+    { id: 'API-113', phase: 'Phase 10', mod: 'Admin Dashboard', m: 'GET', url: '/api/v1/admin/dashboard/activity', auth: 'Yes', role: 'Admin' },
+    { id: 'API-114', phase: 'Phase 10', mod: 'Admin Users', m: 'GET', url: '/api/v1/admin/users', auth: 'Yes', role: 'Admin' },
+    { id: 'API-115', phase: 'Phase 10', mod: 'Admin Users', m: 'GET', url: '/api/v1/admin/users/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-116', phase: 'Phase 10', mod: 'Admin Users', m: 'POST', url: '/api/v1/admin/users', auth: 'Yes', role: 'Admin' },
+    { id: 'API-117', phase: 'Phase 10', mod: 'Admin Users', m: 'PATCH', url: '/api/v1/admin/users/:id', auth: 'Yes', role: 'Admin' },
+    { id: 'API-118', phase: 'Phase 10', mod: 'Admin Users', m: 'PATCH', url: '/api/v1/admin/users/:id/status', auth: 'Yes', role: 'Admin' },
+    { id: 'API-119', phase: 'Phase 10', mod: 'Admin Decks', m: 'GET', url: '/api/v1/admin/decks', auth: 'Yes', role: 'Admin' },
+    { id: 'API-120', phase: 'Phase 10', mod: 'Admin Estimates', m: 'GET', url: '/api/v1/admin/estimates', auth: 'Yes', role: 'Admin' },
+    { id: 'API-121', phase: 'Phase 10', mod: 'Admin Analyses', m: 'GET', url: '/api/v1/admin/analyses', auth: 'Yes', role: 'Admin' },
+    { id: 'API-122', phase: 'Phase 10', mod: 'Admin Settings', m: 'GET', url: '/api/v1/admin/settings', auth: 'Yes', role: 'Admin' },
+    { id: 'API-123', phase: 'Phase 10', mod: 'Admin Settings', m: 'GET', url: '/api/v1/admin/settings/:key', auth: 'Yes', role: 'Admin' },
+    { id: 'API-124', phase: 'Phase 10', mod: 'Admin Settings', m: 'POST', url: '/api/v1/admin/settings', auth: 'Yes', role: 'Admin' },
+    { id: 'API-125', phase: 'Phase 10', mod: 'Admin Settings', m: 'PATCH', url: '/api/v1/admin/settings/:key', auth: 'Yes', role: 'Admin' },
+    { id: 'API-126', phase: 'Phase 10', mod: 'Admin Audit', m: 'GET', url: '/api/v1/admin/audit-logs', auth: 'Yes', role: 'Admin' },
+    { id: 'API-127', phase: 'Phase 10', mod: 'Admin Reports', m: 'GET', url: '/api/v1/admin/reports/:type', auth: 'Yes', role: 'Admin' }
+  ];
+
+  const lines = [];
+  lines.push('## Section 6: Complete API Testing Checklist');
+  lines.push('');
+  lines.push('Use this interactive tracking checklist during manual Postman execution. Valid statuses: `NOT TESTED`, `PASS`, `FAIL`, `PARTIAL`, `BLOCKED`, `NOT APPLICABLE`.');
+  lines.push('');
+  lines.push('| API ID | Phase | Module | Method | Endpoint URL | Auth | Role Required | Testing Status | Actual Result | Notes |');
+  lines.push('| :---: | :---: | :--- | :---: | :--- | :---: | :--- | :---: | :--- | :--- |');
+
+  endpoints.forEach(ep => {
+    lines.push(`| **${ep.id}** | ${ep.phase} | ${ep.mod} | \`${ep.m}\` | \`${ep.url}\` | ${ep.auth} | ${ep.role} | \`NOT TESTED\` | | |`);
+  });
+
+  lines.push('');
+  lines.push('---');
+  return lines.join('\n');
+};

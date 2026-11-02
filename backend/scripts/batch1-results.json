@@ -1,0 +1,1465 @@
+[
+  {
+    "id": "API-001",
+    "name": "Backend API Health & Telemetry Check",
+    "method": "GET",
+    "endpoint": "/health",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 171,
+    "data": {
+      "success": true,
+      "data": {
+        "status": "ok",
+        "environment": "development",
+        "timestamp": "2026-11-02T18:10:21.061Z"
+      }
+    }
+  },
+  {
+    "id": "API-002",
+    "name": "User Account Registration",
+    "method": "POST",
+    "endpoint": "/auth/register",
+    "status": "PASS",
+    "statusCode": 201,
+    "duration": 208,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "Batch One Customer",
+          "email": "batch1_cust_1793643021079@example.com",
+          "phone": "+1-555-010-3001",
+          "role": "customer",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": null,
+          "createdAt": "2026-11-02T18:10:21.245Z",
+          "updatedAt": "2026-11-02T18:10:21.245Z",
+          "id": "6ae8d20daff425d84744197b"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZThkMjBkYWZmNDI1ZDg0NzQ0MTk3YiIsInJvbGUiOiJjdXN0b21lciIsImVtYWlsIjoiYmF0Y2gxX2N1c3RfMTc5MzY0MzAyMTA3OUBleGFtcGxlLmNvbSIsImlhdCI6MTc5MzY0MzAyMSwiZXhwIjoxNzk0MjQ3ODIxfQ.M7NprI9ur8XzHu44An4Z7sjI_wMCXO98V1GEOfjAOOo",
+        "contractorProfile": null
+      }
+    }
+  },
+  {
+    "id": "API-003",
+    "name": "User Login & Session Establishment",
+    "method": "POST",
+    "endpoint": "/auth/login",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 202,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "Batch One Customer",
+          "email": "batch1_cust_1793643021079@example.com",
+          "phone": "+1-555-010-3001",
+          "role": "customer",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": "2026-11-02T18:10:21.456Z",
+          "createdAt": "2026-11-02T18:10:21.245Z",
+          "updatedAt": "2026-11-02T18:10:21.456Z",
+          "id": "6ae8d20daff425d84744197b"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZThkMjBkYWZmNDI1ZDg0NzQ0MTk3YiIsInJvbGUiOiJjdXN0b21lciIsImVtYWlsIjoiYmF0Y2gxX2N1c3RfMTc5MzY0MzAyMTA3OUBleGFtcGxlLmNvbSIsImlhdCI6MTc5MzY0MzAyMSwiZXhwIjoxNzk0MjQ3ODIxfQ.M7NprI9ur8XzHu44An4Z7sjI_wMCXO98V1GEOfjAOOo",
+        "contractorProfile": null
+      }
+    }
+  },
+  {
+    "id": "ADMIN_SETUP",
+    "name": "Admin Setup Login",
+    "method": "POST",
+    "endpoint": "/auth/login",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 151,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "System Administrator",
+          "email": "admin@deckestimator.com",
+          "phone": "555-0100",
+          "role": "admin",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": "2026-11-02T18:10:21.605Z",
+          "createdAt": "2026-11-02T06:08:59.408Z",
+          "updatedAt": "2026-11-02T18:10:21.605Z",
+          "id": "6ae828fb83dc9eb8e450f8d6"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZTgyOGZiODNkYzllYjhlNDUwZjhkNiIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AZGVja2VzdGltYXRvci5jb20iLCJpYXQiOjE3OTM2NDMwMjEsImV4cCI6MTc5NDI0NzgyMX0.T37Q4SIQO17X0ACI8q9oZ4Tuyayyz3ZlQ9k1bolHnzs",
+        "contractorProfile": null
+      }
+    }
+  },
+  {
+    "id": "API-004",
+    "name": "User Logout & Session Invalidation",
+    "method": "POST",
+    "endpoint": "/auth/logout",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 5,
+    "data": {
+      "success": true,
+      "data": {
+        "message": "Logged out successfully."
+      }
+    }
+  },
+  {
+    "id": "API-005",
+    "name": "Retrieve Current Authenticated User Session",
+    "method": "GET",
+    "endpoint": "/auth/me",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 62,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "Batch One Customer",
+          "email": "batch1_cust_1793643021079@example.com",
+          "phone": "+1-555-010-3001",
+          "role": "customer",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": "2026-11-02T18:10:21.804Z",
+          "createdAt": "2026-11-02T18:10:21.245Z",
+          "updatedAt": "2026-11-02T18:10:21.804Z",
+          "id": "6ae8d20daff425d84744197b"
+        },
+        "contractorProfile": null
+      }
+    }
+  },
+  {
+    "id": "API-006",
+    "name": "User Profile Details",
+    "method": "GET",
+    "endpoint": "/users/me",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 62,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "Batch One Customer",
+          "email": "batch1_cust_1793643021079@example.com",
+          "phone": "+1-555-010-3001",
+          "role": "customer",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": "2026-11-02T18:10:21.804Z",
+          "createdAt": "2026-11-02T18:10:21.245Z",
+          "updatedAt": "2026-11-02T18:10:21.804Z",
+          "id": "6ae8d20daff425d84744197b"
+        },
+        "contractorProfile": null
+      }
+    }
+  },
+  {
+    "id": "API-007",
+    "name": "Update User Profile Details",
+    "method": "PATCH",
+    "endpoint": "/users/me",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 79,
+    "data": {
+      "success": true,
+      "data": {
+        "user": {
+          "fullName": "Batch One Customer Updated",
+          "email": "batch1_cust_1793643021079@example.com",
+          "phone": "+1-555-010-3999",
+          "role": "customer",
+          "accountStatus": "active",
+          "emailVerifiedAt": null,
+          "phoneVerifiedAt": null,
+          "lastLoginAt": "2026-11-02T18:10:21.804Z",
+          "createdAt": "2026-11-02T18:10:21.245Z",
+          "updatedAt": "2026-11-02T18:10:21.999Z",
+          "id": "6ae8d20daff425d84744197b"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-008",
+    "name": "Create Deck Project",
+    "method": "POST",
+    "endpoint": "/decks",
+    "status": "PASS",
+    "statusCode": 201,
+    "duration": 78,
+    "data": {
+      "success": true,
+      "data": {
+        "deck": {
+          "ownerId": "6ae8d20daff425d84744197b",
+          "projectName": "Cedar Lakeside Deck 1793643022040",
+          "projectDescription": "Large residential attached deck requiring full restoration",
+          "propertyAddress": {
+            "street": "",
+            "city": "",
+            "state": "",
+            "zipCode": "",
+            "country": "USA"
+          },
+          "measurementUnit": "ft",
+          "dimensions": {
+            "length": 24,
+            "width": 16,
+            "area": 384,
+            "isManualArea": false
+          },
+          "deckShape": "rectangle",
+          "structureDetails": {
+            "levels": 1,
+            "isAttached": true,
+            "hasRailings": true,
+            "railingLength": 64,
+            "hasStairs": false,
+            "stairStepCount": 0,
+            "builtInFeatures": [],
+            "structureNotes": ""
+          },
+          "surfaceDetails": {
+            "material": "wood",
+            "coatingStatus": "stained",
+            "previousTreatment": "",
+            "surfaceDescription": ""
+          },
+          "visibleConditions": [],
+          "additionalNotes": "",
+          "completionStatus": "draft",
+          "createdAt": "2026-11-02T18:10:22.084Z",
+          "updatedAt": "2026-11-02T18:10:22.084Z",
+          "id": "6ae8d20eaff425d84744197c"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-009",
+    "name": "List User Deck Projects",
+    "method": "GET",
+    "endpoint": "/decks",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 63,
+    "data": {
+      "success": true,
+      "data": {
+        "decks": [
+          {
+            "propertyAddress": {
+              "street": "",
+              "city": "",
+              "state": "",
+              "zipCode": "",
+              "country": "USA"
+            },
+            "dimensions": {
+              "length": 10,
+              "width": 10,
+              "area": 100,
+              "isManualArea": false
+            },
+            "structureDetails": {
+              "levels": 1,
+              "isAttached": true,
+              "hasRailings": false,
+              "railingLength": 0,
+              "hasStairs": false,
+              "stairStepCount": 0,
+              "builtInFeatures": [],
+              "structureNotes": ""
+            },
+            "surfaceDetails": {
+              "material": "wood",
+              "coatingStatus": "none",
+              "previousTreatment": "",
+              "surfaceDescription": ""
+            },
+            "ownerId": "6ae8d20daff425d84744197b",
+            "projectName": "Temp Deck to Delete",
+            "projectDescription": "",
+            "measurementUnit": "ft",
+            "deckShape": "rectangle",
+            "visibleConditions": [],
+            "additionalNotes": "",
+            "completionStatus": "draft",
+            "createdAt": "2026-11-02T18:10:22.159Z",
+            "updatedAt": "2026-11-02T18:10:22.159Z",
+            "id": "6ae8d20eaff425d84744197d"
+          },
+          {
+            "propertyAddress": {
+              "street": "",
+              "city": "",
+              "state": "",
+              "zipCode": "",
+              "country": "USA"
+            },
+            "dimensions": {
+              "length": 24,
+              "width": 16,
+              "area": 384,
+              "isManualArea": false
+            },
+            "structureDetails": {
+              "levels": 1,
+              "isAttached": true,
+              "hasRailings": true,
+              "railingLength": 64,
+              "hasStairs": false,
+              "stairStepCount": 0,
+              "builtInFeatures": [],
+              "structureNotes": ""
+            },
+            "surfaceDetails": {
+              "material": "wood",
+              "coatingStatus": "stained",
+              "previousTreatment": "",
+              "surfaceDescription": ""
+            },
+            "ownerId": "6ae8d20daff425d84744197b",
+            "projectName": "Cedar Lakeside Deck 1793643022040",
+            "projectDescription": "Large residential attached deck requiring full restoration",
+            "measurementUnit": "ft",
+            "deckShape": "rectangle",
+            "visibleConditions": [],
+            "additionalNotes": "",
+            "completionStatus": "draft",
+            "createdAt": "2026-11-02T18:10:22.084Z",
+            "updatedAt": "2026-11-02T18:10:22.084Z",
+            "id": "6ae8d20eaff425d84744197c"
+          }
+        ],
+        "pagination": {
+          "total": 2,
+          "page": 1,
+          "limit": 10,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "API-010",
+    "name": "Get Deck Project by Identifier",
+    "method": "GET",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 100,
+    "data": {
+      "success": true,
+      "data": {
+        "deck": {
+          "propertyAddress": {
+            "street": "",
+            "city": "",
+            "state": "",
+            "zipCode": "",
+            "country": "USA"
+          },
+          "dimensions": {
+            "length": 24,
+            "width": 16,
+            "area": 384,
+            "isManualArea": false
+          },
+          "structureDetails": {
+            "levels": 1,
+            "isAttached": true,
+            "hasRailings": true,
+            "railingLength": 64,
+            "hasStairs": false,
+            "stairStepCount": 0,
+            "builtInFeatures": [],
+            "structureNotes": ""
+          },
+          "surfaceDetails": {
+            "material": "wood",
+            "coatingStatus": "stained",
+            "previousTreatment": "",
+            "surfaceDescription": ""
+          },
+          "ownerId": "6ae8d20daff425d84744197b",
+          "projectName": "Cedar Lakeside Deck 1793643022040",
+          "projectDescription": "Large residential attached deck requiring full restoration",
+          "measurementUnit": "ft",
+          "deckShape": "rectangle",
+          "visibleConditions": [],
+          "additionalNotes": "",
+          "completionStatus": "draft",
+          "createdAt": "2026-11-02T18:10:22.084Z",
+          "updatedAt": "2026-11-02T18:10:22.084Z",
+          "id": "6ae8d20eaff425d84744197c",
+          "images": []
+        }
+      }
+    }
+  },
+  {
+    "id": "API-011",
+    "name": "Update Deck Project Specifications",
+    "method": "PATCH",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 107,
+    "data": {
+      "success": true,
+      "data": {
+        "deck": {
+          "propertyAddress": {
+            "street": "",
+            "city": "",
+            "state": "",
+            "zipCode": "",
+            "country": "USA"
+          },
+          "dimensions": {
+            "length": 25,
+            "width": 16,
+            "area": 400,
+            "isManualArea": false
+          },
+          "structureDetails": {
+            "levels": 1,
+            "isAttached": true,
+            "hasRailings": true,
+            "railingLength": 64,
+            "hasStairs": false,
+            "stairStepCount": 0,
+            "builtInFeatures": [],
+            "structureNotes": ""
+          },
+          "surfaceDetails": {
+            "material": "wood",
+            "coatingStatus": "stained",
+            "previousTreatment": "",
+            "surfaceDescription": ""
+          },
+          "ownerId": "6ae8d20daff425d84744197b",
+          "projectName": "Cedar Lakeside Deck 1793643022040",
+          "projectDescription": "Updated lakeside deck description with confirmed measurements",
+          "measurementUnit": "ft",
+          "deckShape": "rectangle",
+          "visibleConditions": [],
+          "additionalNotes": "",
+          "completionStatus": "draft",
+          "createdAt": "2026-11-02T18:10:22.084Z",
+          "updatedAt": "2026-11-02T18:10:22.436Z",
+          "id": "6ae8d20eaff425d84744197c"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-012",
+    "name": "Delete Deck Project (Soft Delete)",
+    "method": "DELETE",
+    "endpoint": "/decks/6ae8d20eaff425d84744197d",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 169,
+    "data": {
+      "success": true,
+      "data": {
+        "message": "Deck project and associated images deleted successfully."
+      }
+    }
+  },
+  {
+    "id": "API-013",
+    "name": "Upload Deck Photographs (Multipart/Form-Data)",
+    "method": "POST",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/images",
+    "status": "PASS",
+    "statusCode": 201,
+    "duration": 204,
+    "data": {
+      "success": true,
+      "data": {
+        "images": [
+          {
+            "deckId": "6ae8d20eaff425d84744197c",
+            "ownerId": "6ae8d20daff425d84744197b",
+            "originalFilename": "primary_deck_overview.png",
+            "storageKey": "6ffc1726-4ab3-4fa6-a28d-e52bb9b1e690.png",
+            "storageProvider": "local",
+            "mimeType": "image/png",
+            "fileSize": 67,
+            "imageDescription": "",
+            "uploadedAt": "2026-11-02T18:10:22.766Z",
+            "createdAt": "2026-11-02T18:10:22.767Z",
+            "updatedAt": "2026-11-02T18:10:22.767Z",
+            "id": "6ae8d20eaff425d84744197e"
+          },
+          {
+            "deckId": "6ae8d20eaff425d84744197c",
+            "ownerId": "6ae8d20daff425d84744197b",
+            "originalFilename": "secondary_surface_detail.png",
+            "storageKey": "d57b57f6-a5be-49f2-bfb1-4158f0143771.png",
+            "storageProvider": "local",
+            "mimeType": "image/png",
+            "fileSize": 67,
+            "imageDescription": "",
+            "uploadedAt": "2026-11-02T18:10:22.804Z",
+            "createdAt": "2026-11-02T18:10:22.805Z",
+            "updatedAt": "2026-11-02T18:10:22.805Z",
+            "id": "6ae8d20eaff425d84744197f"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "API-014",
+    "name": "List Uploaded Deck Photographs",
+    "method": "GET",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/images",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 126,
+    "data": {
+      "success": true,
+      "data": {
+        "images": [
+          {
+            "deckId": "6ae8d20eaff425d84744197c",
+            "ownerId": "6ae8d20daff425d84744197b",
+            "originalFilename": "primary_deck_overview.png",
+            "storageKey": "6ffc1726-4ab3-4fa6-a28d-e52bb9b1e690.png",
+            "storageProvider": "local",
+            "mimeType": "image/png",
+            "fileSize": 67,
+            "imageDescription": "",
+            "uploadedAt": "2026-11-02T18:10:22.766Z",
+            "createdAt": "2026-11-02T18:10:22.767Z",
+            "updatedAt": "2026-11-02T18:10:22.767Z",
+            "id": "6ae8d20eaff425d84744197e"
+          },
+          {
+            "deckId": "6ae8d20eaff425d84744197c",
+            "ownerId": "6ae8d20daff425d84744197b",
+            "originalFilename": "secondary_surface_detail.png",
+            "storageKey": "d57b57f6-a5be-49f2-bfb1-4158f0143771.png",
+            "storageProvider": "local",
+            "mimeType": "image/png",
+            "fileSize": 67,
+            "imageDescription": "",
+            "uploadedAt": "2026-11-02T18:10:22.804Z",
+            "createdAt": "2026-11-02T18:10:22.805Z",
+            "updatedAt": "2026-11-02T18:10:22.805Z",
+            "id": "6ae8d20eaff425d84744197f"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "API-015",
+    "name": "Serve / Stream Private Deck Image",
+    "method": "GET",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/images/6ae8d20eaff425d84744197e",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 145,
+    "data": "�PNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015ĉ\u0000\u0000\u0000\nIDATx�c\u0000\u0001\u0000\u0000\u0005\u0000\u0001\r\n-�\u0000\u0000\u0000\u0000IEND�B`�"
+  },
+  {
+    "id": "API-016",
+    "name": "Delete Deck Photograph",
+    "method": "DELETE",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/images/6ae8d20eaff425d84744197f",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 153,
+    "data": {
+      "success": true,
+      "data": {
+        "message": "Deck image deleted successfully."
+      }
+    }
+  },
+  {
+    "id": "API-017",
+    "name": "Run Condition Analysis (Deck Shortcut)",
+    "method": "POST",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/analyses",
+    "status": "FAIL",
+    "statusCode": 500,
+    "duration": 532,
+    "data": {
+      "success": false,
+      "error": {
+        "code": "INTERNAL_ERROR",
+        "message": "ML inference service is currently unavailable. Please ensure the Python service is running."
+      }
+    }
+  },
+  {
+    "id": "API-018",
+    "name": "List Condition Analyses (Deck Shortcut)",
+    "method": "GET",
+    "endpoint": "/decks/6ae8d20eaff425d84744197c/analyses",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 144,
+    "data": {
+      "success": true,
+      "data": {
+        "analyses": [
+          {
+            "imageQuality": {
+              "label": "GOOD",
+              "confidence": 1,
+              "blurScore": null,
+              "brightness": null,
+              "resolution": null
+            },
+            "manualReview": {
+              "required": false,
+              "reason": null,
+              "reviewStatus": "NONE",
+              "reviewedBy": null,
+              "reviewedAt": null,
+              "reviewNotes": ""
+            },
+            "model": {
+              "name": "MobileNetV3-DeckCondition",
+              "version": "1.0.0",
+              "datasetVersion": "pilot-v1"
+            },
+            "deckId": "6ae8d20eaff425d84744197c",
+            "ownerId": "6ae8d20daff425d84744197b",
+            "requestedBy": {
+              "fullName": "Batch One Customer Updated",
+              "role": "customer",
+              "id": "6ae8d20daff425d84744197b"
+            },
+            "imageReferences": [
+              {
+                "imageId": {
+                  "originalFilename": "primary_deck_overview.png",
+                  "storageKey": "6ffc1726-4ab3-4fa6-a28d-e52bb9b1e690.png",
+                  "id": "6ae8d20eaff425d84744197e"
+                },
+                "storageKey": "6ffc1726-4ab3-4fa6-a28d-e52bb9b1e690.png",
+                "originalFilename": "primary_deck_overview.png",
+                "mimeType": "image/png",
+                "_id": "6ae8d20faff425d847441981"
+              }
+            ],
+            "analysisStatus": "FAILED",
+            "conditionLevel": null,
+            "conditionLabel": null,
+            "conditionConfidence": null,
+            "limitations": [
+              "Assessment is based only on visible image content.",
+              "Structural safety cannot be determined from this photograph."
+            ],
+            "inferenceDurationMs": null,
+            "analysisStartedAt": "2026-11-02T18:10:23.610Z",
+            "analysisCompletedAt": "2026-11-02T18:10:23.759Z",
+            "errorCode": "ML_SERVICE_UNAVAILABLE",
+            "errorMessage": "ML inference service is currently unavailable. Please ensure the Python service is running.",
+            "notes": "Lakeside deck weathering inspection request",
+            "defects": [],
+            "createdAt": "2026-11-02T18:10:23.623Z",
+            "updatedAt": "2026-11-02T18:10:23.760Z",
+            "id": "6ae8d20faff425d847441980"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "API-019",
+    "name": "Create Material Category",
+    "method": "POST",
+    "endpoint": "/catalog/material-categories",
+    "status": "PASS",
+    "statusCode": 201,
+    "duration": 152,
+    "data": {
+      "success": true,
+      "data": {
+        "category": {
+          "name": "Architectural Stains 1793643023946",
+          "slug": "architectural-stains-1793643023946",
+          "description": "Commercial grade penetrating stains, sealers and transparent protective finishes",
+          "displayOrder": 1,
+          "status": "active",
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "categoryName": "Architectural Stains 1793643023946",
+          "createdAt": "2026-11-02T18:10:24.035Z",
+          "updatedAt": "2026-11-02T18:10:24.035Z",
+          "id": "6ae8d210aff425d847441983"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-020",
+    "name": "List Material Categories",
+    "method": "GET",
+    "endpoint": "/catalog/material-categories",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 90,
+    "data": {
+      "success": true,
+      "data": {
+        "categories": [
+          {
+            "name": "Premium Decking Finishes",
+            "slug": "premium-decking-finishes",
+            "description": "",
+            "displayOrder": 0,
+            "status": "active",
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "categoryName": "Premium Decking Finishes",
+            "createdAt": "2026-11-02T17:16:27.574Z",
+            "updatedAt": "2026-11-02T17:16:27.574Z",
+            "id": "6ae8c56bb8fa5774ba5b4632",
+            "materialsCount": 0
+          },
+          {
+            "name": "Architectural Stains 1793643023946",
+            "slug": "architectural-stains-1793643023946",
+            "description": "Commercial grade penetrating stains, sealers and transparent protective finishes",
+            "displayOrder": 1,
+            "status": "active",
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "categoryName": "Architectural Stains 1793643023946",
+            "createdAt": "2026-11-02T18:10:24.035Z",
+            "updatedAt": "2026-11-02T18:10:24.035Z",
+            "id": "6ae8d210aff425d847441983",
+            "materialsCount": 0
+          },
+          {
+            "name": "Premium Stains & Finishes 1793642440175",
+            "slug": "premium-stains-finishes-1793642440175",
+            "description": "Exterior acrylic and oil-based penetrating stains and deck sealers",
+            "displayOrder": 1,
+            "status": "active",
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "categoryName": "Premium Stains & Finishes 1793642440175",
+            "createdAt": "2026-11-02T18:00:40.353Z",
+            "updatedAt": "2026-11-02T18:00:40.353Z",
+            "id": "6ae8cfc8aff425d847441963",
+            "materialsCount": 0
+          },
+          {
+            "name": "Premium Stains & Finishes 1793642508866 (Replaced via PUT)",
+            "slug": "premium-stains-finishes-1793642508866-replaced-via-put",
+            "description": "Fully replaced category description for testing PUT contract",
+            "displayOrder": 5,
+            "status": "active",
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "categoryName": "Premium Stains & Finishes 1793642508866",
+            "createdAt": "2026-11-02T18:01:48.956Z",
+            "updatedAt": "2026-11-02T18:01:49.396Z",
+            "id": "6ae8d00caff425d847441968",
+            "materialsCount": 1
+          },
+          {
+            "name": "Premium Stains & Finishes 1793642570139 (Replaced via PUT)",
+            "slug": "premium-stains-finishes-1793642570139-replaced-via-put",
+            "description": "Fully replaced category description for testing PUT contract",
+            "displayOrder": 5,
+            "status": "active",
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "categoryName": "Premium Stains & Finishes 1793642570139",
+            "createdAt": "2026-11-02T18:02:50.232Z",
+            "updatedAt": "2026-11-02T18:02:50.749Z",
+            "id": "6ae8d04aaff425d847441972",
+            "materialsCount": 1
+          }
+        ],
+        "pagination": {
+          "total": 5,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "API-021",
+    "name": "Get Material Category by ID",
+    "method": "GET",
+    "endpoint": "/catalog/material-categories/6ae8d210aff425d847441983",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 139,
+    "data": {
+      "success": true,
+      "data": {
+        "category": {
+          "name": "Architectural Stains 1793643023946",
+          "slug": "architectural-stains-1793643023946",
+          "description": "Commercial grade penetrating stains, sealers and transparent protective finishes",
+          "displayOrder": 1,
+          "status": "active",
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "categoryName": "Architectural Stains 1793643023946",
+          "createdAt": "2026-11-02T18:10:24.035Z",
+          "updatedAt": "2026-11-02T18:10:24.035Z",
+          "id": "6ae8d210aff425d847441983",
+          "materialsCount": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "API-022",
+    "name": "Patch Material Category",
+    "method": "PATCH",
+    "endpoint": "/catalog/material-categories/6ae8d210aff425d847441983",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 154,
+    "data": {
+      "success": true,
+      "data": {
+        "category": {
+          "name": "Architectural Stains 1793643023946",
+          "slug": "architectural-stains-1793643023946",
+          "description": "Updated description: Premium exterior deck finishes and ultraviolet shields",
+          "displayOrder": 3,
+          "status": "active",
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "categoryName": "Architectural Stains 1793643023946",
+          "createdAt": "2026-11-02T18:10:24.035Z",
+          "updatedAt": "2026-11-02T18:10:24.395Z",
+          "id": "6ae8d210aff425d847441983"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-023",
+    "name": "Put (Replace) Material Category",
+    "method": "PUT",
+    "endpoint": "/catalog/material-categories/6ae8d210aff425d847441983",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 220,
+    "data": {
+      "success": true,
+      "data": {
+        "category": {
+          "name": "Architectural Stains 1793643023946 (Fully Replaced)",
+          "slug": "architectural-stains-1793643023946-fully-replaced",
+          "description": "Full replacement via PUT endpoint",
+          "displayOrder": 4,
+          "status": "active",
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "categoryName": "Architectural Stains 1793643023946",
+          "createdAt": "2026-11-02T18:10:24.035Z",
+          "updatedAt": "2026-11-02T18:10:24.603Z",
+          "id": "6ae8d210aff425d847441983"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-024",
+    "name": "Toggle Material Category Status",
+    "method": "PATCH",
+    "endpoint": "/catalog/material-categories/6ae8d210aff425d847441983/status",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 187,
+    "data": {
+      "success": true,
+      "data": {
+        "category": {
+          "name": "Architectural Stains 1793643023946 (Fully Replaced)",
+          "slug": "architectural-stains-1793643023946-fully-replaced",
+          "description": "Full replacement via PUT endpoint",
+          "displayOrder": 4,
+          "status": "inactive",
+          "isActive": false,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "categoryName": "Architectural Stains 1793643023946",
+          "createdAt": "2026-11-02T18:10:24.035Z",
+          "updatedAt": "2026-11-02T18:10:24.790Z",
+          "id": "6ae8d210aff425d847441983"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-025",
+    "name": "Create Material Item",
+    "method": "POST",
+    "endpoint": "/catalog/materials",
+    "status": "PASS",
+    "statusCode": 201,
+    "duration": 207,
+    "data": {
+      "success": true,
+      "data": {
+        "material": {
+          "materialName": "Cabot Australian Timber Oil",
+          "materialCode": "MAT-B1-6146",
+          "description": "Proven formulation designed to accentuate natural wood depth and repel water",
+          "categoryId": "6ae8d210aff425d847441983",
+          "materialType": "stain",
+          "brandName": "Cabot",
+          "productName": "",
+          "productModel": "",
+          "productImage": "",
+          "technicalDocument": "",
+          "compatibleSurfaces": [
+            "wood"
+          ],
+          "specifications": {
+            "baseType": "oil",
+            "finishType": "semi-gloss",
+            "dryingTime": 24,
+            "recommendedCoats": 2,
+            "applicationMethod": "",
+            "colors": [],
+            "uvResistance": false,
+            "waterResistance": false,
+            "weatherResistance": false
+          },
+          "measurement": {
+            "quantityUnit": "gallon"
+          },
+          "coverage": {
+            "coverageValue": 300,
+            "coverageAreaUnit": "square_foot",
+            "coverageQuantity": 1,
+            "coverageQuantityUnit": "gallon",
+            "coverageNotes": ""
+          },
+          "cost": {
+            "unitCost": 54.95,
+            "currency": "USD",
+            "costUnit": "gallon",
+            "costNotes": "",
+            "costLastUpdatedAt": null
+          },
+          "status": "active",
+          "unit": "GALLON",
+          "pricePerUnit": 54.95,
+          "coveragePerUnit": 300,
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "createdAt": "2026-11-02T18:10:25.162Z",
+          "updatedAt": "2026-11-02T18:10:25.162Z",
+          "id": "6ae8d211aff425d847441989"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-026",
+    "name": "List Materials",
+    "method": "GET",
+    "endpoint": "/catalog/materials",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 105,
+    "data": {
+      "success": true,
+      "data": {
+        "materials": [
+          {
+            "specifications": {
+              "baseType": "oil",
+              "finishType": "semi-gloss",
+              "dryingTime": 24,
+              "recommendedCoats": 2,
+              "applicationMethod": "",
+              "colors": [],
+              "uvResistance": false,
+              "waterResistance": false,
+              "weatherResistance": false
+            },
+            "measurement": {
+              "quantityUnit": "gallon"
+            },
+            "coverage": {
+              "coverageValue": 300,
+              "coverageAreaUnit": "square_foot",
+              "coverageQuantity": 1,
+              "coverageQuantityUnit": "gallon",
+              "coverageNotes": ""
+            },
+            "cost": {
+              "unitCost": 54.95,
+              "currency": "USD",
+              "costUnit": "gallon",
+              "costNotes": "",
+              "costLastUpdatedAt": null
+            },
+            "materialName": "Cabot Australian Timber Oil",
+            "materialCode": "MAT-B1-6146",
+            "description": "Proven formulation designed to accentuate natural wood depth and repel water",
+            "categoryId": {
+              "name": "Architectural Stains 1793643023946 (Fully Replaced)",
+              "slug": "architectural-stains-1793643023946-fully-replaced",
+              "status": "active",
+              "id": "6ae8d210aff425d847441983"
+            },
+            "materialType": "stain",
+            "brandName": "Cabot",
+            "productName": "",
+            "productModel": "",
+            "productImage": "",
+            "technicalDocument": "",
+            "compatibleSurfaces": [
+              "wood"
+            ],
+            "status": "active",
+            "unit": "GALLON",
+            "pricePerUnit": 54.95,
+            "coveragePerUnit": 300,
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "createdAt": "2026-11-02T18:10:25.162Z",
+            "updatedAt": "2026-11-02T18:10:25.162Z",
+            "id": "6ae8d211aff425d847441989"
+          },
+          {
+            "specifications": {
+              "baseType": "oil",
+              "finishType": "semi-gloss",
+              "dryingTime": 24,
+              "recommendedCoats": 2,
+              "applicationMethod": "",
+              "colors": [],
+              "uvResistance": false,
+              "waterResistance": false,
+              "weatherResistance": false
+            },
+            "measurement": {
+              "quantityUnit": "gallon"
+            },
+            "coverage": {
+              "coverageValue": 250,
+              "coverageAreaUnit": "square_foot",
+              "coverageQuantity": 1,
+              "coverageQuantityUnit": "gallon",
+              "coverageNotes": ""
+            },
+            "cost": {
+              "unitCost": 45.99,
+              "currency": "USD",
+              "costUnit": "gallon",
+              "costNotes": "",
+              "costLastUpdatedAt": null
+            },
+            "materialName": "Olympic Maximum Semi-Transparent Stain",
+            "materialCode": "MAT-STN-9999",
+            "description": "Advanced waterproof exterior stain and sealant in one",
+            "categoryId": {
+              "name": "Premium Stains & Finishes 1793642508866 (Replaced via PUT)",
+              "slug": "premium-stains-finishes-1793642508866-replaced-via-put",
+              "status": "active",
+              "id": "6ae8d00caff425d847441968"
+            },
+            "materialType": "stain",
+            "brandName": "",
+            "productName": "",
+            "productModel": "",
+            "productImage": "",
+            "technicalDocument": "",
+            "compatibleSurfaces": [
+              "wood"
+            ],
+            "status": "active",
+            "unit": "GALLON",
+            "pricePerUnit": 45.99,
+            "coveragePerUnit": 250,
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "createdAt": "2026-11-02T18:02:20.528Z",
+            "updatedAt": "2026-11-02T18:02:20.528Z",
+            "id": "6ae8d02caff425d84744196d"
+          },
+          {
+            "specifications": {
+              "baseType": "oil",
+              "finishType": "semi-gloss",
+              "dryingTime": 24,
+              "recommendedCoats": 2,
+              "applicationMethod": "",
+              "colors": [],
+              "uvResistance": false,
+              "waterResistance": false,
+              "weatherResistance": false
+            },
+            "measurement": {
+              "quantityUnit": "gallon"
+            },
+            "coverage": {
+              "coverageValue": 250,
+              "coverageAreaUnit": "square_foot",
+              "coverageQuantity": 1,
+              "coverageQuantityUnit": "gallon",
+              "coverageNotes": ""
+            },
+            "cost": {
+              "unitCost": 45.99,
+              "currency": "USD",
+              "costUnit": "gallon",
+              "costNotes": "",
+              "costLastUpdatedAt": null
+            },
+            "materialName": "Olympic Maximum Semi-Transparent Stain",
+            "materialCode": "MAT-STN-1303",
+            "description": "Advanced waterproof exterior stain and sealant in one",
+            "categoryId": {
+              "name": "Premium Stains & Finishes 1793642570139 (Replaced via PUT)",
+              "slug": "premium-stains-finishes-1793642570139-replaced-via-put",
+              "status": "active",
+              "id": "6ae8d04aaff425d847441972"
+            },
+            "materialType": "stain",
+            "brandName": "",
+            "productName": "",
+            "productModel": "",
+            "productImage": "",
+            "technicalDocument": "",
+            "compatibleSurfaces": [
+              "wood"
+            ],
+            "status": "active",
+            "unit": "GALLON",
+            "pricePerUnit": 45.99,
+            "coveragePerUnit": 250,
+            "isActive": true,
+            "createdBy": "6ae828fb83dc9eb8e450f8d6",
+            "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+            "createdAt": "2026-11-02T18:02:50.937Z",
+            "updatedAt": "2026-11-02T18:02:50.937Z",
+            "id": "6ae8d04aaff425d847441977"
+          }
+        ],
+        "pagination": {
+          "total": 3,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "API-027",
+    "name": "Get Material by ID",
+    "method": "GET",
+    "endpoint": "/catalog/materials/6ae8d211aff425d847441989",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 115,
+    "data": {
+      "success": true,
+      "data": {
+        "material": {
+          "specifications": {
+            "baseType": "oil",
+            "finishType": "semi-gloss",
+            "dryingTime": 24,
+            "recommendedCoats": 2,
+            "applicationMethod": "",
+            "colors": [],
+            "uvResistance": false,
+            "waterResistance": false,
+            "weatherResistance": false
+          },
+          "measurement": {
+            "quantityUnit": "gallon"
+          },
+          "coverage": {
+            "coverageValue": 300,
+            "coverageAreaUnit": "square_foot",
+            "coverageQuantity": 1,
+            "coverageQuantityUnit": "gallon",
+            "coverageNotes": ""
+          },
+          "cost": {
+            "unitCost": 54.95,
+            "currency": "USD",
+            "costUnit": "gallon",
+            "costNotes": "",
+            "costLastUpdatedAt": null
+          },
+          "materialName": "Cabot Australian Timber Oil",
+          "materialCode": "MAT-B1-6146",
+          "description": "Proven formulation designed to accentuate natural wood depth and repel water",
+          "categoryId": {
+            "name": "Architectural Stains 1793643023946 (Fully Replaced)",
+            "slug": "architectural-stains-1793643023946-fully-replaced",
+            "status": "active",
+            "id": "6ae8d210aff425d847441983"
+          },
+          "materialType": "stain",
+          "brandName": "Cabot",
+          "productName": "",
+          "productModel": "",
+          "productImage": "",
+          "technicalDocument": "",
+          "compatibleSurfaces": [
+            "wood"
+          ],
+          "status": "active",
+          "unit": "GALLON",
+          "pricePerUnit": 54.95,
+          "coveragePerUnit": 300,
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "createdAt": "2026-11-02T18:10:25.162Z",
+          "updatedAt": "2026-11-02T18:10:25.162Z",
+          "id": "6ae8d211aff425d847441989"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-028",
+    "name": "Patch Material",
+    "method": "PATCH",
+    "endpoint": "/catalog/materials/6ae8d211aff425d847441989",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 138,
+    "data": {
+      "success": true,
+      "data": {
+        "material": {
+          "specifications": {
+            "baseType": "oil",
+            "finishType": "semi-gloss",
+            "dryingTime": 24,
+            "recommendedCoats": 2,
+            "applicationMethod": "",
+            "colors": [],
+            "uvResistance": false,
+            "waterResistance": false,
+            "weatherResistance": false
+          },
+          "measurement": {
+            "quantityUnit": "gallon"
+          },
+          "coverage": {
+            "coverageValue": 300,
+            "coverageAreaUnit": "square_foot",
+            "coverageQuantity": 1,
+            "coverageQuantityUnit": "gallon",
+            "coverageNotes": ""
+          },
+          "cost": {
+            "unitCost": 56.5,
+            "currency": "USD",
+            "costUnit": "gallon",
+            "costLastUpdatedAt": "2026-11-02T18:10:25.522Z"
+          },
+          "materialName": "Cabot Australian Timber Oil",
+          "materialCode": "MAT-B1-6146",
+          "description": "Updated Cabot formulation with double UV stabilizers",
+          "categoryId": "6ae8d210aff425d847441983",
+          "materialType": "stain",
+          "brandName": "Cabot",
+          "productName": "",
+          "productModel": "",
+          "productImage": "",
+          "technicalDocument": "",
+          "compatibleSurfaces": [
+            "wood"
+          ],
+          "status": "active",
+          "unit": "GALLON",
+          "pricePerUnit": 56.5,
+          "coveragePerUnit": 300,
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "createdAt": "2026-11-02T18:10:25.162Z",
+          "updatedAt": "2026-11-02T18:10:25.525Z",
+          "id": "6ae8d211aff425d847441989"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-029",
+    "name": "Put (Replace) Material",
+    "method": "PUT",
+    "endpoint": "/catalog/materials/6ae8d211aff425d847441989",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 129,
+    "data": {
+      "success": true,
+      "data": {
+        "material": {
+          "specifications": {
+            "baseType": "oil",
+            "finishType": "matte",
+            "dryingTime": 24,
+            "recommendedCoats": 2
+          },
+          "measurement": {
+            "quantityUnit": "gallon"
+          },
+          "coverage": {
+            "coverageValue": 320,
+            "coverageAreaUnit": "square_foot",
+            "coverageQuantity": 1,
+            "coverageQuantityUnit": "gallon"
+          },
+          "cost": {
+            "unitCost": 58,
+            "currency": "USD",
+            "costUnit": "gallon",
+            "costLastUpdatedAt": "2026-11-02T18:10:25.651Z"
+          },
+          "materialName": "Cabot Australian Timber Oil - Commercial Series",
+          "materialCode": "MAT-B1-6146",
+          "description": "Full replacement via PUT: Professional grade exterior timber treatment",
+          "categoryId": "6ae8d210aff425d847441983",
+          "materialType": "stain",
+          "brandName": "Cabot Premium",
+          "productName": "",
+          "productModel": "",
+          "productImage": "",
+          "technicalDocument": "",
+          "compatibleSurfaces": [
+            "wood"
+          ],
+          "status": "active",
+          "unit": "GALLON",
+          "pricePerUnit": 58,
+          "coveragePerUnit": 320,
+          "isActive": true,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "createdAt": "2026-11-02T18:10:25.162Z",
+          "updatedAt": "2026-11-02T18:10:25.653Z",
+          "id": "6ae8d211aff425d847441989"
+        }
+      }
+    }
+  },
+  {
+    "id": "API-030",
+    "name": "Update Material Status",
+    "method": "PATCH",
+    "endpoint": "/catalog/materials/6ae8d211aff425d847441989/status",
+    "status": "PASS",
+    "statusCode": 200,
+    "duration": 147,
+    "data": {
+      "success": true,
+      "data": {
+        "material": {
+          "specifications": {
+            "applicationMethod": "",
+            "colors": [],
+            "uvResistance": false,
+            "waterResistance": false,
+            "weatherResistance": false,
+            "baseType": "oil",
+            "finishType": "matte",
+            "dryingTime": 24,
+            "recommendedCoats": 2
+          },
+          "measurement": {
+            "quantityUnit": "gallon"
+          },
+          "coverage": {
+            "coverageNotes": "",
+            "coverageValue": 320,
+            "coverageAreaUnit": "square_foot",
+            "coverageQuantity": 1,
+            "coverageQuantityUnit": "gallon"
+          },
+          "cost": {
+            "costNotes": "",
+            "unitCost": 58,
+            "currency": "USD",
+            "costUnit": "gallon",
+            "costLastUpdatedAt": "2026-11-02T18:10:25.651Z"
+          },
+          "materialName": "Cabot Australian Timber Oil - Commercial Series",
+          "materialCode": "MAT-B1-6146",
+          "description": "Full replacement via PUT: Professional grade exterior timber treatment",
+          "categoryId": "6ae8d210aff425d847441983",
+          "materialType": "stain",
+          "brandName": "Cabot Premium",
+          "productName": "",
+          "productModel": "",
+          "productImage": "",
+          "technicalDocument": "",
+          "compatibleSurfaces": [
+            "wood"
+          ],
+          "status": "inactive",
+          "unit": "GALLON",
+          "pricePerUnit": 58,
+          "coveragePerUnit": 320,
+          "isActive": false,
+          "createdBy": "6ae828fb83dc9eb8e450f8d6",
+          "updatedBy": "6ae828fb83dc9eb8e450f8d6",
+          "createdAt": "2026-11-02T18:10:25.162Z",
+          "updatedAt": "2026-11-02T18:10:25.787Z",
+          "id": "6ae8d211aff425d847441989"
+        }
+      }
+    }
+  }
+]

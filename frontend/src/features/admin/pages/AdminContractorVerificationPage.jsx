@@ -35,8 +35,15 @@ export default function AdminContractorVerificationPage() {
         status: statusFilter || undefined,
         search: searchTerm || undefined,
       });
-      setContractors(data.data || []);
-      setPagination(data.pagination || { page: 1, totalPages: 1, total: 0 });
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.contractors)
+        ? data.contractors
+        : [];
+      setContractors(list);
+      setPagination(data?.pagination || { page: 1, totalPages: 1, total: list.length });
     } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Failed to load contractor applications.');
     } finally {
@@ -48,7 +55,7 @@ export default function AdminContractorVerificationPage() {
     setReviewLoading(true);
     try {
       const data = await adminVerificationApi.getApplicationDetails(appId);
-      setSelectedApp(data.data);
+      setSelectedApp(data?.data || data);
       setReviewReason('');
       setReviewNotes('');
     } catch (err) {
@@ -69,7 +76,8 @@ export default function AdminContractorVerificationPage() {
 
     setReviewLoading(true);
     try {
-      await adminVerificationApi.reviewApplication(selectedApp.profile.id, {
+      const profileId = selectedApp.profile?.id || selectedApp.profile?._id || selectedApp.id || selectedApp._id;
+      await adminVerificationApi.reviewApplication(profileId, {
         action: reviewAction,
         reason: reviewReason.trim(),
         notes: reviewNotes.trim(),
@@ -162,13 +170,15 @@ export default function AdminContractorVerificationPage() {
             </thead>
             <tbody>
               {contractors.map((c) => {
-                const colors = statusColors[c.verificationStatus] || { bg: '#f1f5f9', text: '#334155' };
+                const status = c.verificationStatus || 'pending';
+                const colors = statusColors[status] || { bg: '#f1f5f9', text: '#334155' };
+                const contractorId = c.id || c._id;
                 return (
-                  <tr key={c.id} style={styles.tr}>
+                  <tr key={contractorId} style={styles.tr}>
                     <td style={styles.tdBold}>{c.businessName}</td>
                     <td style={styles.td}>
-                      {c.userId?.firstName} {c.userId?.lastName}
-                      <span style={styles.emailSub}>{c.userId?.email}</span>
+                      {c.userId?.fullName || c.businessName}
+                      <span style={styles.emailSub}>{c.userId?.email || c.businessEmail}</span>
                     </td>
                     <td style={styles.td}><code>{c.licenseNumber}</code></td>
                     <td style={styles.td}>
@@ -182,7 +192,7 @@ export default function AdminContractorVerificationPage() {
                           color: colors.text,
                         }}
                       >
-                        {c.verificationStatus.replace(/_/g, ' ').toUpperCase()}
+                        {status.replace(/_/g, ' ').toUpperCase()}
                       </span>
                     </td>
                     <td style={styles.td}>
@@ -191,7 +201,7 @@ export default function AdminContractorVerificationPage() {
                     <td style={styles.td}>
                       <button
                         type="button"
-                        onClick={() => handleOpenReview(c.id)}
+                        onClick={() => handleOpenReview(contractorId)}
                         style={styles.reviewBtn}
                       >
                         Review Application
