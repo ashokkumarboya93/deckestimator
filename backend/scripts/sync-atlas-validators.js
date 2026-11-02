@@ -71,3 +71,4 @@ async function syncValidators() {
 }
 
 syncValidators().catch(console.error);
+
