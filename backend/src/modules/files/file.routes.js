@@ -30,7 +30,12 @@ const upload = multer({
     files: MAX_IMAGES_PER_DECK,
   },
   fileFilter: (_req, file, cb) => {
-    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    const isImageMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+    const isOctetStreamWithImageExt =
+      file.mimetype === 'application/octet-stream' &&
+      /\.(jpe?g|png|webp)$/i.test(file.originalname);
+
+    if (isImageMime || isOctetStreamWithImageExt) {
       cb(null, true);
     } else {
       cb(

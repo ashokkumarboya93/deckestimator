@@ -595,9 +595,7 @@ async function listDecks({ page = 1, limit = 20, search = '', surfaceType, owner
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('ownerId', 'fullName email role')
-      .populate('customerId', 'fullName email role')
-      .populate('contractorId', 'fullName email role'),
+      .populate('ownerId', 'fullName email role'),
     Deck.countDocuments(query),
   ]);
 
@@ -636,9 +634,7 @@ async function listEstimates({ page = 1, limit = 20, status, search = '' }) {
       .populate('ownerId', 'fullName email')
       .populate('createdBy', 'fullName email')
       .populate('createdFor', 'fullName email')
-      .populate('customerId', 'fullName email')
-      .populate('contractorId', 'fullName email')
-      .populate('deckId', 'projectName name surfaceMaterial dimensions'),
+      .populate('deckId', 'projectName dimensions surfaceDetails'),
     Estimate.countDocuments(query),
   ]);
 
@@ -672,7 +668,7 @@ async function listAIAnalyses({ page = 1, limit = 20, status, conditionLevel, re
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('deckId', 'name customerId')
+      .populate('deckId', 'projectName ownerId')
       .populate('requestedBy', 'fullName email role'),
     DeckConditionAnalysis.countDocuments(query),
   ]);
