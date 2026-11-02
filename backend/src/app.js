@@ -99,6 +99,11 @@ const commissionRoutes = require('./modules/commissions/commission.routes');
 app.use('/api/v1/discounts', discountRoutes);
 app.use('/api/v1/commissions', commissionRoutes);
 
+// Phase 10: Administrative Dashboard & Platform Management routes
+const adminRoutes = require('./modules/admin/admin.routes');
+
+app.use('/api/v1/admin', adminRoutes);
+
 // -----------------------------------------------
 // Module routes will be mounted here in later phases:
 //

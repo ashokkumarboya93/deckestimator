@@ -146,10 +146,20 @@ export const ENDPOINTS = {
     HISTORY: (id) => `/commissions/${id}/history`,
   },
 
-  // Admin (Phase 10/11)
+  // Admin (Phase 10)
   ADMIN: {
-    DASHBOARD: '/admin/dashboard',
+    DASHBOARD_SUMMARY: '/admin/dashboard/summary',
+    DASHBOARD_ACTIVITY: '/admin/dashboard/activity',
     USERS: '/admin/users',
+    USER_BY_ID: (id) => `/admin/users/${id}`,
+    USER_STATUS: (id) => `/admin/users/${id}/status`,
+    DECKS: '/admin/decks',
+    ESTIMATES: '/admin/estimates',
+    ANALYSES: '/admin/analyses',
+    SETTINGS: '/admin/settings',
+    SETTING_BY_KEY: (key) => `/admin/settings/${key}`,
+    AUDIT_LOGS: '/admin/audit-logs',
+    REPORTS: (type) => `/admin/reports/${type}`,
   },
 };
 

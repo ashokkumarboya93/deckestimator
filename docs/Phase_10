@@ -1,0 +1,2032 @@
+# DECK PRO
+# Phase 10 – Administrative Dashboard and Platform Management
+## Complete Technical Development Specification
+
+**Project:** DECK PRO – Deck Restoration Estimator  
+**Phase:** 10 of 12  
+**Phase Name:** Administrative Dashboard and Platform Management  
+**Development Priority:** Critical  
+**Status:** Specification Ready for Implementation  
+**Dependencies:** Phases 1–9
+
+---
+
+# 1. PHASE OVERVIEW
+
+## 1.1 Objective
+
+Phase 10 establishes a complete, secure, centralized administrative management system for the DECK PRO platform.
+
+The Admin dashboard must allow authorized administrators to manage platform users, contractors, customers, operational records, system configurations, reports, and administrative activities.
+
+The objective is to provide complete operational control without compromising the functionality already implemented in Phases 1–9.
+
+This is a platform-management phase, not simply a dashboard UI development task.
+
+## 1.2 Core Requirements
+
+The implementation must provide:
+
+1. Centralized Admin dashboard.
+2. User management.
+3. Customer management.
+4. Contractor management.
+5. Contractor verification oversight.
+6. Deck and project oversight.
+7. Estimate management and monitoring.
+8. Lead management and monitoring.
+9. Material and service catalog oversight.
+10. Pricing configuration oversight.
+11. Discount and commission oversight.
+12. Platform configuration management.
+13. Audit log management.
+14. Operational analytics and reporting.
+15. Secure administrative access.
+16. Complete CRUD functionality wherever applicable.
+17. Data integrity and ownership protection.
+18. Reliable search, filtering, sorting, and pagination.
+19. Error handling and activity tracking.
+20. Comprehensive testing and regression verification.
+
+## 1.3 Primary Development Principle
+
+Every feature must work across the complete application stack:
+
+**Admin UI → API → Authentication → Authorization → Validation → Service Layer → Database → Response → UI Update**
+
+A button that only changes frontend state does not count as implemented functionality.
+
+A CRUD operation is complete only when the backend operation works, the database is updated correctly, the response is handled properly, and the relevant tests pass.
+
+---
+
+# 2. EXISTING SYSTEM INTEGRATION
+
+Phase 10 must integrate with all existing phases.
+
+| Phase | Existing Functionality | Phase 10 Responsibility |
+|---|---|---|
+| Phase 1 | Requirements and architecture | Preserve architecture |
+| Phase 2 | Backend and frontend foundation | Reuse application structure |
+| Phase 3 | Authentication and authorization | Secure Admin access |
+| Phase 4 | Deck management and uploads | Administrative oversight |
+| Phase 5 | Material and service catalog | Catalog administration |
+| Phase 6 | Pricing and estimates | Estimate and pricing oversight |
+| Phase 7 | AI condition analysis | Analysis visibility and monitoring |
+| Phase 8 | Contractor verification and leads | Verification and lead oversight |
+| Phase 9 | Discounts and commissions | Financial administration |
+
+## 2.1 Important Integration Rule
+
+Before implementing a module, inspect its existing implementation.
+
+If an existing module already supports CRUD, integrate it into the Admin dashboard.
+
+Do not create duplicate models, duplicate APIs, duplicate business logic, or duplicate database collections.
+
+Phase 10 should improve administrative accessibility, control, and reporting.
+
+It must not break existing customer or contractor workflows.
+
+---
+
+# 3. USER ROLES AND ADMIN PERMISSIONS
+
+## 3.1 Platform Roles
+
+The existing roles are:
+
+- ADMIN
+- CONTRACTOR
+- CUSTOMER
+
+Phase 10 must preserve the existing role system.
+
+Do not introduce a new role system without an approved requirement.
+
+## 3.2 Admin Access
+
+Admin users can access authorized administrative modules.
+
+The backend must verify Admin permissions on every protected API request.
+
+Hiding a frontend button is not authorization.
+
+## 3.3 Customer Permissions
+
+Customers must not access administrative functionality.
+
+Customers must only access their own:
+
+- Profile.
+- Decks.
+- Uploaded photographs.
+- Estimates.
+- Leads and enquiries.
+- Authorized AI analysis records.
+
+## 3.4 Contractor Permissions
+
+Contractors must not access administrative functionality.
+
+Contractors must only access their authorized:
+
+- Profile.
+- Verification records.
+- Assigned leads.
+- Authorized deck information.
+- Estimates.
+- Discount information.
+- Commission records.
+
+## 3.5 Admin Account Protection
+
+The following operations require special protection:
+
+- Changing Admin roles.
+- Disabling an Admin account.
+- Deleting an Admin account.
+- Changing security-related configuration.
+- Changing platform-wide financial configuration.
+
+Never allow an Admin to accidentally remove the last usable administrative account.
+
+Sensitive actions should require confirmation and must be audited.
+
+---
+
+# 4. ADMIN DASHBOARD OVERVIEW
+
+## 4.1 Dashboard Purpose
+
+The main Admin dashboard must provide a consolidated overview of the platform.
+
+It should display important operational and business metrics.
+
+## 4.2 Dashboard Components
+
+### A. User Metrics
+
+Display:
+
+- Total registered users.
+- Total customers.
+- Total contractors.
+- Approved contractors.
+- Pending contractors.
+- Rejected contractors.
+- Suspended contractors.
+- Active users.
+- Disabled users.
+- Recently registered users.
+
+### B. Deck and Project Metrics
+
+Display:
+
+- Total decks.
+- Recently created decks.
+- Decks by surface type.
+- Decks by measurement unit.
+- Decks with uploaded photographs.
+
+### C. Estimate Metrics
+
+Display:
+
+- Total estimates.
+- Draft estimates.
+- Generated estimates.
+- Submitted estimates.
+- Approved estimates, if supported by the existing workflow.
+- Cancelled estimates.
+- Expired estimates.
+- Recently generated estimates.
+
+Use the actual existing estimate statuses. Do not create conflicting status definitions.
+
+### D. Lead Metrics
+
+Display:
+
+- Total leads.
+- New leads.
+- Unassigned leads.
+- Assigned leads.
+- Accepted leads.
+- Converted leads.
+- Closed leads.
+- Leads awaiting Admin action.
+
+### E. AI Analysis Metrics
+
+Display:
+
+- Total analyses.
+- Completed analyses.
+- Pending analyses.
+- Failed analyses.
+- Analyses requiring manual review.
+- Analyses by condition level.
+
+These metrics must reflect actual stored Phase 7 analysis records.
+
+Do not present model confidence or condition classifications as verified physical inspection results.
+
+### F. Financial Metrics
+
+Display:
+
+- Total discounted estimates.
+- Total discount amount.
+- Total generated commissions.
+- Pending commissions.
+- Approved commissions.
+- Payable commissions.
+- Paid commissions.
+- Reversed commissions.
+
+Financial totals must be calculated from trusted persisted records.
+
+Do not treat estimate value as actual revenue unless the business has explicitly established that relationship.
+
+### G. Recent Activities
+
+Display recent administrative and operational activities:
+
+- User registration.
+- Contractor verification.
+- Lead creation.
+- Lead assignment.
+- Estimate creation.
+- Estimate changes.
+- Discount applications.
+- Commission approvals.
+- Commission payments.
+- Admin configuration changes.
+
+Use the existing AuditLog and relevant activity records.
+
+## 4.3 Dashboard Filters
+
+Provide filters where appropriate:
+
+- Date range.
+- Status.
+- User type.
+- Contractor.
+- Lead source.
+- Estimate status.
+- Financial status.
+
+Dashboard filters must affect the actual API queries and returned data.
+
+## 4.4 Dashboard Data Accuracy
+
+All dashboard numbers must come from backend queries or aggregation pipelines.
+
+Do not use hardcoded values.
+
+Do not generate random chart data.
+
+Do not calculate platform-wide totals by downloading all records into the frontend.
+
+---
+
+# 5. USER MANAGEMENT
+
+## 5.1 Objective
+
+Admin must have a centralized interface to manage registered platform users.
+
+This includes customers, contractors, and administrative accounts, subject to the security restrictions defined in this specification.
+
+## 5.2 User List
+
+Display:
+
+- User ID.
+- Name.
+- Email.
+- Phone number, if available.
+- Role.
+- Account status.
+- Registration date.
+- Last login, if tracked.
+- Last updated date.
+
+## 5.3 User CRUD
+
+### Create
+
+Admin may create users only through an explicitly supported and secure workflow.
+
+Requirements:
+
+- Validate all required fields.
+- Validate email uniqueness.
+- Validate phone uniqueness where required by existing rules.
+- Assign only permitted roles.
+- Never allow arbitrary role escalation.
+- Never store plain-text passwords.
+- Use the existing authentication and password hashing implementation.
+
+If an invitation or password setup process is not implemented, do not create an unsafe alternative.
+
+### Read
+
+Admin can:
+
+- View user lists.
+- Search users.
+- Filter by role.
+- Filter by account status.
+- View individual user details.
+- View permitted related records.
+
+Sensitive information must be protected.
+
+### Update
+
+Admin can update permitted user information.
+
+Possible fields:
+
+- Name.
+- Contact details.
+- Account status.
+- Other approved profile fields.
+
+Role changes must follow strict authorization rules.
+
+Never allow modification of:
+
+- Password hashes.
+- Authentication tokens.
+- Internal security fields.
+- Immutable audit information.
+
+### Delete / Deactivate
+
+Do not permanently delete users who own decks, estimates, leads, commissions, verification documents, or financial history.
+
+Use account deactivation, suspension, or archival according to the existing data lifecycle.
+
+Permanent deletion should only be allowed when data retention and dependency checks establish that it is safe and legally permitted.
+
+## 5.4 User Status Management
+
+Use existing account statuses.
+
+Admin should be able to:
+
+- View status.
+- Activate or deactivate an account.
+- Suspend an account if supported.
+- Record a reason for sensitive status changes.
+
+The backend must enforce valid transitions.
+
+---
+
+# 6. CUSTOMER MANAGEMENT
+
+## 6.1 Customer Overview
+
+Admin must be able to view registered customers and their platform activity.
+
+Customer list:
+
+- Customer ID.
+- Name.
+- Email.
+- Phone.
+- Account status.
+- Registration date.
+- Number of decks.
+- Number of estimates.
+- Number of leads.
+
+## 6.2 Customer CRUD
+
+Admin should have the following capabilities.
+
+### Create Customer
+
+Use the existing registration or secure invitation workflow.
+
+### Read Customer
+
+View:
+
+- Customer profile.
+- Customer decks.
+- Estimate history.
+- Lead history.
+- AI analysis history, where authorized.
+- Account status.
+
+### Update Customer
+
+Modify only approved customer profile fields.
+
+### Deactivate Customer
+
+Disable access without destroying historical business records.
+
+## 6.3 Customer Data Protection
+
+Admin access does not justify unrestricted exposure of unnecessary sensitive information.
+
+Protect:
+
+- Authentication information.
+- Private photographs.
+- Contact details.
+- Private notes.
+- Personal documents.
+
+Use existing authorization and secure file access.
+
+---
+
+# 7. CONTRACTOR MANAGEMENT
+
+## 7.1 Contractor Overview
+
+Admin must be able to manage contractor accounts and monitor their platform activity.
+
+Display:
+
+- Contractor ID.
+- Business name.
+- Contact person.
+- Business email.
+- Business phone.
+- License information.
+- Verification status.
+- Account status.
+- Service areas.
+- Registration date.
+- Number of assigned leads.
+- Number of converted leads.
+- Commission summary, where authorized.
+
+## 7.2 Contractor CRUD
+
+### Create
+
+Reuse the existing contractor registration or Admin-approved creation workflow.
+
+Do not bypass required verification.
+
+### Read
+
+Admin can view:
+
+- Contractor profile.
+- Verification information.
+- Verification documents.
+- Verification history.
+- Assigned leads.
+- Lead conversion history.
+- Estimates and authorized deck records.
+- Discount assignments.
+- Commission records.
+
+### Update
+
+Admin can update permitted business profile and administrative fields.
+
+Changes to verification status must use the Phase 8 verification workflow.
+
+Do not directly edit status fields without executing the appropriate business operation.
+
+### Deactivate / Suspend
+
+Admin can deactivate or suspend a contractor according to existing account and verification rules.
+
+The operation must:
+
+- Record the reason.
+- Record the Admin actor.
+- Preserve historical records.
+- Prevent unauthorized future activity.
+- Respect existing lead and commission history.
+
+## 7.3 Contractor Eligibility
+
+The backend must consistently enforce:
+
+- Approved verification.
+- Active account status.
+- Existing authorization.
+- Applicable discount eligibility.
+- Lead assignment permissions.
+
+Do not duplicate eligibility logic in multiple frontend components.
+
+---
+
+# 8. DECK AND PROJECT OVERSIGHT
+
+## 8.1 Objective
+
+Admin must have a centralized view of customer and contractor deck records.
+
+## 8.2 Deck List
+
+Display:
+
+- Deck ID.
+- Project name.
+- Owner.
+- Deck location.
+- Deck area.
+- Measurement unit.
+- Surface material.
+- Deck shape.
+- Creation date.
+- Last updated date.
+
+## 8.3 Deck Operations
+
+Admin should be able to:
+
+- List decks.
+- Search decks.
+- Filter decks.
+- View deck details.
+- View associated photographs through secure access.
+- View estimate history.
+- View AI analysis history.
+- View associated leads.
+
+## 8.4 Deck Modification Restrictions
+
+Deck records are owned by customers or authorized contractors.
+
+Admin must not silently change customer measurements or project information.
+
+If administrative correction is required:
+
+1. Validate the requested change.
+2. Record the reason.
+3. Record the Admin actor.
+4. Preserve relevant historical values.
+5. Ensure dependent estimates are not silently corrupted.
+
+Prefer a controlled administrative correction workflow over unrestricted editing.
+
+## 8.5 Deck Deletion
+
+Deleting a deck must not accidentally delete associated estimates, financial history, leads, or audit records.
+
+Use the established deletion or archival strategy.
+
+---
+
+# 9. ESTIMATE MANAGEMENT
+
+## 9.1 Objective
+
+Provide centralized administrative visibility into estimates generated by Phase 6.
+
+## 9.2 Estimate List
+
+Display:
+
+- Estimate ID.
+- Estimate reference.
+- Customer or contractor.
+- Related deck.
+- Estimate version.
+- Base amount.
+- Discount amount.
+- Tax amount.
+- Final amount.
+- Estimate status.
+- Created date.
+- Updated date.
+
+## 9.3 Estimate Operations
+
+Admin can:
+
+- List estimates.
+- Search estimates.
+- Filter by status.
+- Filter by date.
+- View estimate details.
+- View line-item breakdown.
+- View pricing configuration snapshot.
+- View discount snapshot.
+- View revision history.
+- View related lead, if present.
+
+## 9.4 Estimate Modification
+
+Financial estimate records must not be directly edited through unrestricted Admin CRUD.
+
+If a correction or recalculation is required, use the existing Phase 6 estimate service and revision mechanism.
+
+Preserve historical estimate versions.
+
+Never directly overwrite:
+
+- Original material quantities.
+- Historical product prices.
+- Previous discount amounts.
+- Previous tax calculations.
+- Previous final totals.
+
+## 9.5 Estimate Deletion
+
+Do not permanently delete generated or finalized estimates with business significance.
+
+Use the existing cancellation, expiry, archival, or retention workflow.
+
+---
+
+# 10. LEAD MANAGEMENT OVERSIGHT
+
+## 10.1 Objective
+
+Provide Admin with complete visibility and operational control over Phase 8 lead management.
+
+## 10.2 Lead Dashboard
+
+Display:
+
+- Lead reference.
+- Customer.
+- Related deck.
+- Related estimate.
+- Lead source.
+- Assigned contractor.
+- Lead status.
+- Creation date.
+- Last activity date.
+
+## 10.3 Lead Operations
+
+Admin can:
+
+- View all leads.
+- Search leads.
+- Filter leads.
+- View lead details.
+- View assignment history.
+- View activity timeline.
+- Assign contractors.
+- Reassign contractors.
+- Close leads according to existing rules.
+- Review conversion information.
+- Inspect commission eligibility references.
+
+## 10.4 Lead Modification
+
+Do not directly update lead status using unrestricted database updates.
+
+Use Phase 8 lead-management services.
+
+All transitions must follow the existing state machine.
+
+## 10.5 Lead Privacy
+
+Internal notes must remain restricted to authorized personnel.
+
+Customer-visible and internal activities must remain separate.
+
+Contractors must only access leads assigned to them.
+
+---
+
+# 11. CATALOG MANAGEMENT OVERSIGHT
+
+## 11.1 Objective
+
+Provide complete Admin access to the Phase 5 material and service catalog.
+
+## 11.2 Catalog Sections
+
+- Material Categories.
+- Materials.
+- Service Categories.
+- Services.
+- Material-Service Compatibility.
+
+## 11.3 CRUD Requirements
+
+Admin must be able to:
+
+- Create categories.
+- Read category lists and details.
+- Update category information.
+- Activate or deactivate categories.
+- Create materials.
+- Read materials.
+- Update materials.
+- Activate or deactivate materials.
+- Create services.
+- Read services.
+- Update services.
+- Activate or deactivate services.
+- Manage compatibility relationships.
+
+All existing Phase 5 validation and business rules must remain intact.
+
+## 11.4 Catalog Data Integrity
+
+Before deleting or deactivating a catalog record:
+
+- Check whether estimates reference it.
+- Check whether other catalog records depend on it.
+- Preserve historical estimate snapshots.
+- Prevent deletion that would break historical records.
+
+Prefer deactivation or archival where dependencies exist.
+
+## 11.5 Commercial Data Protection
+
+Changes to material prices, coverage, and service costs must use existing Admin pricing and catalog workflows.
+
+Do not invent manufacturer coverage, product specifications, or commercial prices.
+
+---
+
+# 12. PRICING CONFIGURATION MANAGEMENT
+
+## 12.1 Objective
+
+Provide administrative access to the existing Phase 6 pricing configuration system.
+
+## 12.2 Admin Operations
+
+Admin can:
+
+- View pricing configurations.
+- Create configurations if supported.
+- Update approved pricing values.
+- Activate or deactivate configurations.
+- View configuration history.
+- View associated estimates.
+
+## 12.3 Pricing Configuration Fields
+
+Reuse the existing schema.
+
+Depending on existing implementation, this may include:
+
+- Base pricing.
+- Minimum job price.
+- Labor configuration.
+- Waste allowance.
+- Travel charge.
+- Tax configuration.
+- Other approved pricing components.
+
+Do not create new fields without checking the Phase 6 implementation and business requirements.
+
+## 12.4 Pricing Change Controls
+
+Every pricing change must record:
+
+- Previous value.
+- New value.
+- Admin actor.
+- Change reason, where required.
+- Timestamp.
+
+Historical estimates must retain their original pricing snapshots.
+
+A pricing update must not silently modify existing estimates.
+
+---
+
+# 13. DISCOUNT AND COMMISSION OVERSIGHT
+
+## 13.1 Objective
+
+Provide centralized administrative access to Phase 9 financial workflows.
+
+Do not recreate Phase 9 discount or commission logic.
+
+## 13.2 Discount Administration
+
+Admin must be able to:
+
+- View discount policies.
+- Create and update policies.
+- Activate and deactivate policies.
+- View contractor assignments.
+- View discount applications.
+- Inspect discount snapshots.
+- View discount usage and summaries.
+
+All operations must use the existing Phase 9 discount services.
+
+## 13.3 Commission Administration
+
+Admin must be able to:
+
+- View commission policies.
+- View commission records.
+- Review pending commissions.
+- Approve or reject commissions.
+- View payable commissions.
+- Record payment confirmations.
+- Review disputes.
+- Reverse commissions where authorized.
+- View commission history.
+- View payment records.
+
+Use the existing Phase 9 commission state machine.
+
+## 13.4 Financial Safety
+
+Never:
+
+- Modify paid commission amounts silently.
+- Delete historical payment records.
+- Generate duplicate commissions.
+- Change discount history.
+- Bypass approval restrictions.
+- Allow contractor access to other contractors' financial records.
+
+All financial operations must be audited.
+
+---
+
+# 14. AI ANALYSIS OVERSIGHT
+
+## 14.1 Objective
+
+Provide Admin visibility into Phase 7 AI condition-analysis activity.
+
+## 14.2 Analysis List
+
+Display:
+
+- Analysis ID.
+- Deck ID.
+- Owner.
+- Requesting user.
+- Analysis status.
+- Model version.
+- Condition result.
+- Defect labels.
+- Image quality.
+- Manual review status.
+- Created date.
+
+## 14.3 Admin Operations
+
+Admin can:
+
+- View analysis records.
+- Search analysis records.
+- Filter by status.
+- Filter by condition level.
+- View model metadata.
+- View failure details where authorized.
+- Identify analyses requiring manual review.
+
+## 14.4 AI Data Integrity
+
+Do not allow Admin to silently overwrite model predictions.
+
+If manual review or correction is needed:
+
+- Store the human review separately.
+- Record the reviewer.
+- Record the timestamp.
+- Preserve the original model output.
+- Preserve model version information.
+
+Never present AI image analysis as proof of structural safety.
+
+## 14.5 Model Monitoring
+
+Provide basic operational monitoring:
+
+- Number of analyses.
+- Success and failure rates.
+- Pending analysis count.
+- Manual review count.
+- Model version usage.
+
+Do not implement model retraining or dataset management in this phase unless separately approved.
+
+---
+
+# 15. PLATFORM CONFIGURATION MANAGEMENT
+
+## 15.1 Objective
+
+Create a centralized location for approved platform-level configuration.
+
+This module must manage configurable application behavior without requiring source-code changes for every routine administrative setting.
+
+## 15.2 Configuration Categories
+
+Potential categories include:
+
+### General Settings
+
+- Platform display name.
+- Support contact details.
+- Business contact information.
+- Default display preferences.
+
+### Estimate Settings
+
+- Estimate validity period.
+- Approved rounding configuration.
+- Estimate display options.
+
+### Upload Settings
+
+- Allowed image formats.
+- Maximum image size.
+- Maximum images per deck.
+
+Only expose settings that the existing application can safely enforce.
+
+### Notification Settings
+
+- Notification preferences.
+- Enabled notification categories.
+- Approved notification templates, if supported.
+
+### Business Settings
+
+- Approved currency configuration.
+- Business timezone.
+- Regional formatting.
+- Approved operational settings.
+
+### Security Settings
+
+- Existing supported authentication settings.
+- Existing rate-limit configuration where safely configurable.
+- Session policy settings only if implemented and approved.
+
+## 15.3 Configuration CRUD
+
+Admin must be able to:
+
+- View configuration.
+- Create configuration entries where supported.
+- Update configuration values.
+- Activate or deactivate configurable options.
+- View configuration history.
+
+Do not allow arbitrary configuration keys or unrestricted JSON values.
+
+Every configurable field must have:
+
+- A defined type.
+- Validation.
+- Allowed range or values.
+- Default behavior.
+- Backend enforcement.
+
+## 15.4 Configuration Security
+
+Never store secrets in ordinary application configuration records.
+
+Examples of secrets:
+
+- Database credentials.
+- JWT secrets.
+- API private keys.
+- Cloud storage secrets.
+- SMTP passwords.
+
+Secrets must remain in approved environment or secret-management systems.
+
+Do not expose secrets to the frontend.
+
+---
+
+# 16. AUDIT LOG MANAGEMENT
+
+## 16.1 Objective
+
+Provide centralized visibility into important system and administrative actions.
+
+Reuse the existing AuditLog implementation.
+
+Do not create a duplicate audit system.
+
+## 16.2 Audit Log List
+
+Display:
+
+- Audit ID.
+- Actor.
+- Actor role.
+- Action.
+- Target entity.
+- Target ID.
+- Timestamp.
+- Relevant metadata.
+
+## 16.3 Search and Filtering
+
+Support:
+
+- Actor.
+- Action.
+- Target type.
+- Target ID.
+- Date range.
+- Role.
+
+Use server-side pagination.
+
+## 16.4 Audit Log Security
+
+Audit records must be immutable through normal Admin CRUD operations.
+
+Admin can:
+
+- View logs.
+- Search logs.
+- Filter logs.
+- Export authorized audit information.
+
+Admin must not:
+
+- Edit historical audit entries.
+- Delete individual audit entries.
+- Modify the recorded actor.
+- Modify historical timestamps.
+
+If retention or archival is required, use a separately authorized and auditable process.
+
+---
+
+# 17. REPORTING AND ANALYTICS
+
+## 17.1 Objective
+
+Provide accurate platform-wide operational and business reports.
+
+## 17.2 Report Categories
+
+### User Reports
+
+- Registration trends.
+- Active and inactive users.
+- Customer and contractor counts.
+
+### Contractor Reports
+
+- Verification status.
+- Contractor activity.
+- Lead assignments.
+- Conversion statistics.
+
+### Deck Reports
+
+- Deck creation trends.
+- Surface distribution.
+- Deck measurement distribution.
+
+### Estimate Reports
+
+- Estimate generation trends.
+- Estimate statuses.
+- Estimate amounts.
+- Revision history summaries.
+
+### Lead Reports
+
+- Lead source distribution.
+- Assignment performance.
+- Lead status distribution.
+- Conversion counts.
+
+### AI Reports
+
+- Analysis counts.
+- Analysis success/failure.
+- Manual review frequency.
+- Model version usage.
+
+### Financial Reports
+
+- Discount application totals.
+- Commission totals.
+- Approved commissions.
+- Payable commissions.
+- Paid commissions.
+- Reversed commissions.
+
+## 17.3 Report Filters
+
+Provide:
+
+- Date range.
+- Status.
+- User type.
+- Contractor.
+- Lead source.
+- Other relevant filters.
+
+## 17.4 Export
+
+Where supported, allow Admin to export reports as:
+
+- CSV.
+- XLSX.
+- PDF.
+
+Export requirements:
+
+- Respect Admin authorization.
+- Apply the selected filters.
+- Use backend-generated trusted data.
+- Avoid exposing unnecessary personal information.
+- Handle large exports safely.
+- Include report generation date and filter criteria.
+
+Do not export all database records by default.
+
+## 17.5 Reporting Accuracy
+
+Define every metric precisely.
+
+Examples:
+
+- Total leads must not be confused with converted leads.
+- Generated estimates must not be treated as completed jobs.
+- Approved commissions must not be treated as paid commissions.
+- Estimate value must not automatically be treated as actual business revenue.
+
+---
+
+# 18. ADMIN API DESIGN
+
+All APIs must follow existing conventions.
+
+Base path:
+
+`/api/v1/admin`
+
+The examples below describe logical API capabilities. Reuse existing routes wherever they already provide the required behavior.
+
+## 18.1 Dashboard
+
+- GET `/dashboard/summary`
+- GET `/dashboard/activity`
+- GET `/dashboard/charts`
+
+## 18.2 Users
+
+- GET `/users`
+- GET `/users/:id`
+- POST `/users` (only if a secure Admin creation workflow is supported)
+- PATCH `/users/:id`
+- PATCH `/users/:id/status`
+
+## 18.3 Customers
+
+- GET `/customers`
+- GET `/customers/:id`
+- PATCH `/customers/:id`
+- PATCH `/customers/:id/status`
+
+Create and delete operations should use existing registration and data-retention rules rather than introducing unsafe duplicate workflows.
+
+## 18.4 Contractors
+
+- GET `/contractors`
+- GET `/contractors/:id`
+- PATCH `/contractors/:id`
+- PATCH `/contractors/:id/status`
+- GET `/contractors/:id/activity`
+- GET `/contractors/:id/leads`
+- GET `/contractors/:id/commissions`
+
+Verification actions must reuse Phase 8 endpoints and services.
+
+## 18.5 Decks
+
+- GET `/decks`
+- GET `/decks/:id`
+- GET `/decks/:id/activity`
+
+Administrative correction endpoints should only be added when a controlled correction workflow is approved.
+
+## 18.6 Estimates
+
+- GET `/estimates`
+- GET `/estimates/:id`
+- GET `/estimates/:id/revisions`
+
+Estimate recalculation must use Phase 6 services.
+
+## 18.7 Leads
+
+- GET `/leads`
+- GET `/leads/:id`
+- GET `/leads/:id/history`
+- POST `/leads/:id/assign`
+- POST `/leads/:id/reassign`
+- POST `/leads/:id/close`
+
+Use Phase 8 business rules.
+
+## 18.8 Catalog
+
+Reuse Phase 5 catalog routes.
+
+Provide Admin access to existing catalog CRUD.
+
+## 18.9 Pricing
+
+Reuse Phase 6 pricing configuration routes.
+
+## 18.10 Discounts and Commissions
+
+Reuse Phase 9 financial routes.
+
+## 18.11 AI Analyses
+
+- GET `/analyses`
+- GET `/analyses/:id`
+
+Additional review endpoints must preserve original AI predictions and follow an approved manual-review workflow.
+
+## 18.12 Platform Configuration
+
+- GET `/settings`
+- GET `/settings/:key`
+- POST `/settings`
+- PATCH `/settings/:key`
+- PATCH `/settings/:key/status`
+
+Only approved configuration keys may be changed.
+
+## 18.13 Audit Logs
+
+- GET `/audit-logs`
+- GET `/audit-logs/:id`
+
+Audit logs are read-only.
+
+## 18.14 Reports
+
+- GET `/reports/users`
+- GET `/reports/contractors`
+- GET `/reports/decks`
+- GET `/reports/estimates`
+- GET `/reports/leads`
+- GET `/reports/ai-analyses`
+- GET `/reports/financial`
+
+Export endpoints may be added according to the supported reporting implementation.
+
+---
+
+# 19. FRONTEND ADMIN APPLICATION STRUCTURE
+
+Follow the existing React/Vite structure.
+
+Do not rebuild the application shell if one already exists.
+
+## 19.1 Admin Navigation
+
+Recommended navigation:
+
+1. Dashboard
+2. User Management
+3. Customer Management
+4. Contractor Management
+5. Deck Management
+6. Estimate Management
+7. Lead Management
+8. AI Analysis
+9. Material Catalog
+10. Service Catalog
+11. Pricing Configuration
+12. Discounts
+13. Commissions
+14. Reports and Analytics
+15. Platform Settings
+16. Audit Logs
+
+Organize related sections into groups where appropriate.
+
+## 19.2 Reusable UI Components
+
+Use reusable components for:
+
+- Data tables.
+- Search fields.
+- Filters.
+- Pagination.
+- Status badges.
+- Detail panels.
+- Forms.
+- Confirmation dialogs.
+- Delete/deactivation confirmation.
+- Loading indicators.
+- Error messages.
+- Empty states.
+- Export controls.
+
+Do not duplicate the same table and CRUD implementation in every module.
+
+## 19.3 CRUD Interface Requirements
+
+Every editable module must provide the required operations.
+
+### Create
+
+- Form opens correctly.
+- Fields are validated.
+- Submission reaches the backend.
+- Loading state is displayed.
+- Success response updates the UI.
+- Errors are displayed clearly.
+
+### Read
+
+- List loads from the backend.
+- Detail view loads the correct record.
+- Search works.
+- Filters work.
+- Pagination works.
+- Empty state works.
+
+### Update
+
+- Existing data loads into the form.
+- Validation runs.
+- Only permitted fields are submitted.
+- Backend changes are persisted.
+- UI reflects the saved data.
+- Errors are handled.
+
+### Delete / Deactivate
+
+- Confirmation is displayed.
+- Backend verifies dependencies and permissions.
+- Destructive actions are blocked when unsafe.
+- Appropriate deactivation or archival is used.
+- UI reflects the actual result.
+
+## 19.4 UI Reliability
+
+Every page must handle:
+
+- Loading.
+- Success.
+- Validation errors.
+- Authorization errors.
+- Not-found responses.
+- Network failures.
+- Empty datasets.
+- Expired sessions.
+
+No dead buttons.
+
+No fake success notifications.
+
+No placeholder charts presented as real data.
+
+No forms that only update local component state without saving to the backend.
+
+---
+
+# 20. DATABASE AND DATA INTEGRITY
+
+## 20.1 Existing Database Reuse
+
+Inspect existing collections before creating new ones.
+
+Phase 10 should primarily reuse:
+
+- Users.
+- Contractor profiles.
+- Decks.
+- Estimates.
+- Materials.
+- Services.
+- Pricing configurations.
+- Leads.
+- Analyses.
+- Discount policies.
+- Discount assignments.
+- Discount applications.
+- Commission policies.
+- Commissions.
+- Commission histories.
+- Payment records.
+- Audit logs.
+
+Create new collections only when a genuine new platform-management requirement exists.
+
+## 20.2 Data Integrity Requirements
+
+All operations must enforce:
+
+- Valid references.
+- Required fields.
+- Unique constraints.
+- Correct data types.
+- Valid status values.
+- Ownership relationships.
+- Referential integrity.
+- Dependency checks.
+- Consistent timestamps.
+
+## 20.3 Deletion Strategy
+
+Use the following priority:
+
+1. Permanent deletion only when explicitly safe and permitted.
+2. Soft deletion or archival when historical relationships exist.
+3. Deactivation for operational records that should no longer be selectable.
+4. Immutable retention for financial and audit records.
+
+Never cascade-delete important business history without an explicitly approved retention rule.
+
+## 20.4 Database Transactions
+
+Use transactions or equivalent safeguards for operations involving multiple dependent records.
+
+Examples:
+
+- Contractor status changes with related eligibility effects.
+- User deactivation.
+- Lead reassignment.
+- Financial configuration changes.
+- Administrative correction workflows.
+
+Do not leave partially updated data if an operation fails.
+
+---
+
+# 21. SECURITY REQUIREMENTS
+
+Security is a mandatory acceptance criterion.
+
+## 21.1 Authentication
+
+- Reuse Phase 3 authentication.
+- Validate sessions or JWTs using existing middleware.
+- Reject expired or invalid authentication.
+- Do not trust frontend role information.
+
+## 21.2 Authorization
+
+Every Admin API must enforce Admin access on the backend.
+
+Every record-level operation must verify the requested resource.
+
+Do not rely only on route visibility.
+
+## 21.3 Input Validation
+
+Validate:
+
+- IDs.
+- Query parameters.
+- Pagination values.
+- Search strings.
+- Filter values.
+- Request bodies.
+- File references.
+- Configuration values.
+
+Reject unknown or protected fields where appropriate.
+
+## 21.4 Mass Assignment Protection
+
+Never pass arbitrary request bodies directly into database updates.
+
+Use explicit field allowlists and validated update objects.
+
+Protect:
+
+- Role.
+- Account status.
+- Verification status.
+- Ownership fields.
+- Password hashes.
+- Financial amounts.
+- Audit fields.
+- Internal flags.
+
+## 21.5 Sensitive Data
+
+Do not expose:
+
+- Password hashes.
+- Authentication tokens.
+- API secrets.
+- Private credentials.
+- Internal notes.
+- Unrelated customer data.
+- Unauthorized documents.
+
+## 21.6 File Security
+
+Reuse the Phase 4 secure upload and streaming implementation.
+
+Admin file access must use authenticated and authorized file endpoints.
+
+Do not expose private local storage paths or public unrestricted file URLs.
+
+## 21.7 Audit
+
+All sensitive Admin operations must be audited.
+
+Audit records must include:
+
+- Actor.
+- Actor role.
+- Action.
+- Target entity.
+- Target ID.
+- Timestamp.
+- Relevant change metadata.
+- Reason where required.
+
+Do not log passwords, tokens, secrets, or unnecessary personal information.
+
+---
+
+# 22. PERFORMANCE AND RELIABILITY
+
+The Admin dashboard must remain responsive as the database grows.
+
+Requirements:
+
+- Server-side pagination.
+- Indexed search fields.
+- Efficient filters.
+- Database aggregation for dashboard metrics.
+- Avoid N+1 query patterns.
+- Limit unnecessary population of referenced documents.
+- Avoid loading all records into frontend memory.
+- Use appropriate API response limits.
+- Use controlled export processing.
+- Handle database failures gracefully.
+
+Do not introduce unnecessary microservices, Redis, queues, or infrastructure.
+
+Use the existing architecture unless a demonstrated requirement justifies a change.
+
+---
+
+# 23. TESTING STRATEGY
+
+Phase 10 requires more extensive testing than a normal UI-only feature.
+
+Every module must be tested at multiple levels.
+
+## 23.1 Backend Unit Tests
+
+Test:
+
+- Validation.
+- Service methods.
+- Permission checks.
+- Business rules.
+- Status transitions.
+- Aggregation calculations.
+- Dependency checks.
+
+## 23.2 Backend Integration Tests
+
+Test complete API workflows.
+
+For every supported CRUD module:
+
+### Create Tests
+
+- Authorized Admin creates a valid record.
+- Invalid input is rejected.
+- Duplicate records are rejected.
+- Non-admin access is denied.
+- Database persistence is verified.
+
+### Read Tests
+
+- Authorized Admin can retrieve records.
+- Search works.
+- Filters work.
+- Pagination works.
+- Invalid IDs are handled.
+- Unauthorized users cannot access Admin records.
+
+### Update Tests
+
+- Valid update is persisted.
+- Invalid update is rejected.
+- Protected fields cannot be modified.
+- Historical data is preserved.
+- Failed updates do not corrupt records.
+
+### Delete / Deactivate Tests
+
+- Valid deactivation works.
+- Dependency restrictions work.
+- Financial and audit history is preserved.
+- Unauthorized deletion is rejected.
+- Repeated requests behave safely.
+
+## 23.3 Authorization Matrix
+
+Test all three roles:
+
+| Operation | Admin | Contractor | Customer |
+|---|---|---|---|
+| Admin dashboard | Allow | Deny | Deny |
+| User administration | Allow | Deny | Deny |
+| Customer administration | Allow | Deny | Deny |
+| Contractor administration | Allow | Deny | Deny |
+| Platform settings | Allow | Deny | Deny |
+| Audit logs | Allow | Deny | Deny |
+| Platform reports | Allow | Deny | Deny |
+| Own authorized customer records | According to Admin permissions | Deny | Allow |
+| Own authorized contractor records | According to Admin permissions | Allow | Deny |
+
+Existing customer and contractor APIs must retain their original ownership restrictions.
+
+## 23.4 Frontend Tests
+
+Test:
+
+- Admin login and navigation.
+- Protected routes.
+- Every CRUD form.
+- Search.
+- Filters.
+- Pagination.
+- Validation messages.
+- Confirmation dialogs.
+- Error states.
+- Loading states.
+- Empty states.
+- Data refresh after successful mutations.
+
+## 23.5 End-to-End Tests
+
+Test complete workflows such as:
+
+1. Admin logs in.
+2. Admin opens the dashboard.
+3. Admin searches for a customer.
+4. Admin opens customer details.
+5. Admin performs a permitted profile update.
+6. Database reflects the change.
+7. Audit log records the action.
+8. Customer remains able to access only their own records.
+
+Additional E2E workflows must cover contractor management, lead reassignment, catalog administration, pricing configuration, financial oversight, and report generation.
+
+## 23.6 Regression Tests
+
+Run all existing tests from Phases 3–9.
+
+Verify:
+
+- Authentication still works.
+- Customer deck management still works.
+- Contractor access still works.
+- Uploads still work.
+- Catalog CRUD still works.
+- Pricing and estimates still work.
+- AI analysis integration still works.
+- Contractor verification still works.
+- Lead management still works.
+- Discounts and commissions still work.
+
+---
+
+# 24. ACCEPTANCE CRITERIA
+
+Phase 10 is accepted only when all applicable criteria below are satisfied.
+
+## Admin Dashboard
+
+- [ ] Dashboard loads actual database metrics.
+- [ ] Charts use real backend data.
+- [ ] Filters work.
+- [ ] Recent activity is accurate.
+- [ ] Loading and error states work.
+
+## User and Customer Management
+
+- [ ] User lists load correctly.
+- [ ] Search and filters work.
+- [ ] Details load correctly.
+- [ ] Supported creation workflows work.
+- [ ] Updates persist.
+- [ ] Deactivation works.
+- [ ] Role escalation is prevented.
+
+## Contractor Management
+
+- [ ] Contractor list works.
+- [ ] Contractor details work.
+- [ ] Profile updates work.
+- [ ] Verification history is visible.
+- [ ] Status actions use Phase 8 services.
+- [ ] Suspension/deactivation preserves history.
+
+## Deck and Estimate Oversight
+
+- [ ] Deck list and detail views work.
+- [ ] Secure photographs are accessible to authorized Admins.
+- [ ] Estimate list and detail views work.
+- [ ] Estimate revision history is preserved.
+- [ ] Financial snapshots cannot be silently overwritten.
+
+## Leads and AI
+
+- [ ] Lead list and details work.
+- [ ] Assignment and reassignment work.
+- [ ] Lead history is visible.
+- [ ] AI analysis list and details work.
+- [ ] Original AI predictions remain preserved.
+- [ ] Manual review does not overwrite model output.
+
+## Catalog and Pricing
+
+- [ ] All existing catalog CRUD operations work.
+- [ ] Compatibility management works.
+- [ ] Pricing configuration operations work.
+- [ ] Historical estimate values remain unchanged.
+
+## Financial Management
+
+- [ ] Discount policies are accessible.
+- [ ] Discount applications are visible.
+- [ ] Commission policies are accessible.
+- [ ] Commission approval workflows work.
+- [ ] Payment records are visible.
+- [ ] Financial history is preserved.
+
+## Platform Settings and Audit
+
+- [ ] Supported settings CRUD works.
+- [ ] Invalid configuration is rejected.
+- [ ] Secrets are not exposed.
+- [ ] Audit logs are searchable.
+- [ ] Audit records cannot be modified through normal Admin CRUD.
+
+## Reporting
+
+- [ ] All implemented report metrics are accurate.
+- [ ] Filters work.
+- [ ] Exported records match selected filters.
+- [ ] Sensitive data is protected.
+
+## Quality
+
+- [ ] All applicable backend tests pass.
+- [ ] All applicable frontend tests pass.
+- [ ] End-to-end tests pass.
+- [ ] Existing regression tests pass.
+- [ ] Frontend lint passes.
+- [ ] Production build passes.
+- [ ] Database verification passes.
+- [ ] Git changes are committed and synchronized.
+- [ ] No unresolved critical or high-severity security issue remains.
+
+---
+
+# 25. IMPLEMENTATION SEQUENCE
+
+Antigravity must follow this sequence.
+
+## Step 1 – Existing Architecture Inspection
+
+Inspect:
+
+- Existing Admin routes and dashboard.
+- Authentication and authorization.
+- User and contractor modules.
+- Deck and estimate modules.
+- Lead management.
+- Catalog and pricing.
+- AI analysis.
+- Discounts and commissions.
+- Audit logging.
+- Existing frontend layouts and API clients.
+
+Inspect only relevant files.
+
+Identify missing features, incomplete CRUD operations, duplicated functionality, security risks, and data integrity risks.
+
+Prepare a concise readiness report.
+
+Do not begin large-scale implementation before identifying integration risks.
+
+## Step 2 – Admin Dashboard Foundation
+
+Implement:
+
+- Admin dashboard layout.
+- Navigation.
+- Protected routes.
+- Summary APIs.
+- Recent activity.
+- Actual metrics.
+
+## Step 3 – User and Contractor Administration
+
+Implement and test:
+
+- User management.
+- Customer management.
+- Contractor management.
+- Verification oversight.
+- Account status management.
+
+## Step 4 – Operational Record Oversight
+
+Implement and test:
+
+- Deck management oversight.
+- Estimate oversight.
+- Lead management oversight.
+- AI analysis oversight.
+
+## Step 5 – Business Module Integration
+
+Integrate and test:
+
+- Material and service catalog.
+- Pricing configurations.
+- Discounts.
+- Commissions.
+
+Reuse existing services.
+
+## Step 6 – Platform Configuration and Audit
+
+Implement:
+
+- Approved platform settings.
+- Configuration validation.
+- Audit log browsing.
+- Sensitive action auditing.
+
+## Step 7 – Reporting and Analytics
+
+Implement:
+
+- Operational reports.
+- Financial reports.
+- Filters.
+- Aggregations.
+- Supported exports.
+
+## Step 8 – Security and Data Integrity Review
+
+Review:
+
+- Every Admin API.
+- Every mutation.
+- Every ownership boundary.
+- Every sensitive field.
+- Every deletion operation.
+- Every financial operation.
+- Every file access path.
+- Every configuration update.
+
+## Step 9 – Full Testing
+
+Run:
+
+- Unit tests.
+- Integration tests.
+- CRUD tests.
+- Authorization tests.
+- End-to-end tests.
+- Regression tests.
+- Frontend lint.
+- Production build.
+- Live database verification.
+
+Fix all discovered issues.
+
+## Step 10 – Completion Review
+
+Create:
+
+`CompletionReviews/Phase-10-Review.md`
+
+Include:
+
+1. Implemented modules.
+2. Admin dashboard functionality.
+3. All CRUD operations and their verification status.
+4. API inventory.
+5. Database changes.
+6. Security and authorization results.
+7. Ownership and data integrity results.
+8. Test execution results.
+9. Frontend build and lint results.
+10. Database verification results.
+11. Known limitations.
+12. Outstanding issues.
+13. Git commit and synchronization information.
+
+---
+
+# 26. STRICT DEVELOPMENT GOVERNANCE
+
+The following rules are mandatory for Phase 10.
+
+## Rule 1 – No Superficial Implementation
+
+A UI page without working backend functionality is incomplete.
+
+## Rule 2 – Every CRUD Operation Must Work
+
+Every implemented create, read, update, and delete/deactivate operation must be tested against the actual backend and database.
+
+## Rule 3 – Security Is Mandatory
+
+Every endpoint must enforce authentication, authorization, validation, and resource-level access controls.
+
+## Rule 4 – Protect Existing Business Logic
+
+Do not duplicate or rewrite Phases 3–9 unnecessarily.
+
+## Rule 5 – Preserve Historical Data
+
+Financial, estimate, lead, audit, and AI history must not be silently overwritten or deleted.
+
+## Rule 6 – No Fake Data
+
+Do not use hardcoded dashboard metrics, fake chart values, or fabricated business records.
+
+Use clearly labeled test fixtures only in tests.
+
+## Rule 7 – No Fake Test Results
+
+Never claim a test, build, database verification, or security check passed unless it was actually executed.
+
+## Rule 8 – No Unnecessary Dependencies
+
+Do not add infrastructure or libraries without a demonstrated requirement.
+
+## Rule 9 – Fix Before Completion
+
+Do not mark a module complete while its core CRUD, security, persistence, or integration tests are failing.
+
+## Rule 10 – Verify the Full Workflow
+
+Check the frontend, backend, database, and authorization together.
+
+## Rule 11 – Avoid Unrelated Refactoring
+
+Only make changes necessary for Phase 10 and required integration fixes.
+
+## Rule 12 – Stop at the Phase Boundary
+
+Do not begin Phase 11 automatically.
+
+---
+
+# 27. FINAL PHASE GATE
+
+Phase 10 must not be declared complete based only on a successful frontend build or a large number of passing tests.
+
+The completion review must demonstrate:
+
+- Working administrative workflows.
+- Complete applicable CRUD functionality.
+- Correct database persistence.
+- Secure role-based access.
+- Correct record ownership and isolation.
+- Historical data integrity.
+- Accurate dashboard and report calculations.
+- Successful regression testing across Phases 3–9.
+- No unresolved critical security or data integrity defects.
+- Successful Git synchronization.
+
+**Final instruction:**
+
+After Phase 10 is implemented and verified:
+
+1. Update `CompletionReviews/Phase-10-Review.md`.
+2. Update the project roadmap.
+3. Commit and synchronize verified changes.
+4. Provide the final completion report.
+5. List all unresolved issues honestly.
+6. STOP.
+7. Wait for explicit approval before starting Phase 11 – Integration, Security and Quality Assurance.
+
+**The priority is a fully functional, secure, reliable administrative platform. Feature count and UI appearance must never take priority over correctness, data security, and working CRUD operations.**

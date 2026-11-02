@@ -50,6 +50,20 @@ function App() {
               {user?.role === 'admin' && (
                 <>
                   <Link
+                    to="/admin/dashboard"
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: '#4338ca',
+                      backgroundColor: '#e0e7ff',
+                      padding: '3px 10px',
+                      borderRadius: '4px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Admin Console
+                  </Link>
+                  <Link
                     to="/admin/catalog"
                     style={{
                       fontSize: '14px',
