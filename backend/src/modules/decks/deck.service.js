@@ -30,13 +30,23 @@ function normalizeDimensions(dimensions, deckShape) {
 }
 
 /**
- * Verify deck ownership or admin authorization.
+ * Verify deck ownership, admin authorization, or assigned contractor read access.
  */
-function assertDeckAccess(deck, user) {
+async function assertDeckAccess(deck, user, { readOnly = false } = {}) {
   if (user.role === ROLES.ADMIN) return;
-  if (deck.ownerId.toString() !== user.id.toString()) {
-    throw new ForbiddenError('You do not have permission to access this deck project.');
+  if (deck.ownerId.toString() === user.id.toString()) return;
+
+  // If contractor and read-only access (e.g. viewing deck or images for an assigned lead)
+  if (readOnly && user.role === ROLES.CONTRACTOR) {
+    const Lead = require('../leads/lead.model');
+    const assignedLead = await Lead.findOne({
+      deckId: deck._id,
+      assignedContractorId: user.id,
+    });
+    if (assignedLead) return;
   }
+
+  throw new ForbiddenError('You do not have permission to access this deck project.');
 }
 
 /**
@@ -88,7 +98,7 @@ async function getDeckById(deckId, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: true });
 
   const images = await DeckImage.find({ deckId }).sort({ createdAt: 1 });
 
@@ -106,7 +116,7 @@ async function updateDeck(deckId, updateData, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: false });
 
   // Recalculate dimensions if updated
   const shape = updateData.deckShape || deck.deckShape;
@@ -137,7 +147,7 @@ async function deleteDeck(deckId, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: false });
 
   // Fetch all associated images
   const images = await DeckImage.find({ deckId });

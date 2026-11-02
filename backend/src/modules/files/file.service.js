@@ -23,7 +23,7 @@ async function uploadDeckImages(deckId, files, user, description = '') {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: false });
 
   if (!files || files.length === 0) {
     throw new BadRequestError('No files were provided for upload.');
@@ -95,7 +95,7 @@ async function getDeckImages(deckId, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: true });
 
   const images = await DeckImage.find({ deckId }).sort({ createdAt: 1 });
   return images.map((img) => img.toJSON());
@@ -110,7 +110,7 @@ async function getImageFile(deckId, imageId, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: true });
 
   const image = await DeckImage.findOne({ _id: imageId, deckId });
   if (!image) {
@@ -134,7 +134,7 @@ async function deleteDeckImage(deckId, imageId, user) {
     throw new NotFoundError('Deck project not found.');
   }
 
-  assertDeckAccess(deck, user);
+  await assertDeckAccess(deck, user, { readOnly: false });
 
   const image = await DeckImage.findOne({ _id: imageId, deckId });
   if (!image) {

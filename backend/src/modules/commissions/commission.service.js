@@ -403,34 +403,52 @@ async function reviewCommission(commissionId, { action, reason, notes, approvedA
 
 /**
  * Records payment confirmation for an approved or payable commission (Admin only).
+ * Uses an atomic conditional database update to strictly prevent duplicate or concurrent payouts.
  */
 async function recordCommissionPayment(commissionId, { paymentReference, paymentMethod, amount, currency, notes }, adminUser) {
-  const commission = await Commission.findById(commissionId);
-  if (!commission) {
-    throw new NotFoundError('Commission record not found.');
-  }
+  const userId = adminUser.id || adminUser._id;
+  const trimmedRef = paymentReference.trim();
 
-  if (![COMMISSION_STATUS.PAYABLE, COMMISSION_STATUS.APPROVED].includes(commission.status)) {
-    throw new BadRequestError(
-      `Cannot record payment for commission with status "${commission.status}". Status must be PAYABLE or APPROVED.`
-    );
-  }
-
-  // Prevent duplicate payment reference
+  // Prevent duplicate payment reference on this commission
   const existingPayment = await CommissionPaymentRecord.findOne({
     commissionId,
-    paymentReference: paymentReference.trim(),
+    paymentReference: trimmedRef,
   });
   if (existingPayment) {
     throw new ConflictError(`Payment reference "${paymentReference}" already recorded for this commission.`);
   }
 
-  const userId = adminUser.id || adminUser._id;
-  const previousStatus = commission.status;
+  // Atomic conditional transition from PAYABLE or APPROVED to PAID
+  const commission = await Commission.findOneAndUpdate(
+    {
+      _id: commissionId,
+      status: { $in: [COMMISSION_STATUS.PAYABLE, COMMISSION_STATUS.APPROVED] },
+    },
+    {
+      $set: {
+        status: COMMISSION_STATUS.PAID,
+        paidAt: new Date(),
+        paidBy: userId,
+        paymentReference: trimmedRef,
+      },
+    },
+    { returnDocument: 'after' }
+  );
+
+  if (!commission) {
+    const existing = await Commission.findById(commissionId);
+    if (!existing) {
+      throw new NotFoundError('Commission record not found.');
+    }
+    throw new BadRequestError(
+      `Cannot record payment for commission with status "${existing.status}". Status must be PAYABLE or APPROVED.`
+    );
+  }
+
   const paymentRecord = await CommissionPaymentRecord.create({
     commissionId: commission._id,
     contractorId: commission.contractorId,
-    paymentReference: paymentReference.trim(),
+    paymentReference: trimmedRef,
     paymentMethod: paymentMethod.trim(),
     amount: round2(Number(amount)),
     currency: (currency || commission.currency || 'USD').toUpperCase(),
@@ -439,21 +457,15 @@ async function recordCommissionPayment(commissionId, { paymentReference, payment
     notes: notes || '',
   });
 
-  commission.status = COMMISSION_STATUS.PAID;
-  commission.paidAt = new Date();
-  commission.paidBy = userId;
-  commission.paymentReference = paymentReference.trim();
-  await commission.save();
-
   await CommissionHistory.create({
     commissionId: commission._id,
-    previousStatus,
+    previousStatus: COMMISSION_STATUS.PAYABLE,
     newStatus: COMMISSION_STATUS.PAID,
     action: 'RECORD_PAYMENT',
     reason: `Payment confirmed via ${paymentMethod} (Ref: ${paymentReference}).`,
     performedBy: userId,
     performedByRole: adminUser.role,
-    metadata: { paymentId: paymentRecord._id, amount, paymentReference },
+    metadata: { paymentId: paymentRecord._id, amount, paymentReference: trimmedRef },
   });
 
   await AuditLog.create({
@@ -461,7 +473,7 @@ async function recordCommissionPayment(commissionId, { paymentReference, payment
     performedBy: userId,
     entityType: 'COMMISSION',
     entityId: commission._id,
-    newValue: { paymentReference, amount, status: COMMISSION_STATUS.PAID },
+    newValue: { paymentReference: trimmedRef, amount, status: COMMISSION_STATUS.PAID },
     status: 'SUCCESS',
   });
 

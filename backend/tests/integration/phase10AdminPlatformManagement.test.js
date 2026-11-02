@@ -542,6 +542,9 @@ describe('Phase 10 — Administrative Dashboard & Platform Management Full Valid
       });
 
       assert.ok(remainingActiveAdmins >= 1, 'At least 1 active admin MUST remain after concurrent deactivations');
+
+      // Restore primary adminUser to active state so session remains valid for subsequent tests
+      await User.findByIdAndUpdate(adminUser._id, { accountStatus: ACCOUNT_STATUS.ACTIVE });
     });
 
     it('29. Self-Demotion Block - Admin can NEVER modify their own admin status directly', async () => {
