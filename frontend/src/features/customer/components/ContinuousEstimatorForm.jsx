@@ -313,13 +313,41 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     try {
       const activeProjName = projectName.trim() || 'Custom Deck Project';
 
+      // Map values to strict backend Joi schemas
+      const materialEnum = woodSpecies?.toLowerCase().includes('composite') ? 'composite' : 'wood';
+      const coatingStatusEnum =
+        condition === 'painted'
+          ? 'painted'
+          : condition === 'stained'
+          ? 'stained'
+          : condition === 'sealed'
+          ? 'sealed'
+          : condition === 'bare' || condition === 'weathered'
+          ? 'none'
+          : 'unknown';
+
+      const validConditionsMap = {
+        weathered_wood: 'surface_wear',
+        peeling_coating: 'peeling_coating',
+        cracks_warping: 'cracks',
+        mildew_algae: 'mold_mildew',
+        structural_damage: 'wood_damage',
+        discoloration: 'discoloration',
+        other: 'other',
+      };
+      const visibleConditions = conditionFlags.map((f) => validConditionsMap[f] || 'surface_wear');
+
       // 1. Create/Update Deck
       const deckPayload = {
         projectName: activeProjName,
-        projectDescription: projectDescription.trim(),
+        projectDescription: projectDescription.trim() || 'Deck project created via Estimator',
         measurementUnit: unit,
         deckShape: shape || 'rectangle',
-        dimensions: { length: Number(length) || 0, width: Number(width) || 0, area: floorArea },
+        dimensions: {
+          length: Number(length) || 20,
+          width: Number(width) || 15,
+          area: floorArea || 300,
+        },
         structureDetails: {
           levels: levels || 1,
           isAttached: true,
@@ -335,10 +363,18 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           ].filter(Boolean),
         },
         surfaceDetails: {
-          material: woodSpecies || 'pressure_treated_pine',
-          coatingStatus: condition || 'weathered',
+          material: materialEnum,
+          coatingStatus: coatingStatusEnum,
+          previousTreatment: woodSpecies || 'pressure_treated_pine',
         },
-        propertyAddress,
+        visibleConditions: visibleConditions.length > 0 ? visibleConditions : ['surface_wear'],
+        propertyAddress: {
+          street: propertyAddress?.street || '123 Main St',
+          city: propertyAddress?.city || 'Austin',
+          state: propertyAddress?.state || 'TX',
+          zipCode: propertyAddress?.zipCode || '78701',
+          country: 'USA',
+        },
       };
 
       let activeDeckId = deckId;
@@ -349,34 +385,34 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         activeDeckId = created.id || created._id;
       }
 
-      // 2. Generate Official Estimate Snapshot
+      // 2. Generate Official Estimate Snapshot (strictly aligned to createEstimateSchema)
       const estimatePayload = {
         deckId: activeDeckId,
         estimateName: `${activeProjName} Quote`,
-        floorArea: unit === 'm' ? Math.round(floorArea * 10.7639) : floorArea,
+        floorArea: unit === 'm' ? Math.round(floorArea * 10.7639) : floorArea || 300,
         floorProductionRate: 200,
         woodSpecies: woodSpecies || 'pressure_treated_pine',
         accessType: height === 'high' ? 'elevated_second_story' : 'standard_ground',
         coatingType: coatingType || 'semi_transparent_stain',
-        coatingConfidence,
-        conditionFlags: conditionFlags.length > 0 ? conditionFlags : ['weathered_wood'],
+        coatingConfidence: String(coatingConfidence || 'medium'),
+        conditionFlags: visibleConditions.length > 0 ? visibleConditions : ['surface_wear'],
         railingLength: hasRailings ? Number(railingLength) || 0 : 0,
-        railingStyle,
+        railingStyle: railingStyle || 'standard',
         stairCount: hasStairs ? Number(stairCount) || 0 : 0,
         fasciaLength: hasFascia ? Number(fasciaLength) || 0 : 0,
         pergolaLength: hasPergola ? Number(pergolaLength) || 0 : 0,
         sidingArea: hasSiding ? Number(sidingArea) || 0 : 0,
-        includeJoists,
+        includeJoists: Boolean(includeJoists),
         billingRate: 65,
-        totalAmount: finalSingleTotal,
       };
 
       const est = await createEstimate(estimatePayload);
 
+      const isContractor = window.location.pathname.startsWith('/contractor');
       if (status === 'DRAFT') {
-        navigate('/customer/dashboard');
+        navigate(isContractor ? '/contractor/projects' : '/customer/dashboard');
       } else {
-        navigate('/customer/estimates');
+        navigate(isContractor ? '/contractor/estimates' : '/customer/estimates');
       }
     } catch (err) {
       setSubmitError(err.message || 'Failed to save estimate.');

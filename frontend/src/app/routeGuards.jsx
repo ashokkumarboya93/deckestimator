@@ -59,10 +59,48 @@ export function RequireRole({ allowedRoles, children }) {
 }
 
 /**
+ * Restrict contractor pages exclusively to contractors whose verification has been approved by admin.
+ * If pending, draft, under_review, or rejected, redirect to /contractor/verification-request.
+ */
+export function RequireApprovedContractor({ children }) {
+  const { user, contractorProfile, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Verifying credentials...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Admins can view any contractor page if authorized
+  if (user.role === 'admin') {
+    return children;
+  }
+
+  if (user.role !== 'contractor') {
+    return <Navigate to="/" replace />;
+  }
+
+  const isApproved = contractorProfile?.verificationStatus === 'approved';
+
+  if (!isApproved) {
+    return <Navigate to="/contractor/verification-request" replace />;
+  }
+
+  return children;
+}
+
+/**
  * Redirect authenticated users away from guest pages (login, register).
  */
 export function GuestOnly({ children }) {
-  const { user, loading } = useAuth();
+  const { user, contractorProfile, loading } = useAuth();
 
   if (loading) {
     return null;
@@ -70,7 +108,10 @@ export function GuestOnly({ children }) {
 
   if (user) {
     if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
-    if (user.role === 'contractor') return <Navigate to="/contractor/dashboard" replace />;
+    if (user.role === 'contractor') {
+      const isApproved = contractorProfile?.verificationStatus === 'approved';
+      return <Navigate to={isApproved ? "/contractor/dashboard" : "/contractor/verification-request"} replace />;
+    }
     return <Navigate to="/customer/dashboard" replace />;
   }
 

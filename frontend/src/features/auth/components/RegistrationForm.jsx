@@ -162,12 +162,14 @@ export function RegistrationForm() {
       const data = await register(payload);
 
       setRegistrationSuccess(
-        `Account created successfully! Welcome to Deck Pro, ${data.user.fullName || 'Customer'}. Redirecting to your dashboard...`
+        data.user.role === 'contractor'
+          ? `Account created successfully! Welcome to Deck Pro, ${data.user.fullName || 'Contractor'}. Redirecting to business verification...`
+          : `Account created successfully! Welcome to Deck Pro, ${data.user.fullName || 'Customer'}. Redirecting to your dashboard...`
       );
 
       setTimeout(() => {
         if (data.user.role === 'contractor') {
-          navigate('/contractor/dashboard');
+          navigate('/contractor/verification-request');
         } else {
           navigate('/customer/dashboard');
         }
@@ -262,6 +264,10 @@ export function RegistrationForm() {
               type="button"
               onClick={() => setFormData((p) => ({ ...p, role: 'customer' }))}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
                 padding: '0.65rem 1rem',
                 borderRadius: '8px',
                 border: formData.role === 'customer' ? '2px solid #2563eb' : '1px solid #cbd5e1',
@@ -273,12 +279,21 @@ export function RegistrationForm() {
                 transition: 'all 0.15s ease',
               }}
             >
-              👤 Homeowner / Customer
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              Homeowner / Customer
             </button>
             <button
               type="button"
+              data-role-btn="contractor"
               onClick={() => setFormData((p) => ({ ...p, role: 'contractor' }))}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
                 padding: '0.65rem 1rem',
                 borderRadius: '8px',
                 border: formData.role === 'contractor' ? '2px solid #2563eb' : '1px solid #cbd5e1',
@@ -290,7 +305,10 @@ export function RegistrationForm() {
                 transition: 'all 0.15s ease',
               }}
             >
-              🔨 Deck Contractor
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+              Deck Contractor
             </button>
           </div>
         </div>

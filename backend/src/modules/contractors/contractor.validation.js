@@ -16,6 +16,9 @@ const updateProfileSchema = Joi.object({
   website: Joi.string().uri().trim().allow(''),
   businessDescription: Joi.string().trim().max(1000).allow(''),
   yearsOfExperience: Joi.number().min(0).max(100),
+  licenseNumber: Joi.string().trim().max(100).allow(''),
+  licenseJurisdiction: Joi.string().trim().max(100).allow(''),
+  registrationNumber: Joi.string().trim().max(100).allow(''),
   servicesOffered: Joi.array().items(Joi.string().pattern(objectIdRegex)),
   supportedSurfaceTypes: Joi.array().items(Joi.string().trim()),
   serviceAreas: Joi.array().items(

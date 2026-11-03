@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Auth Service
 // =============================================
 
@@ -78,7 +78,7 @@ async function registerUser(userData) {
         businessPhone: userData.phone ? userData.phone.trim() : '',
         licenseNumber: userData.licenseNumber.trim(),
         licenseJurisdiction: userData.licenseJurisdiction ? userData.licenseJurisdiction.trim() : '',
-        verificationStatus: VERIFICATION_STATUS.PENDING,
+        verificationStatus: VERIFICATION_STATUS.DRAFT,
       });
     } catch (profileErr) {
       // Clean up orphaned user record if contractor profile creation fails

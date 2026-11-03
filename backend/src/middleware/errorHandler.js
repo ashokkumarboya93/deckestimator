@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Centralized Error Handler
 // =============================================
 // Catches all errors and returns safe, consistent responses.
@@ -25,11 +25,14 @@ function errorHandler(err, req, res, _next) {
       field: e.path,
       message: e.message,
     }));
+    const summaryMsg = details.length
+      ? `Database validation failed: ${details.map((d) => d.message).join('; ')}`
+      : 'Database validation failed.';
     return res.status(400).json({
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
-        message: 'Database validation failed.',
+        message: summaryMsg,
         details,
       },
     });

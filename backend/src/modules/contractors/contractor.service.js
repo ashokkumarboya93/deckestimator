@@ -28,7 +28,7 @@ const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
  */
 async function getProfileByUserId(userId) {
   const profile = await ContractorProfile.findOne({ userId })
-    .populate('userId', 'firstName lastName email role accountStatus')
+    .populate('userId', 'fullName firstName lastName email role accountStatus')
     .populate('servicesOffered', 'name serviceCode description categoryId');
 
   if (!profile) {
@@ -64,6 +64,9 @@ async function updateProfile(userId, updateData) {
     'supportedSurfaceTypes',
     'serviceAreas',
     'businessAddress',
+    'licenseNumber',
+    'licenseJurisdiction',
+    'registrationNumber',
   ];
 
   const oldSnapshot = profile.toObject();
@@ -109,6 +112,7 @@ async function submitVerification(userId, notes = '') {
     VERIFICATION_STATUS.DRAFT,
     VERIFICATION_STATUS.PENDING,
     VERIFICATION_STATUS.ADDITIONAL_INFORMATION_REQUIRED,
+    VERIFICATION_STATUS.REJECTED,
   ];
 
   if (!allowableStatuses.includes(profile.verificationStatus)) {
@@ -324,7 +328,7 @@ async function listContractorsForAdmin(query = {}) {
 
   const [items, total] = await Promise.all([
     ContractorProfile.find(filter)
-      .populate('userId', 'firstName lastName email accountStatus createdAt')
+      .populate('userId', 'fullName firstName lastName email accountStatus createdAt')
       .populate('servicesOffered', 'name serviceCode')
       .sort({ [sortBy]: sortDirection })
       .skip(skip)
@@ -348,9 +352,9 @@ async function listContractorsForAdmin(query = {}) {
  */
 async function getContractorDetailsForAdmin(contractorProfileId) {
   const profile = await ContractorProfile.findById(contractorProfileId)
-    .populate('userId', 'firstName lastName email role accountStatus createdAt')
+    .populate('userId', 'fullName firstName lastName email role accountStatus createdAt')
     .populate('servicesOffered', 'name serviceCode description categoryId')
-    .populate('reviewedBy', 'firstName lastName email');
+    .populate('reviewedBy', 'fullName firstName lastName email');
 
   if (!profile) {
     const error = new Error('Contractor profile not found.');

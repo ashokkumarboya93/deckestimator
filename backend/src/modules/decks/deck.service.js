@@ -70,11 +70,26 @@ async function createDeck(deckData, user) {
  * Get paginated list of decks for the authenticated user.
  */
 async function getDecks(user, { page = 1, limit = 10 } = {}) {
-  const query = user.role === ROLES.ADMIN ? {} : { ownerId: user.id };
+  let query;
+  if (user.role === ROLES.ADMIN) {
+    query = {};
+  } else if (user.role === ROLES.CONTRACTOR) {
+    const Lead = require('../leads/lead.model');
+    const assignedLeads = await Lead.find({ assignedContractorId: user.id }).select('deckId');
+    const assignedDeckIds = assignedLeads.map((l) => l.deckId).filter(Boolean);
+    query = {
+      $or: [
+        { ownerId: user.id },
+        { _id: { $in: assignedDeckIds } },
+      ],
+    };
+  } else {
+    query = { ownerId: user.id };
+  }
   const skip = (Math.max(1, page) - 1) * limit;
 
   const [decks, total] = await Promise.all([
-    Deck.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Deck.find(query).populate('ownerId', 'fullName email').sort({ createdAt: -1 }).skip(skip).limit(limit),
     Deck.countDocuments(query),
   ]);
 
@@ -93,7 +108,7 @@ async function getDecks(user, { page = 1, limit = 10 } = {}) {
  * Get single deck by ID with attached image metadata.
  */
 async function getDeckById(deckId, user) {
-  const deck = await Deck.findById(deckId);
+  const deck = await Deck.findById(deckId).populate('ownerId', 'fullName email');
   if (!deck) {
     throw new NotFoundError('Deck project not found.');
   }
