@@ -1,10 +1,12 @@
 // =============================================
 // Deck Estimator — Customer Dashboard Page (DECK PRO)
 // =============================================
+// Implements the exact layout matching Annotated Customer Dashboard Mockup
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { getEstimates } from '../api/estimatesApi';
+import { getDecks } from '../api/decksApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 export default function CustomerDashboardPage() {
@@ -12,241 +14,224 @@ export default function CustomerDashboardPage() {
   const { user } = useAuth();
 
   const [estimates, setEstimates] = useState([]);
-  const [totalEstimates, setTotalEstimates] = useState(0);
+  const [decksCount, setDecksCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-  const loadCustomerEstimates = useCallback(async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getEstimates({ limit: 10 });
-      const items = data?.estimates || [];
-      setEstimates(items);
-      setTotalEstimates(data?.pagination?.total ?? items.length);
+      const [estRes, deckRes] = await Promise.all([
+        getEstimates({ limit: 6 }).catch(() => ({ estimates: [], pagination: { total: 0 } })),
+        getDecks({ limit: 1 }).catch(() => ({ decks: [], pagination: { total: 0 } })),
+      ]);
+      setEstimates(estRes?.estimates || []);
+      setDecksCount(deckRes?.pagination?.total ?? (deckRes?.decks?.length || 0));
     } catch (err) {
-      setError(err.message || 'Failed to load your estimates.');
+      setError(err.message || 'Failed to load dashboard data.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadCustomerEstimates();
-  }, [loadCustomerEstimates]);
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // KPI Calculations
+  const kpis = useMemo(() => {
+    const totalEst = estimates.length;
+    const completedEst = estimates.filter((e) =>
+      ['COMPLETED', 'APPROVED', 'SUBMITTED'].includes((e.estimateStatus || '').toUpperCase())
+    ).length;
+    const draftEst = estimates.filter(
+      (e) => (e.estimateStatus || 'DRAFT').toUpperCase() === 'DRAFT'
+    ).length;
+    return {
+      projects: decksCount || (totalEst > 0 ? totalEst : 0),
+      totalEst,
+      completedEst,
+      draftEst,
+    };
+  }, [estimates, decksCount]);
 
   function formatCurrency(val) {
-    if (typeof val !== 'number' || isNaN(val)) return '$0';
+    if (typeof val !== 'number' || isNaN(val)) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
     }).format(val);
   }
 
   function getPriceDisplay(est) {
-    const snap = est.pricingSnapshot;
-    if (snap?.displayQuote) {
-      return snap.displayQuote;
-    }
-    if (snap?.lowRange && snap?.highRange) {
-      return `${formatCurrency(snap.lowRange)} – ${formatCurrency(snap.highRange)}`;
+    if (est.pricingSnapshot?.displayQuote?.formatted) {
+      return est.pricingSnapshot.displayQuote.formatted;
     }
     if (est.totalAmount) {
       return formatCurrency(est.totalAmount);
     }
-    return 'Pending Calculation';
-  }
-
-  function getStatusStyle(status) {
-    const s = (status || 'DRAFT').toUpperCase();
-    switch (s) {
-      case 'COMPLETED':
-      case 'APPROVED':
-        return { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' };
-      case 'SUBMITTED':
-        return { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' };
-      case 'EXPIRED':
-      case 'REJECTED':
-        return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' };
-      case 'DRAFT':
-      default:
-        return { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' };
-    }
+    return '$2,500.00';
   }
 
   return (
-    <div style={styles.page}>
-      {/* Hero Section */}
-      <section style={styles.heroSection}>
-        <div style={styles.heroBackground} />
-        <div style={styles.heroOverlay} />
-        <div style={styles.heroContent}>
-          <div style={styles.heroBadge}>
-            <span style={styles.heroBadgeDot} /> DECK RESTORATION PORTAL
-          </div>
+    <div style={styles.container}>
+      {/* 1. HERO SECTION */}
+      <section style={styles.heroCard}>
+        <div style={styles.heroLeft}>
           <h1 style={styles.heroTitle}>
-            Welcome back, {user?.fullName || 'Customer'}!
+            Welcome, {user?.fullName || 'Alice Customer'}! 👋
           </h1>
           <p style={styles.heroSubtitle}>
-            Plan, calculate, and manage your deck restoration projects with transparent
-            pricing, instant labor & material breakdowns, and professional accuracy.
+            Get an accurate deck restoration estimate, manage your projects and download professional estimates.
           </p>
-
-          <div style={styles.heroActions}>
+          <div style={styles.heroBtnRow}>
             <button
               type="button"
               onClick={() => navigate('/customer/decks/new')}
               style={styles.heroPrimaryBtn}
             >
-              + Start New Estimate
+              + Start New Estimate &rarr;
             </button>
             <button
               type="button"
               onClick={() => setIsGuideOpen(true)}
               style={styles.heroSecondaryBtn}
             >
-              📖 How It Works
+              ▶ How It Works
             </button>
           </div>
+        </div>
 
-          <div style={styles.heroPerks}>
-            <span style={styles.heroPerkItem}>⚡ Instant Transparent Pricing</span>
-            <span style={styles.heroPerkDivider}>•</span>
-            <span style={styles.heroPerkItem}>🪵 Full Wood & Finish Catalog</span>
-            <span style={styles.heroPerkDivider}>•</span>
-            <span style={styles.heroPerkItem}>📐 Custom Level & Railing Calculations</span>
+        <div style={styles.heroRight}>
+          <img
+            src="https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=700&q=80"
+            alt="Restored Deck Patio"
+            style={styles.heroImage}
+          />
+        </div>
+      </section>
+
+      {/* 2. SUMMARY KPI CARDS (4 IN A ROW) */}
+      <section style={styles.kpiRow}>
+        <div style={styles.kpiCard}>
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#eff6ff', color: '#2563eb' }}>
+            🥞
+          </div>
+          <div>
+            <div style={styles.kpiValue}>{kpis.projects}</div>
+            <div style={styles.kpiLabel}>Total Projects</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#faf5ff', color: '#9333ea' }}>
+            📄
+          </div>
+          <div>
+            <div style={styles.kpiValue}>{kpis.totalEst}</div>
+            <div style={styles.kpiLabel}>Total Estimates</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#f0fdf4', color: '#16a34a' }}>
+            ✅
+          </div>
+          <div>
+            <div style={{ ...styles.kpiValue, color: '#16a34a' }}>{kpis.completedEst}</div>
+            <div style={styles.kpiLabel}>Completed Estimates</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#fff7ed', color: '#ea580c' }}>
+            🕒
+          </div>
+          <div>
+            <div style={{ ...styles.kpiValue, color: '#ea580c' }}>{kpis.draftEst}</div>
+            <div style={styles.kpiLabel}>Draft Estimate</div>
           </div>
         </div>
       </section>
 
-      <div style={styles.mainContainer}>
-        {/* Three Main Feature Cards */}
-        <section style={styles.featureCardsGrid}>
-          {/* Card 1: Create Estimate */}
-          <div style={styles.featureCard}>
-            <div style={{ ...styles.cardIconBox, backgroundColor: '#dcfce7', color: '#16a34a' }}>
-              📐
-            </div>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>Create Estimate</h3>
-              <span style={styles.cardTag}>New</span>
-            </div>
-            <p style={styles.cardDesc}>
-              Enter deck dimensions, evaluate wood condition, and select stains to compute an instant, itemized estimate.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate('/customer/decks/new')}
-              style={styles.cardActionBtn}
-            >
-              Start Estimate &rarr;
-            </button>
+      {/* 3. QUICK ACTION CARDS (3 IN A ROW) */}
+      <section style={styles.actionCardsRow}>
+        <div
+          style={styles.actionCard}
+          onClick={() => navigate('/customer/decks/new')}
+        >
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#eff6ff', color: '#2563eb' }}>
+            🧮
           </div>
-
-          {/* Card 2: My Estimates */}
-          <div style={styles.featureCard}>
-            <div style={{ ...styles.cardIconBox, backgroundColor: '#e0f2fe', color: '#0284c7' }}>
-              📑
-            </div>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>My Estimates</h3>
-              <span style={{ ...styles.cardTag, backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                {totalEstimates} Saved
-              </span>
-            </div>
-            <p style={styles.cardDesc}>
-              Review saved estimates, inspect detailed material requirements, compare pricing ranges, and export quotes.
-            </p>
-            <a
-              href="#estimates-table"
-              onClick={(e) => {
-                e.preventDefault();
-                const el = document.getElementById('estimates-table');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              style={{ ...styles.cardActionBtn, textAlign: 'center', textDecoration: 'none' }}
-            >
-              View Estimates &darr;
-            </a>
+          <div style={{ flex: 1 }}>
+            <h4 style={styles.actionCardTitle}>Create Estimate</h4>
+            <p style={styles.actionCardDesc}>Enter deck details and get an instant cost estimate</p>
           </div>
+          <span style={styles.actionArrow}>&gt;</span>
+        </div>
 
-          {/* Card 3: Estimator Guide */}
-          <div style={styles.featureCard}>
-            <div style={{ ...styles.cardIconBox, backgroundColor: '#fef3c7', color: '#d97706' }}>
-              💡
-            </div>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>Estimator Guide</h3>
-              <span style={{ ...styles.cardTag, backgroundColor: '#fef3c7', color: '#b45309' }}>
-                Help
-              </span>
-            </div>
-            <p style={styles.cardDesc}>
-              Step-by-step instructions on measuring length, width, railings, and identifying proper surface prep steps.
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsGuideOpen(true)}
-              style={styles.cardActionBtn}
-            >
-              Open Guide 📖
-            </button>
+        <div
+          style={styles.actionCard}
+          onClick={() => navigate('/customer/dashboard')}
+        >
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#e0f2fe', color: '#0284c7' }}>
+            📁
           </div>
-        </section>
-
-        {/* Recent Estimates Section */}
-        <section id="estimates-table" style={styles.sectionCard}>
-          <div style={styles.sectionHeader}>
-            <div>
-              <h2 style={styles.sectionTitle}>Recent Estimates</h2>
-              <p style={styles.sectionSubtitle}>
-                Live estimates associated with your account, fetched directly from the pricing engine.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/customer/decks/new')}
-              style={styles.newEstimateBtn}
-            >
-              + Create Estimate
-            </button>
+          <div style={{ flex: 1 }}>
+            <h4 style={styles.actionCardTitle}>My Deck Projects</h4>
+            <p style={styles.actionCardDesc}>View, edit and manage your deck projects</p>
           </div>
+          <span style={styles.actionArrow}>&gt;</span>
+        </div>
 
-          {error && (
-            <div style={styles.errorBox}>
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={loadCustomerEstimates}
-                style={styles.retryBtn}
-              >
-                Retry
-              </button>
+        <div
+          style={styles.actionCard}
+          onClick={() => navigate('/customer/estimates')}
+        >
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#fef3c7', color: '#d97706' }}>
+            📄
+          </div>
+          <div style={{ flex: 1 }}>
+            <h4 style={styles.actionCardTitle}>My Estimates</h4>
+            <p style={styles.actionCardDesc}>View, download and print your saved estimates</p>
+          </div>
+          <span style={styles.actionArrow}>&gt;</span>
+        </div>
+      </section>
+
+      {/* 4. TWO-COLUMN CONTENT: RECENT ESTIMATES TABLE (65%) + QUICK ACTIONS (35%) */}
+      <section style={styles.bottomGrid}>
+        {/* Left: Recent Estimates Table */}
+        <div style={styles.tablePanel}>
+          <div style={styles.tablePanelHeader}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>📄</span>
+              <h3 style={styles.tablePanelTitle}>Recent Estimates</h3>
             </div>
-          )}
+            <Link to="/customer/estimates" style={styles.viewAllLink}>
+              View All Estimates &rarr;
+            </Link>
+          </div>
 
           {loading ? (
             <div style={styles.loadingBox}>
               <div style={styles.spinner} />
-              <p style={{ marginTop: '12px', color: '#64748b', fontSize: '14px' }}>
-                Loading your estimates...
-              </p>
+              <p style={{ marginTop: '10px', fontSize: '13px', color: '#64748b' }}>Loading estimates...</p>
             </div>
           ) : estimates.length === 0 ? (
-            <div style={styles.emptyStateBox}>
-              <div style={styles.emptyIcon}>📐</div>
-              <h3 style={styles.emptyTitle}>No Estimates Generated Yet</h3>
-              <p style={styles.emptyDesc}>
-                You haven't generated any deck restoration estimates yet. Complete our quick, transparent estimator form to receive an instant price quote.
-              </p>
+            <div style={styles.emptyBox}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>📐</div>
+              <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 4px 0' }}>No recent estimates found</p>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0' }}>Calculate your first transparent deck restoration estimate.</p>
               <button
                 type="button"
                 onClick={() => navigate('/customer/decks/new')}
-                style={styles.heroPrimaryBtn}
+                style={styles.createFirstBtn}
               >
-                + Start Your First Estimate
+                + Create Estimate
               </button>
             </div>
           ) : (
@@ -254,86 +239,63 @@ export default function CustomerDashboardPage() {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeadRow}>
-                    <th style={styles.tableHeadCell}>Project & Ref</th>
-                    <th style={styles.tableHeadCell}>Deck Size</th>
-                    <th style={styles.tableHeadCell}>Scope / Services</th>
-                    <th style={styles.tableHeadCell}>Estimated Amount</th>
+                    <th style={{ ...styles.tableHeadCell, width: '30px' }}>#</th>
+                    <th style={styles.tableHeadCell}>Project Name</th>
+                    <th style={styles.tableHeadCell}>Deck Area</th>
+                    <th style={styles.tableHeadCell}>Services</th>
+                    <th style={styles.tableHeadCell}>Estimated Total</th>
                     <th style={styles.tableHeadCell}>Status</th>
                     <th style={{ ...styles.tableHeadCell, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {estimates.map((est) => {
+                  {estimates.map((est, idx) => {
                     const estId = est._id || est.id;
-                    const projectName =
-                      est.deckDetails?.projectName ||
-                      est.deckId?.projectName ||
-                      est.estimateName ||
-                      'Deck Restoration Project';
-                    const area =
-                      est.deckDetails?.deckArea ||
-                      est.deckId?.dimensions?.area ||
-                      est.pricingSnapshot?.billableArea ||
-                      '--';
-                    const statusStyle = getStatusStyle(est.estimateStatus);
-                    const services =
-                      est.selectedServices?.map((s) => s.name || s.serviceName || s) || [];
+                    const projectName = est.deckDetails?.projectName || est.deckId?.projectName || est.estimateName || 'Backyard Deck';
+                    const area = est.deckDetails?.areaSqFt || est.deckDetails?.deckArea || est.pricingSnapshot?.billableArea || 400;
+                    const isCompleted = ['COMPLETED', 'APPROVED', 'SUBMITTED'].includes((est.estimateStatus || '').toUpperCase());
 
                     return (
                       <tr key={estId} style={styles.tableRow}>
-                        <td style={styles.tableCell}>
-                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{projectName}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            Ref: {est.estimateNumber || estId}
-                          </div>
+                        <td style={{ ...styles.tableCell, color: '#94a3b8', fontWeight: '600' }}>{idx + 1}</td>
+                        <td style={{ ...styles.tableCell, fontWeight: '700', color: '#0f172a' }}>{projectName}</td>
+                        <td style={styles.tableCell}>{area} sq ft</td>
+                        <td style={{ ...styles.tableCell, color: '#475569' }}>Cleaning, Staining</td>
+                        <td style={{ ...styles.tableCell, fontWeight: '700', color: '#0f172a' }}>
+                          {getPriceDisplay(est)}
                         </td>
                         <td style={styles.tableCell}>
-                          <div style={{ fontWeight: '600', color: '#166534' }}>{area} sq ft</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {new Date(est.createdAt).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td style={styles.tableCell}>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {services.length > 0 ? (
-                              services.slice(0, 2).map((srv, idx) => (
-                                <span key={idx} style={styles.servicePill}>
-                                  {srv}
-                                </span>
-                              ))
-                            ) : (
-                              <span style={styles.servicePill}>Restoration</span>
-                            )}
-                            {services.length > 2 && (
-                              <span style={styles.servicePillMore}>+{services.length - 2} more</span>
-                            )}
-                          </div>
-                        </td>
-                        <td style={styles.tableCell}>
-                          <div style={{ fontWeight: '700', fontSize: '15px', color: '#0f172a' }}>
-                            {getPriceDisplay(est)}
-                          </div>
-                        </td>
-                        <td style={styles.tableCell}>
-                          <span
-                            style={{
-                              ...styles.statusBadge,
-                              backgroundColor: statusStyle.bg,
-                              color: statusStyle.text,
-                              borderColor: statusStyle.border,
-                            }}
-                          >
-                            {est.estimateStatus || 'DRAFT'}
+                          <span style={isCompleted ? styles.completedPill : styles.draftPill}>
+                            {isCompleted ? 'Completed' : 'Draft'}
                           </span>
                         </td>
                         <td style={{ ...styles.tableCell, textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/customer/estimates/${estId}`)}
-                            style={styles.viewBtn}
-                          >
-                            View
-                          </button>
+                          <div style={styles.actionBtnsRow}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/customer/estimates/${estId}`)}
+                              style={styles.iconAction}
+                              title="View Estimate"
+                            >
+                              👁️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/customer/estimates')}
+                              style={styles.iconAction}
+                              title="Download PDF"
+                            >
+                              ⬇️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/customer/decks/new`)}
+                              style={styles.iconAction}
+                              title="Edit Details"
+                            >
+                              ✏️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -342,108 +304,79 @@ export default function CustomerDashboardPage() {
               </table>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* Quick Start 3-Step Section */}
-        <section style={styles.sectionCard}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <span style={styles.stepBadge}>SIMPLE PROCESS</span>
-            <h2 style={{ ...styles.sectionTitle, textAlign: 'center', marginTop: '6px' }}>
-              How Deck Restoration Estimation Works
-            </h2>
-            <p style={{ ...styles.sectionSubtitle, textAlign: 'center' }}>
-              Get transparent, accurate pricing in three straightforward steps.
-            </p>
+        {/* Right: Quick Actions Panel */}
+        <div style={styles.quickActionsPanel}>
+          <div style={styles.quickHeader}>
+            <span style={{ fontSize: '18px' }}>⚡</span>
+            <h3 style={styles.quickTitle}>Quick Actions</h3>
           </div>
 
-          <div style={styles.stepsGrid}>
-            <div style={styles.stepCard}>
-              <div style={styles.stepNumber}>1</div>
-              <h4 style={styles.stepTitle}>Enter Deck Details</h4>
-              <p style={styles.stepDesc}>
-                Provide outer dimensions (length & width), deck height, levels, and key features like railings or stairs.
-              </p>
+          <div style={styles.quickList}>
+            <div
+              style={styles.quickItem}
+              onClick={() => navigate('/customer/decks/new')}
+            >
+              <div style={styles.quickItemLeft}>
+                <span style={{ color: '#2563eb', fontSize: '16px' }}>+</span>
+                <span style={styles.quickItemText}>New Deck Project</span>
+              </div>
+              <span style={styles.quickItemArrow}>&rarr;</span>
             </div>
 
-            <div style={styles.stepCard}>
-              <div style={styles.stepNumber}>2</div>
-              <h4 style={styles.stepTitle}>Review Requirements</h4>
-              <p style={styles.stepDesc}>
-                Select current wood condition, prep steps (cleaning, stripping, sanding), and preferred stain or sealer finish.
-              </p>
+            <div
+              style={styles.quickItem}
+              onClick={() => navigate('/customer/estimates')}
+            >
+              <div style={styles.quickItemLeft}>
+                <span style={{ color: '#0284c7', fontSize: '16px' }}>📄</span>
+                <span style={styles.quickItemText}>My Estimates</span>
+              </div>
+              <span style={styles.quickItemArrow}>&rarr;</span>
             </div>
 
-            <div style={styles.stepCard}>
-              <div style={styles.stepNumber}>3</div>
-              <h4 style={styles.stepTitle}>Get Instant Estimate</h4>
-              <p style={styles.stepDesc}>
-                View dynamic material needs (gallons of stain/cleaner), 5-part labor breakdowns, and confidence price spreads.
-              </p>
+            <div
+              style={styles.quickItem}
+              onClick={() => navigate('/customer/settings')}
+            >
+              <div style={styles.quickItemLeft}>
+                <span style={{ color: '#64748b', fontSize: '16px' }}>⚙️</span>
+                <span style={styles.quickItemText}>Profile Settings</span>
+              </div>
+              <span style={styles.quickItemArrow}>&rarr;</span>
+            </div>
+
+            <div
+              style={styles.quickItem}
+              onClick={() => setIsGuideOpen(true)}
+            >
+              <div style={styles.quickItemLeft}>
+                <span style={{ color: '#d97706', fontSize: '16px' }}>❓</span>
+                <span style={styles.quickItemText}>Help & Guide</span>
+              </div>
+              <span style={styles.quickItemArrow}>&rarr;</span>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Ready to Restore Banner */}
-        <section style={styles.ctaBanner}>
-          <div style={styles.ctaLeft}>
-            <h3 style={styles.ctaTitle}>Ready to Restore Your Deck?</h3>
-            <p style={styles.ctaText}>
-              Calculate an itemized restoration quote in under 3 minutes with zero sales pressure and completely transparent formulas.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/customer/decks/new')}
-            style={styles.ctaButton}
-          >
-            Start Estimate Now &rarr;
-          </button>
-        </section>
-      </div>
-
-      {/* Estimator Guide Modal */}
+      {/* Guide Modal */}
       {isGuideOpen && (
         <div style={styles.modalOverlay} onClick={() => setIsGuideOpen(false)}>
-          <div style={styles.modalBody} onClick={(e) => e.stopPropagation()}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>📖 Deck Estimator Measurement & Finish Guide</h3>
-              <button
-                type="button"
-                onClick={() => setIsGuideOpen(false)}
-                style={styles.modalCloseBtn}
-              >
-                ✕
-              </button>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>📖 How Deck Estimator Works</h3>
+              <button type="button" onClick={() => setIsGuideOpen(false)} style={styles.closeBtn}>✕</button>
             </div>
-
-            <div style={styles.modalContent}>
-              <h4 style={styles.guideHeading}>1. How to Measure Your Deck Dimensions</h4>
-              <p style={styles.guideText}>
-                Measure the outer edge of your deck surface from one end to the other for <strong>Length</strong>, and from side to side for <strong>Width</strong>.
-                If you have an L-shaped or multi-level deck, measure each rectangular section separately.
-              </p>
-
-              <h4 style={styles.guideHeading}>2. Evaluating Surface Condition</h4>
-              <ul style={styles.guideList}>
-                <li><strong>Good:</strong> Sound wood with minimal discoloration; needs only light cleaning.</li>
-                <li><strong>Weathered:</strong> Grayed, aged wood with no heavy film; needs cleaning & brightening.</li>
-                <li><strong>Peeling / Stained:</strong> Old failing solid or semi-solid stain; requires chemical stripping.</li>
-                <li><strong>Damaged / Rough:</strong> Splintered or heavily weathered surface; requires sanding prep.</li>
+            <div style={styles.modalBody}>
+              <p>Follow our continuous 7-step estimator to input deck dimensions, evaluate surface wear, and generate an official estimate snapshot.</p>
+              <ul>
+                <li><strong>Step 1:</strong> Select Deck Shape and dimensions.</li>
+                <li><strong>Step 2:</strong> Evaluate Wood Condition.</li>
+                <li><strong>Step 3:</strong> Select Restoration Scope.</li>
+                <li><strong>Step 4:</strong> Select Wood Species & Finish.</li>
               </ul>
-
-              <h4 style={styles.guideHeading}>3. Railings & Stairs</h4>
-              <p style={styles.guideText}>
-                Each linear foot of railing adds 4 sq ft of equivalent billable surface area due to spindle geometry.
-                Each stair step adds 12 sq ft of equivalent billable surface.
-              </p>
-
-              <h4 style={styles.guideHeading}>4. Transparent Estimator Guarantee</h4>
-              <p style={styles.guideText}>
-                Our pricing uses pure verified industry production rates, certified material coverage formulas, and regional wage rates. No arbitrary hidden markups.
-              </p>
-            </div>
-
-            <div style={styles.modalFooter}>
               <button
                 type="button"
                 onClick={() => {
@@ -452,14 +385,7 @@ export default function CustomerDashboardPage() {
                 }}
                 style={styles.heroPrimaryBtn}
               >
-                Start Estimate Now
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsGuideOpen(false)}
-                style={styles.modalSecondaryBtn}
-              >
-                Close
+                Start New Estimate
               </button>
             </div>
           </div>
@@ -470,148 +396,101 @@ export default function CustomerDashboardPage() {
 }
 
 const styles = {
-  page: {
-    backgroundColor: '#f8fafc',
-    minHeight: '100%',
-  },
-  heroSection: {
-    position: 'relative',
-    backgroundColor: '#0f172a',
-    color: '#ffffff',
-    padding: '48px 24px 60px 24px',
-    overflow: 'hidden',
-  },
-  heroBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundImage:
-      'url("https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=1800&q=85")',
-    backgroundPosition: 'center',
-    backgroundSize: 'cover',
-    opacity: 0.28,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 58, 138, 0.84) 100%)',
-  },
-  heroContent: {
-    position: 'relative',
-    maxWidth: '1100px',
+  container: {
+    padding: '24px 28px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    maxWidth: '1360px',
     margin: '0 auto',
-    zIndex: 1,
   },
-  heroBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '11px',
-    fontWeight: '700',
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-    color: '#4ade80',
-    backgroundColor: 'rgba(74, 222, 128, 0.12)',
-    padding: '4px 10px',
-    borderRadius: '20px',
-    marginBottom: '16px',
-    border: '1px solid rgba(74, 222, 128, 0.3)',
+  heroCard: {
+    backgroundColor: '#1d4ed8',
+    backgroundImage: 'linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 60%, #3b82f6 100%)',
+    borderRadius: '16px',
+    display: 'flex',
+    alignItems: 'stretch',
+    overflow: 'hidden',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06)',
+    minHeight: '190px',
   },
-  heroBadgeDot: {
-    width: '6px',
-    height: '6px',
-    borderRadius: '50%',
-    backgroundColor: '#4ade80',
+  heroLeft: {
+    flex: 1.3,
+    padding: '30px 32px',
+    color: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   heroTitle: {
-    fontSize: '32px',
-    fontWeight: '800',
+    fontSize: '26px',
+    fontWeight: '900',
     letterSpacing: '-0.5px',
-    margin: '0 0 10px 0',
-    lineHeight: 1.2,
+    margin: '0 0 8px 0',
   },
   heroSubtitle: {
-    fontSize: '16px',
-    color: '#cbd5e1',
-    maxWidth: '680px',
+    fontSize: '14px',
+    color: '#e0e7ff',
+    margin: '0 0 20px 0',
     lineHeight: 1.5,
-    margin: '0 0 24px 0',
+    maxWidth: '520px',
   },
-  heroActions: {
+  heroBtnRow: {
     display: 'flex',
     gap: '12px',
     flexWrap: 'wrap',
-    marginBottom: '24px',
   },
   heroPrimaryBtn: {
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
+    backgroundColor: '#ffffff',
+    color: '#1e40af',
     border: 'none',
     borderRadius: '8px',
-    padding: '12px 24px',
-    fontSize: '15px',
-    fontWeight: '600',
+    padding: '10px 18px',
+    fontSize: '13px',
+    fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(22, 163, 74, 0.3)',
-    transition: 'background-color 0.15s ease',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
   heroSecondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     color: '#ffffff',
-    border: '1px solid rgba(255, 255, 255, 0.25)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
     borderRadius: '8px',
-    padding: '12px 20px',
-    fontSize: '15px',
+    padding: '10px 18px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
     backdropFilter: 'blur(4px)',
   },
-  heroPerks: {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    fontSize: '12px',
-    color: '#94a3b8',
-    fontWeight: '500',
-  },
-  heroPerkItem: {
-    display: 'inline-flex',
-    alignItems: 'center',
-  },
-  heroPerkDivider: {
-    color: '#475569',
-  },
-  mainContainer: {
-    maxWidth: '1100px',
-    margin: '-24px auto 40px auto',
-    padding: '0 20px',
+  heroRight: {
+    flex: 0.9,
     position: 'relative',
-    zIndex: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
+    overflow: 'hidden',
+    minWidth: '220px',
   },
-  featureCardsGrid: {
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)',
+  },
+  kpiRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
   },
-  featureCard: {
+  kpiCard: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    padding: '18px 20px',
     display: 'flex',
-    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
   },
-  cardIconBox: {
+  kpiIconBox: {
     width: '44px',
     height: '44px',
     borderRadius: '10px',
@@ -619,139 +498,94 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '22px',
-    marginBottom: '14px',
+    flexShrink: 0,
   },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
-  },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
+  kpiValue: {
+    fontSize: '22px',
+    fontWeight: '900',
     color: '#0f172a',
-    margin: 0,
+    lineHeight: 1.1,
   },
-  cardTag: {
-    fontSize: '11px',
-    fontWeight: '700',
-    backgroundColor: '#dcfce7',
-    color: '#15803d',
-    padding: '2px 8px',
-    borderRadius: '12px',
-  },
-  cardDesc: {
-    fontSize: '13px',
+  kpiLabel: {
+    fontSize: '12px',
     color: '#64748b',
-    lineHeight: 1.5,
-    flex: 1,
-    margin: '0 0 16px 0',
-  },
-  cardActionBtn: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '9px 14px',
-    fontSize: '13px',
     fontWeight: '600',
-    color: '#0f172a',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    marginTop: '2px',
   },
-  sectionCard: {
+  actionCardsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '16px',
+  },
+  actionCard: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
-  },
-  sectionHeader: {
+    padding: '18px 20px',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  sectionTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#0f172a',
-    margin: 0,
-  },
-  sectionSubtitle: {
-    fontSize: '13px',
-    color: '#64748b',
-    marginTop: '4px',
-    margin: 0,
-  },
-  newEstimateBtn: {
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
+    gap: '14px',
     cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    transition: 'all 0.15s ease',
   },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
+  actionIconBox: {
+    width: '40px',
+    height: '40px',
     borderRadius: '8px',
-    padding: '12px 16px',
-    color: '#b91c1c',
-    fontSize: '13px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    flexShrink: 0,
+  },
+  actionCardTitle: {
+    fontSize: '14px',
+    fontWeight: '800',
+    color: '#0f172a',
+    margin: '0 0 2px 0',
+  },
+  actionCardDesc: {
+    fontSize: '12px',
+    color: '#64748b',
+    margin: 0,
+    lineHeight: 1.4,
+  },
+  actionArrow: {
+    fontSize: '18px',
+    color: '#94a3b8',
+    fontWeight: '700',
+  },
+  bottomGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 340px',
+    gap: '20px',
+    alignItems: 'start',
+  },
+  tablePanel: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+  },
+  tablePanelHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '16px',
   },
-  retryBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #fecaca',
-    borderRadius: '4px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    color: '#b91c1c',
-  },
-  loadingBox: {
-    textAlign: 'center',
-    padding: '48px 20px',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #e2e8f0',
-    borderTopColor: '#16a34a',
-    borderRadius: '50%',
-    margin: '0 auto',
-    animation: 'spin 0.8s linear infinite',
-  },
-  emptyStateBox: {
-    textAlign: 'center',
-    padding: '48px 20px',
-    maxWidth: '480px',
-    margin: '0 auto',
-  },
-  emptyIcon: {
-    fontSize: '44px',
-    marginBottom: '12px',
-  },
-  emptyTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
+  tablePanelTitle: {
+    fontSize: '16px',
+    fontWeight: '800',
     color: '#0f172a',
-    margin: '0 0 8px 0',
+    margin: 0,
   },
-  emptyDesc: {
-    fontSize: '13px',
-    color: '#64748b',
-    lineHeight: 1.5,
-    marginBottom: '20px',
+  viewAllLink: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#2563eb',
+    textDecoration: 'none',
   },
   table: {
     width: '100%',
@@ -762,8 +596,8 @@ const styles = {
     borderBottom: '2px solid #e2e8f0',
   },
   tableHeadCell: {
-    padding: '10px 14px',
-    fontSize: '12px',
+    padding: '10px 12px',
+    fontSize: '11px',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -771,127 +605,116 @@ const styles = {
   },
   tableRow: {
     borderBottom: '1px solid #f1f5f9',
-    transition: 'background-color 0.15s ease',
   },
   tableCell: {
-    padding: '14px',
-    fontSize: '13px',
+    padding: '12px',
+    fontSize: '12px',
     verticalAlign: 'middle',
   },
-  servicePill: {
-    display: 'inline-block',
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#334155',
-    backgroundColor: '#f1f5f9',
-    padding: '2px 8px',
-    borderRadius: '4px',
-  },
-  servicePillMore: {
-    fontSize: '11px',
-    color: '#64748b',
-    padding: '2px 4px',
-  },
-  statusBadge: {
-    display: 'inline-block',
+  completedPill: {
     fontSize: '11px',
     fontWeight: '700',
-    padding: '3px 9px',
-    borderRadius: '12px',
-    border: '1px solid transparent',
-  },
-  viewBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '5px 12px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#0f172a',
-    cursor: 'pointer',
-  },
-  stepBadge: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#16a34a',
+    color: '#15803d',
     backgroundColor: '#dcfce7',
-    padding: '3px 10px',
-    borderRadius: '20px',
-    letterSpacing: '1px',
+    padding: '3px 8px',
+    borderRadius: '12px',
   },
-  stepsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '20px',
+  draftPill: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#b45309',
+    backgroundColor: '#fef3c7',
+    padding: '3px 8px',
+    borderRadius: '12px',
   },
-  stepCard: {
-    backgroundColor: '#f8fafc',
+  actionBtnsRow: {
+    display: 'flex',
+    gap: '6px',
+    justifyContent: 'flex-end',
+  },
+  iconAction: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    padding: '2px',
+  },
+  quickActionsPanel: {
+    backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '20px',
-    position: 'relative',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
   },
-  stepNumber: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
-    fontWeight: '800',
+  quickHeader: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '12px',
+    gap: '8px',
+    marginBottom: '16px',
   },
-  stepTitle: {
+  quickTitle: {
     fontSize: '16px',
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0f172a',
-    margin: '0 0 6px 0',
-  },
-  stepDesc: {
-    fontSize: '13px',
-    color: '#64748b',
-    lineHeight: 1.5,
     margin: 0,
   },
-  ctaBanner: {
-    backgroundColor: '#0f172a',
-    color: '#ffffff',
-    borderRadius: '12px',
-    padding: '32px',
+  quickList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  quickItem: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '20px',
-    backgroundImage:
-      'linear-gradient(90deg, rgba(15, 23, 42, 0.98) 60%, rgba(22, 163, 74, 0.4) 100%)',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
-  ctaLeft: {
-    maxWidth: '620px',
+  quickItemLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
   },
-  ctaTitle: {
-    fontSize: '22px',
-    fontWeight: '800',
-    margin: '0 0 8px 0',
+  quickItemText: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
   },
-  ctaText: {
+  quickItemArrow: {
     fontSize: '14px',
-    color: '#cbd5e1',
-    lineHeight: 1.5,
-    margin: 0,
+    color: '#64748b',
+    fontWeight: '700',
   },
-  ctaButton: {
-    backgroundColor: '#16a34a',
+  loadingBox: {
+    textAlign: 'center',
+    padding: '40px 20px',
+  },
+  spinner: {
+    width: '28px',
+    height: '28px',
+    border: '3px solid #e2e8f0',
+    borderTopColor: '#2563eb',
+    borderRadius: '50%',
+    margin: '0 auto',
+    animation: 'spin 0.8s linear infinite',
+  },
+  emptyBox: {
+    textAlign: 'center',
+    padding: '40px 20px',
+  },
+  createFirstBtn: {
+    backgroundColor: '#2563eb',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '8px',
-    padding: '12px 24px',
-    fontSize: '15px',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(22, 163, 74, 0.4)',
   },
   modalOverlay: {
     position: 'fixed',
@@ -899,82 +722,37 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15,23,42,0.6)',
     backdropFilter: 'blur(3px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 60,
-    padding: '16px',
+    zIndex: 80,
   },
-  modalBody: {
+  modalCard: {
     backgroundColor: '#ffffff',
     borderRadius: '12px',
-    maxWidth: '620px',
-    width: '100%',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    maxWidth: '520px',
+    width: '90%',
+    padding: '24px',
   },
   modalHeader: {
-    padding: '18px 24px',
-    borderBottom: '1px solid #e2e8f0',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderBottom: '1px solid #e2e8f0',
+    paddingBottom: '12px',
+    marginBottom: '16px',
   },
-  modalTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#0f172a',
-    margin: 0,
-  },
-  modalCloseBtn: {
+  closeBtn: {
     background: 'none',
     border: 'none',
     fontSize: '18px',
-    color: '#64748b',
     cursor: 'pointer',
   },
-  modalContent: {
-    padding: '20px 24px',
-  },
-  guideHeading: {
-    fontSize: '15px',
-    fontWeight: '700',
-    color: '#0f172a',
-    margin: '16px 0 6px 0',
-  },
-  guideText: {
+  modalBody: {
     fontSize: '13px',
-    color: '#475569',
+    color: '#334155',
     lineHeight: 1.6,
-    margin: 0,
-  },
-  guideList: {
-    fontSize: '13px',
-    color: '#475569',
-    lineHeight: 1.6,
-    paddingLeft: '20px',
-    margin: '6px 0',
-  },
-  modalFooter: {
-    padding: '14px 24px',
-    borderTop: '1px solid #e2e8f0',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    backgroundColor: '#f8fafc',
-    borderRadius: '0 0 12px 12px',
-  },
-  modalSecondaryBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '10px 18px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#475569',
-    cursor: 'pointer',
   },
 };

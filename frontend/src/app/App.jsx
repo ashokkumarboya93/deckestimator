@@ -15,6 +15,13 @@ function App() {
     navigate('/login');
   }
 
+  const isCustomerRoute = location.pathname.startsWith('/customer');
+
+  // Dedicated Customer Portal Experience (matches annotated UI mockups with static sidebar & topbar)
+  if (isCustomerRoute && isAuthenticated) {
+    return <Outlet />;
+  }
+
   return (
     <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header

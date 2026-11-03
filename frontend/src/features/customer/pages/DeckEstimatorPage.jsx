@@ -45,19 +45,6 @@ export default function DeckEstimatorPage() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.topBar}>
-        <button
-          type="button"
-          onClick={() => navigate('/customer/dashboard')}
-          style={styles.backBtn}
-        >
-          ← Back to Dashboard
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={styles.badgeText}>DECK RESTORATION ESTIMATOR</span>
-        </div>
-      </div>
-
       {error && <div style={styles.errorBox}>{error}</div>}
 
       <ContinuousEstimatorForm

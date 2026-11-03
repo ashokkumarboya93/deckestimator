@@ -20,6 +20,7 @@ import AdminCommissionsPage from '../features/admin/pages/AdminCommissionsPage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
+import CustomerLayout from '../features/customer/components/CustomerLayout';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
 
 const router = createBrowserRouter([
@@ -49,74 +50,48 @@ const router = createBrowserRouter([
       },
       // Customer Routes
       {
-        path: 'customer/dashboard',
+        path: 'customer',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['customer', 'admin']}>
-              <CustomerDashboardPage />
+              <CustomerLayout />
             </RequireRole>
           </RequireAuth>
         ),
-      },
-      {
-        path: 'customer/decks/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId/edit',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId/estimate/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <EstimateBuilderPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/estimates',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <CustomerEstimatesPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/estimates/:estimateId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <EstimateDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/customer/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <CustomerDashboardPage />,
+          },
+          {
+            path: 'decks/new',
+            element: <DeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId',
+            element: <DeckDetailPage />,
+          },
+          {
+            path: 'decks/:deckId/edit',
+            element: <DeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId/estimate/new',
+            element: <EstimateBuilderPage />,
+          },
+          {
+            path: 'estimates',
+            element: <CustomerEstimatesPage />,
+          },
+          {
+            path: 'estimates/:estimateId',
+            element: <EstimateDetailPage />,
+          },
+        ],
       },
       // Contractor Routes
       {
