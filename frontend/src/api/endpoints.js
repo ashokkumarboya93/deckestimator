@@ -65,6 +65,7 @@ export const ENDPOINTS = {
     ACTIVE: '/pricing/configurations/active',
     BY_ID: (id) => `/pricing/configurations/${id}`,
     STATUS: (id) => `/pricing/configurations/${id}/status`,
+    CALCULATE: '/pricing/calculate',
   },
 
   // Estimates (Phase 6)
@@ -98,68 +99,55 @@ export const ENDPOINTS = {
     ADMIN_ANALYTICS: '/leads/admin/analytics',
     ADMIN_ASSIGN: (id) => `/leads/admin/${id}/assign`,
     ADMIN_CLOSE: (id) => `/leads/admin/${id}/close`,
-    ADMIN_HISTORY: (id) => `/leads/admin/${id}/history`,
-    CONTRACTOR_INBOX: '/leads/contractor/inbox',
-    CONTRACTOR_ACCEPT: (id) => `/leads/contractor/${id}/accept`,
-    CONTRACTOR_REJECT: (id) => `/leads/contractor/${id}/reject`,
-    CONTRACTOR_STATUS: (id) => `/leads/contractor/${id}/status`,
   },
 
-  // Contractors & Verification (Phase 8)
-  CONTRACTORS: {
-    ME: '/contractors/me',
-    SUBMIT_VERIFICATION: '/contractors/me/verification/submit',
-    DOCUMENTS: '/contractors/me/verification/documents',
-    DOCUMENT_FILE: (id) => `/contractors/documents/${id}/file`,
-    ELIGIBLE: '/contractors/eligible',
-    ADMIN_VERIFICATIONS: '/contractors/admin/verifications',
-    ADMIN_VERIFICATION_BY_ID: (id) => `/contractors/admin/verifications/${id}`,
-    ADMIN_VERIFICATION_REVIEW: (id) => `/contractors/admin/verifications/${id}/review`,
+  // Lead Activities (Phase 8)
+  LEAD_ACTIVITIES: {
+    BY_LEAD: (leadId) => `/leads/${leadId}/activities`,
   },
 
-  // Discounts (Phase 9)
-  DISCOUNTS: {
-    POLICIES: '/discounts/policies',
-    POLICY_BY_ID: (id) => `/discounts/policies/${id}`,
-    POLICY_STATUS: (id) => `/discounts/policies/${id}/status`,
-    ASSIGN: (id) => `/discounts/policies/${id}/assign`,
-    ASSIGNMENTS: (id) => `/discounts/policies/${id}/assignments`,
-    REMOVE_ASSIGNMENT: (id, contractorId) => `/discounts/policies/${id}/assignments/${contractorId}`,
-    APPLY_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/apply`,
-    REMOVE_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/remove`,
-    ESTIMATE_HISTORY: (estimateId) => `/discounts/estimates/${estimateId}/history`,
-    CONTRACTOR_ELIGIBLE: '/discounts/contractor/eligible',
+  // Lead Notes (Phase 8)
+  LEAD_NOTES: {
+    BY_LEAD: (leadId) => `/leads/${leadId}/notes`,
+    BY_ID: (leadId, noteId) => `/leads/${leadId}/notes/${noteId}`,
+  },
+
+  // Contractor Discounts (Phase 9)
+  CONTRACTOR_DISCOUNTS: {
+    BASE: '/contractor-discounts',
+    ELIGIBLE: '/contractor-discounts/eligible',
+    BY_ID: (id) => `/contractor-discounts/${id}`,
+    STATUS: (id) => `/contractor-discounts/${id}/status`,
+    USAGE: (id) => `/contractor-discounts/${id}/usage`,
+    AUDIT: (id) => `/contractor-discounts/${id}/audit`,
   },
 
   // Commissions (Phase 9)
   COMMISSIONS: {
-    POLICIES: '/commissions/policies',
-    POLICY_BY_ID: (id) => `/commissions/policies/${id}`,
-    POLICY_STATUS: (id) => `/commissions/policies/${id}/status`,
-    ADMIN_GENERATE: '/commissions/admin/generate',
-    ADMIN_ALL: '/commissions/admin/all',
-    ADMIN_REVIEW: (id) => `/commissions/admin/${id}/review`,
-    ADMIN_RECORD_PAYMENT: (id) => `/commissions/admin/${id}/record-payment`,
-    CONTRACTOR_MY_COMMISSIONS: '/commissions',
-    CONTRACTOR_SUMMARY: '/commissions/summary',
+    BASE: '/commissions',
+    SUMMARY: '/commissions/summary',
     BY_ID: (id) => `/commissions/${id}`,
     HISTORY: (id) => `/commissions/${id}/history`,
+    ADMIN_ALL: '/commissions/admin/all',
+    ADMIN_REVIEW: (id) => `/commissions/admin/${id}/review`,
+    ADMIN_PAYMENT: (id) => `/commissions/admin/${id}/record-payment`,
   },
 
-  // Admin (Phase 10)
-  ADMIN: {
-    DASHBOARD_SUMMARY: '/admin/dashboard/summary',
-    DASHBOARD_ACTIVITY: '/admin/dashboard/activity',
-    USERS: '/admin/users',
-    USER_BY_ID: (id) => `/admin/users/${id}`,
-    USER_STATUS: (id) => `/admin/users/${id}/status`,
-    DECKS: '/admin/decks',
-    ESTIMATES: '/admin/estimates',
-    ANALYSES: '/admin/analyses',
-    SETTINGS: '/admin/settings',
-    SETTING_BY_KEY: (key) => `/admin/settings/${key}`,
-    AUDIT_LOGS: '/admin/audit-logs',
-    REPORTS: (type) => `/admin/reports/${type}`,
+  // Contractor Verifications (Phase 10)
+  VERIFICATIONS: {
+    APPLY: '/contractor-verifications/apply',
+    STATUS: '/contractor-verifications/status',
+    DOCUMENTS: '/contractor-verifications/documents',
+    DOCUMENT_BY_ID: (docId) => `/contractor-verifications/documents/${docId}`,
+    ADMIN_ALL: '/contractor-verifications/admin/all',
+    ADMIN_BY_CONTRACTOR: (contractorId) => `/contractor-verifications/admin/${contractorId}`,
+    ADMIN_REVIEW_DECISION: (contractorId) => `/contractor-verifications/admin/${contractorId}/review`,
+    ADMIN_DOC_REVIEW: (contractorId, docId) => `/contractor-verifications/admin/${contractorId}/documents/${docId}/review`,
+  },
+
+  // Audit Logs (Shared)
+  AUDIT: {
+    BASE: '/audit-logs',
+    BY_ID: (id) => `/audit-logs/${id}`,
   },
 };
-

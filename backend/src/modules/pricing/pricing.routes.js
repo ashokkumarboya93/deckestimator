@@ -19,6 +19,9 @@ const router = express.Router();
 
 router.use(authenticate);
 
+// Live preview calculation endpoint for estimator form
+router.post('/calculate', pricingController.calculateClientPricingPreview);
+
 // Public read for active pricing configuration used in estimate creation
 router.get('/configurations/active', pricingController.getActivePricingConfiguration);
 

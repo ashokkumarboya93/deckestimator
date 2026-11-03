@@ -46,6 +46,25 @@ const createEstimateSchema = {
       .optional(),
     numberOfCoats: Joi.number().min(1).max(5).optional(),
     notes: Joi.string().trim().max(1000).allow('').optional(),
+    // Client restoration specific inputs
+    floorArea: Joi.number().min(0).optional(),
+    floorProductionRate: Joi.number().min(1).optional(),
+    restorationDetails: Joi.object().optional(),
+    woodSpecies: Joi.string().allow('').optional(),
+    accessType: Joi.string().allow('').optional(),
+    coatingType: Joi.string().allow('').optional(),
+    coatingConfidence: Joi.string().allow('').optional(),
+    conditionFlags: Joi.alternatives().try(Joi.array(), Joi.object()).optional(),
+    railingLength: Joi.number().min(0).optional(),
+    railingStyle: Joi.string().allow('').optional(),
+    stairCount: Joi.number().min(0).optional(),
+    fasciaLength: Joi.number().min(0).optional(),
+    pergolaLength: Joi.number().min(0).optional(),
+    sidingArea: Joi.number().min(0).optional(),
+    includeJoists: Joi.boolean().optional(),
+    billingRate: Joi.number().min(0).optional(),
+    customPrices: Joi.object().optional(),
+    isCoatingIncomplete: Joi.boolean().optional(),
   }).unknown(false),
 };
 
@@ -83,4 +102,3 @@ module.exports = {
   recalculateEstimateSchema,
   updateEstimateStatusSchema,
 };
-

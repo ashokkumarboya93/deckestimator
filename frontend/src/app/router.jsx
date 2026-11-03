@@ -9,6 +9,7 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardPage';
 import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
 import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
+import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
 import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
@@ -19,6 +20,7 @@ import AdminCommissionsPage from '../features/admin/pages/AdminCommissionsPage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
+import CustomerLayout from '../features/customer/components/CustomerLayout';
 import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
 
 const router = createBrowserRouter([
@@ -48,64 +50,48 @@ const router = createBrowserRouter([
       },
       // Customer Routes
       {
-        path: 'customer/dashboard',
+        path: 'customer',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['customer', 'admin']}>
-              <CustomerDashboardPage />
+              <CustomerLayout />
             </RequireRole>
           </RequireAuth>
         ),
-      },
-      {
-        path: 'customer/decks/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId/edit',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <DeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/decks/:deckId/estimate/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <EstimateBuilderPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'customer/estimates/:estimateId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['customer', 'admin']}>
-              <EstimateDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/customer/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <CustomerDashboardPage />,
+          },
+          {
+            path: 'decks/new',
+            element: <DeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId',
+            element: <DeckDetailPage />,
+          },
+          {
+            path: 'decks/:deckId/edit',
+            element: <DeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId/estimate/new',
+            element: <EstimateBuilderPage />,
+          },
+          {
+            path: 'estimates',
+            element: <CustomerEstimatesPage />,
+          },
+          {
+            path: 'estimates/:estimateId',
+            element: <EstimateDetailPage />,
+          },
+        ],
       },
       // Contractor Routes
       {
@@ -222,6 +208,11 @@ const router = createBrowserRouter([
             </RequireRole>
           </RequireAuth>
         ),
+      },
+      // Fallback
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },

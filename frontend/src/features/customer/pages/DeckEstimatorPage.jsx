@@ -1,11 +1,11 @@
 // =============================================
-// Deck Estimator — Create / Edit Deck Page
+// Deck Estimator — Customer Estimator Page
 // =============================================
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import DeckInputForm from '../components/DeckInputForm';
-import { createDeck, getDeckById, updateDeck } from '../api/decksApi';
+import ContinuousEstimatorForm from '../components/ContinuousEstimatorForm';
+import { getDeckById } from '../api/decksApi';
 
 export default function DeckEstimatorPage() {
   const navigate = useNavigate();
@@ -14,7 +14,6 @@ export default function DeckEstimatorPage() {
 
   const [initialData, setInitialData] = useState(null);
   const [loading, setLoading] = useState(isEditing);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const loadDeck = React.useCallback(async () => {
@@ -36,58 +35,22 @@ export default function DeckEstimatorPage() {
     }
   }, [isEditing, loadDeck]);
 
-  async function handleSubmit(payload) {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      if (isEditing) {
-        await updateDeck(deckId, payload);
-        navigate(`/customer/decks/${deckId}`);
-      } else {
-        const created = await createDeck(payload);
-        navigate(`/customer/decks/${created.id}`);
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to save deck project. Please verify inputs.');
-      setIsSubmitting(false);
-    }
-  }
-
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
-        <p>Loading deck project details...</p>
+        <p>Loading deck specifications...</p>
       </div>
     );
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <button
-          type="button"
-          onClick={() => navigate('/customer/dashboard')}
-          style={styles.backBtn}
-        >
-          ← Back to Dashboard
-        </button>
-        <h1 style={styles.title}>
-          {isEditing ? `Edit Deck Project: ${initialData?.projectName || ''}` : 'New Deck Project Specification'}
-        </h1>
-        <p style={styles.subtitle}>
-          {isEditing
-            ? 'Update your deck measurements, features, or surface details.'
-            : 'Enter your deck information step-by-step. All data is saved securely to your account.'}
-        </p>
-      </div>
-
       {error && <div style={styles.errorBox}>{error}</div>}
 
-      <DeckInputForm
+      <ContinuousEstimatorForm
         initialData={initialData}
-        onSubmit={handleSubmit}
-        onCancel={() => navigate('/customer/dashboard')}
-        isSubmitting={isSubmitting}
+        isEditing={isEditing}
+        deckId={deckId}
       />
     </div>
   );
@@ -95,45 +58,48 @@ export default function DeckEstimatorPage() {
 
 const styles = {
   page: {
-    maxWidth: '960px',
-    margin: '30px auto',
-    padding: '0 20px',
+    backgroundColor: '#f8fafc',
+    minHeight: '100vh',
   },
-  header: {
-    marginBottom: '24px',
+  topBar: {
+    maxWidth: '1280px',
+    margin: '0 auto',
+    padding: '16px 20px 0 20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backBtn: {
     background: 'none',
     border: 'none',
-    color: 'var(--color-primary)',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#0284c7',
     cursor: 'pointer',
-    fontSize: '14px',
     padding: 0,
-    marginBottom: '12px',
-    display: 'inline-block',
   },
-  title: {
-    fontSize: '24px',
+  badgeText: {
+    fontSize: '11px',
     fontWeight: '700',
-    color: 'var(--color-text)',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: 'var(--color-text-muted)',
-    marginTop: '4px',
-  },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid var(--color-danger)',
-    color: 'var(--color-danger)',
-    padding: '12px 16px',
-    borderRadius: 'var(--radius)',
-    marginBottom: '20px',
-    fontSize: '14px',
+    letterSpacing: '0.5px',
+    color: '#16a34a',
+    backgroundColor: '#dcfce7',
+    padding: '3px 8px',
+    borderRadius: '4px',
   },
   loadingContainer: {
     textAlign: 'center',
     padding: '80px 20px',
-    color: 'var(--color-text-muted)',
+    color: '#64748b',
+  },
+  errorBox: {
+    maxWidth: '1280px',
+    margin: '10px auto',
+    padding: '12px 20px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    color: '#b91c1c',
+    fontSize: '13px',
   },
 };
