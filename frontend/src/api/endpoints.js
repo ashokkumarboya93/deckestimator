@@ -92,6 +92,10 @@ export const ENDPOINTS = {
   LEADS: {
     BASE: '/leads',
     MY_LEADS: '/leads/my-leads',
+    CONTRACTOR_INBOX: '/leads/contractor/inbox',
+    CONTRACTOR_ACCEPT: (id) => `/leads/contractor/${id}/accept`,
+    CONTRACTOR_REJECT: (id) => `/leads/contractor/${id}/reject`,
+    CONTRACTOR_STATUS: (id) => `/leads/contractor/${id}/status`,
     BY_ID: (id) => `/leads/${id}`,
     ACTIVITIES: (id) => `/leads/${id}/activities`,
     NOTES: (id) => `/leads/${id}/notes`,
@@ -112,20 +116,42 @@ export const ENDPOINTS = {
     BY_ID: (leadId, noteId) => `/leads/${leadId}/notes/${noteId}`,
   },
 
-  // Contractor Discounts (Phase 9)
+  // Contractor Self-Service & Verification (Phase 8 & 10)
+  CONTRACTORS: {
+    ME: '/contractors/me',
+    SUBMIT_VERIFICATION: '/contractors/me/verification/submit',
+    DOCUMENTS: '/contractors/me/verification/documents',
+    DOCUMENT_FILE: (docId) => `/contractors/documents/${docId}/file`,
+    ELIGIBLE: '/contractors/eligible',
+  },
+
+  // Discounts (Phase 9)
+  DISCOUNTS: {
+    BASE: '/discounts',
+    CONTRACTOR_ELIGIBLE: '/discounts/contractor',
+    APPLY_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/apply`,
+    REMOVE_ESTIMATE: (estimateId) => `/discounts/estimates/${estimateId}/remove`,
+    ESTIMATE_HISTORY: (estimateId) => `/discounts/estimates/${estimateId}/history`,
+    ADMIN_POLICIES: '/discounts/admin/policies',
+    ADMIN_POLICY_BY_ID: (id) => `/discounts/admin/policies/${id}`,
+  },
+
+  // Contractor Discounts alias for backwards compatibility
   CONTRACTOR_DISCOUNTS: {
-    BASE: '/contractor-discounts',
-    ELIGIBLE: '/contractor-discounts/eligible',
-    BY_ID: (id) => `/contractor-discounts/${id}`,
-    STATUS: (id) => `/contractor-discounts/${id}/status`,
-    USAGE: (id) => `/contractor-discounts/${id}/usage`,
-    AUDIT: (id) => `/contractor-discounts/${id}/audit`,
+    BASE: '/discounts',
+    ELIGIBLE: '/discounts/contractor',
+    BY_ID: (id) => `/discounts/${id}`,
+    STATUS: (id) => `/discounts/${id}/status`,
+    USAGE: (id) => `/discounts/${id}/usage`,
+    AUDIT: (id) => `/discounts/${id}/audit`,
   },
 
   // Commissions (Phase 9)
   COMMISSIONS: {
     BASE: '/commissions',
     SUMMARY: '/commissions/summary',
+    CONTRACTOR_MY_COMMISSIONS: '/commissions',
+    CONTRACTOR_SUMMARY: '/commissions/summary',
     BY_ID: (id) => `/commissions/${id}`,
     HISTORY: (id) => `/commissions/${id}/history`,
     ADMIN_ALL: '/commissions/admin/all',
@@ -135,14 +161,14 @@ export const ENDPOINTS = {
 
   // Contractor Verifications (Phase 10)
   VERIFICATIONS: {
-    APPLY: '/contractor-verifications/apply',
-    STATUS: '/contractor-verifications/status',
-    DOCUMENTS: '/contractor-verifications/documents',
-    DOCUMENT_BY_ID: (docId) => `/contractor-verifications/documents/${docId}`,
-    ADMIN_ALL: '/contractor-verifications/admin/all',
-    ADMIN_BY_CONTRACTOR: (contractorId) => `/contractor-verifications/admin/${contractorId}`,
-    ADMIN_REVIEW_DECISION: (contractorId) => `/contractor-verifications/admin/${contractorId}/review`,
-    ADMIN_DOC_REVIEW: (contractorId, docId) => `/contractor-verifications/admin/${contractorId}/documents/${docId}/review`,
+    APPLY: '/contractors/me/verification/submit',
+    STATUS: '/contractors/me',
+    DOCUMENTS: '/contractors/me/verification/documents',
+    DOCUMENT_BY_ID: (docId) => `/contractors/documents/${docId}/file`,
+    ADMIN_ALL: '/contractors/admin/verifications',
+    ADMIN_BY_CONTRACTOR: (contractorId) => `/contractors/admin/verifications/${contractorId}`,
+    ADMIN_REVIEW_DECISION: (contractorId) => `/contractors/admin/verifications/${contractorId}/review`,
+    ADMIN_DOC_REVIEW: (contractorId, docId) => `/contractors/admin/verifications/${contractorId}/documents/${docId}/review`,
   },
 
   // Audit Logs (Shared)

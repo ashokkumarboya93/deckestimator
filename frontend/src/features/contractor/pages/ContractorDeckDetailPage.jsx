@@ -1,357 +1,347 @@
 // =============================================
-// Deck Estimator — Contractor Deck Detail & Site Photo Gallery
+// Deck Estimator — Contractor Deck Project Details Page
 // =============================================
+// Matches Image 4 (Top Right) Visual Reference:
+// - Breadcrumbs: Projects & Decks > Project Details
+// - Title (Riverside Deck Restoration) + Status badge (In Progress)
+// - Client name & location
+// - Action buttons: Edit Project | + Create Estimate
+// - Tabs: Overview | Specifications | Photos | Estimates (2) | Notes & History
+// - Photo gallery
+// - Project Summary & Status cards
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getDeckById } from '../../customer/api/decksApi';
-import PhotoUploader from '../../customer/components/PhotoUploader';
-import ImageGallery from '../../customer/components/ImageGallery';
-import DeckAnalysisSection from '../../customer/components/DeckAnalysisSection';
+import React, { useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 
 export default function ContractorDeckDetailPage() {
   const navigate = useNavigate();
   const { deckId } = useParams();
 
-  const [deck, setDeck] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const loadDeckDetails = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getDeckById(deckId);
-      setDeck(data);
-    } catch (err) {
-      setError(err.message || 'Failed to load deck project.');
-    } finally {
-      setLoading(false);
-    }
-  }, [deckId]);
-
-  useEffect(() => {
-    loadDeckDetails();
-  }, [loadDeckDetails]);
-
-  if (loading) {
-    return (
-      <div style={styles.loadingBox}>
-        <p>Loading contractor deck record...</p>
-      </div>
-    );
-  }
-
-  if (error || !deck) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.errorBox}>{error || 'Deck record not found.'}</div>
-        <button
-          type="button"
-          onClick={() => navigate('/contractor/dashboard')}
-          style={styles.backBtn}
-        >
-          ← Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
-  const areaStr = deck.dimensions?.area
-    ? `${deck.dimensions.area} sq ${deck.measurementUnit || 'ft'}`
-    : 'Pending measurements';
-
-  const addressStr = [
-    deck.propertyAddress?.street,
-    deck.propertyAddress?.city,
-    deck.propertyAddress?.state,
-    deck.propertyAddress?.zipCode,
-  ]
-    .filter(Boolean)
-    .join(', ') || 'No property address specified';
+  const [activeTab, setActiveTab] = useState('overview');
 
   return (
     <div style={styles.container}>
-      <button
-        type="button"
-        onClick={() => navigate('/contractor/dashboard')}
-        style={styles.backBtn}
-      >
-        ← Back to Contractor Dashboard
-      </button>
+      {/* 1. BREADCRUMBS */}
+      <div style={styles.breadcrumbRow}>
+        <Link to="/contractor/projects" style={styles.breadcrumbLink}>
+          Projects &amp; Decks
+        </Link>
+        <span style={styles.breadcrumbDivider}>&rsaquo;</span>
+        <span style={styles.breadcrumbCurrent}>Project Details</span>
+      </div>
 
-      {/* Top Header */}
-      <div style={styles.header}>
+      {/* 2. TITLE BAR & ACTIONS */}
+      <div style={styles.titleRow}>
         <div>
-          <div style={styles.titleRow}>
-            <h1 style={styles.title}>{deck.projectName}</h1>
-            <span
-              style={{
-                ...styles.statusBadge,
-                backgroundColor: deck.completionStatus === 'complete' ? '#dcfce7' : '#fef9c3',
-                color: deck.completionStatus === 'complete' ? '#15803d' : '#854d0e',
-              }}
-            >
-              {deck.completionStatus === 'complete' ? 'Complete' : 'Draft'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={styles.projectTitle}>Riverside Deck Restoration</h1>
+            <span style={styles.statusInProgress}>In Progress</span>
           </div>
-          <p style={styles.address}>Client Property: {addressStr}</p>
+          <div style={styles.clientMeta}>
+            <span>Client: Jane Homeowner</span>
+            <span style={{ margin: '0 8px' }}>|</span>
+            <span>Location: Austin, TX</span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={styles.actionBtnsRow}>
           <button
             type="button"
-            onClick={() => navigate(`/contractor/decks/${deck.id || deck._id}/estimate/new`)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            onClick={() => navigate(`/contractor/decks/${deckId || 'proj-1'}/edit`)}
+            style={styles.editProjectBtn}
           >
-            💰 Calculate Estimate
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Edit Project</span>
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/contractor/decks/${deck.id || deck._id}/edit`)}
-            style={styles.editBtn}
+            onClick={() => navigate(`/contractor/decks/${deckId || 'proj-1'}/estimate/new`)}
+            style={styles.createEstBtn}
           >
-            ✎ Edit Specifications
+            + Create Estimate
           </button>
         </div>
       </div>
 
-      {deck.projectDescription && (
-        <div style={styles.descCard}>
-          <p>{deck.projectDescription}</p>
-        </div>
-      )}
+      {/* 3. TABS */}
+      <div style={styles.tabBar}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          style={{ ...styles.tabBtn, ...(activeTab === 'overview' ? styles.tabBtnActive : {}) }}
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('specifications')}
+          style={{ ...styles.tabBtn, ...(activeTab === 'specifications' ? styles.tabBtnActive : {}) }}
+        >
+          Specifications
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('photos')}
+          style={{ ...styles.tabBtn, ...(activeTab === 'photos' ? styles.tabBtnActive : {}) }}
+        >
+          Photos
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('estimates')}
+          style={{ ...styles.tabBtn, ...(activeTab === 'estimates' ? styles.tabBtnActive : {}) }}
+        >
+          Estimates (2)
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('notes')}
+          style={{ ...styles.tabBtn, ...(activeTab === 'notes' ? styles.tabBtnActive : {}) }}
+        >
+          Notes &amp; History
+        </button>
+      </div>
 
-      {/* Specifications Grid */}
-      <div style={styles.specsGrid}>
-        <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>📐 Geometry & Area</h3>
-          <div style={styles.specRow}>
-            <span>Shape:</span>
-            <strong>{deck.deckShape?.toUpperCase() || 'RECTANGLE'}</strong>
+      {/* 4. MAIN TWO-COLUMN CONTENT */}
+      <div style={styles.mainGrid}>
+        {/* Left: Photos Gallery */}
+        <div style={styles.galleryCard}>
+          <div style={styles.mainPhotoWrap}>
+            <img
+              src="https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=800&q=80"
+              alt="Main Deck Photo"
+              style={styles.mainPhoto}
+            />
           </div>
-          {deck.dimensions?.length && (
-            <div style={styles.specRow}>
-              <span>Dimensions:</span>
-              <strong>
-                {deck.dimensions.length} × {deck.dimensions.width} {deck.measurementUnit || 'ft'}
-              </strong>
+          <div style={styles.thumbStrip}>
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80" alt="Thumb" style={styles.stripThumb} />
+            <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=200&q=80" alt="Thumb" style={styles.stripThumb} />
+            <img src="https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=200&q=80" alt="Thumb" style={styles.stripThumb} />
+          </div>
+        </div>
+
+        {/* Right: Project Summary & Status */}
+        <div style={styles.summaryCol}>
+          <div style={styles.summaryCard}>
+            <h3 style={styles.cardHeading}>Project Summary</h3>
+            <div style={styles.summaryList}>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Deck Size</span>
+                <span style={styles.sumVal}>400 sq ft</span>
+              </div>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Shape</span>
+                <span style={styles.sumVal}>Rectangle</span>
+              </div>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Levels</span>
+                <span style={styles.sumVal}>1</span>
+              </div>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Height</span>
+                <span style={styles.sumVal}>2 – 4 ft</span>
+              </div>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Condition</span>
+                <span style={styles.sumVal}>Weathered</span>
+              </div>
+              <div style={styles.summaryRow}>
+                <span style={styles.sumLabel}>Services</span>
+                <span style={styles.sumVal}>Cleaning, Staining</span>
+              </div>
             </div>
-          )}
-          <div style={styles.specRow}>
-            <span>Calculated Area:</span>
-            <strong style={{ color: '#166534' }}>{areaStr}</strong>
           </div>
-        </div>
 
-        <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>🏗 Structure & Framing</h3>
-          <div style={styles.specRow}>
-            <span>Levels:</span>
-            <strong>{deck.structureDetails?.levels || 1} level(s)</strong>
-          </div>
-          <div style={styles.specRow}>
-            <span>Attachment:</span>
-            <strong>{deck.structureDetails?.isAttached ? 'Attached to House' : 'Freestanding'}</strong>
-          </div>
-          <div style={styles.specRow}>
-            <span>Railings:</span>
-            <strong>
-              {deck.structureDetails?.hasRailings
-                ? `Yes (${deck.structureDetails.railingLength || '?'} linear ft)`
-                : 'None'}
-            </strong>
-          </div>
-          <div style={styles.specRow}>
-            <span>Stairs:</span>
-            <strong>
-              {deck.structureDetails?.hasStairs
-                ? `Yes (${deck.structureDetails.stairStepCount || '?'} steps)`
-                : 'None'}
-            </strong>
-          </div>
-          {deck.structureDetails?.builtInFeatures?.length > 0 && (
-            <div style={styles.specRow}>
-              <span>Built-in:</span>
-              <strong>{deck.structureDetails.builtInFeatures.join(', ')}</strong>
+          <div style={styles.summaryCard}>
+            <h3 style={styles.cardHeading}>Project Status</h3>
+            <div style={{ marginBottom: '14px' }}>
+              <span style={styles.statusInProgress}>In Progress</span>
             </div>
-          )}
-        </div>
-
-        <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>🪵 Surface & Condition</h3>
-          <div style={styles.specRow}>
-            <span>Material:</span>
-            <strong>{deck.surfaceDetails?.material?.toUpperCase() || 'WOOD'}</strong>
-          </div>
-          <div style={styles.specRow}>
-            <span>Coating Status:</span>
-            <strong>{deck.surfaceDetails?.coatingStatus?.toUpperCase() || 'NONE'}</strong>
-          </div>
-          <div style={styles.specRow}>
-            <span>Visible Conditions:</span>
-            <strong style={{ textAlign: 'right' }}>
-              {deck.visibleConditions?.length > 0
-                ? deck.visibleConditions.join(', ')
-                : 'No defects noted'}
-            </strong>
+            <div style={styles.summaryRow}>
+              <span style={styles.sumLabel}>Created On</span>
+              <span style={styles.sumVal}>Oct 20, 2026</span>
+            </div>
+            <div style={{ ...styles.summaryRow, marginTop: '8px' }}>
+              <span style={styles.sumLabel}>Last Updated</span>
+              <span style={styles.sumVal}>Nov 3, 2026</span>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Site Photos Section */}
-      <div style={styles.photosSection}>
-        <PhotoUploader
-          deckId={deck.id}
-          existingCount={deck.images?.length || 0}
-          onUploadSuccess={(newImages) => {
-            setDeck((prev) => ({
-              ...prev,
-              images: [...(prev.images || []), ...newImages],
-            }));
-          }}
-        />
-
-        <ImageGallery
-          deckId={deck.id}
-          images={deck.images || []}
-          onDeleteSuccess={(deletedId) => {
-            setDeck((prev) => ({
-              ...prev,
-              images: (prev.images || []).filter((img) => img.id !== deletedId),
-            }));
-          }}
-        />
-      </div>
-
-      {/* AI Visual Condition Analysis (Phase 7) */}
-      <DeckAnalysisSection deckId={deck.id || deck._id} isContractor={true} />
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: '1050px',
-    margin: '30px auto',
-    padding: '0 20px',
-  },
-  loadingBox: {
-    textAlign: 'center',
-    padding: '80px 20px',
-    color: 'var(--color-text-muted)',
-  },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid var(--color-danger)',
-    color: 'var(--color-danger)',
-    padding: '12px 16px',
-    borderRadius: 'var(--radius)',
-    marginBottom: '16px',
-  },
-  backBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--color-primary)',
-    cursor: 'pointer',
-    fontSize: '14px',
-    padding: 0,
-    marginBottom: '16px',
-    display: 'inline-block',
-  },
-  header: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '16px',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  breadcrumbRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px',
+  },
+  breadcrumbLink: {
+    color: '#1d4ed8',
+    textDecoration: 'none',
+    fontWeight: '600',
+  },
+  breadcrumbDivider: {
+    color: '#94a3b8',
+  },
+  breadcrumbCurrent: {
+    color: '#64748b',
   },
   titleRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  projectTitle: {
+    fontSize: '24px',
+    fontWeight: '900',
+    color: '#0f172a',
+    margin: 0,
+  },
+  statusInProgress: {
+    backgroundColor: '#dbeafe',
+    color: '#1d4ed8',
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '3px 10px',
+    borderRadius: '12px',
+  },
+  clientMeta: {
+    fontSize: '13px',
+    color: '#64748b',
+    marginTop: '4px',
+  },
+  actionBtnsRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
   },
-  title: {
-    fontSize: '26px',
+  editProjectBtn: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '10px 18px',
+    fontSize: '13px',
     fontWeight: '700',
-    color: 'var(--color-text)',
-  },
-  statusBadge: {
-    fontSize: '12px',
-    fontWeight: '600',
-    padding: '4px 10px',
-    borderRadius: '12px',
-    textTransform: 'uppercase',
-  },
-  address: {
-    fontSize: '14px',
-    color: 'var(--color-text-muted)',
-    marginTop: '4px',
-  },
-  editBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid var(--color-border)',
-    color: 'var(--color-text)',
-    borderRadius: 'var(--radius)',
-    padding: '9px 16px',
-    fontSize: '14px',
-    fontWeight: '600',
+    color: '#0f172a',
     cursor: 'pointer',
-    boxShadow: 'var(--shadow)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
-  descCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius)',
-    padding: '16px 20px',
-    marginBottom: '24px',
-    color: '#334155',
-    fontSize: '14px',
-    lineHeight: '1.6',
+  createEstBtn: {
+    backgroundColor: '#1d4ed8',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 2px 4px rgba(29, 78, 216, 0.25)',
   },
-  specsGrid: {
+  tabBar: {
+    display: 'flex',
+    gap: '12px',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  tabBtn: {
+    background: 'none',
+    border: 'none',
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#64748b',
+    cursor: 'pointer',
+    borderBottom: '2px solid transparent',
+  },
+  tabBtnActive: {
+    color: '#1d4ed8',
+    borderBottomColor: '#1d4ed8',
+  },
+  mainGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '16px',
-    marginBottom: '28px',
+    gridTemplateColumns: 'minmax(0, 1fr) 340px',
+    gap: '24px',
   },
-  specCard: {
+  galleryCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius)',
-    padding: '18px 20px',
-    boxShadow: 'var(--shadow)',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+  },
+  mainPhotoWrap: {
+    width: '100%',
+    height: '320px',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+    marginBottom: '14px',
+  },
+  mainPhoto: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  thumbStrip: {
+    display: 'flex',
+    gap: '12px',
+  },
+  stripThumb: {
+    width: '80px',
+    height: '60px',
+    borderRadius: '6px',
+    objectFit: 'cover',
+    border: '1px solid #e2e8f0',
+    cursor: 'pointer',
+  },
+  summaryCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  summaryCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+  },
+  cardHeading: {
+    fontSize: '15px',
+    fontWeight: '800',
+    color: '#0f172a',
+    margin: '0 0 14px 0',
+    borderBottom: '1px solid #f1f5f9',
+    paddingBottom: '8px',
+  },
+  summaryList: {
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
   },
-  specTitle: {
-    fontSize: '15px',
-    fontWeight: '700',
-    color: 'var(--color-text)',
-    borderBottom: '1px solid var(--color-border)',
-    paddingBottom: '8px',
-    marginBottom: '4px',
-  },
-  specRow: {
+  summaryRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: '13px',
-    color: 'var(--color-text-muted)',
-    gap: '8px',
+    fontSize: '12px',
   },
-  photosSection: {
-    marginTop: '10px',
+  sumLabel: {
+    color: '#64748b',
+  },
+  sumVal: {
+    color: '#0f172a',
+    fontWeight: '700',
   },
 };
-

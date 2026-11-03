@@ -10,9 +10,19 @@ import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardP
 import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
 import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
 import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
+import ContractorLayout from '../features/contractor/components/ContractorLayout';
 import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
+import ContractorLeadsPage from '../features/contractor/pages/ContractorLeadsPage';
+import ContractorProjectsPage from '../features/contractor/pages/ContractorProjectsPage';
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
+import ContractorEstimatesPage from '../features/contractor/pages/ContractorEstimatesPage';
+import ContractorEstimateBuilderPage from '../features/contractor/pages/ContractorEstimateBuilderPage';
+import ContractorVerificationPage from '../features/contractor/pages/ContractorVerificationPage';
+import ContractorDocumentDetailPage from '../features/contractor/pages/ContractorDocumentDetailPage';
+import ContractorCommissionsPage from '../features/contractor/pages/ContractorCommissionsPage';
+import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
+import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
 import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
 import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
@@ -95,64 +105,84 @@ const router = createBrowserRouter([
       },
       // Contractor Routes
       {
-        path: 'contractor/dashboard',
+        path: 'contractor',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorDashboardPage />
+              <ContractorLayout />
             </RequireRole>
           </RequireAuth>
         ),
-      },
-      {
-        path: 'contractor/decks/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorDeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'contractor/decks/:deckId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorDeckDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'contractor/decks/:deckId/edit',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorDeckEstimatorPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'contractor/decks/:deckId/estimate/new',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <EstimateBuilderPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'contractor/estimates/:estimateId',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <EstimateDetailPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/contractor/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <ContractorDashboardPage />,
+          },
+          {
+            path: 'leads',
+            element: <ContractorLeadsPage />,
+          },
+          {
+            path: 'projects',
+            element: <ContractorProjectsPage />,
+          },
+          {
+            path: 'decks',
+            element: <Navigate to="/contractor/projects" replace />,
+          },
+          {
+            path: 'decks/new',
+            element: <ContractorDeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId',
+            element: <ContractorDeckDetailPage />,
+          },
+          {
+            path: 'decks/:deckId/edit',
+            element: <ContractorDeckEstimatorPage />,
+          },
+          {
+            path: 'decks/:deckId/estimate/new',
+            element: <ContractorEstimateBuilderPage />,
+          },
+          {
+            path: 'estimates',
+            element: <ContractorEstimatesPage />,
+          },
+          {
+            path: 'estimates/new',
+            element: <ContractorEstimateBuilderPage />,
+          },
+          {
+            path: 'estimates/:estimateId',
+            element: <EstimateDetailPage />,
+          },
+          {
+            path: 'verification',
+            element: <ContractorVerificationPage />,
+          },
+          {
+            path: 'verification/:documentId',
+            element: <ContractorDocumentDetailPage />,
+          },
+          {
+            path: 'commissions',
+            element: <ContractorCommissionsPage />,
+          },
+          {
+            path: 'commissions/:commissionId',
+            element: <ContractorCommissionDetailPage />,
+          },
+          {
+            path: 'discounts',
+            element: <ContractorDiscountsPage />,
+          },
+        ],
       },
       // Admin Routes (Phase 5, 8, 9, 10)
       {
