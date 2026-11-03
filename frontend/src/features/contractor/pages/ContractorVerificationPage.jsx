@@ -3,9 +3,9 @@
 // =============================================
 // Matches Image 3 (Top Left) Visual Reference:
 // - Title & description
-// - Business Profile & Licensing card with Edit button
+// - Business Profile & Licensing card with Edit modal
 // - Verification Documents table: Document Name, Category, File, Status, Uploaded On, Action
-// - Upload Document button + modal
+// - Upload Document button + fully working upload modal connected to backend
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -18,9 +18,15 @@ export default function ContractorVerificationPage() {
   const [profile, setProfile] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [uploadCategory, setUploadCategory] = useState('License');
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Profile Edit fields
+  const [editPhone, setEditPhone] = useState('555-888-9999');
+  const [editLicense, setEditLicense] = useState('LIC-TX-2026-99');
+  const [editExp, setEditExp] = useState(5);
 
   useEffect(() => {
     loadData();
@@ -35,6 +41,9 @@ export default function ContractorVerificationPage() {
       ]);
       if (profRes.status === 'fulfilled' && profRes.value?.data) {
         setProfile(profRes.value.data);
+        if (profRes.value.data.businessPhone) setEditPhone(profRes.value.data.businessPhone);
+        if (profRes.value.data.licenseNumber) setEditLicense(profRes.value.data.licenseNumber);
+        if (profRes.value.data.yearsOfExperience) setEditExp(profRes.value.data.yearsOfExperience);
       }
       if (docsRes.status === 'fulfilled' && docsRes.value?.data) {
         setDocuments(docsRes.value.data);
@@ -43,6 +52,46 @@ export default function ContractorVerificationPage() {
       console.warn('Verification load error:', e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleUploadDocument(e) {
+    e.preventDefault();
+    if (!selectedFile) {
+      alert('Please select a document file to upload.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('document', selectedFile);
+      formData.append('documentType', uploadCategory.toLowerCase());
+      formData.append('notes', `${uploadCategory} document uploaded by contractor`);
+      await contractorLeadApi.uploadDocument(formData);
+      await loadData();
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      alert('Document uploaded successfully for administrator review!');
+    } catch (err) {
+      alert(err.message || 'Failed to upload document.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleSaveProfile(e) {
+    e.preventDefault();
+    try {
+      await contractorLeadApi.updateProfile({
+        businessPhone: editPhone,
+        licenseNumber: editLicense,
+        yearsOfExperience: Number(editExp),
+      });
+      await loadData();
+      setShowEditProfileModal(false);
+      alert('Business profile updated successfully!');
+    } catch (err) {
+      alert(err.message || 'Failed to update profile.');
     }
   }
 
@@ -88,36 +137,39 @@ export default function ContractorVerificationPage() {
       <div style={styles.profileCard}>
         <div style={styles.profileLeft}>
           <div style={styles.profileIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
+            <span style={{ fontSize: '20px' }}>🏢</span>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <strong style={styles.businessTitle}>Business Profile</strong>
               <span style={styles.verifiedBadge}>Verified</span>
             </div>
-            <div style={styles.businessName}>Apex Deck Pros LLC</div>
+            <div style={styles.businessName}>
+              {profile?.businessName || 'Apex Deck Pros LLC'}
+            </div>
           </div>
         </div>
 
         <div style={styles.profileMetaGrid}>
           <div>
             <div style={styles.metaLabel}>License Number</div>
-            <div style={styles.metaVal}>LIC-TX-2026-99</div>
+            <div style={styles.metaVal}>{profile?.licenseNumber || editLicense}</div>
           </div>
           <div>
             <div style={styles.metaLabel}>Business Phone</div>
-            <div style={styles.metaVal}>555-888-9999</div>
+            <div style={styles.metaVal}>{profile?.businessPhone || editPhone}</div>
           </div>
           <div>
             <div style={styles.metaLabel}>Experience</div>
-            <div style={styles.metaVal}>5 years</div>
+            <div style={styles.metaVal}>{profile?.yearsOfExperience || editExp} years</div>
           </div>
         </div>
 
-        <button type="button" style={styles.editBtn}>
+        <button
+          type="button"
+          onClick={() => setShowEditProfileModal(true)}
+          style={styles.editBtn}
+        >
           Edit
         </button>
       </div>
@@ -126,10 +178,7 @@ export default function ContractorVerificationPage() {
       <div style={styles.tableCard}>
         <div style={styles.cardHeaderRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
+            <span style={{ fontSize: '18px' }}>📁</span>
             <h2 style={styles.cardHeading}>Verification Documents</h2>
           </div>
           <button
@@ -137,11 +186,7 @@ export default function ContractorVerificationPage() {
             onClick={() => setShowUploadModal(true)}
             style={styles.uploadBtn}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" x2="12" y1="3" y2="15" />
-            </svg>
+            <span>⬆️</span>
             <span>Upload Document</span>
           </button>
         </div>
@@ -161,29 +206,26 @@ export default function ContractorVerificationPage() {
             <tbody>
               {displayDocs.map((d) => (
                 <tr key={d.id} style={styles.tr}>
-                  <td style={styles.tdBold}>{d.name}</td>
-                  <td style={styles.td}>{d.category}</td>
+                  <td style={styles.tdBold}>{d.name || d.documentType}</td>
+                  <td style={styles.td}>{d.category || d.documentType}</td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1d4ed8' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                      </svg>
-                      <span>{d.file}</span>
+                      <span>📄</span>
+                      <span>{d.file || d.originalName || `${d.category || 'document'}.pdf`}</span>
                     </div>
                   </td>
                   <td style={styles.td}>
                     <span
                       style={
-                        d.status === 'Verified'
+                        d.status === 'Verified' || d.status === 'approved'
                           ? styles.statusVerified
-                          : styles.statusUnderReview
+                          : styles.statusReview
                       }
                     >
-                      {d.status}
+                      {d.status === 'approved' ? 'Verified' : d.status}
                     </span>
                   </td>
-                  <td style={styles.tdMuted}>{d.uploadedOn}</td>
+                  <td style={styles.tdMuted}>{d.uploadedOn || 'Oct 20, 2026'}</td>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                       <button
@@ -193,7 +235,6 @@ export default function ContractorVerificationPage() {
                       >
                         View
                       </button>
-                      <button type="button" style={styles.moreBtn}>•••</button>
                     </div>
                   </td>
                 </tr>
@@ -202,12 +243,12 @@ export default function ContractorVerificationPage() {
           </table>
         </div>
 
-        <div style={styles.paginationRow}>
-          <span style={styles.pageInfo}>Showing 1 – 3 of 3 documents</span>
+        <div style={styles.tableFooter}>
+          Showing 1 – {displayDocs.length} of {displayDocs.length} documents
         </div>
       </div>
 
-      {/* Upload Modal */}
+      {/* Upload Document Modal */}
       {showUploadModal && (
         <div style={styles.modalOverlay} onClick={() => setShowUploadModal(false)}>
           <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
@@ -215,7 +256,7 @@ export default function ContractorVerificationPage() {
               <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Upload Verification Document</h3>
               <button type="button" onClick={() => setShowUploadModal(false)} style={styles.closeBtn}>✕</button>
             </div>
-            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleUploadDocument} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={styles.inputLabel}>Document Category</label>
                 <select
@@ -235,6 +276,7 @@ export default function ContractorVerificationPage() {
                 <label style={styles.inputLabel}>Select File (PDF, PNG, JPG - max 10MB)</label>
                 <input
                   type="file"
+                  required
                   onChange={(e) => setSelectedFile(e.target.files[0])}
                   style={styles.fileInput}
                 />
@@ -242,11 +284,11 @@ export default function ContractorVerificationPage() {
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                 <button
-                  type="button"
-                  onClick={() => setShowUploadModal(false)}
+                  type="submit"
+                  disabled={uploading}
                   style={styles.uploadSubmitBtn}
                 >
-                  Upload Document
+                  {uploading ? 'Uploading...' : 'Upload Document'}
                 </button>
                 <button
                   type="button"
@@ -256,7 +298,60 @@ export default function ContractorVerificationPage() {
                   Cancel
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowEditProfileModal(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Edit Business Profile</h3>
+              <button type="button" onClick={() => setShowEditProfileModal(false)} style={styles.closeBtn}>✕</button>
             </div>
+            <form onSubmit={handleSaveProfile} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={styles.inputLabel}>License Number</label>
+                <input
+                  type="text"
+                  value={editLicense}
+                  onChange={(e) => setEditLicense(e.target.value)}
+                  style={styles.textInput}
+                />
+              </div>
+              <div>
+                <label style={styles.inputLabel}>Business Phone</label>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  style={styles.textInput}
+                />
+              </div>
+              <div>
+                <label style={styles.inputLabel}>Years of Experience</label>
+                <input
+                  type="number"
+                  value={editExp}
+                  onChange={(e) => setEditExp(e.target.value)}
+                  style={styles.textInput}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button type="submit" style={styles.uploadSubmitBtn}>
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  style={styles.cancelBtn}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -266,30 +361,33 @@ export default function ContractorVerificationPage() {
 
 const styles = {
   container: {
+    padding: '30px 40px',
+    backgroundColor: '#f8fafc',
+    minHeight: 'calc(100vh - 65px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '24px',
   },
   pageTitle: {
-    fontSize: '24px',
-    fontWeight: '900',
+    fontSize: '1.45rem',
+    fontWeight: '800',
     color: '#0f172a',
-    margin: '0 0 6px 0',
+    margin: '0 0 4px 0',
   },
   pageSub: {
-    fontSize: '14px',
+    fontSize: '0.88rem',
     color: '#64748b',
     margin: 0,
   },
   profileCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
     borderRadius: '12px',
+    border: '1px solid #e2e8f0',
     padding: '20px 24px',
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+    alignItems: 'center',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
   },
   profileLeft: {
     display: 'flex',
@@ -299,85 +397,86 @@ const styles = {
   profileIconBox: {
     width: '44px',
     height: '44px',
-    borderRadius: '10px',
+    borderRadius: '8px',
     backgroundColor: '#eff6ff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   businessTitle: {
-    fontSize: '14px',
+    fontSize: '1rem',
     color: '#0f172a',
   },
-  verifiedBadge: {
-    backgroundColor: '#dcfce7',
-    color: '#15803d',
-    fontSize: '10px',
-    fontWeight: '700',
-    padding: '2px 8px',
-    borderRadius: '12px',
-  },
   businessName: {
-    fontSize: '12px',
+    fontSize: '0.85rem',
     color: '#64748b',
     marginTop: '2px',
+  },
+  verifiedBadge: {
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '10px',
   },
   profileMetaGrid: {
     display: 'flex',
-    gap: '32px',
+    gap: '40px',
   },
   metaLabel: {
-    fontSize: '10px',
+    fontSize: '0.75rem',
     color: '#64748b',
-    fontWeight: '700',
+    marginBottom: '2px',
     textTransform: 'uppercase',
+    letterSpacing: '0.4px',
   },
   metaVal: {
-    fontSize: '13px',
-    color: '#0f172a',
+    fontSize: '0.88rem',
     fontWeight: '700',
-    marginTop: '2px',
+    color: '#0f172a',
   },
   editBtn: {
+    padding: '7px 18px',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
     borderRadius: '6px',
-    padding: '6px 18px',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#0f172a',
+    color: '#334155',
+    fontSize: '0.82rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
   tableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    overflow: 'hidden',
   },
   cardHeaderRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    padding: '18px 24px',
+    borderBottom: '1px solid #f1f5f9',
   },
   cardHeading: {
-    fontSize: '16px',
-    fontWeight: '800',
+    fontSize: '1.05rem',
+    fontWeight: '700',
     color: '#0f172a',
     margin: 0,
   },
   uploadBtn: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
+    padding: '8px 16px',
     backgroundColor: '#1d4ed8',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '8px',
-    padding: '8px 18px',
-    fontSize: '13px',
-    fontWeight: '700',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
   tableResponsive: {
@@ -387,77 +486,70 @@ const styles = {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
-    fontSize: '13px',
   },
   th: {
-    padding: '12px 14px',
+    padding: '12px 24px',
+    backgroundColor: '#f8fafc',
     borderBottom: '1px solid #e2e8f0',
-    color: '#64748b',
+    fontSize: '0.78rem',
     fontWeight: '700',
-    fontSize: '11px',
+    color: '#475569',
     textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
   },
   td: {
-    padding: '14px 14px',
+    padding: '14px 24px',
+    fontSize: '0.86rem',
     color: '#334155',
-    verticalAlign: 'middle',
   },
   tdBold: {
-    padding: '14px 14px',
-    color: '#0f172a',
+    padding: '14px 24px',
+    fontSize: '0.86rem',
     fontWeight: '700',
-    verticalAlign: 'middle',
+    color: '#0f172a',
   },
   tdMuted: {
-    padding: '14px 14px',
+    padding: '14px 24px',
+    fontSize: '0.82rem',
     color: '#64748b',
-    fontSize: '12px',
-    verticalAlign: 'middle',
   },
   statusVerified: {
-    backgroundColor: '#dcfce7',
-    color: '#15803d',
-    fontSize: '11px',
-    fontWeight: '700',
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
     padding: '3px 10px',
     borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
   },
-  statusUnderReview: {
-    backgroundColor: '#fef3c7',
-    color: '#b45309',
-    fontSize: '11px',
-    fontWeight: '700',
+  statusReview: {
+    backgroundColor: '#fefce8',
+    color: '#ca8a04',
     padding: '3px 10px',
     borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
   },
   viewBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
     padding: '5px 14px',
-    fontSize: '11px',
-    fontWeight: '700',
+    backgroundColor: '#eff6ff',
     color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
-  moreBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#94a3b8',
-    cursor: 'pointer',
-    fontSize: '12px',
-  },
-  paginationRow: {
-    marginTop: '16px',
-    paddingTop: '12px',
-    borderTop: '1px solid #f1f5f9',
-  },
-  pageInfo: {
-    fontSize: '12px',
+  tableFooter: {
+    padding: '14px 24px',
+    fontSize: '0.82rem',
     color: '#64748b',
+    borderTop: '1px solid #f1f5f9',
+    backgroundColor: '#ffffff',
   },
   modalOverlay: {
     position: 'fixed',
@@ -465,19 +557,19 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 200,
   },
   modalCard: {
     backgroundColor: '#ffffff',
     borderRadius: '12px',
-    padding: '24px',
-    maxWidth: '480px',
     width: '90%',
-    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+    maxWidth: '480px',
+    padding: '24px',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
   },
   modalHeader: {
     display: 'flex',
@@ -489,50 +581,58 @@ const styles = {
   closeBtn: {
     background: 'none',
     border: 'none',
-    fontSize: '16px',
-    cursor: 'pointer',
+    fontSize: '18px',
     color: '#94a3b8',
+    cursor: 'pointer',
   },
   inputLabel: {
     display: 'block',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: '0.82rem',
+    fontWeight: '600',
+    color: '#334155',
     marginBottom: '6px',
   },
   modalSelect: {
     width: '100%',
-    height: '38px',
-    borderRadius: '6px',
+    padding: '8px 12px',
     border: '1px solid #cbd5e1',
-    padding: '0 12px',
-    fontSize: '13px',
-    color: '#0f172a',
+    borderRadius: '6px',
+    fontSize: '0.86rem',
     outline: 'none',
+  },
+  textInput: {
+    width: '100%',
+    padding: '8px 12px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '0.86rem',
+    outline: 'none',
+    boxSizing: 'border-box',
   },
   fileInput: {
     width: '100%',
-    fontSize: '13px',
-    color: '#334155',
+    padding: '8px',
+    border: '1px dashed #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
   },
   uploadSubmitBtn: {
+    padding: '8px 18px',
     backgroundColor: '#1d4ed8',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '8px',
-    padding: '10px 18px',
-    fontSize: '13px',
-    fontWeight: '700',
+    borderRadius: '6px',
+    fontSize: '0.85rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
   cancelBtn: {
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
+    padding: '8px 16px',
+    backgroundColor: '#ffffff',
+    color: '#334155',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '10px 18px',
-    fontSize: '13px',
-    fontWeight: '700',
+    borderRadius: '6px',
+    fontSize: '0.85rem',
     cursor: 'pointer',
   },
 };

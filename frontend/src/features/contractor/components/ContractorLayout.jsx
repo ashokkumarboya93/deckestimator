@@ -1,34 +1,53 @@
 // =============================================
 // Deck Estimator — Contractor Dedicated Portal Layout
 // =============================================
-// Matches Image 1, 2, 3, 4 reference design:
-// - Bright white & light navy blue theme (Zero green theme; green reserved only for positive status badges)
-// - Fixed left sidebar with consistent line icons and live badge counts
-// - Top navigation bar with DECK PRO branding, search, notifications, profile and logout
-// - Full responsiveness and uniform visual styling across all 13 contractor interfaces
+// Matches Customer Dashboard Sidebar & Layout UX:
+// - Collapsible hover sidebar (68px collapsed, 230px expanded on hover)
+// - Fixed sidebar position with smooth width transition
+// - Independent middle scrolling for continuous estimator (height: 100vh)
+// - Dynamic top navigation with breadcrumbs, notifications, search, profile, and logout
+// - Help & Guide modal for contractor self-service
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { contractorLeadApi } from '../api/contractorLeadApi';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [leadsCount, setLeadsCount] = useState(6);
+
+  const currentPath = location.pathname;
+  const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
+
+  // Load live lead counts for badge
+  useEffect(() => {
+    let mounted = true;
+    contractorLeadApi.getAssignedLeads({ limit: 1 })
+      .then((res) => {
+        if (mounted && res?.pagination?.total !== undefined) {
+          setLeadsCount(res.pagination.total);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const currentPath = location.pathname;
-
-  // Active path checker
   const isActive = (path) => {
     if (path === '/contractor/dashboard') return currentPath === '/contractor/dashboard';
     return currentPath === path || currentPath.startsWith(path);
@@ -44,16 +63,41 @@ export default function ContractorLayout() {
     : 'AB';
 
   return (
-    <div style={styles.container}>
-      {/* 1. FIXED LEFT SIDEBAR */}
-      <aside style={styles.sidebar}>
+    <div
+      style={{
+        ...styles.container,
+        ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+      }}
+    >
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Identical UX to Customer Dashboard) */}
+      <aside
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+        style={{
+          ...styles.sidebar,
+          width: isSidebarHovered ? '230px' : '68px',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.12)' : 'none',
+        }}
+      >
         {/* Brand Header */}
         <div style={styles.brandBox}>
-          <Link to="/contractor/dashboard" style={{ textDecoration: 'none' }}>
-            <div style={styles.brandTitle}>
-              DECK <span style={{ color: '#1e40af' }}>PRO</span>
+          <Link to="/contractor/dashboard" style={styles.brandLink}>
+            <div style={styles.brandLogoIcon}>🔨</div>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                opacity: isSidebarHovered ? 1 : 0,
+                transition: 'opacity 0.18s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span style={styles.brandTitle}>
+                DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+              </span>
+              <span style={styles.brandSubtitle}>Contractor Portal</span>
             </div>
-            <div style={styles.brandSubtitle}>Contractor Portal</div>
           </Link>
         </div>
 
@@ -66,30 +110,27 @@ export default function ContractorLayout() {
               ...styles.navItem,
               ...(isActive('/contractor/dashboard') ? styles.navItemActive : {}),
             }}
+            title="Dashboard"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-            <span style={styles.navText}>Dashboard</span>
+            <span style={styles.navIcon}>📊</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Dashboard
+            </span>
           </Link>
 
-          {/* 2. Assigned Leads */}
+          {/* 2. New Deck Project (Prominent create button) */}
           <Link
-            to="/contractor/leads"
+            to="/contractor/decks/new"
             style={{
               ...styles.navItem,
-              ...(isActive('/contractor/leads') ? styles.navItemActive : {}),
+              ...(currentPath === '/contractor/decks/new' ? styles.navItemActive : {}),
             }}
+            title="New Deck Project"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span style={styles.navText}>Assigned Leads</span>
-            <span style={isActive('/contractor/leads') ? styles.leadBadgeActive : styles.leadBadge}>6</span>
+            <span style={styles.navIcon}>⊕</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              New Deck Project
+            </span>
           </Link>
 
           {/* 3. Projects & Decks */}
@@ -97,117 +138,214 @@ export default function ContractorLayout() {
             to="/contractor/projects"
             style={{
               ...styles.navItem,
-              ...(isActive('/contractor/projects') || (isActive('/contractor/decks') && !currentPath.includes('/estimates')) ? styles.navItemActive : {}),
+              ...(isActive('/contractor/projects') || (isActive('/contractor/decks') && !currentPath.includes('/decks/new'))
+                ? styles.navItemActive
+                : {}),
             }}
+            title="Projects & Decks"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-            <span style={styles.navText}>Projects &amp; Decks</span>
+            <span style={styles.navIcon}>📁</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Projects &amp; Decks
+            </span>
           </Link>
 
-          {/* 4. Estimates */}
+          {/* 4. Assigned Leads */}
+          <Link
+            to="/contractor/leads"
+            style={{
+              ...styles.navItem,
+              ...(isActive('/contractor/leads') ? styles.navItemActive : {}),
+            }}
+            title="Assigned Leads"
+          >
+            <span style={styles.navIcon}>👥</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Assigned Leads
+            </span>
+            {isSidebarHovered && leadsCount > 0 && (
+              <span style={isActive('/contractor/leads') ? styles.badgeActive : styles.badge}>
+                {leadsCount}
+              </span>
+            )}
+          </Link>
+
+          {/* 5. Estimates */}
           <Link
             to="/contractor/estimates"
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/estimates') ? styles.navItemActive : {}),
             }}
+            title="Estimates"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
-            <span style={styles.navText}>Estimates</span>
+            <span style={styles.navIcon}>📋</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Estimates
+            </span>
           </Link>
 
-          {/* 5. Verification & Compliance */}
+          {/* 6. Verification & Compliance */}
           <Link
             to="/contractor/verification"
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/verification') ? styles.navItemActive : {}),
             }}
+            title="Verification & Compliance"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-            <span style={styles.navText}>Verification &amp; Compliance</span>
+            <span style={styles.navIcon}>🛡️</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Verification &amp; Compliance
+            </span>
           </Link>
 
-          {/* 6. Commissions & Earnings */}
+          {/* 7. Commissions & Earnings */}
           <Link
             to="/contractor/commissions"
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/commissions') ? styles.navItemActive : {}),
             }}
+            title="Commissions & Earnings"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" x2="12" y1="20" y2="10" />
-              <line x1="18" x2="18" y1="20" y2="4" />
-              <line x1="6" x2="6" y1="20" y2="16" />
-            </svg>
-            <span style={styles.navText}>Commissions &amp; Earnings</span>
+            <span style={styles.navIcon}>💰</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Commissions &amp; Earnings
+            </span>
           </Link>
 
-          {/* 7. Partner Discounts */}
+          {/* 8. Partner Discounts */}
           <Link
             to="/contractor/discounts"
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/discounts') ? styles.navItemActive : {}),
             }}
+            title="Partner Discounts"
           >
-            <svg style={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
-              <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
-            <span style={styles.navText}>Partner Discounts</span>
+            <span style={styles.navIcon}>🏷️</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Partner Discounts
+            </span>
           </Link>
+
+          <div style={styles.navDivider} />
+
+          {/* Profile / Settings */}
+          <Link
+            to="/contractor/verification"
+            style={{
+              ...styles.navItem,
+              ...(currentPath === '/contractor/settings' ? styles.navItemActive : {}),
+            }}
+            title="Profile Settings"
+          >
+            <span style={styles.navIcon}>⚙️</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Profile Settings
+            </span>
+          </Link>
+
+          {/* Help & Guide Modal Trigger */}
+          <button
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            style={{ ...styles.navItem, background: 'none', border: 'none', width: '100%', cursor: 'pointer' }}
+            title="Help & Guide"
+          >
+            <span style={styles.navIcon}>❓</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Help &amp; Guide
+            </span>
+          </button>
+
+          {/* Standalone Logout in Sidebar bottom */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              ...styles.navItem,
+              background: 'none',
+              border: 'none',
+              width: '100%',
+              cursor: 'pointer',
+              color: '#dc2626',
+              marginTop: 'auto',
+            }}
+            title="Logout"
+          >
+            <span style={styles.navIcon}>🚪</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Logout
+            </span>
+          </button>
         </nav>
       </aside>
 
       {/* 2. MAIN CONTENT WRAPPER */}
-      <div style={styles.mainWrapper}>
-        {/* Top Header Bar matching Images 1-4 */}
+      <div
+        style={{
+          ...styles.mainWrapper,
+          ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+        }}
+      >
+        {/* Top Header Bar */}
         <header style={styles.topHeader}>
-          {/* Left: Page Title / Hamburger */}
+          {/* Left: Dynamic Page Title / Breadcrumbs */}
           <div style={styles.headerLeft}>
-            <button type="button" style={styles.menuToggleBtn} title="Toggle Sidebar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" x2="20" y1="12" y2="12" />
-                <line x1="4" x2="20" y1="6" y2="6" />
-                <line x1="4" x2="20" y1="18" y2="18" />
-              </svg>
-            </button>
-            <h1 style={styles.headerTitle}>
-              {currentPath.includes('/dashboard')
-                ? 'Contractor Dashboard'
-                : 'Contractor Portal'}
-            </h1>
+            {isEstimatorPage ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Link to="/contractor/projects" style={styles.backLink}>
+                  ← Back to Projects
+                </Link>
+                <span style={styles.estimateForTitle}>
+                  Estimate for: <strong>{currentPath.includes('/edit') ? 'Edit Project' : 'New Project'}</strong>
+                </span>
+                <span style={styles.draftBadge}>Draft</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '18px' }}>🔨</span>
+                <h1 style={styles.headerTitle}>
+                  {currentPath.includes('/dashboard')
+                    ? 'Contractor Dashboard'
+                    : currentPath.includes('/leads')
+                    ? 'Assigned Leads & Enquiries'
+                    : currentPath.includes('/projects')
+                    ? 'Projects & Decks'
+                    : currentPath.includes('/estimates')
+                    ? 'Commercial Estimates'
+                    : currentPath.includes('/verification')
+                    ? 'Verification & Compliance'
+                    : currentPath.includes('/commissions')
+                    ? 'Commissions & Earnings'
+                    : currentPath.includes('/discounts')
+                    ? 'Partner Discounts'
+                    : 'Contractor Portal'}
+                </h1>
+              </div>
+            )}
           </div>
 
           {/* Center: Search Bar */}
-          <div style={styles.headerCenter}>
-            <div style={styles.searchBox}>
-              <svg style={styles.searchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" x2="16.65" y1="21" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects, leads, estimates..."
-                style={styles.searchInput}
-              />
+          {!isEstimatorPage && (
+            <div style={styles.headerCenter}>
+              <div style={styles.searchBox}>
+                <span style={{ color: '#94a3b8', fontSize: '14px', marginRight: '8px' }}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search projects, leads, estimates..."
+                  style={styles.searchInput}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      navigate(`/contractor/projects?search=${encodeURIComponent(e.target.value)}`);
+                    }
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Right: Notifications, Profile, Logout */}
           <div style={styles.headerRight}>
@@ -222,10 +360,7 @@ export default function ContractorLayout() {
                 style={styles.iconBtn}
                 title="Notifications"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                </svg>
+                <span>🔔</span>
                 {unreadNotifications > 0 && (
                   <span style={styles.notifBadge}>{unreadNotifications}</span>
                 )}
@@ -252,9 +387,7 @@ export default function ContractorLayout() {
                   <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
                   <span style={styles.profileRole}>Apex Deck Pros LLC</span>
                 </div>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
               </div>
 
               {showProfileMenu && (
@@ -267,14 +400,24 @@ export default function ContractorLayout() {
                     }}
                     style={styles.dropdownItem}
                   >
-                    Profile &amp; Compliance
+                    🛡️ Profile &amp; Compliance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate('/contractor/projects');
+                    }}
+                    style={styles.dropdownItem}
+                  >
+                    📁 My Projects
                   </button>
                   <button
                     type="button"
                     onClick={handleLogout}
                     style={{ ...styles.dropdownItem, color: '#dc2626' }}
                   >
-                    Logout
+                    🚪 Logout
                   </button>
                 </div>
               )}
@@ -292,10 +435,53 @@ export default function ContractorLayout() {
         </header>
 
         {/* Dynamic Page Content */}
-        <main style={styles.mainContent}>
+        <main
+          style={{
+            ...styles.mainContent,
+            ...(isEstimatorPage ? { height: 'calc(100vh - 65px)', overflow: 'hidden', padding: 0 } : {}),
+          }}
+        >
           <Outlet />
         </main>
       </div>
+
+      {/* 3. HELP & GUIDE MODAL */}
+      {isHelpOpen && (
+        <div style={styles.modalOverlay} onClick={() => setIsHelpOpen(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>
+                Contractor Portal Guide &amp; Workflow
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen(false)}
+                style={styles.closeBtn}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={styles.modalBody}>
+              <h4>1. Managing Assigned Leads</h4>
+              <p>
+                When admin dispatches customer deck inquiries in your service area, they appear under <strong>Assigned Leads</strong>. Accept leads to initiate contact or create bids.
+              </p>
+              <h4>2. Creating Estimates with Continuous Estimator</h4>
+              <p>
+                Navigate to <strong>New Deck Project</strong>. Enter dimensions, structural height, wood condition, and select services. The live calculation engine calculates total price instantly.
+              </p>
+              <h4>3. Verification &amp; Compliance</h4>
+              <p>
+                Upload required Contractor License, General Liability Insurance, and Business Registration documents to maintain verified contractor status.
+              </p>
+              <h4>4. Commissions &amp; Earnings</h4>
+              <p>
+                Track earned commissions on converted customer projects and monitor payout ledger history.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -305,46 +491,59 @@ const styles = {
     display: 'flex',
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
-    fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
-    width: '240px',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    bottom: 0,
     backgroundColor: '#ffffff',
     borderRight: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
-    position: 'sticky',
-    top: 0,
-    height: '100vh',
-    flexShrink: 0,
-    zIndex: 40,
+    zIndex: 50,
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    whiteSpace: 'nowrap',
   },
   brandBox: {
-    padding: '24px 20px',
+    height: '65px',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 16px',
     borderBottom: '1px solid #f1f5f9',
   },
+  brandLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    textDecoration: 'none',
+  },
+  brandLogoIcon: {
+    fontSize: '22px',
+    minWidth: '36px',
+    textAlign: 'center',
+  },
   brandTitle: {
-    fontSize: '20px',
-    fontWeight: '900',
+    fontSize: '1.15rem',
+    fontWeight: '800',
+    letterSpacing: '-0.3px',
     color: '#0f172a',
-    letterSpacing: '-0.5px',
-    lineHeight: 1.1,
   },
   brandSubtitle: {
-    fontSize: '11px',
+    fontSize: '0.72rem',
     color: '#64748b',
-    fontWeight: '700',
-    marginTop: '3px',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   navMenu: {
-    padding: '16px 12px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
+    padding: '16px 10px',
     flex: 1,
-    overflowY: 'auto',
   },
   navItem: {
     display: 'flex',
@@ -352,141 +551,153 @@ const styles = {
     gap: '12px',
     padding: '10px 14px',
     borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#334155',
     textDecoration: 'none',
+    color: '#475569',
+    fontSize: '0.88rem',
+    fontWeight: '500',
     transition: 'all 0.15s ease',
+    position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    fontWeight: '700',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    fontWeight: '600',
   },
   navIcon: {
-    width: '18px',
-    height: '18px',
-    flexShrink: 0,
-  },
-  navText: {
-    flex: 1,
-  },
-  leadBadge: {
-    backgroundColor: '#dbeafe',
-    color: '#1d4ed8',
-    fontSize: '11px',
-    fontWeight: '800',
-    padding: '2px 7px',
-    borderRadius: '12px',
-  },
-  leadBadgeActive: {
-    backgroundColor: '#ffffff',
-    color: '#1d4ed8',
-    fontSize: '11px',
-    fontWeight: '800',
-    padding: '2px 7px',
-    borderRadius: '12px',
-  },
-  mainWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    minWidth: 0,
-    height: '100vh',
-    overflowY: 'auto',
-  },
-  topHeader: {
-    height: '64px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
-    padding: '0 28px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'sticky',
-    top: 0,
-    zIndex: 35,
-    flexShrink: 0,
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-  },
-  menuToggleBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#64748b',
-    cursor: 'pointer',
-    padding: '4px',
+    fontSize: '18px',
+    minWidth: '22px',
+    textAlign: 'center',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  navLabel: {
+    transition: 'opacity 0.15s ease',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  badge: {
+    marginLeft: 'auto',
+    backgroundColor: '#e2e8f0',
+    color: '#475569',
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '10px',
+  },
+  badgeActive: {
+    marginLeft: 'auto',
+    backgroundColor: '#1d4ed8',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '10px',
+  },
+  navDivider: {
+    height: '1px',
+    backgroundColor: '#f1f5f9',
+    margin: '12px 6px',
+  },
+  mainWrapper: {
+    marginLeft: '68px',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  topHeader: {
+    height: '65px',
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #e2e8f0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 24px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 40,
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
   headerTitle: {
-    fontSize: '17px',
-    fontWeight: '800',
+    fontSize: '1.15rem',
+    fontWeight: '700',
     color: '#0f172a',
     margin: 0,
   },
+  backLink: {
+    color: '#1d4ed8',
+    textDecoration: 'none',
+    fontSize: '0.9rem',
+    fontWeight: '600',
+  },
+  estimateForTitle: {
+    fontSize: '0.95rem',
+    color: '#334155',
+  },
+  draftBadge: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#15803d',
+    backgroundColor: '#dcfce7',
+    padding: '3px 9px',
+    borderRadius: '12px',
+  },
   headerCenter: {
     flex: 1,
-    maxWidth: '440px',
+    maxWidth: '420px',
     margin: '0 24px',
   },
   searchBox: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    padding: '0 12px',
-    height: '38px',
-  },
-  searchIcon: {
-    width: '16px',
-    height: '16px',
-    color: '#94a3b8',
-    marginRight: '8px',
-    flexShrink: 0,
+    padding: '6px 12px',
   },
   searchInput: {
     border: 'none',
     background: 'transparent',
     outline: 'none',
-    fontSize: '13px',
+    fontSize: '0.88rem',
     color: '#0f172a',
     width: '100%',
   },
   headerRight: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: '14px',
   },
   iconBtn: {
-    background: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '50%',
-    width: '36px',
-    height: '36px',
+    position: 'relative',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '18px',
+    padding: '6px',
+    borderRadius: '6px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: 'pointer',
-    position: 'relative',
-    color: '#475569',
   },
   notifBadge: {
     position: 'absolute',
-    top: '-3px',
-    right: '-3px',
+    top: '2px',
+    right: '2px',
     backgroundColor: '#dc2626',
-    color: '#ffffff',
+    color: '#fff',
     fontSize: '10px',
-    fontWeight: '800',
+    fontWeight: '700',
+    borderRadius: '50%',
     width: '16px',
     height: '16px',
-    borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -495,48 +706,49 @@ const styles = {
     position: 'absolute',
     top: '44px',
     right: 0,
-    width: '280px',
+    width: '320px',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-    zIndex: 50,
+    borderRadius: '10px',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+    padding: '12px',
+    zIndex: 100,
   },
   notifHeader: {
-    padding: '10px 14px',
-    borderBottom: '1px solid #f1f5f9',
-    fontSize: '12px',
+    fontSize: '0.85rem',
     fontWeight: '700',
     color: '#0f172a',
+    marginBottom: '8px',
+    borderBottom: '1px solid #f1f5f9',
+    paddingBottom: '6px',
   },
   notifItem: {
-    padding: '10px 14px',
-    fontSize: '12px',
+    fontSize: '0.82rem',
     color: '#475569',
+    padding: '6px 0',
     borderBottom: '1px solid #f8fafc',
-    lineHeight: 1.4,
   },
   profilePill: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    padding: '5px 12px 5px 6px',
     backgroundColor: '#f8fafc',
     border: '1px solid #e2e8f0',
     borderRadius: '24px',
-    padding: '4px 14px 4px 5px',
     cursor: 'pointer',
   },
   avatarCircle: {
-    width: '32px',
-    height: '32px',
+    width: '30px',
+    height: '30px',
     borderRadius: '50%',
     backgroundColor: '#1d4ed8',
     color: '#ffffff',
+    fontWeight: '700',
+    fontSize: '0.78rem',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontWeight: '800',
-    fontSize: '12px',
   },
   profileText: {
     display: 'flex',
@@ -544,55 +756,96 @@ const styles = {
     textAlign: 'left',
   },
   profileName: {
-    fontSize: '12px',
-    fontWeight: '700',
+    fontSize: '0.85rem',
+    fontWeight: '600',
     color: '#0f172a',
     lineHeight: 1.2,
   },
   profileRole: {
-    fontSize: '10px',
+    fontSize: '0.72rem',
     color: '#64748b',
+    lineHeight: 1.2,
   },
   profileDropdown: {
     position: 'absolute',
-    top: '46px',
+    top: '48px',
     right: 0,
-    width: '180px',
+    width: '200px',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-    zIndex: 50,
-    overflow: 'hidden',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+    padding: '6px',
+    zIndex: 100,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
   },
   dropdownItem: {
-    width: '100%',
-    textAlign: 'left',
-    padding: '10px 14px',
+    padding: '8px 12px',
+    fontSize: '0.85rem',
+    color: '#334155',
     background: 'none',
     border: 'none',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#334155',
+    textAlign: 'left',
+    borderRadius: '6px',
     cursor: 'pointer',
-    borderBottom: '1px solid #f1f5f9',
+    width: '100%',
   },
   logoutBtn: {
+    padding: '7px 16px',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
     borderRadius: '6px',
-    padding: '6px 14px',
-    fontSize: '12px',
+    color: '#334155',
+    fontSize: '0.85rem',
     fontWeight: '600',
-    color: '#475569',
     cursor: 'pointer',
   },
   mainContent: {
     flex: 1,
-    padding: '24px 32px 60px 32px',
-    maxWidth: '1440px',
-    width: '100%',
-    margin: '0 auto',
-    boxSizing: 'border-box',
+    minWidth: 0,
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '540px',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '18px 24px',
+    borderBottom: '1px solid #e2e8f0',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '18px',
+    color: '#94a3b8',
+    cursor: 'pointer',
+  },
+  modalBody: {
+    padding: '24px',
+    color: '#334155',
+    fontSize: '0.9rem',
+    lineHeight: '1.6',
+    maxHeight: '65vh',
+    overflowY: 'auto',
   },
 };

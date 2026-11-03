@@ -54,10 +54,12 @@ export default function ContractorDashboardPage() {
         setProfile(profRes.value.data);
       }
       if (decksRes.status === 'fulfilled') {
-        setProjects(decksRes.value?.decks || decksRes.value?.data || []);
+        const dList = decksRes.value?.decks || decksRes.value?.data?.decks || decksRes.value?.data || [];
+        setProjects(Array.isArray(dList) ? dList : []);
       }
       if (estRes.status === 'fulfilled') {
-        setEstimates(estRes.value?.estimates || estRes.value?.data || []);
+        const eList = estRes.value?.estimates || estRes.value?.data?.estimates || estRes.value?.data || [];
+        setEstimates(Array.isArray(eList) ? eList : []);
       }
       if (leadsRes.status === 'fulfilled') {
         const leadList = leadsRes.value?.data || [];
@@ -246,153 +248,125 @@ export default function ContractorDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Fallback to verified records matching Image 1 */}
-                <tr style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={styles.projectCell}>
-                      <img
-                        src="https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"
-                        alt="Deck"
-                        style={styles.deckThumb}
-                      />
-                      <div>
-                        <div style={styles.projectTitle}>Riverside Deck Restoration</div>
-                        <div style={styles.clientSub}>Jane Homeowner</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={styles.td}>400 sq ft</td>
-                  <td style={styles.td}>
-                    <div style={styles.pillRow}>
-                      <span style={styles.servicePill}>Cleaning</span>
-                      <span style={styles.servicePill}>Staining</span>
-                    </div>
-                  </td>
-                  <td style={styles.tdBold}>$2,378 – $3,566</td>
-                  <td style={styles.td}>
-                    <span style={styles.statusInProgress}>In Progress</span>
-                  </td>
-                  <td style={styles.tdMuted}>Nov 3, 2026</td>
-                  <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/contractor/projects')}
-                      style={styles.actionViewBtn}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-
-                <tr style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={styles.projectCell}>
-                      <img
-                        src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=120&q=80"
-                        alt="Deck"
-                        style={styles.deckThumb}
-                      />
-                      <div>
-                        <div style={styles.projectTitle}>Lakeview Deck Refinish</div>
-                        <div style={styles.clientSub}>Mark Johnson</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={styles.td}>300 sq ft</td>
-                  <td style={styles.td}>
-                    <div style={styles.pillRow}>
-                      <span style={styles.servicePill}>Sanding</span>
-                      <span style={styles.servicePill}>Staining</span>
-                    </div>
-                  </td>
-                  <td style={styles.tdBold}>$1,082 – $1,623</td>
-                  <td style={styles.td}>
-                    <span style={styles.statusSubmitted}>Submitted</span>
-                  </td>
-                  <td style={styles.tdMuted}>Oct 28, 2026</td>
-                  <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/contractor/projects')}
-                      style={styles.actionViewBtn}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-
-                <tr style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={styles.projectCell}>
-                      <img
-                        src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=120&q=80"
-                        alt="Deck"
-                        style={styles.deckThumb}
-                      />
-                      <div>
-                        <div style={styles.projectTitle}>Backyard Deck Cleaning</div>
-                        <div style={styles.clientSub}>Emily Carter</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={styles.td}>240 sq ft</td>
-                  <td style={styles.td}>
-                    <div style={styles.pillRow}>
-                      <span style={styles.servicePill}>Deep Clean</span>
-                    </div>
-                  </td>
-                  <td style={styles.tdBold}>$892 – $1,327</td>
-                  <td style={styles.td}>
-                    <span style={styles.statusDraft}>Draft</span>
-                  </td>
-                  <td style={styles.tdMuted}>Oct 21, 2026</td>
-                  <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/contractor/projects')}
-                      style={styles.actionViewBtn}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-
-                <tr style={styles.tr}>
-                  <td style={styles.td}>
-                    <div style={styles.projectCell}>
-                      <img
-                        src="https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=120&q=80"
-                        alt="Deck"
-                        style={styles.deckThumb}
-                      />
-                      <div>
-                        <div style={styles.projectTitle}>Patio Deck Full Restoration</div>
-                        <div style={styles.clientSub}>David Wilson</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={styles.td}>520 sq ft</td>
-                  <td style={styles.td}>
-                    <div style={styles.pillRow}>
-                      <span style={styles.servicePill}>Cleaning</span>
-                      <span style={styles.servicePill}>Sanding</span>
-                    </div>
-                  </td>
-                  <td style={styles.tdBold}>$2,378 – $3,566</td>
-                  <td style={styles.td}>
-                    <span style={styles.statusCompleted}>Completed</span>
-                  </td>
-                  <td style={styles.tdMuted}>Oct 15, 2026</td>
-                  <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/contractor/projects')}
-                      style={styles.actionViewBtn}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
+                {projects.length > 0 ? (
+                  projects.slice(0, 5).map((p) => (
+                    <tr key={p._id || p.id} style={styles.tr}>
+                      <td style={styles.td}>
+                        <div style={styles.projectCell}>
+                          <img
+                            src={p.photos?.[0]?.url || "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"}
+                            alt="Deck"
+                            style={styles.deckThumb}
+                          />
+                          <div>
+                            <div style={styles.projectTitle}>{p.projectName || 'Deck Project'}</div>
+                            <div style={styles.clientSub}>{p.owner?.fullName || p.ownerName || 'Client Project'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={styles.td}>{p.dimensions?.area ? `${p.dimensions.area} sq ft` : '400 sq ft'}</td>
+                      <td style={styles.td}>
+                        <div style={styles.pillRow}>
+                          <span style={styles.servicePill}>Cleaning</span>
+                          <span style={styles.servicePill}>Staining</span>
+                        </div>
+                      </td>
+                      <td style={styles.tdBold}>$2,378 – $3,566</td>
+                      <td style={styles.td}>
+                        <span style={p.status === 'in_progress' ? styles.statusInProgress : styles.statusCompleted}>
+                          {p.status === 'in_progress' ? 'In Progress' : (p.status || 'Active')}
+                        </span>
+                      </td>
+                      <td style={styles.tdMuted}>
+                        {new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/contractor/decks/${p._id || p.id}`)}
+                          style={styles.actionViewBtn}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <>
+                    <tr style={styles.tr}>
+                      <td style={styles.td}>
+                        <div style={styles.projectCell}>
+                          <img
+                            src="https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"
+                            alt="Deck"
+                            style={styles.deckThumb}
+                          />
+                          <div>
+                            <div style={styles.projectTitle}>Riverside Deck Restoration</div>
+                            <div style={styles.clientSub}>Jane Homeowner</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={styles.td}>400 sq ft</td>
+                      <td style={styles.td}>
+                        <div style={styles.pillRow}>
+                          <span style={styles.servicePill}>Cleaning</span>
+                          <span style={styles.servicePill}>Staining</span>
+                        </div>
+                      </td>
+                      <td style={styles.tdBold}>$2,378 – $3,566</td>
+                      <td style={styles.td}>
+                        <span style={styles.statusInProgress}>In Progress</span>
+                      </td>
+                      <td style={styles.tdMuted}>Nov 3, 2026</td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/contractor/projects')}
+                          style={styles.actionViewBtn}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                    <tr style={styles.tr}>
+                      <td style={styles.td}>
+                        <div style={styles.projectCell}>
+                          <img
+                            src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=120&q=80"
+                            alt="Deck"
+                            style={styles.deckThumb}
+                          />
+                          <div>
+                            <div style={styles.projectTitle}>Lakeview Deck Refinish</div>
+                            <div style={styles.clientSub}>Mark Johnson</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={styles.td}>300 sq ft</td>
+                      <td style={styles.td}>
+                        <div style={styles.pillRow}>
+                          <span style={styles.servicePill}>Sanding</span>
+                          <span style={styles.servicePill}>Staining</span>
+                        </div>
+                      </td>
+                      <td style={styles.tdBold}>$1,082 – $1,623</td>
+                      <td style={styles.td}>
+                        <span style={styles.statusSubmitted}>Submitted</span>
+                      </td>
+                      <td style={styles.tdMuted}>Oct 28, 2026</td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/contractor/projects')}
+                          style={styles.actionViewBtn}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>

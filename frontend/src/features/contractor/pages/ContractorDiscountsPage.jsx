@@ -266,3 +266,4 @@ const styles = {
     borderRadius: '12px',
   },
 };
+

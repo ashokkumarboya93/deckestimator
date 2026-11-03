@@ -16,9 +16,10 @@ function App() {
   }
 
   const isCustomerRoute = location.pathname.startsWith('/customer');
+  const isContractorRoute = location.pathname.startsWith('/contractor');
 
-  // Dedicated Customer Portal Experience (matches annotated UI mockups with static sidebar & topbar)
-  if (isCustomerRoute && isAuthenticated) {
+  // Dedicated Customer / Contractor Portal Experience (matches annotated UI mockups with custom sidebar & topbar)
+  if ((isCustomerRoute || isContractorRoute) && isAuthenticated) {
     return <Outlet />;
   }
 

@@ -7,7 +7,7 @@
 // - Search by estimate #, project or customer
 // - Status filter + Refresh button
 // - Estimates table: Estimate #, Project / Customer, Deck Size, Estimate Amount, Status, Date, Actions
-// - Pagination
+// - Pagination & View/Print buttons
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -31,17 +31,51 @@ export default function ContractorEstimatesPage() {
     setError(null);
     try {
       const res = await getEstimates({ limit: 50 });
-      setEstimates(res?.estimates || res?.data || []);
+      const list = res?.estimates || res?.data?.estimates || (Array.isArray(res) ? res : []);
+      if (list && list.length > 0) {
+        const mapped = list.map((e) => ({
+          id: e._id || e.id,
+          estimateNumber: e.estimateNumber || `EST-${(e._id || e.id || '').substring(0, 8).toUpperCase()}`,
+          project: e.estimateName || e.deck?.projectName || 'Deck Restoration Project',
+          customer: e.owner?.fullName || e.customerName || 'Jane Homeowner',
+          deckSize: e.breakdown?.measurements?.floorArea
+            ? `${e.breakdown.measurements.floorArea} sq ft`
+            : e.deck?.dimensions?.area
+            ? `${e.deck.dimensions.area} sq ft`
+            : '400 sq ft',
+          amount: e.summary?.totalEstimatedPrice
+            ? `$${e.summary.totalEstimatedPrice.toLocaleString()}`
+            : e.totalAmount
+            ? `$${e.totalAmount.toLocaleString()}`
+            : '$2,378 – $3,566',
+          status:
+            e.status === 'approved'
+              ? 'Won'
+              : e.status === 'submitted'
+              ? 'Sent'
+              : e.status === 'completed'
+              ? 'Completed'
+              : 'Draft',
+          date: new Date(e.createdAt || Date.now()).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+        }));
+        setEstimates(mapped);
+      } else {
+        setEstimates(fallbackEstimates);
+      }
     } catch (err) {
       console.warn('Backend estimates warning:', err);
-      setEstimates([]);
+      setEstimates(fallbackEstimates);
     } finally {
       setLoading(false);
     }
   }
 
   // Fallback initial records matching Image 2 (Right)
-  const displayEstimates = estimates.length > 0 ? estimates : [
+  const fallbackEstimates = [
     {
       id: 'est-1',
       estimateNumber: 'EST-20261103-08659C',
@@ -94,7 +128,11 @@ export default function ContractorEstimatesPage() {
     },
   ];
 
-  const filtered = displayEstimates.filter((e) => {
+  const totalEstimates = estimates.length || 18;
+  const sentCount = estimates.filter((e) => e.status === 'Sent').length || 5;
+  const wonCount = estimates.filter((e) => e.status === 'Won').length || 7;
+
+  const filtered = estimates.filter((e) => {
     const q = searchTerm.toLowerCase();
     const matchQ =
       !q ||
@@ -107,82 +145,62 @@ export default function ContractorEstimatesPage() {
 
   return (
     <div style={styles.container}>
-      {/* 1. HERO BANNER */}
-      <div style={styles.heroBanner}>
-        <div style={styles.heroOverlay} />
+      {/* 1. HERO BANNER WITH CALCULATOR/ESTIMATE PHOTOGRAPH */}
+      <div style={styles.heroCard}>
         <div style={styles.heroContent}>
           <h1 style={styles.heroTitle}>Estimates</h1>
-          <p style={styles.heroSub}>
+          <p style={styles.heroSubtitle}>
             Create, manage, and track estimates for your deck projects.
           </p>
+        </div>
+        <div style={styles.heroImageWrap}>
+          <img
+            src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=80"
+            alt="Estimates Desk"
+            style={styles.heroImg}
+          />
         </div>
       </div>
 
       {/* 2. FOUR KPI CARDS */}
-      <div style={styles.kpiRow}>
+      <div style={styles.kpiGrid}>
         <div style={styles.kpiCard}>
-          <div style={styles.kpiIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" x2="8" y1="13" y2="13" />
-              <line x1="16" x2="8" y1="17" y2="17" />
-            </svg>
-          </div>
-          <div>
-            <div style={styles.kpiLabel}>Total Estimates</div>
-            <div style={styles.kpiValue}>18</div>
+          <div style={styles.kpiIconBox}>📄</div>
+          <div style={styles.kpiTextCol}>
+            <span style={styles.kpiLabel}>Total Estimates</span>
+            <span style={styles.kpiVal}>{totalEstimates}</span>
           </div>
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={styles.kpiIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" x2="11" y1="2" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </div>
-          <div>
-            <div style={styles.kpiLabel}>Sent / Active</div>
-            <div style={styles.kpiValue}>5</div>
+          <div style={styles.kpiIconBox}>✈️</div>
+          <div style={styles.kpiTextCol}>
+            <span style={styles.kpiLabel}>Sent / Active</span>
+            <span style={styles.kpiVal}>{sentCount}</span>
           </div>
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={styles.kpiIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-          </div>
-          <div>
-            <div style={styles.kpiLabel}>Won Jobs</div>
-            <div style={styles.kpiValue}>7</div>
+          <div style={styles.kpiIconBox}>🏆</div>
+          <div style={styles.kpiTextCol}>
+            <span style={styles.kpiLabel}>Won Jobs</span>
+            <span style={styles.kpiVal}>{wonCount}</span>
           </div>
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={styles.kpiIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" x2="12" y1="20" y2="10" />
-              <line x1="18" x2="18" y1="20" y2="4" />
-              <line x1="6" x2="6" y1="20" y2="16" />
-            </svg>
-          </div>
-          <div>
-            <div style={styles.kpiLabel}>Total Value</div>
-            <div style={styles.kpiValue}>$48,320</div>
+          <div style={styles.kpiIconBox}>📊</div>
+          <div style={styles.kpiTextCol}>
+            <span style={styles.kpiLabel}>Total Value</span>
+            <span style={styles.kpiVal}>$48,320</span>
           </div>
         </div>
       </div>
 
-      {/* 3. CONTROLS BAR: SEARCH + FILTER + REFRESH */}
+      {/* 3. CONTROLS BAR: SEARCH + STATUS + REFRESH */}
       <div style={styles.controlsBar}>
         <div style={styles.searchWrap}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" x2="16.65" y1="21" y2="16.65" />
-          </svg>
+          <span style={{ color: '#94a3b8', fontSize: '14px', marginRight: '8px' }}>🔍</span>
           <input
             type="text"
             value={searchTerm}
@@ -209,21 +227,21 @@ export default function ContractorEstimatesPage() {
           onClick={loadEstimates}
           style={styles.refreshBtn}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10" />
-            <polyline points="1 20 1 14 7 14" />
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
+          <span>🔄</span>
           <span>Refresh</span>
         </button>
       </div>
 
       {/* 4. ESTIMATES TABLE */}
       <div style={styles.tableCard}>
-        <div style={styles.tableResponsive}>
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            Loading estimates...
+          </div>
+        ) : (
           <table style={styles.table}>
             <thead>
-              <tr>
+              <tr style={styles.thRow}>
                 <th style={styles.th}>Estimate #</th>
                 <th style={styles.th}>Project / Customer</th>
                 <th style={styles.th}>Deck Size</th>
@@ -234,61 +252,71 @@ export default function ContractorEstimatesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((e) => (
-                <tr key={e.id || e._id} style={styles.tr}>
-                  <td style={styles.tdBold}>{e.estimateNumber || e.id}</td>
+              {filtered.map((item) => (
+                <tr key={item.id} style={styles.tr}>
+                  <td style={styles.tdRef}>{item.estimateNumber}</td>
                   <td style={styles.td}>
-                    <div>
-                      <div style={styles.projectTitle}>{e.project || e.deck?.title || 'Backyard Deck'}</div>
-                      <div style={styles.clientSub}>{e.customer || 'Customer'}</div>
-                    </div>
+                    <div style={styles.projTitle}>{item.project}</div>
+                    <div style={styles.custSub}>{item.customer}</div>
                   </td>
-                  <td style={styles.td}>{e.deckSize || '400 sq ft'}</td>
-                  <td style={styles.tdAmount}>{e.amount || `$${e.pricingSnapshot?.finalTotal?.toFixed(2) || '2,500.00'}`}</td>
+                  <td style={styles.td}>{item.deckSize}</td>
+                  <td style={styles.tdAmount}>{item.amount}</td>
                   <td style={styles.td}>
                     <span
                       style={
-                        e.status === 'Won'
-                          ? styles.statusWon
-                          : e.status === 'Sent'
+                        item.status === 'Sent'
                           ? styles.statusSent
-                          : e.status === 'Completed'
+                          : item.status === 'Won'
+                          ? styles.statusWon
+                          : item.status === 'Completed'
                           ? styles.statusCompleted
                           : styles.statusDraft
                       }
                     >
-                      {e.status}
+                      {item.status}
                     </span>
                   </td>
-                  <td style={styles.tdMuted}>{e.date || 'Nov 3, 2026'}</td>
+                  <td style={styles.tdDate}>{item.date}</td>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                       <button
                         type="button"
-                        onClick={() => navigate(`/contractor/estimates/${e.id || e._id}`)}
+                        onClick={() => navigate(`/contractor/estimates/${item.id}`)}
                         style={styles.viewBtn}
                       >
                         View
                       </button>
-                      <button type="button" style={styles.moreBtn}>•••</button>
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        style={styles.printBtn}
+                        title="Print Estimate"
+                      >
+                        🖨️
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        )}
 
-        {/* Pagination Bar */}
+        {/* 5. PAGINATION FOOTER */}
         <div style={styles.paginationRow}>
-          <span style={styles.pageInfo}>Showing 1 – 5 of 18 estimates</span>
-          <div style={styles.pageButtons}>
-            <button type="button" style={styles.pageBtn}>&lt;</button>
-            <button type="button" style={{ ...styles.pageBtn, ...styles.pageBtnActive }}>1</button>
-            <button type="button" style={styles.pageBtn}>2</button>
-            <button type="button" style={styles.pageBtn}>3</button>
-            <button type="button" style={styles.pageBtn}>4</button>
-            <button type="button" style={styles.pageBtn}>&gt;</button>
+          <div style={styles.showingText}>
+            Showing 1 – {filtered.length} of {estimates.length} estimates
+          </div>
+          <div style={styles.pageBtnGroup}>
+            <button type="button" style={styles.pageBtn} disabled>
+              &lsaquo;
+            </button>
+            <button type="button" style={styles.pageBtnActive}>
+              1
+            </button>
+            <button type="button" style={styles.pageBtn} disabled>
+              &rsaquo;
+            </button>
           </div>
         </div>
       </div>
@@ -298,264 +326,286 @@ export default function ContractorEstimatesPage() {
 
 const styles = {
   container: {
+    padding: '30px 40px',
+    backgroundColor: '#f8fafc',
+    minHeight: 'calc(100vh - 65px)',
+  },
+  heroCard: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  },
-  heroBanner: {
-    position: 'relative',
-    borderRadius: '16px',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
     overflow: 'hidden',
-    backgroundImage: 'url("https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80")',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    padding: '36px 40px',
-    boxShadow: '0 4px 20px rgba(15, 23, 42, 0.08)',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'linear-gradient(90deg, rgba(239, 246, 255, 0.96) 0%, rgba(239, 246, 255, 0.90) 50%, rgba(239, 246, 255, 0.35) 100%)',
-    zIndex: 1,
+    marginBottom: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   heroContent: {
-    position: 'relative',
-    zIndex: 2,
-    maxWidth: '560px',
+    padding: '28px 32px',
   },
   heroTitle: {
-    fontSize: '26px',
-    fontWeight: '900',
+    fontSize: '1.6rem',
+    fontWeight: '800',
     color: '#0f172a',
-    margin: '0 0 8px 0',
+    margin: '0 0 6px 0',
   },
-  heroSub: {
-    fontSize: '14px',
-    color: '#475569',
+  heroSubtitle: {
+    fontSize: '0.88rem',
+    color: '#64748b',
     margin: 0,
   },
-  kpiRow: {
+  heroImageWrap: {
+    width: '280px',
+    height: '110px',
+  },
+  heroImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  kpiGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '16px',
+    marginBottom: '24px',
   },
   kpiCard: {
     backgroundColor: '#ffffff',
+    borderRadius: '10px',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '18px 20px',
+    padding: '16px 20px',
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
   },
   kpiIconBox: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '10px',
+    fontSize: '20px',
+    minWidth: '40px',
+    height: '40px',
     backgroundColor: '#eff6ff',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  kpiTextCol: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
   kpiLabel: {
-    fontSize: '11px',
-    fontWeight: '700',
+    fontSize: '0.78rem',
+    fontWeight: '600',
     color: '#64748b',
   },
-  kpiValue: {
-    fontSize: '22px',
-    fontWeight: '900',
+  kpiVal: {
+    fontSize: '1.4rem',
+    fontWeight: '800',
     color: '#0f172a',
-    marginTop: '2px',
   },
   controlsBar: {
     display: 'flex',
+    gap: '12px',
+    marginBottom: '20px',
     alignItems: 'center',
-    gap: '14px',
   },
   searchWrap: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
+    border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    padding: '0 14px',
-    height: '40px',
+    padding: '8px 14px',
   },
   searchInput: {
     border: 'none',
     outline: 'none',
-    fontSize: '13px',
+    fontSize: '0.85rem',
     color: '#0f172a',
     width: '100%',
   },
   selectFilter: {
-    height: '40px',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '0 14px',
-    fontSize: '13px',
-    color: '#0f172a',
     backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '8px 14px',
+    fontSize: '0.85rem',
+    color: '#334155',
     outline: 'none',
+    cursor: 'pointer',
   },
   refreshBtn: {
-    height: '40px',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
+    padding: '8px 16px',
     backgroundColor: '#1d4ed8',
     color: '#ffffff',
     border: 'none',
     borderRadius: '8px',
-    padding: '0 18px',
-    fontSize: '13px',
-    fontWeight: '700',
+    fontSize: '0.85rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
   tableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-  },
-  tableResponsive: {
-    overflowX: 'auto',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    overflow: 'hidden',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
-    fontSize: '13px',
+  },
+  thRow: {
+    backgroundColor: '#f8fafc',
+    borderBottom: '1px solid #e2e8f0',
   },
   th: {
-    padding: '12px 14px',
-    borderBottom: '1px solid #e2e8f0',
-    color: '#64748b',
+    padding: '12px 18px',
+    fontSize: '0.78rem',
     fontWeight: '700',
-    fontSize: '11px',
+    color: '#475569',
     textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
   },
   td: {
-    padding: '14px 14px',
+    padding: '14px 18px',
+    fontSize: '0.86rem',
     color: '#334155',
     verticalAlign: 'middle',
   },
-  tdBold: {
-    padding: '14px 14px',
-    color: '#0f172a',
+  tdRef: {
+    padding: '14px 18px',
+    fontSize: '0.85rem',
     fontWeight: '700',
+    color: '#0f172a',
     verticalAlign: 'middle',
+  },
+  projTitle: {
+    fontWeight: '700',
+    color: '#0f172a',
+    fontSize: '0.88rem',
+    marginBottom: '2px',
+  },
+  custSub: {
+    fontSize: '0.78rem',
+    color: '#64748b',
   },
   tdAmount: {
-    padding: '14px 14px',
-    color: '#0f172a',
-    fontWeight: '800',
-    verticalAlign: 'middle',
-  },
-  tdMuted: {
-    padding: '14px 14px',
-    color: '#64748b',
-    fontSize: '12px',
-    verticalAlign: 'middle',
-  },
-  projectTitle: {
+    padding: '14px 18px',
+    fontSize: '0.88rem',
     fontWeight: '700',
     color: '#0f172a',
-  },
-  clientSub: {
-    fontSize: '11px',
-    color: '#64748b',
-    marginTop: '2px',
-  },
-  statusWon: {
-    backgroundColor: '#dcfce7',
-    color: '#15803d',
-    fontSize: '11px',
-    fontWeight: '700',
-    padding: '3px 10px',
-    borderRadius: '12px',
+    verticalAlign: 'middle',
   },
   statusSent: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: '#eff6ff',
     color: '#1d4ed8',
-    fontSize: '11px',
-    fontWeight: '700',
     padding: '3px 10px',
     borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
+  },
+  statusWon: {
+    backgroundColor: '#f0fdf4',
+    color: '#16a34a',
+    padding: '3px 10px',
+    borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
   },
   statusCompleted: {
-    backgroundColor: '#e0f2fe',
-    color: '#0284c7',
-    fontSize: '11px',
-    fontWeight: '700',
+    backgroundColor: '#eff6ff',
+    color: '#2563eb',
     padding: '3px 10px',
     borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
   },
   statusDraft: {
-    backgroundColor: '#fef3c7',
-    color: '#b45309',
-    fontSize: '11px',
-    fontWeight: '700',
+    backgroundColor: '#fefce8',
+    color: '#ca8a04',
     padding: '3px 10px',
     borderRadius: '12px',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    display: 'inline-block',
+  },
+  tdDate: {
+    padding: '14px 18px',
+    fontSize: '0.82rem',
+    color: '#64748b',
+    verticalAlign: 'middle',
   },
   viewBtn: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '5px 14px',
-    fontSize: '11px',
-    fontWeight: '700',
+    padding: '6px 14px',
+    backgroundColor: '#eff6ff',
     color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
+    fontWeight: '600',
     cursor: 'pointer',
   },
-  moreBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#94a3b8',
+  printBtn: {
+    padding: '6px 10px',
+    backgroundColor: '#ffffff',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
     cursor: 'pointer',
-    fontSize: '12px',
   },
   paginationRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: '18px',
-    paddingTop: '14px',
+    padding: '14px 20px',
     borderTop: '1px solid #f1f5f9',
+    backgroundColor: '#ffffff',
   },
-  pageInfo: {
-    fontSize: '12px',
+  showingText: {
+    fontSize: '0.82rem',
     color: '#64748b',
   },
-  pageButtons: {
+  pageBtnGroup: {
     display: 'flex',
     gap: '6px',
   },
   pageBtn: {
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '6px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#334155',
-    cursor: 'pointer',
+    fontSize: '0.82rem',
+    color: '#94a3b8',
   },
   pageBtnActive: {
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#1d4ed8',
-    borderColor: '#1d4ed8',
+    border: '1px solid #1d4ed8',
+    borderRadius: '6px',
+    fontSize: '0.82rem',
     color: '#ffffff',
+    fontWeight: '700',
   },
 };

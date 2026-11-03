@@ -373,10 +373,11 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
       const est = await createEstimate(estimatePayload);
 
+      const isContractor = window.location.pathname.startsWith('/contractor');
       if (status === 'DRAFT') {
-        navigate('/customer/dashboard');
+        navigate(isContractor ? '/contractor/projects' : '/customer/dashboard');
       } else {
-        navigate('/customer/estimates');
+        navigate(isContractor ? '/contractor/estimates' : '/customer/estimates');
       }
     } catch (err) {
       setSubmitError(err.message || 'Failed to save estimate.');
