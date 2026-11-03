@@ -428,11 +428,11 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
       </div>
 
       {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + STATIC RIGHT SIDEBAR */}
-      <div style={styles.mainGrid}>
+      <div style={styles.contentLayoutRow}>
         {/* ======================================================== */}
         {/* MIDDLE FORM: CONTINUOUS SCROLLABLE IMAGE & ICON INPUTS */}
         {/* ======================================================== */}
-        <div style={styles.formScrollColumn}>
+        <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
           {submitError && (
             <div style={styles.errorBox}>
               ⚠️ <strong>Error:</strong> {submitError}
@@ -881,7 +881,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         {/* ======================================================== */}
         {/* RIGHT SIDEBAR: STATIC STICKY SUMMARY & SINGLE ESTIMATE */}
         {/* ======================================================== */}
-        <aside style={styles.rightSidebar}>
+        <aside style={styles.fixedRightSidebar}>
           {/* 1. ESTIMATION PROGRESS CARD */}
           <div style={styles.sidebarCard}>
             <div style={styles.progressRow}>
@@ -1113,7 +1113,10 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 const styles = {
   estimatorPageContainer: {
     backgroundColor: '#f8fafc',
-    minHeight: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
     fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
   },
   stepperBar: {
@@ -1161,26 +1164,38 @@ const styles = {
     color: '#94a3b8',
     fontSize: '12px',
   },
-  mainGrid: {
-    maxWidth: '1380px',
-    margin: '20px auto',
-    padding: '0 24px 60px 24px',
+  contentLayoutRow: {
+    flex: 1,
+    maxWidth: '1440px',
+    width: '100%',
+    margin: '0 auto',
+    padding: '16px 24px 0 24px',
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) 340px',
     gap: '24px',
-    alignItems: 'start',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    alignItems: 'stretch',
   },
-  formScrollColumn: {
+  middleScrollableColumn: {
+    height: '100%',
+    overflowY: 'auto',
+    paddingRight: '12px',
+    paddingBottom: '80px',
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
+    scrollbarWidth: 'thin',
   },
-  rightSidebar: {
-    position: 'sticky',
-    top: '70px',
+  fixedRightSidebar: {
+    height: '100%',
+    overflowY: 'auto',
+    paddingBottom: '80px',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    flexShrink: 0,
+    scrollbarWidth: 'thin',
   },
   sidebarCard: {
     backgroundColor: '#ffffff',

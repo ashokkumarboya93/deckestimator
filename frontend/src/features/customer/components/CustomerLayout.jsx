@@ -250,7 +250,7 @@ export default function CustomerLayout() {
         </header>
 
         {/* Page Content Body */}
-        <main style={styles.mainContent}>
+        <main style={{ ...styles.mainContent, ...(currentPath === '/customer/decks/new' ? { overflow: 'hidden', height: 'calc(100vh - 62px)', display: 'flex', flexDirection: 'column' } : {}) }}>
           <Outlet />
         </main>
       </div>
