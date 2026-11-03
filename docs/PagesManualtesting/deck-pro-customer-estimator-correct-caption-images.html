@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DECK PRO – Customer Estimator (Demo)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--g:#1f8a3b;--gd:#176b2d;--gl:#e8f5ec;--n:#14233b;--m:#5b6779;--b:#dfe5ec;--bg:#f4f6f9;--r:10px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--n);background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #2b7de9;outline-offset:2px}
+.app{display:grid;grid-template-columns:190px minmax(0,1fr) 240px;gap:0;min-height:100vh}
+aside.side{background:#fff;border-right:1px solid var(--b);padding:14px 10px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column}
+.logo{font-weight:900;font-size:24px;letter-spacing:.5px;padding:0 6px}.logo b{color:var(--g)}.logo small{display:block;font-size:9px;font-weight:600;color:var(--m);letter-spacing:.3px}
+nav a{display:flex;gap:10px;align-items:center;padding:10px;border-radius:8px;color:var(--n);text-decoration:none;cursor:pointer;margin:2px 0}
+nav a:hover{background:var(--bg)}nav a.on{background:var(--gl);color:var(--gd);font-weight:700}
+.helpc{margin-top:auto;border:1px solid var(--b);border-radius:var(--r);overflow:hidden;background:#fff}.helpc .im{height:110px}.helpc div.t{padding:10px}
+main{padding:14px 18px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.user{display:flex;gap:12px;align-items:center}.av{width:34px;height:34px;border-radius:50%;background:var(--n);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+.bell{position:relative;background:none;border:0;font-size:18px;cursor:pointer}.bell i.d{position:absolute;top:-6px;right:-8px;background:#d92d20;color:#fff;font:700 9px sans-serif;border-radius:9px;padding:1px 5px}
+.hero{border-radius:12px;padding:22px;color:#fff;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(90deg,rgba(10,20,30,.88),rgba(10,20,30,.45)),repeating-linear-gradient(90deg,#9a5a2c 0 38px,#8a4e24 38px 40px);margin-bottom:14px;position:relative;overflow:hidden}.hero>*{position:relative}.hero>.hbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}.hero>.ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,20,30,.85),rgba(10,20,30,.3))}
+.hero h1{margin:0 0 4px;font-size:26px}.hero p{margin:0;max-width:380px}
+.ben{display:flex;gap:16px;background:rgba(0,0,0,.4);border-radius:10px;padding:10px 14px;font-size:12px}.ben div{display:flex;gap:8px;align-items:center}.ben i{font-size:20px}
+section.card{background:#fff;border:1px solid var(--b);border-radius:12px;padding:16px;margin-bottom:14px;scroll-margin-top:12px}
+section.card.bad{border-color:#d92d20;box-shadow:0 0 0 2px #fde4e1}
+.sh{display:flex;gap:12px;align-items:center;margin-bottom:12px}.num{width:34px;height:34px;border-radius:50%;background:var(--g);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.sh h2{margin:0;font-size:20px}.sh span{color:var(--m);font-size:13px}
+h3{font-size:14px;margin:16px 0 8px}h3 small{font-weight:400;color:var(--m)}
+.grid{display:grid;gap:10px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.opt{position:relative;border:2px solid var(--b);border-radius:var(--r);background:#fff;padding:0;cursor:pointer;text-align:center;overflow:hidden;transition:border-color .15s}
+.opt:hover{border-color:#9bd0aa}.im{position:relative;overflow:hidden}.im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.opt .im{height:96px}.opt .tx{padding:6px 6px 8px;font-size:12px}.opt b{display:block;font-size:13px}.opt span{color:var(--m)}
+.opt .ck{display:none;position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--g);color:#fff;font-size:11px;place-items:center}
+.opt.sel{border-color:var(--g)}.opt.sel .ck{display:grid}
+.err{color:#b42318;font-size:12px;min-height:0;margin-top:4px}.err:empty{display:none}
+.row{display:flex;gap:12px;flex-wrap:wrap}.f{flex:1;min-width:150px}
+label{display:block;font-weight:600;font-size:12px;margin-bottom:4px}
+input[type=text],input[type=number],input[type=email],input[type=tel],select,textarea{width:100%;padding:9px 10px;border:1px solid #c7d0db;border-radius:8px;background:#fff}
+input.inv,select.inv,textarea.inv{border-color:#d92d20}
+.note{background:var(--gl);border-radius:var(--r);padding:12px;font-size:12px;color:#25503a}
+.area{display:flex;gap:12px;align-items:center;background:var(--gl);border-radius:var(--r);padding:12px}.area i{font-size:22px;color:var(--g)}.area strong{font-size:24px;display:block}
+.btn{border:1px solid var(--b);background:#fff;border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}.btn:hover{background:var(--bg)}
+.btn.p{background:var(--g);border-color:var(--g);color:#fff}.btn.p:hover{background:var(--gd)}.btn.s{padding:5px 10px;font-size:12px}.btn.w{width:100%;margin-top:8px}
+.lv{display:grid;grid-template-columns:70px 1fr 1fr;gap:8px;align-items:center;margin-top:6px}
+.drop{border:2px dashed #9bd0aa;border-radius:var(--r);padding:22px;text-align:center;background:#fafdfb;cursor:pointer}.drop.over{background:var(--gl)}.drop i{font-size:28px;color:var(--g)}
+.th{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:10px}.th div{border:1px solid var(--b);border-radius:8px;padding:4px;font-size:11px;position:relative}.th img{width:100%;height:70px;object-fit:cover;border-radius:6px}.th button{position:absolute;top:6px;right:6px;border:0;border-radius:50%;width:20px;height:20px;background:#000a;color:#fff;cursor:pointer}.th p{margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.component-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.component-option{display:flex;align-items:center;gap:8px;border:1px solid var(--b);border-radius:8px;padding:10px;background:#fff;cursor:pointer;font-size:12px}.component-option:has(input:checked){border-color:var(--g);background:var(--gl)}.component-option input{accent-color:var(--g)}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chips span{background:var(--bg);border-radius:20px;padding:3px 10px;font-size:11px}
+.ck2{display:flex;gap:6px;flex-wrap:wrap}.ck2 label{display:flex;gap:6px;align-items:center;font-weight:500;border:1px solid var(--b);border-radius:8px;padding:7px 10px;margin:0;cursor:pointer}
+.acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+aside.prev{background:#fff;border-left:1px solid var(--b);padding:14px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.ph{display:flex;justify-content:space-between;align-items:center}.ph h3{margin:0;font-size:16px}
+.tabs{display:flex;gap:4px;margin:8px 0}.tabs button{flex:1;border:0;border-radius:16px;padding:5px;font-size:11px;background:var(--bg);cursor:pointer}.tabs button.on{background:var(--g);color:#fff}
+.stage{height:190px;border-radius:var(--r);background:#cfe3d0 repeating-linear-gradient(45deg,#c4dcc6 0 8px,#cfe3d0 8px 16px);display:grid;place-items:center;position:relative;overflow:hidden;perspective:500px}
+.deck{background:repeating-linear-gradient(90deg,#b2662e 0 14px,#a45a26 14px 16px);border:3px solid #7b4219;position:relative;transition:all .25s}
+.dl{position:absolute;font-size:11px;font-weight:700;background:#fffd;border-radius:4px;padding:0 4px}
+.sm{list-style:none;margin:0;padding:0}.sm li{display:flex;justify-content:space-between;gap:6px;padding:6px 0;border-bottom:1px solid var(--bg);font-size:12px;cursor:pointer}.sm li:hover{color:var(--gd)}.sm span{color:var(--m)}.sm b{text-align:right;font-weight:600}
+.warn{background:#fff4e5;color:#8a4b00;border-radius:8px;padding:8px;font-size:12px;margin-top:8px}
+.modal{position:fixed;inset:0;background:#0009;display:none;place-items:center;z-index:50;padding:14px}.modal.open{display:grid}
+.mb{background:#fff;border-radius:12px;max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:18px;position:relative}
+.mb .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:20px;cursor:pointer}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--n);color:#fff;padding:10px 16px;border-radius:8px;z-index:60;display:none}
+.banner{background:#fff8e1;border:1px solid #f0d98a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:none;gap:10px;align-items:center;flex-wrap:wrap}
+table.est{width:100%;border-collapse:collapse;font-size:13px}.est td{padding:6px 4px;border-bottom:1px solid var(--bg)}.est td:last-child{text-align:right}.est tr.t td{font-weight:800;font-size:16px;border-top:2px solid var(--n)}
+.icon-fallback{display:inline-flex;align-items:center;justify-content:center;min-width:1em;font-family:Arial,sans-serif;font-size:1.15em;font-style:normal;font-weight:700;line-height:1;color:currentColor}.mobtog{display:none}
+@media(max-width:1000px){.app{grid-template-columns:64px minmax(0,1fr)}aside.prev{grid-column:1/-1;position:static;height:auto;border-left:0;border-top:1px solid var(--b)}aside.side .nt,.side .logo small,.helpc{display:none}.logo{font-size:12px}nav a{justify-content:center}.mobtog{display:block}}
+@media(max-width:700px){.component-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.app{grid-template-columns:1fr}aside.side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px}.logo{display:none}nav{display:flex}.g4,.g3{grid-template-columns:repeat(2,1fr)}.ben{display:none}.hero h1{font-size:21px}.lv{grid-template-columns:1fr}.pbody.hide{display:none}}
+@media print{body *{visibility:hidden}#estModal,#estModal *{visibility:visible}#estModal{position:absolute;inset:0;background:#fff;display:block}.mb{max-height:none;overflow:visible}.noprint{display:none!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style></head><body>
+<div class="app">
+<aside class="side"><div class="logo"><i class="fa-solid fa-house-chimney" style="color:#8a4e24"></i> DECK <b>PRO</b><small>Deck Restoration Experts</small></div>
+<nav aria-label="Main" style="margin-top:14px" id="nav"></nav>
+<div class="helpc"><div class="im" style="position:relative;background:linear-gradient(#bcdcf0,#bcdcf0 40%,#a45a26 40%),repeating-linear-gradient(90deg,#b2662e 0 14px,#a45a26 14px 16px);background-blend-mode:normal"><img alt="" src="https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=700&q=85" onerror="this.remove()"></div><div class="t"><b>Need Help?</b><div style="font-size:12px;color:var(--m)">Not sure how to measure? Watch our step-by-step guide.</div><button class="btn w" data-modal="video"><i class="fa-solid fa-circle-play" style="color:var(--g)"></i> Watch Video</button></div></div></aside>
+
+<main>
+<div class="top"><div><i class="fa-solid fa-house"></i> Dashboard &nbsp;›&nbsp; <b>New Estimate</b></div>
+<div class="user"><button class="bell" aria-label="Notifications (demo)" data-demo="You have 3 demo notifications. None are real."><i class="fa-regular fa-bell"></i><i class="d">3</i></button><div class="av">JS</div><div style="line-height:1.2"><b>John Smith</b><br><small style="color:var(--m)">Customer</small></div></div></div>
+
+<div class="hero"><img class="hbg" alt="" src="https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=1800&q=85" onerror="this.remove()"><div class="ov"></div><div><h1>Deck Restoration Estimator</h1><p>Follow the steps below to provide details about your deck and get an accurate estimate.</p></div>
+<div class="ben"><div><i class="fa-regular fa-square-check"></i><span><b>Accurate Estimate</b><br>Based on your project details</span></div><div><i class="fa-regular fa-clock"></i><span><b>Takes 5–10 mins</b><br>Easy to complete</span></div><div><i class="fa-regular fa-floppy-disk"></i><span><b>Save as Draft</b><br>Continue later</span></div></div></div>
+
+<div class="banner" id="draftBanner"><i class="fa-solid fa-clock-rotate-left"></i><span>A saved demo draft was found in this browser.</span><button class="btn s p" id="restore">Restore draft</button><button class="btn s" id="clearDraft">Clear saved draft</button></div>
+
+<section class="card" id="s1"><div class="sh"><div class="num">1</div><h2>Deck Details</h2><span>Let’s start with basic information about your deck.</span></div>
+
+<h3 id="h-shape">1.1 Deck Shape *</h3><div class="grid g4" id="shape" role="radiogroup" aria-labelledby="h-shape"></div>
+<div id="customWrap" hidden style="margin-top:8px"><label for="customDesc">Describe your custom shape and dimensions *</label><textarea id="customDesc" rows="2" placeholder="e.g. Circular, about 14 ft diameter"></textarea></div><div class="err" id="e-shape"></div>
+<h3 id="h-dim">1.2 Deck Dimensions * <small>Measure the full usable deck surface.</small></h3>
+<div class="row"><div class="f" style="flex:1.2;min-width:230px"><div class="stage" style="height:150px;background:#cfe3d0 url(https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=900&q=85) center/cover"><div class="deck" style="width:200px;height:80px"><span class="dl" style="top:-18px;left:70px">Length</span><span class="dl" style="right:-52px;top:28px">Width</span></div></div><small style="color:var(--m)">Length: outer edge from end to end. Width: outer edge from side to side.</small></div>
+<div class="f" id="dimBox"><div class="row"><div class="f"><label for="len">Length *</label><input type="number" id="len" min="0" step="0.1" inputmode="decimal"></div><div class="f"><label for="wid">Width *</label><input type="number" id="wid" min="0" step="0.1" inputmode="decimal"></div><div class="f" style="max-width:110px"><label for="unit">Unit</label><select id="unit"><option value="ft">Feet</option><option value="m">Meters</option></select></div></div>
+<div class="err" id="e-dim"></div>
+<div class="area" style="margin-top:8px"><i class="fa-solid fa-ruler-combined"></i><div>Total deck area<strong id="areaOut">—</strong></div></div>
+<button class="btn s" style="margin-top:8px" data-modal="measure"><i class="fa-solid fa-circle-question"></i> How to measure?</button></div></div>
+<h3 id="h-ht">1.3 Deck Height from Ground *</h3><div class="grid g4" id="height" role="radiogroup" aria-labelledby="h-ht"></div><div class="err" id="e-height"></div>
+<h3 id="h-lv">1.4 Number of Levels *</h3><div class="row"><div class="grid g3" id="levels" role="radiogroup" aria-labelledby="h-lv" style="flex:2;min-width:260px"></div>
+<div class="note f"><b><i class="fa-regular fa-lightbulb"></i> What is a level?</b><br>A level is a flat deck surface at a different height. Choose the number of separate heights your deck has.</div></div>
+<div id="lvWrap" hidden><h3>Dimensions for each level</h3><div id="lvRows"></div></div><div class="err" id="e-levels"></div>
+<h3 id="h-components">1.5 Deck Components <small>Select the parts of the deck included in this estimate.</small></h3>
+<div class="component-grid" id="components">
+<label class="component-option"><input type="checkbox" value="Deck Flooring"> Deck Flooring</label>
+<label class="component-option"><input type="checkbox" value="Railings"> Railings</label>
+<label class="component-option"><input type="checkbox" value="Stairs"> Stairs</label>
+<label class="component-option"><input type="checkbox" value="Fascia"> Fascia</label>
+<label class="component-option"><input type="checkbox" value="Pergola"> Pergola</label>
+<label class="component-option"><input type="checkbox" value="Underside / Joists"> Underside / Joists</label>
+<label class="component-option"><input type="checkbox" value="Siding / Skirting"> Siding / Skirting</label>
+<label class="component-option"><input type="checkbox" value="Built-in Seating"> Built-in Seating</label>
+<label class="component-option"><input type="checkbox" value="Other"> Other</label>
+</div>
+<div id="componentOtherW" hidden style="margin-top:8px"><label for="componentOther">Describe other deck component</label><input type="text" id="componentOther" placeholder="Describe the additional component"></div>
+</section>
+
+<section class="card" id="s2"><div class="sh"><div class="num">2</div><h2>Deck Condition</h2><span>Select the current condition of your deck.</span></div>
+<div class="grid g4" id="cond" role="radiogroup" aria-label="Deck condition"></div><div class="err" id="e-cond"></div>
+<label for="condNotes" style="margin-top:10px">Notes about damage (optional)</label><textarea id="condNotes" rows="2"></textarea>
+<p style="font-size:12px;color:var(--m);margin:6px 0 0">Your selection is used for this demo estimate only. It is not a structural safety assessment.</p></section>
+
+<section class="card" id="s3"><div class="sh"><div class="num">3</div><h2>Restoration Type</h2><span>What type of restoration do you need? Select one or more.</span></div>
+<div class="grid g4" id="rest" role="group" aria-label="Restoration services"></div><div class="err" id="e-rest"></div></section>
+
+<section class="card" id="s4"><div class="sh"><div class="num">4</div><h2>Materials &amp; Finish</h2><span>Choose your preferred finish.</span></div>
+<div class="grid g4" id="fin" role="radiogroup" aria-label="Finish"></div><div class="err" id="e-fin"></div>
+<div class="note" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span><b>Finish Comparison</b> — compare how each finish looks and wears.</span><button class="btn s" data-modal="finish">View Larger Samples</button></div></section>
+
+<section class="card" id="s5"><div class="sh"><div class="num">5</div><h2>Upload Photos (Optional)</h2><span>Add photos of your deck to help us provide a more accurate estimate.</span></div>
+<div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload photos"><i class="fa-solid fa-cloud-arrow-up"></i><p style="margin:6px 0 0"><b>Drag &amp; drop your photos here or click to upload</b><br><small style="color:var(--m)">JPG, JPEG, PNG · max 10 MB each · previews stay in your browser</small></p></div>
+<input type="file" id="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple hidden><div class="err" id="e-file"></div><div class="th" id="thumbs"></div>
+<div class="chips"><span>Full deck view</span><span>Close-up of surface</span><span>Stairs and railings</span><span>Any problem areas</span></div></section>
+
+<section class="card" id="s6"><div class="sh"><div class="num">6</div><h2>Additional Details (Optional)</h2><span>These details help us understand your project better.</span></div>
+<div class="row"><div class="f"><label for="mat">Existing deck material</label><select id="mat"><option value="">Select…</option><option>Pressure-Treated Wood</option><option>Cedar</option><option>Redwood</option><option>Composite</option><option>Other</option></select></div>
+<div class="f"><label for="age">Approximate deck age</label><select id="age"><option value="">Select…</option><option>Less than 1 year</option><option>1–5 years</option><option>6–10 years</option><option>More than 10 years</option><option>Not sure</option></select></div></div>
+<div id="matOtherW" hidden style="margin-top:8px"><label for="matOther">Describe the material</label><input type="text" id="matOther"></div>
+<h3>Special features</h3><div class="ck2" id="feat"></div>
+<div id="featOtherW" hidden style="margin-top:8px"><label for="featOther">Describe the other feature</label><input type="text" id="featOther"></div>
+<label for="notes" style="margin-top:12px">Additional notes</label><textarea id="notes" rows="3"></textarea>
+<div class="acts" style="margin-top:14px"><button class="btn" id="toTop"><i class="fa-solid fa-arrow-up"></i> Back to Top</button><button class="btn" id="reset">Reset Form</button><button class="btn" data-act="draft">Save as Draft</button><button class="btn p" data-act="est">Get My Estimate</button></div></section>
+<p style="text-align:center;color:var(--m);font-size:12px">Prototype with demo prices and formulas. <a href="#" data-modal="contact">Contact Us</a></p>
+</main>
+
+<aside class="prev"><div class="ph"><h3>Live Preview</h3><button class="btn s mobtog" id="collapse" aria-expanded="true" aria-label="Collapse preview"><i class="fa-solid fa-chevron-up"></i></button></div>
+<div class="pbody" id="pbody"><div class="tabs" id="views"><button class="on" data-v="top">Top View</button><button data-v="side">Side View</button><button data-v="3d">3D View</button></div>
+<div class="stage" id="stage"><div class="deck" id="pdeck"><span class="dl" id="pl" style="top:-18px;left:30%"></span><span class="dl" id="pw" style="right:-46px;top:35%"></span></div></div>
+<p style="font-size:10px;color:var(--m);margin:4px 0">Illustration only — proportions follow your entries, not a measured deck.</p>
+<div class="ph" style="margin-top:8px"><h3 style="font-size:14px">Your Input Summary</h3><button class="btn s" id="editAll"><i class="fa-solid fa-pen"></i> Edit</button></div>
+<ul class="sm" id="sum"></ul><div class="warn" id="missing" hidden></div>
+<div class="note" style="margin-top:8px">The final price will be calculated after reviewing all details.</div>
+<div class="note" style="background:#fff;border:1px solid var(--b);margin-top:8px"><b><i class="fa-regular fa-circle-question" style="color:var(--g)"></i> Need Help?</b><br>Check detailed guides or contact support.<div class="row" style="margin-top:6px;gap:6px"><button class="btn s f" data-modal="guide">View Guide</button><button class="btn s f" data-modal="contact">Contact Support</button></div></div>
+<button class="btn p w" data-act="est">Get My Estimate <i class="fa-solid fa-arrow-right"></i></button><button class="btn w" data-act="draft"><i class="fa-regular fa-file-lines"></i> Save as Draft</button></div></aside>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="mb"><button class="x" aria-label="Close" id="mx">&times;</button><div id="mc"></div></div></div>
+<div class="modal" id="estModal" role="dialog" aria-modal="true" aria-label="Sample estimate"><div class="mb"><button class="x noprint" aria-label="Close" onclick="this.closest('.modal').classList.remove('open')">&times;</button><div id="estC"></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// ===== DEMO CONFIG: placeholder rates only. Replace with client-approved formulas/prices. =====
+const CFG={baseCleanPerSqft:0.6,rates:{Cleaning:0.8,Stripping:1.6,Sanding:1.4,"Full Restoration":4.2},
+ condMult:{Good:1,Weathered:1.1,"Peeling / Stained":1.25,Damaged:1.5},
+ finish:{Natural:{price:0.45,cov:300},"Semi-Transparent Stain":{price:0.55,cov:250},"Solid Stain":{price:0.65,cov:200},Sealer:{price:0.5,cov:300}},
+ featureFee:{Stairs:150,Railings:200,"Built-in Seating":120,Pergola:180,"Siding / Skirting":140,Other:0}, galPrice:42};
+const wood=(h,s)=>`background:repeating-linear-gradient(${s||90}deg,hsl(${h},55%,42%) 0 12px,hsl(${h},50%,36%) 12px 14px)`;
+const D={
+shape:[["Rectangle","Most common shape",wood(25)],["L-Shape","Two connected sections",wood(25,0)],["Multi-Level","More than one level",wood(22,45)],["Custom","Unique shape, e.g. circular",wood(28,135)]],
+height:[["Ground Level","0–2 ft",wood(25)],["Low","2–4 ft",wood(25)],["Medium","4–8 ft",wood(25)],["High","8+ ft",wood(25)]],
+levels:[["Single Level","",wood(25)],["Two Levels","",wood(25,60)],["Three or More Levels","",wood(25,120)]],
+cond:[["Good","Looks clean and well maintained",wood(25)],["Weathered","Faded color, minor wear",wood(30,90).replace("55%","12%").replace("50%","10%")],["Peeling / Stained","Old stain or visible peeling",wood(20)+";opacity:.85"],["Damaged","Cracks, rot or major wear",wood(15)+";filter:brightness(.7)"]],
+rest:[["Cleaning","Remove dirt and mildew",wood(25)],["Stripping","Remove old stain or finish",wood(35)],["Sanding","Smooth the surface",wood(32)],["Full Restoration","Complete restoration process",wood(22)]],
+fin:[["Natural","Clear finish, natural wood look",wood(35)],["Semi-Transparent Stain","Adds color, shows wood grain",wood(22)],["Solid Stain","Full-color coverage",wood(8)],["Sealer","Protects from weather",wood(30)]]};
+const IMAGE_BY_CAPTION={"Rectangle": "photo-1695550056778-de79c8cd909e", "L-Shape": "photo-1659320681808-4cf523d261a2", "Multi-Level": "photo-1659320681808-4cf523d261a2", "Custom": "photo-1695550056778-de79c8cd909e", "Ground Level": "photo-1695550056778-de79c8cd909e", "Low": "photo-1659320681808-4cf523d261a2", "Medium": "photo-1659320681808-4cf523d261a2", "High": "photo-1659320681808-4cf523d261a2", "Single Level": "photo-1695550056778-de79c8cd909e", "Two Levels": "photo-1659320681808-4cf523d261a2", "Three or More Levels": "photo-1659320681808-4cf523d261a2", "Good": "photo-1695550056778-de79c8cd909e", "Weathered": "photo-1768173756660-45fd2bfe6be6", "Peeling / Stained": "photo-1672365916735-066b8afce771", "Damaged": "photo-1768173756660-45fd2bfe6be6", "Cleaning": "photo-1695550056778-de79c8cd909e", "Stripping": "photo-1672365916735-066b8afce771", "Sanding": "photo-1679797878543-66c1e502d413", "Full Restoration": "photo-1659320681808-4cf523d261a2", "Natural": "photo-1768173756660-45fd2bfe6be6", "Semi-Transparent Stain": "photo-1695550056778-de79c8cd909e", "Solid Stain": "photo-1672365916735-066b8afce771", "Sealer": "photo-1768173756660-45fd2bfe6be6"};
+const IMG=(o,w=320,h=220)=>{const id=IMAGE_BY_CAPTION[o[0]]||"photo-1695550056778-de79c8cd909e";return `<img loading="lazy" alt="${o[0]} reference image" src="https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&h=${h}&q=85" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=${w}&h=${h}&q=80'">`};
+const FEATS=["Stairs","Railings","Built-in Seating","Pergola","Siding / Skirting","Other"];
+const $=id=>document.getElementById(id), q=(s,r=document)=>[...r.querySelectorAll(s)];
+let S={shape:"",height:"",levels:"",cond:"",rest:[],fin:"",lv:[{l:"",w:""},{l:"",w:""},{l:"",w:""}],feats:[],components:[]};
+let photos=[],view="top";
+
+function cards(id,key,multi){const el=$(id);el.innerHTML=D[key].map((o,i)=>`<button type="button" class="opt" role="${multi?"checkbox":"radio"}" aria-checked="false" data-i="${i}"><div class="im" style="${o[2]}">${IMG(o)}</div><i class="ck fa-solid fa-check"></i><div class="tx"><b>${o[0]}</b><span>${o[1]}${key==="fin"?"<br>Price calculated after reviewing project details":""}</span></div></button>`).join("");
+ el.onclick=e=>{const b=e.target.closest(".opt");if(!b)return;const v=D[key][b.dataset.i][0];
+  if(multi){const a=S[key],j=a.indexOf(v);j>-1?a.splice(j,1):a.push(v);}else S[key]=v;sync(id,key);clearErr(key);update();};}
+function sync(id,key){q(".opt",$(id)).forEach((b,i)=>{const v=D[key][i][0],on=Array.isArray(S[key])?S[key].includes(v):S[key]===v;b.classList.toggle("sel",on);b.setAttribute("aria-checked",on)});}
+cards("shape","shape");cards("height","height");cards("levels","levels");cards("cond","cond");cards("rest","rest",1);cards("fin","fin");
+$("feat").innerHTML=FEATS.map(f=>`<label><input type="checkbox" value="${f}"> ${f}</label>`).join("");
+$("nav").innerHTML=[["gauge","Dashboard"],["table-cells","New Estimate",1],["clock","Estimate History"],["file-lines","Saved Drafts"],["user","My Profile"],["comment","Messages"],["circle-question","Help & Support"]].map(n=>`<a ${n[2]?'class="on"':""} data-demo="“${n[1]}” is not part of this prototype. This static prototype focuses on the Customer Estimator; this navigation item is a demo placeholder."><i class="fa-regular fa-${n[0]}" style="width:18px"></i><span class="nt">${n[1]}</span></a>`).join("");
+
+// levels
+function lvCount(){return S.levels==="Two Levels"?2:S.levels==="Three or More Levels"?3:1}
+function renderLv(){const n=lvCount(),w=$("lvWrap");w.hidden=n<2;$("dimBox").querySelector(".row").style.opacity=n<2?1:.5;
+ $("lvRows").innerHTML=n<2?"":S.lv.slice(0,n).map((x,i)=>`<div class="lv"><b>Level ${i+1}</b><input type="number" min="0" step="0.1" aria-label="Level ${i+1} length" placeholder="Length" data-lv="${i}" data-k="l" value="${x.l}"><input type="number" min="0" step="0.1" aria-label="Level ${i+1} width" placeholder="Width" data-lv="${i}" data-k="w" value="${x.w}"></div>`).join("")+(S.levels==="Three or More Levels"?'<small style="color:var(--m)">Enter any additional levels combined into Level 3.</small>':"");}
+$("lvRows").oninput=e=>{const t=e.target;if(t.dataset.lv!=null){S.lv[t.dataset.lv][t.dataset.k]=t.value;update();}};
+$("levels").addEventListener("click",()=>{renderLv();update()});
+
+// numbers
+function area(){const n=lvCount(),f=$("unit").value==="m"?10.7639:1;let a=0;
+ if(n>1)S.lv.slice(0,n).forEach(x=>{const l=+x.l,w=+x.w;if(l>0&&w>0)a+=l*w});else{const l=+$("len").value,w=+$("wid").value;if(l>0&&w>0)a=l*w}
+ return a;}
+function areaSqft(){return area()*($("unit").value==="m"?10.7639:1)}
+function dimsOK(){const n=lvCount();if(n>1)return S.lv.slice(0,n).every(x=>+x.l>0&&+x.w>0);return +$("len").value>0&&+$("wid").value>0}
+function dimMsg(){let m="";["len","wid"].forEach(id=>{const v=$(id).value;$(id).classList.remove("inv");if(v!==""&&!(+v>0)){m="Enter a number greater than zero.";$(id).classList.add("inv")}});$("e-dim").textContent=m}
+["len","wid","unit"].forEach(id=>$(id).addEventListener("input",()=>{dimMsg();clearErr("dim");update()}));
+const fmt=(n,d=0)=>n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const u=()=>$("unit").value==="m"?"m":"ft", ua=()=>$("unit").value==="m"?"sq m":"sq ft";
+
+// validation helpers
+function clearErr(k){const e=$("e-"+k);if(e)e.textContent="";const sec=e&&e.closest("section");if(sec&&!q(".err",sec).some(x=>x.textContent))sec.classList.remove("bad")}
+function fail(k,msg,focusEl){$("e-"+k).textContent=msg;$("e-"+k).closest("section").classList.add("bad");return focusEl||$("e-"+k)}
+function validate(){const bad=[];
+ const c=[["cname","Name"],["cemail","Email"],["cphone","Phone"],["czip","ZIP"]];$("e-contact").textContent="";
+ const miss=c.filter(([id])=>!$(id).value.trim());c.forEach(([id])=>$(id).classList.toggle("inv",!$(id).value.trim()));
+ if(miss.length)bad.push(fail("contact","Please complete: "+miss.map(m=>m[1]).join(", ")+".",$(miss[0][0])));
+ else if(!/^\S+@\S+\.\S+$/.test($("cemail").value)){$("cemail").classList.add("inv");bad.push(fail("contact","Enter a valid email address.",$("cemail")))}
+ if(!S.shape)bad.push(fail("shape","Choose a deck shape.",$("shape").querySelector(".opt")));
+ else if(S.shape==="Custom"&&!$("customDesc").value.trim())bad.push(fail("shape","Describe your custom shape and dimensions.",$("customDesc")));
+ if(!dimsOK())bad.push(fail("dim","Enter length and width greater than zero"+(lvCount()>1?" for every level.":"."),lvCount()>1?q("#lvRows input").find(i=>!(+i.value>0)):($("len").value>0?$("wid"):$("len"))));
+ if(!S.height)bad.push(fail("height","Choose a deck height.",$("height").querySelector(".opt")));
+ if(!S.levels)bad.push(fail("levels","Choose the number of levels.",$("levels").querySelector(".opt")));
+ if(!S.cond)bad.push(fail("cond","Select your deck’s condition.",$("cond").querySelector(".opt")));
+ if(!S.rest.length)bad.push(fail("rest","Select at least one restoration service.",$("rest").querySelector(".opt")));
+ if(!S.fin)bad.push(fail("fin","Choose a finish.",$("fin").querySelector(".opt")));
+ return bad;}
+// restoration rule: Full Restoration already includes the other services
+$("rest").addEventListener("click",()=>{const e=$("e-rest");if(S.rest.includes("Full Restoration")&&S.rest.length>1){e.textContent="Full Restoration already includes cleaning, stripping and sanding. Deselect Full Restoration or the individual services — nothing has been changed for you.";e.closest("section").classList.add("bad")}});
+
+// summary + preview
+const SUM=[["Deck Shape","shape","s1","fa-shapes"],["Dimensions","dim","len","fa-ruler"],["Deck Height","height","s1","fa-arrows-up-down"],["Levels","levels","s1","fa-layer-group"],["Deck Components","components","s1","fa-list-check"],["Condition","cond","s2","fa-clipboard-check"],["Restoration","rest","s3","fa-screwdriver-wrench"],["Finish","fin","s4","fa-fill-drip"],["Special Features","feat","s6","fa-list-check"]];
+function features(){return q("#feat input:checked").map(i=>i.value)}
+function components(){return q("#components input:checked").map(i=>i.value)}
+function update(){const a=area(),l=+$("len").value,w=+$("wid").value,multi=lvCount()>1;
+ $("areaOut").textContent=a>0?`${fmt(a,1)} ${ua()}`:"—";
+ const vals={shape:S.shape,dim:a>0?(multi?`${lvCount()} levels · ${fmt(a,1)} ${ua()}`:`${l} × ${w} ${u()} (${fmt(a,1)} ${ua()})`):"",height:S.height?`${S.height} (${D.height.find(o=>o[0]===S.height)[1]})`:"",levels:S.levels,components:components().join(", "),cond:S.cond,rest:S.rest.join(", "),fin:S.fin,feat:features().join(", ")};
+ $("sum").innerHTML=SUM.map(s=>`<li data-go="${s[2]}" data-k="${s[1]}" tabindex="0"><span><i class="fa-solid ${s[3]}" style="width:16px"></i> ${s[0]}</span><b>${vals[s[1]]||"<span>Not set</span>"}</b></li>`).join("");
+ const req=[];if(!S.shape)req.push("shape");if(!dimsOK())req.push("dimensions");if(!S.height)req.push("height");if(!S.levels)req.push("levels");if(!S.cond)req.push("condition");if(!S.rest.length)req.push("restoration");if(!S.fin)req.push("finish");
+ $("missing").hidden=!req.length;$("missing").textContent="Complete required fields: "+req.join(", ")+".";
+ // preview drawing (illustrative)
+ const d=$("pdeck"),L=!multi&&l>0?l:20,W=!multi&&w>0?w:12,sc=Math.min(190/L,110/W),pw=Math.max(40,L*sc),ph=Math.max(24,W*sc);
+ d.style.cssText=`width:${pw}px;height:${ph}px;transform:none;clip-path:none`;
+ if(S.shape==="L-Shape")d.style.clipPath="polygon(0 0,100% 0,100% 50%,55% 50%,55% 100%,0 100%)";
+ if(S.shape==="Custom")d.style.borderRadius="50%";else d.style.borderRadius="2px";
+ if(view==="side"){const h={"Ground Level":10,Low:26,Medium:44,High:62}[S.height]||10;d.style.height=h+"px";d.style.width=pw+"px";d.style.marginTop="60px";d.style.clipPath="none";d.style.borderRadius="2px"}else d.style.marginTop="0";
+ if(view==="3d")d.style.transform="rotateX(55deg) rotateZ(-25deg)";
+ $("pl").textContent=(!multi&&l>0?l:"—")+" "+u();$("pw").textContent=(!multi&&w>0?w:"—")+" "+u();
+ $("pl").style.display=$("pw").style.display=view==="top"&&S.shape!=="Custom"?"block":"none";}
+$("sum").onclick=$("sum").onkeydown=e=>{if(e.type==="keydown"&&e.key!=="Enter")return;const li=e.target.closest("li");if(!li)return;go(li.dataset.go)};
+function go(id){const t=$(id);t.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>(t.matches("input,button,select,textarea")?t:t.querySelector("input,button,select,textarea")||t).focus({preventScroll:true}),350)}
+$("editAll").onclick=()=>go("s1");
+$("views").onclick=e=>{const b=e.target.closest("button");if(!b)return;view=b.dataset.v;q("#views button").forEach(x=>x.classList.toggle("on",x===b));update()};
+$("collapse").onclick=()=>{const h=$("pbody").classList.toggle("hide");$("collapse").setAttribute("aria-expanded",!h)};
+
+// conditional fields
+$("shape").addEventListener("click",()=>{$("customWrap").hidden=S.shape!=="Custom";update()});
+$("mat").onchange=()=>$("matOtherW").hidden=$("mat").value!=="Other";
+$("feat").onchange=()=>{$("featOtherW").hidden=!features().includes("Other");update()};
+$("components").onchange=()=>{S.components=components();$("componentOtherW").hidden=!S.components.includes("Other");update()};
+["customDesc"].forEach(id=>$(id).addEventListener("input",()=>{$(id).classList.remove("inv");clearErr("shape")}));
+
+// uploads
+const drop=$("drop");drop.onclick=()=>$("file").click();drop.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("file").click()}};
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>addFiles(e.dataTransfer.files));$("file").onchange=e=>{addFiles(e.target.files);e.target.value=""};
+function addFiles(fl){const errs=[];[...fl].forEach(f=>{if(!/^image\/(jpeg|png)$/.test(f.type)||!/\.(jpe?g|png)$/i.test(f.name))errs.push(`“${f.name}” is not a JPG, JPEG or PNG image.`);else if(f.size>10*1048576)errs.push(`“${f.name}” is ${(f.size/1048576).toFixed(1)} MB. The limit is 10 MB per image.`);else photos.push({name:f.name,url:URL.createObjectURL(f)})});
+ $("e-file").innerHTML=errs.join("<br>");renderPh()}
+function renderPh(){$("thumbs").innerHTML=photos.map((p,i)=>`<div><img src="${p.url}" alt="Preview of ${p.name}"><button aria-label="Remove ${p.name}" data-r="${i}">&times;</button><p title="${p.name}">${p.name}</p></div>`).join("")}
+$("thumbs").onclick=e=>{const b=e.target.closest("[data-r]");if(b){URL.revokeObjectURL(photos[b.dataset.r].url);photos.splice(b.dataset.r,1);renderPh()}};
+
+// modals
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",3200)}
+function openM(html){$("mc").innerHTML=html;$("modal").classList.add("open");$("mx").focus()}
+$("mx").onclick=()=>$("modal").classList.remove("open");
+document.addEventListener("keydown",e=>{if(e.key==="Escape")q(".modal").forEach(m=>m.classList.remove("open"))});
+q(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open")}));
+const MODALS={
+measure:()=>`<h2>How to measure your deck</h2><div class="stage" style="height:150px;background:#cfe3d0 url(https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=900&q=85) center/cover"><div class="deck" style="width:200px;height:80px"><span class="dl" style="top:-18px;left:70px">Length</span><span class="dl" style="right:-52px;top:28px">Width</span></div></div><ol><li>Measure the outer edge from one end to the other — this is the length.</li><li>Measure the outer edge from side to side — this is the width.</li><li>Include only the usable deck surface. For L-shaped or multi-level decks, measure each section separately.</li><li>Round to the nearest tenth. Don’t include stairs unless you pick them as a feature.</li></ol>`,
+guide:()=>`<h2>Estimator guide</h2><p>Work down the page in order. Required fields are marked *. Your summary on the right updates as you go; click any row to jump back to it.</p><p>Photos and additional details are optional. The result is a demo estimate based on placeholder rates.</p>`,
+video:()=>`<h2>Watch Video</h2><div class="note">Demo placeholder: no video is attached to this prototype. A step-by-step measuring video would play here.</div>`,
+finish:()=>`<h2>Finish comparison</h2><div class="grid g2">${D.fin.map(o=>`<div><div class="im" style="${o[2]};height:140px;border-radius:8px">${IMG(o,480,300)}</div><b>${o[0]}</b><br><small>${o[1]}. Indicative price: calculated after reviewing project details.</small></div>`).join("")}</div>`,
+contact:()=>`<h2>Contact Us</h2><form id="cf" novalidate><div class="row"><div class="f"><label for="cf1">Name *</label><input type="text" id="cf1"></div><div class="f"><label for="cf2">Email *</label><input type="email" id="cf2"></div></div><div class="row" style="margin-top:8px"><div class="f"><label for="cf3">Phone</label><input type="tel" id="cf3"></div><div class="f"><label for="cf4">Enquiry type *</label><select id="cf4"><option value="">Select…</option><option>General question</option><option>Estimate help</option><option>Scheduling</option></select></div></div><label for="cf5" style="margin-top:8px">Message *</label><textarea id="cf5" rows="3"></textarea><div class="err" id="cfe"></div><button class="btn p" style="margin-top:10px" type="submit">Send message</button></form>`};
+document.addEventListener("click",e=>{const m=e.target.closest("[data-modal]");if(m){e.preventDefault();openM(MODALS[m.dataset.modal]());return}
+ const d=e.target.closest("[data-demo]");if(d){e.preventDefault();toast(d.dataset.demo)}});
+document.addEventListener("submit",e=>{if(e.target.id!=="cf")return;e.preventDefault();const g=i=>$(i).value.trim(),er=[];
+ if(!g("cf1"))er.push("name");if(!/^\S+@\S+\.\S+$/.test(g("cf2")))er.push("a valid email");if(!g("cf4"))er.push("enquiry type");if(!g("cf5"))er.push("message");
+ if(er.length){$("cfe").textContent="Please provide: "+er.join(", ")+".";return}
+ $("mc").innerHTML=`<h2>Demo only</h2><p>Thanks, ${g("cf1")}. In this prototype your message was <b>not sent</b> anywhere and no lead was created.</p>`});
+
+// estimate
+function calc(){const A=areaSqft(),cm=CFG.condMult[S.cond],ff=CFG.finish[S.fin],ft=features();
+ const hm={"Ground Level":1,Low:1.05,Medium:1.15,High:1.3}[S.height]*(lvCount()>1?1+0.05*lvCount():1);
+ const svc=S.rest.includes("Full Restoration")?["Full Restoration"]:S.rest;
+ const labour=svc.reduce((t,s)=>t+CFG.rates[s],0)*A*cm*hm,feat=ft.reduce((t,f)=>t+CFG.featureFee[f],0);
+ const gal=Math.ceil(A/ff.cov*2*10)/10,matCost=gal*CFG.galPrice*(ff.price/0.5);
+ return{A,svc,labour,feat,gal,matCost,total:labour+feat+matCost,ft,cm,hm}}
+function showEst(){const bad=validate();
+ if(bad.length){bad[0].scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>bad[0].focus&&bad[0].focus({preventScroll:true}),350);toast("Please fix the highlighted fields.");return}
+ const c=calc(),ref="DEMO-"+Date.now().toString().slice(-6),$$=n=>"$"+fmt(n,2),comps=components();
+ $("estC").innerHTML=`<h2>Sample Estimate <small style="font-size:12px;color:var(--m)">(demonstration only)</small></h2><p style="margin:0;color:var(--m)">Reference: <b>${ref}</b> · Not a quotation</p>
+ <table class="est"><tr><td>Deck area</td><td>${fmt(c.A,1)} sq ft${$("unit").value==="m"?" ("+fmt(area(),1)+" sq m)":""}</td></tr>
+ <tr><td>Shape / height / levels</td><td>${S.shape} · ${S.height} · ${S.levels}</td></tr><tr><td>Condition</td><td>${S.cond}</td></tr>
+ <tr><td>Deck components</td><td>${comps.join(", ")||"Not specified"}</td></tr><tr><td>Special features</td><td>${c.ft.join(", ")||"None"}</td></tr><tr><td>Restoration services</td><td>${S.rest.join(", ")}</td></tr><tr><td>Finish</td><td>${S.fin}</td></tr>
+ <tr><td>Indicative material quantity</td><td>${fmt(c.gal,1)} gal</td></tr><tr><td>Indicative material cost</td><td>${$$(c.matCost)}</td></tr>
+ <tr><td>Indicative restoration cost${c.feat?" (incl. feature allowances "+$$(c.feat)+")":""}</td><td>${$$(c.labour+c.feat)}</td></tr><tr class="t"><td>Estimated total</td><td>${$$(c.total)}</td></tr></table>
+ <h3>Assumptions &amp; exclusions</h3><ul style="font-size:12px;color:var(--m);padding-left:18px"><li>All rates are placeholder demo values, not approved prices.</li><li>Labour = sum of service rates × area × condition factor (${c.cm}) × height/level factor (${c.hm.toFixed(2)}).</li><li>Material = area ÷ coverage × 2 coats × demo price per gallon.</li><li>Excludes structural repairs, board replacement, permits and taxes. No on-site inspection has taken place.</li><li>Final pricing would follow a review of your project details.</li></ul>
+ <div class="acts noprint"><button class="btn" onclick="this.closest('.modal').classList.remove('open')">Edit Estimate</button><button class="btn p" onclick="window.print()"><i class="fa-solid fa-print"></i> Print / Save as PDF</button></div>`;
+ $("estModal").classList.add("open")}
+
+// draft
+const KEY="deckpro-demo-draft";
+const FIELDS=["len","wid","unit","customDesc","condNotes","mat","age","matOther","featOther","notes","componentOther"];
+function snap(){const o={S:{...S,lv:S.lv,components:components()},f:{},feats:features()};FIELDS.forEach(i=>o.f[i]=$(i).value);return o}
+function saveDraft(){try{localStorage.setItem(KEY,JSON.stringify(snap()));toast("Draft saved in this browser only (demo).")}catch(e){toast("Couldn’t save: browser storage is unavailable.")}}
+function load(o){S={...S,...o.S};FIELDS.forEach(i=>{if(o.f[i]!=null)$(i).value=o.f[i]});q("#feat input").forEach(i=>i.checked=o.feats.includes(i.value));q("#components input").forEach(i=>i.checked=(o.S.components||[]).includes(i.value));
+ [["shape","shape"],["height","height"],["levels","levels"],["cond","cond"],["rest","rest"],["fin","fin"]].forEach(([i,k])=>sync(i,k));
+ $("customWrap").hidden=S.shape!=="Custom";$("matOtherW").hidden=$("mat").value!=="Other";$("featOtherW").hidden=!o.feats.includes("Other");S.components=o.S.components||components();$("componentOtherW").hidden=!S.components.includes("Other");renderLv();update()}
+function draftBanner(){let has=false;try{has=!!localStorage.getItem(KEY)}catch(e){}$("draftBanner").style.display=has?"flex":"none"}
+$("restore").onclick=()=>{try{load(JSON.parse(localStorage.getItem(KEY)));$("draftBanner").style.display="none";toast("Draft restored.")}catch(e){toast("Draft could not be restored.")}};
+$("clearDraft").onclick=()=>{try{localStorage.removeItem(KEY)}catch(e){}draftBanner();toast("Saved draft cleared.")};
+q("[data-act]").forEach(b=>b.onclick=()=>b.dataset.act==="est"?showEst():saveDraft());
+$("toTop").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});$("toTop").addEventListener("click",()=>document.querySelector("main").scrollIntoView({behavior:"smooth"}));
+$("reset").onclick=()=>{if(!confirm("Reset the whole form? Your current entries will be cleared."))return;
+ S={shape:"",height:"",levels:"",cond:"",rest:[],fin:"",lv:[{l:"",w:""},{l:"",w:""},{l:"",w:""}],feats:[]};
+ q("input[type=text],input[type=number],textarea,select").forEach(e=>e.id&&(e.value=e.tagName==="SELECT"?e.options[0].value:""));
+ q("#feat input").forEach(i=>i.checked=false);q("#components input").forEach(i=>i.checked=false);S.components=[];photos.forEach(p=>URL.revokeObjectURL(p.url));photos=[];renderPh();
+ ["shape","height","levels","cond","rest","fin"].forEach(k=>sync(k,k));$("customWrap").hidden=$("matOtherW").hidden=$("featOtherW").hidden=$("componentOtherW").hidden=true;
+ q(".err").forEach(e=>e.textContent="");q("section.card").forEach(s=>s.classList.remove("bad"));renderLv();update();toast("Form reset.")};
+renderLv();update();draftBanner();
+
+// Icon fallback: keep interface icons visible if the Font Awesome CDN is blocked/offline.
+(function iconFallback(){
+ const symbols={
+  "fa-house-chimney":"⌂","fa-house":"⌂","fa-gauge":"◫","fa-table-cells":"▦",
+  "fa-clock":"◷","fa-file-lines":"▤","fa-user":"♙","fa-comment":"▤",
+  "fa-circle-question":"?","fa-circle-play":"▶","fa-bell":"♧","fa-square-check":"✓",
+  "fa-floppy-disk":"▣","fa-clock-rotate-left":"↶","fa-ruler-combined":"↔",
+  "fa-lightbulb":"☼","fa-cloud-arrow-up":"↑","fa-arrow-up":"↑","fa-arrow-right":"→",
+  "fa-pen":"✎","fa-shapes":"◇","fa-ruler":"↔","fa-arrows-up-down":"↕",
+  "fa-layer-group":"▤","fa-clipboard-check":"✓","fa-screwdriver-wrench":"⚒",
+  "fa-fill-drip":"◒","fa-list-check":"☷","fa-check":"✓","fa-print":"▣",
+  "fa-circle-info":"i","fa-phone":"☎","fa-xmark":"×","fa-circle-check":"✓"
+ };
+ function applyFallback(){
+  if(document.fonts && document.fonts.check('12px "Font Awesome 6 Free"')) return;
+  document.querySelectorAll("i[class*='fa-']").forEach(el=>{
+   if(el.classList.contains("d") || el.dataset.fallbackDone) return;
+   const key=[...el.classList].find(c=>symbols[c]);
+   if(key){el.dataset.fallbackDone="1";el.className="icon-fallback";el.textContent=symbols[key];}
+  });
+ }
+ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(applyFallback,1200));
+ else setTimeout(applyFallback,1200);
+ window.addEventListener("load",()=>setTimeout(applyFallback,1500));
+})();
+
+</script></body></html>

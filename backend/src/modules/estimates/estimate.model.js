@@ -102,7 +102,7 @@ const estimateSchema = new mongoose.Schema(
         materialId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Material',
-          required: true,
+          default: null,
         },
         materialCode: {
           type: String,

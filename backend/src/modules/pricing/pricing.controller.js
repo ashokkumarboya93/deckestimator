@@ -3,6 +3,7 @@
 // =============================================
 
 const pricingService = require('./pricing.service');
+const pricingEngine = require('./pricingEngine');
 
 function getClientIp(req) {
   return req.ip || (req.connection && req.connection.remoteAddress) || null;
@@ -94,6 +95,18 @@ async function togglePricingConfigurationStatus(req, res, next) {
   }
 }
 
+async function calculateClientPricingPreview(req, res, next) {
+  try {
+    const result = pricingEngine.calculateClientPricing(req.body);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createPricingConfiguration,
   getPricingConfigurations,
@@ -101,5 +114,6 @@ module.exports = {
   getActivePricingConfiguration,
   updatePricingConfiguration,
   togglePricingConfigurationStatus,
+  calculateClientPricingPreview,
 };
 

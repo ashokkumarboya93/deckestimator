@@ -7,8 +7,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getDeckById } from '../api/decksApi';
 import PhotoUploader from '../components/PhotoUploader';
 import ImageGallery from '../components/ImageGallery';
-import DeckAnalysisSection from '../components/DeckAnalysisSection';
-import EnquiryModal from '../components/EnquiryModal';
 
 export default function DeckDetailPage() {
   const navigate = useNavigate();
@@ -17,8 +15,6 @@ export default function DeckDetailPage() {
   const [deck, setDeck] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
-  const [enquirySuccessMessage, setEnquirySuccessMessage] = useState(null);
 
   const loadDeckDetails = React.useCallback(async () => {
     setLoading(true);
@@ -104,26 +100,10 @@ export default function DeckDetailPage() {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => setIsEnquiryOpen(true)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#16a34a',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            📋 Request Contractor
-          </button>
-          <button
-            type="button"
             onClick={() => navigate(`/customer/decks/${deck.id || deck._id}/estimate/new`)}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#0284c7',
+              backgroundColor: '#16a34a',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
@@ -251,27 +231,6 @@ export default function DeckDetailPage() {
           }}
         />
       </div>
-
-      {enquirySuccessMessage && (
-        <div style={{ ...styles.descCard, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginTop: '16px' }}>
-          <strong>✓ Success:</strong> {enquirySuccessMessage}
-        </div>
-      )}
-
-      {/* AI Visual Condition Analysis (Phase 7) */}
-      <DeckAnalysisSection deckId={deck.id || deck._id} />
-
-      {/* Request Contractor Enquiry Modal (Phase 8) */}
-      <EnquiryModal
-        isOpen={isEnquiryOpen}
-        onClose={() => setIsEnquiryOpen(false)}
-        deckId={deck.id || deck._id}
-        onSuccess={(createdLead) => {
-          setEnquirySuccessMessage(
-            `Enquiry submitted successfully (Ref: ${createdLead?.leadNumber || createdLead?.id || 'Submitted'}). Local contractors will be matched shortly.`
-          );
-        }}
-      />
     </div>
   );
 }

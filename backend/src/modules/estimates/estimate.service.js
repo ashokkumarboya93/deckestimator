@@ -2,6 +2,7 @@
 // Deck Estimator — Estimate Service
 // =============================================
 
+const mongoose = require('mongoose');
 const crypto = require('crypto');
 const Estimate = require('./estimate.model');
 const EstimateRevision = require('./estimateRevision.model');
@@ -96,57 +97,187 @@ async function createEstimate(data, user, ipAddress) {
   }
   assertDeckAccess(deck, user);
 
-  // 2. Fetch Selected Active Materials
-  let materials = [];
-  if (materialIds.length > 0) {
-    materials = await Material.find({
-      _id: { $in: materialIds },
-      status: 'active',
-    });
-    if (materials.length !== materialIds.length) {
-      throw new BadRequestError('One or more selected materials are invalid, inactive, or unapproved.');
+  const isClientRestoration = Boolean(
+    data.restorationDetails ||
+    data.woodSpecies ||
+    data.coatingType ||
+    data.clientPricing ||
+    (materialIds.length === 0 && serviceIds.length === 0)
+  );
+
+  let selectedMaterialsItems = [];
+  let selectedServicesItems = [];
+  let laborBreakdownData = {};
+  let additionalChargesData = { items: [], subtotal: 0 };
+  let subtotalAmount = 0;
+  let minAdjustmentAmount = 0;
+  let minJobPriceVal = 0;
+  let preTaxAmount = 0;
+  let taxPercentageVal = 0;
+  let taxAmountVal = 0;
+  let totalAmountVal = 0;
+  let pricingSnapshotData = {};
+  let warningsList = [];
+  let calculatedDeckArea = 0;
+
+  if (isClientRestoration) {
+    const floorArea = Number(
+      deck.dimensions?.area ||
+      deck.deckArea ||
+      data.floorArea ||
+      (deck.dimensions?.length && deck.dimensions?.width
+        ? Number(deck.dimensions.length) * Number(deck.dimensions.width)
+        : 400)
+    );
+    calculatedDeckArea = floorArea;
+
+    const clientParams = {
+      floorArea,
+      railingLength: data.railingLength !== undefined ? data.railingLength : (deck.railingDetails?.totalLength || 0),
+      railingStyle: data.railingStyle || deck.railingDetails?.style || 'plain_2x2',
+      stairCount: data.stairCount !== undefined ? data.stairCount : (deck.structureDetails?.stairCount || 0),
+      fasciaLength: data.fasciaLength || 0,
+      pergolaLength: data.pergolaLength || 0,
+      sidingArea: data.sidingArea || 0,
+      includeJoists: Boolean(data.includeJoists),
+      woodSpecies: data.woodSpecies || deck.surfaceDetails?.material || 'pressure_treated_pine',
+      accessType: data.accessType || (deck.structureDetails?.elevation > 4 ? 'elevated_one_story' : 'ground_level'),
+      coatingType: data.coatingType || 'oil_penetrating_one_coat',
+      coatingConfidence: data.coatingConfidence || 'medium',
+      conditionFlags: data.conditionFlags || deck.visibleConditions || [],
+      billingRate: data.billingRate || 75,
+      floorProductionRate: data.floorProductionRate || 50,
+      customPrices: data.customPrices || data.productPrices || {},
+      isCoatingIncomplete: Boolean(data.isCoatingIncomplete),
+      ...(data.restorationDetails || {}),
+    };
+
+    const clientCalc = pricingEngine.calculateClientPricing(clientParams);
+
+    selectedMaterialsItems = Object.entries(clientCalc.productRequirements)
+      .filter(([_, prod]) => prod.active)
+      .map(([key, prod]) => ({
+        materialId: new mongoose.Types.ObjectId(),
+        materialName: prod.name,
+        materialCode: key.toUpperCase(),
+        brandName: 'Standard Professional',
+        unit: prod.unit,
+        quantity: prod.displayQuantity,
+        unitPrice: prod.unitPrice,
+        coveragePerUnit: prod.coverageRate,
+        baseQuantity: prod.rawQuantity,
+        wastePercentage: 0,
+        wasteQuantity: 0,
+        subtotal: pricingEngine.round2(prod.cost),
+        formula: `${prod.rawQuantity.toFixed(3)} gal × $${prod.unitPrice} = $${prod.cost.toFixed(2)}`,
+      }));
+
+    selectedServicesItems = [
+      {
+        serviceId: new mongoose.Types.ObjectId(),
+        serviceName: 'Deck Surface Restoration Service',
+        serviceCode: 'SRV-RESTORE',
+        serviceType: 'restoration',
+        unit: 'square_foot',
+        quantity: clientCalc.billableArea,
+        price: clientCalc.laborCost,
+        subtotal: clientCalc.laborCost,
+        formula: `${clientCalc.laborBreakdown.totalHours.toFixed(2)} hrs @ $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+      },
+    ];
+
+    laborBreakdownData = {
+      enabled: true,
+      laborRate: clientCalc.laborBreakdown.billingRate,
+      totalHours: clientCalc.laborBreakdown.totalHours,
+      subtotal: clientCalc.laborCost,
+      notes: `5-Part Labor: Base(${clientCalc.laborBreakdown.H1_base.toFixed(2)}h) + Coating(${clientCalc.laborBreakdown.H2_coating.toFixed(2)}h) + Species(${clientCalc.laborBreakdown.H3_species.toFixed(2)}h) + Access(${clientCalc.laborBreakdown.H4_access.toFixed(2)}h) + Condition(${clientCalc.laborBreakdown.H5_condition.toFixed(2)}h)`,
+      formula: `${clientCalc.laborBreakdown.totalHours.toFixed(3)} hrs × $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+    };
+
+    subtotalAmount = clientCalc.baseEstimate;
+    minAdjustmentAmount = 0;
+    minJobPriceVal = 0;
+    preTaxAmount = clientCalc.baseEstimate;
+    taxPercentageVal = 0;
+    taxAmountVal = 0;
+    totalAmountVal = clientCalc.baseEstimate;
+    pricingSnapshotData = clientCalc;
+    warningsList = (clientCalc.warnings || []).map((w) => ({
+      materialName: 'Restoration Scope',
+      serviceName: 'Deck Restoration',
+      type: w.type || 'warning',
+      notes: w.message || '',
+    }));
+  } else {
+    // 2. Fetch Selected Active Materials
+    let materials = [];
+    if (materialIds.length > 0) {
+      materials = await Material.find({
+        _id: { $in: materialIds },
+        status: 'active',
+      });
+      if (materials.length !== materialIds.length) {
+        throw new BadRequestError('One or more selected materials are invalid, inactive, or unapproved.');
+      }
     }
-  }
 
-  // 3. Fetch Selected Active Services
-  let services = [];
-  if (serviceIds.length > 0) {
-    services = await Service.find({
-      _id: { $in: serviceIds },
-      status: 'active',
-    });
-    if (services.length !== serviceIds.length) {
-      throw new BadRequestError('One or more selected services are invalid, inactive, or unapproved.');
+    // 3. Fetch Selected Active Services
+    let services = [];
+    if (serviceIds.length > 0) {
+      services = await Service.find({
+        _id: { $in: serviceIds },
+        status: 'active',
+      });
+      if (services.length !== serviceIds.length) {
+        throw new BadRequestError('One or more selected services are invalid, inactive, or unapproved.');
+      }
     }
-  }
 
-  // 4. Fetch Compatibility Rules
-  let compatibilityRules = [];
-  if (materials.length > 0 && services.length > 0) {
-    compatibilityRules = await MaterialServiceCompatibility.find({
-      materialId: { $in: materials.map((m) => m._id) },
-      serviceId: { $in: services.map((s) => s._id) },
+    // 4. Fetch Compatibility Rules
+    let compatibilityRules = [];
+    if (materials.length > 0 && services.length > 0) {
+      compatibilityRules = await MaterialServiceCompatibility.find({
+        materialId: { $in: materials.map((m) => m._id) },
+        serviceId: { $in: services.map((s) => s._id) },
+      });
+    }
+
+    // 5. Fetch Active Pricing Configuration
+    const pricingConfig = await pricingService.getActivePricingConfiguration();
+
+    // 6. Run Pure Calculation Engine
+    const calculated = pricingEngine.calculateEstimate({
+      deck,
+      materials,
+      services,
+      compatibilityRules,
+      pricingConfig,
     });
+
+    calculatedDeckArea = calculated.deckArea;
+    selectedMaterialsItems = calculated.materialsBreakdown.items;
+    selectedServicesItems = calculated.servicesBreakdown.items;
+    laborBreakdownData = calculated.laborBreakdown;
+    additionalChargesData = calculated.additionalCharges;
+    subtotalAmount = calculated.subtotal;
+    minAdjustmentAmount = calculated.minimumAdjustment;
+    minJobPriceVal = calculated.minimumJobPrice;
+    preTaxAmount = calculated.preTaxTotal;
+    taxPercentageVal = calculated.taxPercentage;
+    taxAmountVal = calculated.taxAmount;
+    totalAmountVal = calculated.totalAmount;
+    pricingSnapshotData = calculated.pricingSnapshot;
+    warningsList = calculated.warnings || [];
   }
-
-  // 5. Fetch Active Pricing Configuration
-  const pricingConfig = await pricingService.getActivePricingConfiguration();
-
-  // 6. Run Pure Calculation Engine
-  const calculated = pricingEngine.calculateEstimate({
-    deck,
-    materials,
-    services,
-    compatibilityRules,
-    pricingConfig,
-  });
 
   // 7. Structure Location & Deck Details for Snapshot
   const deckLocation = deck.propertyAddress || deck.propertyLocation || {};
   const deckDetails = {
     deckId: deck._id,
     projectName: deck.projectName || 'Deck Project',
-    areaSqFt: calculated.deckArea,
+    areaSqFt: calculatedDeckArea,
+    deckArea: calculatedDeckArea,
     deckLength: deck.dimensions?.length || null,
     deckWidth: deck.dimensions?.width || null,
     deckShape: deck.deckShape || 'rectangle',
@@ -175,21 +306,21 @@ async function createEstimate(data, user, ipAddress) {
     createdBy: user.id || user._id,
     createdFor: deck.ownerId,
     deckDetails,
-    selectedMaterials: calculated.materialsBreakdown.items,
-    selectedServices: calculated.servicesBreakdown.items,
-    laborBreakdown: calculated.laborBreakdown,
-    additionalCharges: calculated.additionalCharges,
-    subtotal: calculated.subtotal,
-    minimumAdjustment: calculated.minimumAdjustment,
-    minimumJobPrice: calculated.minimumJobPrice,
-    preTaxTotal: calculated.preTaxTotal,
-    taxPercentage: calculated.taxPercentage,
-    taxAmount: calculated.taxAmount,
-    totalAmount: calculated.totalAmount,
-    pricingSnapshot: calculated.pricingSnapshot,
+    selectedMaterials: selectedMaterialsItems,
+    selectedServices: selectedServicesItems,
+    laborBreakdown: laborBreakdownData,
+    additionalCharges: additionalChargesData,
+    subtotal: subtotalAmount,
+    minimumAdjustment: minAdjustmentAmount,
+    minimumJobPrice: minJobPriceVal,
+    preTaxTotal: preTaxAmount,
+    taxPercentage: taxPercentageVal,
+    taxAmount: taxAmountVal,
+    totalAmount: totalAmountVal,
+    pricingSnapshot: pricingSnapshotData,
     estimateStatus: 'DRAFT',
     version: 1,
-    warnings: calculated.warnings || [],
+    warnings: warningsList,
     notes,
   });
 
@@ -280,7 +411,7 @@ async function recalculateEstimate(id, updateData = {}, user, ipAddress) {
   // 2. Resolve Materials
   let materialIds = updateData.materialIds;
   if (!materialIds) {
-    materialIds = (estimate.selectedMaterials || []).map((m) => m.materialId);
+    materialIds = (estimate.selectedMaterials || []).map((m) => m.materialId).filter(Boolean);
   }
 
   const materials = await Material.find({
