@@ -26,6 +26,65 @@ export default function CustomerLayout() {
   // Active path checker
   const isActive = (path) => currentPath === path || (path !== '/customer/dashboard' && currentPath.startsWith(path));
 
+  const isEstimatesPage = currentPath === '/customer/estimates' || currentPath.startsWith('/customer/estimates');
+
+  if (isEstimatesPage) {
+    return (
+      <div style={styles.estimatesPageWrapper}>
+        {/* Top Navbar matching Image 4 */}
+        <header style={styles.estimatesHeader}>
+          {/* Left: Brand */}
+          <Link to="/customer/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.45rem', fontWeight: '900', letterSpacing: '-0.5px', color: '#0f172a' }}>
+              DECK <span style={{ color: '#16a34a' }}>PRO</span>
+            </span>
+            <span style={styles.estimatorBadge}>ESTIMATOR</span>
+          </Link>
+
+          {/* Center: Tabs */}
+          <nav style={styles.estimatesNavCenter}>
+            <Link to="/customer/dashboard" style={styles.estimatesNavTab}>
+              <span style={{ fontSize: '15px' }}>🏠</span> Home
+            </Link>
+            <Link to="/customer/decks/new" style={styles.estimatesNavTab}>
+              <span style={{ fontSize: '15px' }}>🔗</span> Estimator
+            </Link>
+            <Link to="/customer/estimates" style={{ ...styles.estimatesNavTab, ...styles.estimatesNavTabActive }}>
+              <span style={{ fontSize: '15px' }}>📋</span> My Estimates
+            </Link>
+          </nav>
+
+          {/* Right: User + Logout */}
+          <div style={styles.estimatesNavRight}>
+            <div style={styles.estimatesUserPill} onClick={() => navigate('/customer/settings')}>
+              <div style={styles.estimatesAvatar}>
+                {user?.fullName ? user.fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'JH'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={styles.estimatesUserName}>{user?.fullName || 'Jane Homeowner'}</span>
+                <span style={styles.estimatesUserRole}>Customer</span>
+              </div>
+              <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={styles.estimatesLogoutBtn}
+            >
+              <span style={{ fontSize: '13px' }}>➔</span> Logout
+            </button>
+          </div>
+        </header>
+
+        {/* Content area */}
+        <main style={styles.estimatesMainBody}>
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       {/* 1. STATIC LEFT SIDEBAR */}
@@ -491,4 +550,112 @@ const styles = {
     color: '#334155',
     lineHeight: 1.6,
   },
+  estimatesPageWrapper: {
+    minHeight: '100vh',
+    backgroundColor: '#f8fafc',
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+  },
+  estimatesHeader: {
+    height: '68px',
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #e2e8f0',
+    padding: '0 36px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 40,
+  },
+  estimatorBadge: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#ffffff',
+    backgroundColor: '#1e293b',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    letterSpacing: '0.5px',
+    textTransform: 'uppercase',
+  },
+  estimatesNavCenter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '24px',
+  },
+  estimatesNavTab: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 14px',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#334155',
+    textDecoration: 'none',
+    borderRadius: '8px',
+    transition: 'all 0.15s ease',
+  },
+  estimatesNavTabActive: {
+    backgroundColor: '#dcfce7',
+    color: '#15803d',
+    fontWeight: '700',
+  },
+  estimatesNavRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  estimatesUserPill: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '24px',
+    padding: '4px 12px 4px 6px',
+    cursor: 'pointer',
+  },
+  estimatesAvatar: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#6366f1',
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '700',
+    fontSize: '12px',
+  },
+  estimatesUserName: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    lineHeight: 1.2,
+  },
+  estimatesUserRole: {
+    fontSize: '11px',
+    color: '#64748b',
+  },
+  estimatesLogoutBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    border: '1.5px solid #16a34a',
+    borderRadius: '8px',
+    padding: '7px 16px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#16a34a',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  estimatesMainBody: {
+    flex: 1,
+    overflowY: 'auto',
+  },
 };
+

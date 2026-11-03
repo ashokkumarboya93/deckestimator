@@ -249,3 +249,4 @@ export function HeightHighSvg({ width = 140, height = 75 }) {
     </svg>
   );
 }
+
