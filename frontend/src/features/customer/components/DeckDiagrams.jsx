@@ -1,252 +1,284 @@
 // =============================================
-// Deck Estimator — High-Fidelity SVG Illustrations
+// Deck Estimator — Crisp Architectural SVG Icons & Plan
 // =============================================
-// Provides crisp, scalable SVG illustrations matching the reference mockups.
+// Provides modern, clean vector line & fill icons for deck shapes, heights, levels, and services.
 
 import React from 'react';
 
-export function RectangleDeckSvg({ width = 160, height = 90 }) {
-  return (
-    <svg width={width} height={height} viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="rectWood" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#d97706" />
-          <stop offset="100%" stopColor="#92400e" />
-        </linearGradient>
-        <linearGradient id="rectPlank" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#b45309" />
-          <stop offset="100%" stopColor="#78350f" />
-        </linearGradient>
-      </defs>
-      {/* Garden Greenery Background */}
-      <rect x="0" y="0" width="160" height="90" rx="6" fill="#14532d" />
-      <circle cx="20" cy="15" r="16" fill="#166534" opacity="0.6" />
-      <circle cx="140" cy="20" r="18" fill="#15803d" opacity="0.5" />
-      <circle cx="80" cy="10" r="14" fill="#166534" opacity="0.7" />
+// 1.1 DECK SHAPE ICONS
+export function RectangleDeckIcon({ width = 48, height = 48, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
 
-      {/* 3D Isometric Deck Surface */}
-      <polygon points="25,48 135,48 150,78 10,78" fill="url(#rectWood)" stroke="#78350f" strokeWidth="1.5" />
+  return (
+    <svg width={width} height={height} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="10" width="36" height="28" rx="4" fill={fill} stroke={stroke} strokeWidth="2" />
       {/* Planks */}
-      <line x1="38" y1="48" x2="26" y2="78" stroke="url(#rectPlank)" strokeWidth="1.5" opacity="0.6" />
-      <line x1="58" y1="48" x2="48" y2="78" stroke="url(#rectPlank)" strokeWidth="1.5" opacity="0.6" />
-      <line x1="80" y1="48" x2="74" y2="78" stroke="url(#rectPlank)" strokeWidth="1.5" opacity="0.6" />
-      <line x1="102" y1="48" x2="100" y2="78" stroke="url(#rectPlank)" strokeWidth="1.5" opacity="0.6" />
-      <line x1="122" y1="48" x2="126" y2="78" stroke="url(#rectPlank)" strokeWidth="1.5" opacity="0.6" />
-
-      {/* Front Skirt */}
-      <polygon points="10,78 150,78 150,84 10,84" fill="#78350f" />
-
-      {/* Perimeter Railing */}
-      <polyline points="25,48 25,32 135,32 135,48" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <polyline points="10,78 10,60 25,32" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <polyline points="150,78 150,60 135,32" stroke="#92400e" strokeWidth="2.5" fill="none" />
-
-      {/* Railing Spindles */}
-      <line x1="45" y1="48" x2="45" y2="32" stroke="#78350f" strokeWidth="1" />
-      <line x1="65" y1="48" x2="65" y2="32" stroke="#78350f" strokeWidth="1" />
-      <line x1="85" y1="48" x2="85" y2="32" stroke="#78350f" strokeWidth="1" />
-      <line x1="105" y1="48" x2="105" y2="32" stroke="#78350f" strokeWidth="1" />
-      <line x1="125" y1="48" x2="125" y2="32" stroke="#78350f" strokeWidth="1" />
+      <line x1="14" y1="10" x2="14" y2="38" stroke={stroke} strokeWidth="1.2" strokeDasharray="1 1" opacity="0.6" />
+      <line x1="22" y1="10" x2="22" y2="38" stroke={stroke} strokeWidth="1.2" strokeDasharray="1 1" opacity="0.6" />
+      <line x1="30" y1="10" x2="30" y2="38" stroke={stroke} strokeWidth="1.2" strokeDasharray="1 1" opacity="0.6" />
+      <line x1="38" y1="10" x2="38" y2="38" stroke={stroke} strokeWidth="1.2" strokeDasharray="1 1" opacity="0.6" />
+      {/* Corner posts */}
+      <circle cx="6" cy="10" r="2.5" fill={stroke} />
+      <circle cx="42" cy="10" r="2.5" fill={stroke} />
+      <circle cx="6" cy="38" r="2.5" fill={stroke} />
+      <circle cx="42" cy="38" r="2.5" fill={stroke} />
     </svg>
   );
 }
 
-export function LShapeDeckSvg({ width = 160, height = 90 }) {
-  return (
-    <svg width={width} height={height} viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="160" height="90" rx="6" fill="#14532d" />
-      <circle cx="25" cy="18" r="15" fill="#166534" opacity="0.6" />
-      <circle cx="135" cy="15" r="16" fill="#15803d" opacity="0.5" />
+export function LShapeDeckIcon({ width = 48, height = 48, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
 
-      {/* L-Shape Main Deck Surface */}
-      <polygon points="20,40 90,40 90,52 145,52 135,80 10,80" fill="#b45309" stroke="#78350f" strokeWidth="1.5" />
+  return (
+    <svg width={width} height={height} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M6 10H42V24H24V38H6V10Z"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
       {/* Planks */}
-      <line x1="40" y1="40" x2="32" y2="80" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="65" y1="40" x2="60" y2="80" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="90" y1="52" x2="88" y2="80" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="115" y1="52" x2="114" y2="80" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-
-      {/* Front Skirt */}
-      <polygon points="10,80 135,80 135,85 10,85" fill="#78350f" />
-
-      {/* Railings */}
-      <polyline points="20,40 20,26 90,26 90,38 145,38 145,52" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <polyline points="10,80 10,64 20,40" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <polyline points="135,80 135,66 145,52" stroke="#92400e" strokeWidth="2.5" fill="none" />
+      <line x1="14" y1="10" x2="14" y2="38" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <line x1="22" y1="10" x2="22" y2="24" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <line x1="32" y1="10" x2="32" y2="24" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <circle cx="6" cy="10" r="2.5" fill={stroke} />
+      <circle cx="42" cy="10" r="2.5" fill={stroke} />
+      <circle cx="42" cy="24" r="2.5" fill={stroke} />
+      <circle cx="24" cy="38" r="2.5" fill={stroke} />
+      <circle cx="6" cy="38" r="2.5" fill={stroke} />
     </svg>
   );
 }
 
-export function MultiLevelDeckSvg({ width = 160, height = 90 }) {
+export function MultiLevelDeckIcon({ width = 48, height = 48, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
+
   return (
-    <svg width={width} height={height} viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="160" height="90" rx="6" fill="#14532d" />
-
-      {/* Upper Deck */}
-      <polygon points="35,32 125,32 135,52 25,52" fill="#d97706" stroke="#78350f" strokeWidth="1.5" />
-      <polyline points="35,32 35,18 125,18 125,32" stroke="#92400e" strokeWidth="2.5" fill="none" />
-
-      {/* Connecting Stairs */}
-      <polygon points="65,52 95,52 92,62 62,62" fill="#92400e" />
-      <line x1="64" y1="55" x2="94" y2="55" stroke="#78350f" strokeWidth="1" />
-      <line x1="63" y1="58" x2="93" y2="58" stroke="#78350f" strokeWidth="1" />
-
-      {/* Lower Deck */}
-      <polygon points="15,62 145,62 152,82 8,82" fill="#b45309" stroke="#78350f" strokeWidth="1.5" />
-      <polygon points="8,82 152,82 152,86 8,86" fill="#78350f" />
-      <polyline points="8,82 8,68 15,62" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <polyline points="152,82 152,68 145,62" stroke="#92400e" strokeWidth="2.5" fill="none" />
+    <svg width={width} height={height} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Upper tier */}
+      <rect x="8" y="8" width="32" height="14" rx="2" fill={fill} stroke={stroke} strokeWidth="2" />
+      {/* Connecting step */}
+      <rect x="18" y="22" width="12" height="6" fill="#cbd5e1" stroke={stroke} strokeWidth="1.5" />
+      {/* Lower tier */}
+      <rect x="4" y="28" width="40" height="14" rx="2" fill={fill} stroke={stroke} strokeWidth="2" />
+      {/* Planks */}
+      <line x1="16" y1="8" x2="16" y2="22" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="24" y1="8" x2="24" y2="22" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="32" y1="8" x2="32" y2="22" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="14" y1="28" x2="14" y2="42" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="24" y1="28" x2="24" y2="42" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="34" y1="28" x2="34" y2="42" stroke={stroke} strokeWidth="1" opacity="0.5" />
     </svg>
   );
 }
 
-export function CustomDeckSvg({ width = 160, height = 90 }) {
-  return (
-    <svg width={width} height={height} viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="160" height="90" rx="6" fill="#14532d" />
-      <ellipse cx="80" cy="58" rx="65" ry="24" fill="#b45309" stroke="#78350f" strokeWidth="1.5" />
-      {/* Planks curved */}
-      <line x1="45" y1="42" x2="45" y2="74" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="62" y1="37" x2="62" y2="79" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="80" y1="35" x2="80" y2="82" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="98" y1="37" x2="98" y2="79" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
-      <line x1="115" y1="42" x2="115" y2="74" stroke="#78350f" strokeWidth="1.5" opacity="0.6" />
+export function CustomDeckIcon({ width = 48, height = 48, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
 
-      {/* Curved Perimeter Railing */}
-      <path d="M 18,52 C 30,22 130,22 142,52" stroke="#92400e" strokeWidth="2.5" fill="none" />
-      <line x1="40" y1="45" x2="40" y2="33" stroke="#78350f" strokeWidth="1" />
-      <line x1="60" y1="38" x2="60" y2="28" stroke="#78350f" strokeWidth="1" />
-      <line x1="80" y1="35" x2="80" y2="26" stroke="#78350f" strokeWidth="1" />
-      <line x1="100" y1="38" x2="100" y2="28" stroke="#78350f" strokeWidth="1" />
-      <line x1="120" y1="45" x2="120" y2="33" stroke="#78350f" strokeWidth="1" />
+  return (
+    <svg width={width} height={height} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M14 8H34L44 24L34 40H14L4 24L14 8Z"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="24" cy="24" r="6" stroke={stroke} strokeWidth="1.5" fill="none" opacity="0.7" />
+      <line x1="24" y1="8" x2="24" y2="18" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <line x1="24" y1="30" x2="24" y2="40" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <line x1="8" y1="24" x2="18" y2="24" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
+      <line x1="30" y1="24" x2="40" y2="24" stroke={stroke} strokeWidth="1.2" opacity="0.5" />
     </svg>
   );
 }
 
-// Top-Down Architectural Blueprint with patio furniture & dimensions
-export function TopDownDeckPlanSvg({ width = 300, height = 180, lengthVal = 20, widthVal = 12, unit = 'ft' }) {
+// 1.3 DECK HEIGHT ICONS
+export function HeightGroundIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#475569';
+  const fill = active ? '#dcfce7' : '#f1f5f9';
+
   return (
-    <svg width={width} height={height} viewBox="0 0 300 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Background lawn */}
-      <rect x="0" y="0" width="300" height="180" rx="8" fill="#dcfce7" />
-
-      {/* Length Dimension Indicator (Top) */}
-      <line x1="60" y1="20" x2="240" y2="20" stroke="#0f172a" strokeWidth="1.5" />
-      <polygon points="60,20 66,17 66,23" fill="#0f172a" />
-      <polygon points="240,20 234,17 234,23" fill="#0f172a" />
-      <rect x="110" y="8" width="80" height="18" rx="3" fill="#0f172a" />
-      <text x="150" y="21" fill="#ffffff" fontSize="10" fontWeight="700" textAnchor="middle">
-        Length: {lengthVal} {unit}
-      </text>
-
-      {/* Width Dimension Indicator (Left) */}
-      <line x1="30" y1="40" x2="30" y2="150" stroke="#0f172a" strokeWidth="1.5" />
-      <polygon points="30,40 27,46 33,46" fill="#0f172a" />
-      <polygon points="30,150 27,144 33,144" fill="#0f172a" />
-      <rect x="4" y="85" width="52" height="18" rx="3" fill="#0f172a" />
-      <text x="30" y="98" fill="#ffffff" fontSize="10" fontWeight="700" textAnchor="middle">
-        {widthVal} {unit}
-      </text>
-
-      {/* Wooden Deck Surface */}
-      <rect x="60" y="40" width="180" height="110" rx="4" fill="#d97706" stroke="#92400e" strokeWidth="2" />
-      {/* Horizontal Wood Planks */}
-      {[50, 60, 70, 80, 90, 100, 110, 120, 130, 140].map((y) => (
-        <line key={y} x1="60" y1={y} x2="240" y2={y} stroke="#b45309" strokeWidth="1" />
-      ))}
-
-      {/* Potted Plants on Corners */}
-      <circle cx="70" cy="50" r="8" fill="#15803d" />
-      <circle cx="70" cy="50" r="5" fill="#166534" />
-
-      <circle cx="70" cy="140" r="8" fill="#15803d" />
-      <circle cx="70" cy="140" r="5" fill="#166534" />
-
-      {/* Patio Furniture (L-Couch & Coffee Table) */}
-      <rect x="170" y="55" width="55" height="20" rx="3" fill="#f1f5f9" stroke="#94a3b8" />
-      <rect x="205" y="75" width="20" height="40" rx="3" fill="#f1f5f9" stroke="#94a3b8" />
-      {/* Cushions */}
-      <rect x="173" y="58" width="16" height="14" rx="2" fill="#e2e8f0" />
-      <rect x="191" y="58" width="16" height="14" rx="2" fill="#e2e8f0" />
-      <rect x="208" y="80" width="14" height="16" rx="2" fill="#e2e8f0" />
-      <rect x="208" y="98" width="14" height="16" rx="2" fill="#e2e8f0" />
-      {/* Coffee Table */}
-      <rect x="175" y="85" width="22" height="18" rx="2" fill="#78350f" />
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Ground line */}
+      <line x1="2" y1="38" x2="42" y2="38" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2" />
+      {/* Flush Platform (0 - 2 ft) */}
+      <rect x="6" y="30" width="32" height="7" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.8" />
+      {/* Short riser blocks */}
+      <rect x="10" y="37" width="4" height="2" fill={stroke} />
+      <rect x="30" y="37" width="4" height="2" fill={stroke} />
+      {/* Level measurement arrow */}
+      <path d="M40 30L40 37" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-// Elevation & Height Diagrams
-export function HeightGroundSvg({ width = 140, height = 75 }) {
-  return (
-    <svg width={width} height={height} viewBox="0 0 140 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="140" height="75" rx="6" fill="#f8fafc" />
-      {/* Lawn */}
-      <rect x="10" y="58" width="120" height="6" fill="#16a34a" rx="2" />
-      {/* Low Deck Planks */}
-      <rect x="25" y="46" width="90" height="12" fill="#d97706" stroke="#92400e" strokeWidth="1.5" rx="2" />
-      <line x1="55" y1="46" x2="55" y2="58" stroke="#92400e" strokeWidth="1" />
-      <line x1="85" y1="46" x2="85" y2="58" stroke="#92400e" strokeWidth="1" />
-      {/* Height Indicator: 0-2 ft */}
-      <line x1="120" y1="46" x2="120" y2="58" stroke="#0f172a" strokeWidth="1.5" />
-      <text x="70" y="32" fill="#0f172a" fontSize="11" fontWeight="700" textAnchor="middle">0 – 2 ft</text>
-    </svg>
-  );
-}
+export function HeightLowIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#475569';
+  const fill = active ? '#dcfce7' : '#f1f5f9';
 
-export function HeightLowSvg({ width = 140, height = 75 }) {
   return (
-    <svg width={width} height={height} viewBox="0 0 140 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="140" height="75" rx="6" fill="#f8fafc" />
-      <rect x="10" y="60" width="120" height="6" fill="#16a34a" rx="2" />
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="2" y1="38" x2="42" y2="38" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2" />
+      {/* Low Platform (2 - 4 ft) */}
+      <rect x="6" y="24" width="32" height="6" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.8" />
       {/* Posts */}
-      <rect x="35" y="38" width="6" height="22" fill="#78350f" />
-      <rect x="95" y="38" width="6" height="22" fill="#78350f" />
-      {/* Deck Platform */}
-      <rect x="25" y="30" width="85" height="10" fill="#d97706" stroke="#92400e" strokeWidth="1.5" rx="2" />
-      {/* 2-Step Stairs */}
-      <rect x="110" y="44" width="12" height="6" fill="#b45309" />
-      <rect x="116" y="52" width="12" height="8" fill="#b45309" />
-      <text x="68" y="20" fill="#0f172a" fontSize="11" fontWeight="700" textAnchor="middle">2 – 4 ft</text>
+      <rect x="10" y="30" width="4" height="8" fill={stroke} />
+      <rect x="30" y="30" width="4" height="8" fill={stroke} />
+      {/* Railing */}
+      <line x1="6" y1="16" x2="38" y2="16" stroke={stroke} strokeWidth="1.5" />
+      <line x1="6" y1="16" x2="6" y2="24" stroke={stroke} strokeWidth="1.5" />
+      <line x1="38" y1="16" x2="38" y2="24" stroke={stroke} strokeWidth="1.5" />
     </svg>
   );
 }
 
-export function HeightMediumSvg({ width = 140, height = 75 }) {
+export function HeightMediumIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#475569';
+  const fill = active ? '#dcfce7' : '#f1f5f9';
+
   return (
-    <svg width={width} height={height} viewBox="0 0 140 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="140" height="75" rx="6" fill="#f8fafc" />
-      <rect x="10" y="62" width="120" height="6" fill="#16a34a" rx="2" />
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="2" y1="38" x2="42" y2="38" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2" />
+      {/* Medium Platform (4 - 8 ft) */}
+      <rect x="6" y="18" width="32" height="6" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.8" />
+      {/* Taller Posts */}
+      <rect x="10" y="24" width="4" height="14" fill={stroke} />
+      <rect x="30" y="24" width="4" height="14" fill={stroke} />
+      {/* Cross bracing */}
+      <line x1="14" y1="25" x2="30" y2="37" stroke={stroke} strokeWidth="1" strokeDasharray="2 2" opacity="0.7" />
+      {/* Railing */}
+      <line x1="6" y1="10" x2="38" y2="10" stroke={stroke} strokeWidth="1.5" />
+      <line x1="6" y1="10" x2="6" y2="18" stroke={stroke} strokeWidth="1.5" />
+      <line x1="38" y1="10" x2="38" y2="18" stroke={stroke} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function HeightHighIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#475569';
+  const fill = active ? '#dcfce7' : '#f1f5f9';
+
+  return (
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="2" y1="38" x2="42" y2="38" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3 2" />
+      {/* High Platform (8+ ft) */}
+      <rect x="6" y="12" width="32" height="6" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.8" />
       {/* Tall Posts */}
-      <rect x="30" y="24" width="6" height="38" fill="#78350f" />
-      <rect x="85" y="24" width="6" height="38" fill="#78350f" />
-      {/* Deck Platform */}
-      <rect x="20" y="18" width="80" height="10" fill="#d97706" stroke="#92400e" strokeWidth="1.5" rx="2" />
+      <rect x="10" y="18" width="4" height="20" fill={stroke} />
+      <rect x="30" y="18" width="4" height="20" fill={stroke} />
+      {/* Diagonal brace */}
+      <line x1="14" y1="19" x2="30" y2="37" stroke={stroke} strokeWidth="1.2" opacity="0.6" />
+      <line x1="30" y1="19" x2="14" y2="37" stroke={stroke} strokeWidth="1.2" opacity="0.6" />
+      {/* Stairs representation */}
+      <path d="M38 18L42 38" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" />
       {/* Railing */}
-      <line x1="20" y1="8" x2="100" y2="8" stroke="#92400e" strokeWidth="2" />
-      {/* Flight of steps */}
-      <line x1="100" y1="20" x2="125" y2="62" stroke="#78350f" strokeWidth="2.5" />
-      <text x="60" y="14" fill="#0f172a" fontSize="11" fontWeight="700" textAnchor="middle">4 – 8 ft</text>
+      <line x1="6" y1="5" x2="38" y2="5" stroke={stroke} strokeWidth="1.5" />
+      <line x1="6" y1="5" x2="6" y2="12" stroke={stroke} strokeWidth="1.5" />
+      <line x1="38" y1="5" x2="38" y2="12" stroke={stroke} strokeWidth="1.5" />
     </svg>
   );
 }
 
-export function HeightHighSvg({ width = 140, height = 75 }) {
+// 1.4 NUMBER OF LEVELS ICONS
+export function LevelSingleIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
+
   return (
-    <svg width={width} height={height} viewBox="0 0 140 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="140" height="75" rx="6" fill="#f8fafc" />
-      <rect x="10" y="64" width="120" height="6" fill="#16a34a" rx="2" />
-      {/* 2nd Story Columns */}
-      <rect x="25" y="18" width="6" height="46" fill="#78350f" />
-      <rect x="75" y="18" width="6" height="46" fill="#78350f" />
-      {/* Deck */}
-      <rect x="15" y="12" width="75" height="8" fill="#d97706" stroke="#92400e" strokeWidth="1.5" rx="2" />
-      {/* Railing */}
-      <line x1="15" y1="4" x2="90" y2="4" stroke="#92400e" strokeWidth="2" />
-      {/* Full Staircase */}
-      <line x1="90" y1="14" x2="130" y2="64" stroke="#78350f" strokeWidth="3" />
-      <text x="52" y="10" fill="#0f172a" fontSize="11" fontWeight="700" textAnchor="middle">8+ ft</text>
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="16" width="32" height="14" rx="3" fill={fill} stroke={stroke} strokeWidth="2" />
+      <line x1="14" y1="16" x2="14" y2="30" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="22" y1="16" x2="22" y2="30" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <line x1="30" y1="16" x2="30" y2="30" stroke={stroke} strokeWidth="1" opacity="0.5" />
+      <text x="22" y="38" textAnchor="middle" fontSize="10" fontWeight="700" fill={stroke}>1 Level</text>
     </svg>
   );
 }
 
+export function LevelTwoIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
+
+  return (
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="8" width="24" height="12" rx="2" fill={fill} stroke={stroke} strokeWidth="1.8" />
+      <rect x="6" y="20" width="24" height="12" rx="2" fill={fill} stroke={stroke} strokeWidth="1.8" />
+      <text x="22" y="40" textAnchor="middle" fontSize="10" fontWeight="700" fill={stroke}>2 Levels</text>
+    </svg>
+  );
+}
+
+export function LevelMultiIcon({ width = 44, height = 44, active = false }) {
+  const stroke = active ? '#16a34a' : '#2563eb';
+  const fill = active ? '#dcfce7' : '#eff6ff';
+
+  return (
+    <svg width={width} height={height} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="6" width="20" height="9" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.5" />
+      <rect x="12" y="16" width="20" height="9" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.5" />
+      <rect x="4" y="26" width="20" height="9" rx="1.5" fill={fill} stroke={stroke} strokeWidth="1.5" />
+      <text x="22" y="42" textAnchor="middle" fontSize="9" fontWeight="700" fill={stroke}>3+ Levels</text>
+    </svg>
+  );
+}
+
+// TOP-DOWN ARCHITECTURAL BLUEPRINT PLAN
+export function TopDownDeckPlanSvg({ length = 20, width = 12 }) {
+  return (
+    <svg width="100%" height="150" viewBox="0 0 280 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="gridPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e2e8f0" strokeWidth="0.5" />
+        </pattern>
+      </defs>
+      {/* Blueprint Grid Background */}
+      <rect width="280" height="150" rx="8" fill="#f8fafc" />
+      <rect width="280" height="150" rx="8" fill="url(#gridPattern)" />
+
+      {/* Main Deck Floor Plan */}
+      <rect x="45" y="30" width="180" height="90" rx="4" fill="#b45309" stroke="#78350f" strokeWidth="2" />
+
+      {/* Deck Planks */}
+      <g stroke="#92400e" strokeWidth="1" opacity="0.6">
+        <line x1="45" y1="45" x2="225" y2="45" />
+        <line x1="45" y1="60" x2="225" y2="60" />
+        <line x1="45" y1="75" x2="225" y2="75" />
+        <line x1="45" y1="90" x2="225" y2="90" />
+        <line x1="45" y1="105" x2="225" y2="105" />
+      </g>
+
+      {/* Patio Furniture (Sofa & Table) */}
+      <rect x="160" y="40" width="50" height="20" rx="3" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
+      <rect x="190" y="60" width="20" height="35" rx="3" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
+      <rect x="160" y="66" width="22" height="22" rx="3" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
+
+      {/* Planter Pots */}
+      <circle cx="58" cy="42" r="5" fill="#15803d" />
+      <circle cx="58" cy="108" r="5" fill="#15803d" />
+
+      {/* Dimension Line: Length */}
+      <line x1="45" y1="16" x2="225" y2="16" stroke="#0f172a" strokeWidth="1.5" />
+      <line x1="45" y1="12" x2="45" y2="20" stroke="#0f172a" strokeWidth="1.5" />
+      <line x1="225" y1="12" x2="225" y2="20" stroke="#0f172a" strokeWidth="1.5" />
+      <rect x="105" y="7" width="60" height="18" rx="4" fill="#0f172a" />
+      <text x="135" y="20" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="700">
+        Length: {length || 20} ft
+      </text>
+
+      {/* Dimension Line: Width */}
+      <line x1="26" y1="30" x2="26" y2="120" stroke="#0f172a" strokeWidth="1.5" />
+      <line x1="22" y1="30" x2="30" y2="30" stroke="#0f172a" strokeWidth="1.5" />
+      <line x1="22" y1="120" x2="30" y2="120" stroke="#0f172a" strokeWidth="1.5" />
+      <rect x="5" y="68" width="40" height="16" rx="4" fill="#0f172a" />
+      <text x="25" y="80" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="700">
+        {width || 12} ft
+      </text>
+    </svg>
+  );
+}
