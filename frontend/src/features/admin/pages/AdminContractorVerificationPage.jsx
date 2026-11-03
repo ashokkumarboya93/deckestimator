@@ -92,6 +92,47 @@ export default function AdminContractorVerificationPage() {
     }
   }
 
+  async function handleQuickApprove(contractorId, businessName) {
+    if (!window.confirm(`Are you sure you want to approve contractor "${businessName}"? This will activate their account and grant access to the contractor portal.`)) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await adminVerificationApi.reviewApplication(contractorId, {
+        action: 'APPROVE',
+        notes: 'Approved via quick action by administrator.',
+      });
+      setActionSuccess(`Contractor "${businessName}" approved successfully.`);
+      await loadContractors(pagination.page);
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Approval failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleQuickReject(contractorId, businessName) {
+    const reason = window.prompt(`Enter rejection reason for contractor "${businessName}":`, 'License credentials could not be verified.');
+    if (!reason || !reason.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      await adminVerificationApi.reviewApplication(contractorId, {
+        action: 'REJECT',
+        reason: reason.trim(),
+        notes: 'Rejected by administrator via review dashboard.',
+      });
+      setActionSuccess(`Contractor "${businessName}" application rejected.`);
+      await loadContractors(pagination.page);
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err.message || 'Rejection failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const statusColors = {
     pending: { bg: '#fef3c7', text: '#92400e' },
     under_review: { bg: '#dbeafe', text: '#1e40af' },
@@ -199,13 +240,36 @@ export default function AdminContractorVerificationPage() {
                       {new Date(c.submittedAt || c.createdAt).toLocaleDateString()}
                     </td>
                     <td style={styles.td}>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenReview(contractorId)}
-                        style={styles.reviewBtn}
-                      >
-                        Review Application
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReview(contractorId)}
+                          style={styles.reviewBtn}
+                          title="View full application details"
+                        >
+                          Review
+                        </button>
+                        {status !== 'approved' && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickApprove(contractorId, c.businessName)}
+                            style={styles.quickApproveBtn}
+                            title="Approve contractor immediately"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {status !== 'rejected' && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickReject(contractorId, c.businessName)}
+                            style={styles.quickRejectBtn}
+                            title="Reject contractor application"
+                          >
+                            Reject
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -473,6 +537,26 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     color: '#1e293b',
+  },
+  quickApproveBtn: {
+    backgroundColor: '#dcfce7',
+    color: '#15803d',
+    border: '1px solid #bbf7d0',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  quickRejectBtn: {
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
+    border: '1px solid #fecaca',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
   successBanner: {
     backgroundColor: '#f0fdf4',

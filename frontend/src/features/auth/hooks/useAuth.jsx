@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Auth Context & Hook
 // =============================================
 
@@ -86,9 +86,24 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await authApi.getMe();
+      if (response?.data) {
+        setUser(response.data.user);
+        setContractorProfile(response.data.contractorProfile || null);
+        return response.data;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
   const value = {
     user,
     contractorProfile,
+    setContractorProfile,
     loading,
     error,
     isAuthenticated: !!user,
@@ -98,6 +113,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

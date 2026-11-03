@@ -23,6 +23,7 @@ import ContractorDocumentDetailPage from '../features/contractor/pages/Contracto
 import ContractorCommissionsPage from '../features/contractor/pages/ContractorCommissionsPage';
 import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
 import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
+import ContractorVerificationRequestPage from '../features/contractor/pages/ContractorVerificationRequestPage';
 import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
 import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
@@ -31,7 +32,7 @@ import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import CustomerLayout from '../features/customer/components/CustomerLayout';
-import { GuestOnly, RequireAuth, RequireRole } from './routeGuards';
+import { GuestOnly, RequireAuth, RequireRole, RequireApprovedContractor } from './routeGuards';
 
 const router = createBrowserRouter([
   {
@@ -103,13 +104,26 @@ const router = createBrowserRouter([
           },
         ],
       },
-      // Contractor Routes
+      // Standalone Verification Request Route for Contractors (Accessible before Admin Approval)
+      {
+        path: 'contractor/verification-request',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['contractor', 'admin']}>
+              <ContractorVerificationRequestPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      // Contractor Portal Routes (Requires Admin Approval)
       {
         path: 'contractor',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorLayout />
+              <RequireApprovedContractor>
+                <ContractorLayout />
+              </RequireApprovedContractor>
             </RequireRole>
           </RequireAuth>
         ),

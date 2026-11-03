@@ -10,29 +10,83 @@
 // - Estimate Summary card: Subtotal ($2,880.00), Markup (15%) ($432.00), Discount (Partner 5%) (-$165.60), Tax (8.25%) ($259.98), Total Estimate ($3,406.38)
 // - Actions: Save Draft | Generate Estimate
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { getDeckById, getDecks } from '../../customer/api/decksApi';
+import { createEstimate } from '../../customer/api/estimatesApi';
 
 export default function ContractorEstimateBuilderPage() {
   const navigate = useNavigate();
   const { deckId } = useParams();
 
+  const [currentDeck, setCurrentDeck] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [markupPercent, setMarkupPercent] = useState(15);
   const [discountPercent, setDiscountPercent] = useState(5);
 
+  useEffect(() => {
+    async function loadDeck() {
+      setLoading(true);
+      try {
+        if (deckId && deckId.length === 24) {
+          const d = await getDeckById(deckId);
+          setCurrentDeck(d);
+        } else {
+          const res = await getDecks({ limit: 1 });
+          const list = res?.decks || res?.data?.decks || (Array.isArray(res) ? res : []);
+          if (list && list.length > 0) {
+            setCurrentDeck(list[0]);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load deck for estimate builder:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDeck();
+  }, [deckId]);
+
   // Line items matching Image 4
+  const area = currentDeck?.dimensions?.area || 400;
   const lineItems = [
-    { name: 'Deck Cleaning (Power Wash)', unit: 'sq ft', qty: 400, unitCost: 2.50, amount: 1000.00 },
-    { name: 'Sanding & Surface Prep', unit: 'sq ft', qty: 400, unitCost: 1.00, amount: 400.00 },
-    { name: 'Staining (2 Coats)', unit: 'sq ft', qty: 400, unitCost: 2.50, amount: 1000.00 },
+    { name: 'Deck Cleaning (Power Wash)', unit: 'sq ft', qty: area, unitCost: 2.50, amount: area * 2.50 },
+    { name: 'Sanding & Surface Prep', unit: 'sq ft', qty: area, unitCost: 1.00, amount: area * 1.00 },
+    { name: 'Staining (2 Coats)', unit: 'sq ft', qty: area, unitCost: 2.50, amount: area * 2.50 },
     { name: 'Railings Restoration', unit: 'ft', qty: 60, unitCost: 8.00, amount: 480.00 },
   ];
 
-  const subtotal = 2880.00;
-  const markupAmount = 432.00;
-  const discountAmount = 165.60;
-  const taxAmount = 259.98;
-  const totalEstimate = 3406.38;
+  const subtotal = lineItems.reduce((acc, cur) => acc + cur.amount, 0);
+  const markupAmount = (subtotal * (markupPercent / 100));
+  const discountAmount = ((subtotal + markupAmount) * (discountPercent / 100));
+  const taxable = subtotal + markupAmount - discountAmount;
+  const taxAmount = (taxable * 0.0825);
+  const totalEstimate = taxable + taxAmount;
+
+  async function handleSaveEstimate(status = 'draft') {
+    setSubmitting(true);
+    try {
+      const targetDeckId = currentDeck?._id || (deckId && deckId.length === 24 ? deckId : null);
+      if (!targetDeckId) {
+        alert('Please create or select a deck project before generating an estimate.');
+        navigate('/contractor/decks/new');
+        return;
+      }
+      await createEstimate({
+        deckId: targetDeckId,
+        estimateName: `${currentDeck?.projectName || 'Deck'} Commercial Estimate`,
+        floorArea: area,
+        notes: `Commercial quote: Subtotal $${subtotal.toFixed(2)}, Markup (${markupPercent}%) $${markupAmount.toFixed(2)}, Discount (${discountPercent}%) -$${discountAmount.toFixed(2)}, Total $${totalEstimate.toFixed(2)}`,
+      });
+      alert('Commercial estimate generated and saved to database successfully!');
+      navigate('/contractor/estimates');
+    } catch (err) {
+      alert(err?.message || 'Failed to generate estimate.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div style={styles.container}>
@@ -52,23 +106,29 @@ export default function ContractorEstimateBuilderPage() {
           <p style={styles.pageSub}>Build a detailed estimate with materials, labor, markups and discounts.</p>
         </div>
         <div style={styles.actionBtnRow}>
-          <button type="button" style={styles.saveDraftBtn}>
-            Save Draft
+          <button
+            type="button"
+            onClick={() => handleSaveEstimate('draft')}
+            disabled={submitting}
+            style={styles.saveDraftBtn}
+          >
+            {submitting ? 'Saving...' : 'Save Draft'}
           </button>
           <button
             type="button"
-            onClick={() => navigate('/contractor/estimates')}
+            onClick={() => handleSaveEstimate('submitted')}
+            disabled={submitting}
             style={styles.genEstBtn}
           >
-            Generate Estimate
+            {submitting ? 'Generating...' : 'Generate Estimate'}
           </button>
         </div>
       </div>
 
       {/* 3. PROJECT METADATA CARD */}
       <div style={styles.projectMetaCard}>
-        <div><strong>Project:</strong> Riverside Deck Restoration</div>
-        <div><strong>Deck Area:</strong> 400 sq ft</div>
+        <div><strong>Project:</strong> {currentDeck?.projectName || 'Riverside Deck Restoration'}</div>
+        <div><strong>Deck Area:</strong> {area} sq ft</div>
       </div>
 
       {/* 4. TWO-COLUMN: ITEMIZED TABLE (LEFT) + ESTIMATE SUMMARY (RIGHT) */}

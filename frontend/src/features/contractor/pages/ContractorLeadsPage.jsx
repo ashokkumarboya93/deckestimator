@@ -35,8 +35,30 @@ export default function ContractorLeadsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await contractorLeadApi.getAssignedLeads({ page, limit: 10 });
-      setLeads(res?.data || []);
+      const res = await contractorLeadApi.getAssignedLeads({ page, limit: 20 });
+      const rawLeads = res?.data || [];
+      const mapped = rawLeads.map((l) => {
+        const isConverted = (l.operationalStatus === 'converted' || l.status === 'converted');
+        const isInProgress = (l.operationalStatus === 'in_progress' || l.status === 'in_progress' || l.status === 'accepted' || l.status === 'contacted');
+        const statusDisplay = isConverted ? 'Converted' : isInProgress ? 'In Progress' : 'New';
+
+        return {
+          id: l._id || l.id,
+          deckId: l.deckId?._id || l.deckId || null,
+          customer: l.customerSnapshot?.name || l.customer?.fullName || 'Customer Lead',
+          email: l.customerSnapshot?.email || '',
+          phone: l.customerSnapshot?.phone || '',
+          project: l.deckSnapshot?.projectName || l.deck?.projectName || 'Backyard Deck Restoration',
+          location: l.deckSnapshot?.city ? `${l.deckSnapshot.city}, ${l.deckSnapshot.state || 'TX'}` : (l.location || 'Austin, TX'),
+          deckSize: l.deckSnapshot?.area ? `${l.deckSnapshot.area} sq ft` : (l.deckSize || '400 sq ft'),
+          date: l.assignedAt || l.createdAt ? new Date(l.assignedAt || l.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Nov 3, 2026',
+          status: statusDisplay,
+          rawStatus: l.status,
+          rawLead: l,
+          img: l.deckSnapshot?.photos?.[0] || 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80',
+        };
+      });
+      setLeads(mapped);
     } catch (err) {
       console.warn('Backend leads API warning:', err);
       // Fallback to real structured records from Image 2
@@ -100,6 +122,46 @@ export default function ContractorLeadsPage() {
     },
   ];
 
+  const totalLeads = displayLeads.length;
+  const newLeadsCount = displayLeads.filter((l) => l.status === 'New').length;
+  const inProgressCount = displayLeads.filter((l) => l.status === 'In Progress').length;
+  const convertedCount = displayLeads.filter((l) => l.status === 'Converted').length;
+
+  async function handleAcceptLead(leadId) {
+    try {
+      await contractorLeadApi.acceptLead(leadId, 'Accepted by contractor');
+      alert('Lead accepted successfully! Status changed to In Progress.');
+      await loadLeads();
+      setSelectedLead(null);
+    } catch (err) {
+      alert(err?.message || 'Failed to accept lead.');
+    }
+  }
+
+  async function handleConvertLead(leadId) {
+    try {
+      await contractorLeadApi.updateLeadStatus(leadId, 'converted', 'Converted to signed project');
+      alert('Lead marked as Converted!');
+      await loadLeads();
+      setSelectedLead(null);
+    } catch (err) {
+      alert(err?.message || 'Failed to update lead status.');
+    }
+  }
+
+  async function handleRejectLead(leadId) {
+    const reason = window.prompt('Please enter a reason for declining this lead:');
+    if (!reason) return;
+    try {
+      await contractorLeadApi.rejectLead(leadId, reason);
+      alert('Lead declined.');
+      await loadLeads();
+      setSelectedLead(null);
+    } catch (err) {
+      alert(err?.message || 'Failed to decline lead.');
+    }
+  }
+
   // Filtering
   const filtered = displayLeads.filter((l) => {
     const q = searchTerm.toLowerCase();
@@ -138,7 +200,7 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Total Leads</div>
-            <div style={styles.kpiValue}>6</div>
+            <div style={styles.kpiValue}>{totalLeads}</div>
           </div>
         </div>
 
@@ -151,7 +213,7 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>New Leads</div>
-            <div style={styles.kpiValue}>3</div>
+            <div style={styles.kpiValue}>{newLeadsCount}</div>
           </div>
         </div>
 
@@ -165,7 +227,7 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>In Progress</div>
-            <div style={styles.kpiValue}>2</div>
+            <div style={styles.kpiValue}>{inProgressCount}</div>
           </div>
         </div>
 
@@ -178,7 +240,7 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Converted</div>
-            <div style={styles.kpiValue}>1</div>
+            <div style={styles.kpiValue}>{convertedCount}</div>
           </div>
         </div>
       </div>
@@ -294,7 +356,7 @@ export default function ContractorLeadsPage() {
 
         {/* Pagination Bar */}
         <div style={styles.paginationRow}>
-          <span style={styles.pageInfo}>Showing 1 – 5 of 6 leads</span>
+          <span style={styles.pageInfo}>Showing 1 – {filtered.length} of {displayLeads.length} leads</span>
           <div style={styles.pageButtons}>
             <button type="button" style={styles.pageBtn}>&lt;</button>
             <button type="button" style={{ ...styles.pageBtn, ...styles.pageBtnActive }}>1</button>
@@ -320,16 +382,50 @@ export default function ContractorLeadsPage() {
               <div><strong>Deck Size:</strong> {selectedLead.deckSize}</div>
               <div><strong>Date Assigned:</strong> {selectedLead.date}</div>
               <div><strong>Status:</strong> {selectedLead.status}</div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+              {selectedLead.email && <div><strong>Email:</strong> {selectedLead.email}</div>}
+              {selectedLead.phone && <div><strong>Phone:</strong> {selectedLead.phone}</div>}
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '14px' }}>
+                {selectedLead.status === 'New' && (
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptLead(selectedLead.id)}
+                    style={{ ...styles.modalActionBtn, background: '#1d4ed8' }}
+                  >
+                    Accept Lead
+                  </button>
+                )}
+                {selectedLead.status === 'In Progress' && (
+                  <button
+                    type="button"
+                    onClick={() => handleConvertLead(selectedLead.id)}
+                    style={{ ...styles.modalActionBtn, background: '#16a34a' }}
+                  >
+                    Mark as Converted
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
-                    navigate('/contractor/decks/new');
+                    if (selectedLead.deckId) {
+                      navigate(`/contractor/decks/${selectedLead.deckId}/estimate/new`);
+                    } else {
+                      navigate('/contractor/decks/new');
+                    }
                   }}
                   style={styles.modalActionBtn}
                 >
                   Create Estimate for this Lead
                 </button>
+                {selectedLead.status !== 'Converted' && (
+                  <button
+                    type="button"
+                    onClick={() => handleRejectLead(selectedLead.id)}
+                    style={{ ...styles.modalSecondaryBtn, color: '#dc2626', borderColor: '#fca5a5' }}
+                  >
+                    Decline Lead
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelectedLead(null)}

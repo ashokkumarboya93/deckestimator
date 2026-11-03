@@ -8,14 +8,55 @@
 // - Transaction Details card: Transaction ID, Status, Earned On, Payout Due, Payment Method, Remarks
 // - Commission Timeline: Estimate Created -> Job Converted -> Commission Earned -> Payout
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { contractorCommissionApi } from '../api/contractorCommissionApi';
 
 export default function ContractorCommissionDetailPage() {
   const navigate = useNavigate();
   const { commissionId } = useParams();
 
-  const id = commissionId || 'COM-1007';
+  const [comm, setComm] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCommission() {
+      setLoading(true);
+      try {
+        const res = await contractorCommissionApi.getMyCommissions();
+        const list = res?.data || [];
+        const found = list.find((c) => (c._id || c.id || c.commissionReference) === commissionId);
+        if (found) {
+          setComm(found);
+        }
+      } catch (err) {
+        console.warn('Could not load commission details:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCommission();
+  }, [commissionId]);
+
+  const id = comm?.commissionReference || commissionId || 'COM-1007';
+  const statusStr = comm?.status === 'paid' ? 'Paid' : comm?.status === 'payable' ? 'Payable' : 'Pending';
+  const isPayable = statusStr === 'Payable';
+  const isPaid = statusStr === 'Paid';
+
+  const projectTitle = comm?.leadId?.deckSnapshot?.projectName || 'Lakeview Deck Refinish';
+  const clientName = comm?.leadId?.customerSnapshot?.name || 'Mark Johnson';
+  const estNumber = comm?.estimateId?.estimateNumber || 'EST-20261028-07124B';
+  const basisAmt = comm?.basisAmount ? `$${Number(comm.basisAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$10,820.00';
+  const commRate = comm?.commissionValue ? `${comm.commissionValue}%` : '4.5%';
+  const commAmt = comm?.calculatedAmount != null
+    ? `$${Number(comm.calculatedAmount).toFixed(2)}`
+    : '$486.00';
+  const earnedDate = comm?.createdAt
+    ? new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Oct 28, 2026';
+  const payoutDate = comm?.paidAt
+    ? new Date(comm.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Nov 15, 2026';
 
   return (
     <div style={styles.container}>
@@ -32,7 +73,7 @@ export default function ContractorCommissionDetailPage() {
       <div style={styles.titleRow}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <h1 style={styles.pageTitle}>Commission Transaction &mdash; {id}</h1>
-          <span style={styles.payableBadge}>Payable</span>
+          <span style={isPaid ? styles.paidBadge : styles.payableBadge}>{statusStr}</span>
         </div>
         <p style={styles.pageSub}>Detailed information for this commission earning.</p>
       </div>
@@ -49,27 +90,27 @@ export default function ContractorCommissionDetailPage() {
               style={styles.deckThumb}
             />
             <div>
-              <div style={styles.projectTitle}>Lakeview Deck Refinish</div>
-              <div style={styles.clientSub}>Mark Johnson</div>
+              <div style={styles.projectTitle}>{projectTitle}</div>
+              <div style={styles.clientSub}>{clientName}</div>
             </div>
           </div>
 
           <div style={styles.dataList}>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Estimate #</span>
-              <span style={styles.dataVal}>EST-20261028-07124B</span>
+              <span style={styles.dataVal}>{estNumber}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Project Value</span>
-              <span style={styles.dataVal}>$10,820.00</span>
+              <span style={styles.dataVal}>{basisAmt}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Commission Rate</span>
-              <span style={styles.dataVal}>4.5%</span>
+              <span style={styles.dataVal}>{commRate}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Commission Amount</span>
-              <span style={styles.dataValBold}>$486.00</span>
+              <span style={styles.dataValBold}>{commAmt}</span>
             </div>
           </div>
         </div>
@@ -84,15 +125,15 @@ export default function ContractorCommissionDetailPage() {
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Status</span>
-              <span style={styles.payableText}>Payable</span>
+              <span style={isPaid ? styles.paidText : styles.payableText}>{statusStr}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Earned On</span>
-              <span style={styles.dataVal}>Oct 28, 2026</span>
+              <span style={styles.dataVal}>{earnedDate}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Payout Due</span>
-              <span style={styles.dataVal}>Nov 15, 2026</span>
+              <span style={styles.dataVal}>{payoutDate}</span>
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Payment Method</span>
@@ -100,7 +141,7 @@ export default function ContractorCommissionDetailPage() {
             </div>
             <div style={styles.dataRow}>
               <span style={styles.dataLabel}>Remarks</span>
-              <span style={styles.dataVal}>Commission from estimate conversion</span>
+              <span style={styles.dataVal}>{comm?.reviewNotes || 'Commission from estimate conversion'}</span>
             </div>
           </div>
         </div>
@@ -113,36 +154,54 @@ export default function ContractorCommissionDetailPage() {
         <div style={styles.timelineRow}>
           {/* Step 1 */}
           <div style={styles.timelineStep}>
-            <div style={styles.timelineCircleActive}>✓</div>
+            <div style={styles.timelineCircleActive}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
             <div style={styles.stepTitle}>Estimate Created</div>
-            <div style={styles.stepDate}>Oct 28, 2026</div>
+            <div style={styles.stepDate}>{earnedDate}</div>
           </div>
 
           <div style={styles.timelineLineActive} />
 
           {/* Step 2 */}
           <div style={styles.timelineStep}>
-            <div style={styles.timelineCircleActive}>✓</div>
+            <div style={styles.timelineCircleActive}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
             <div style={styles.stepTitle}>Job Converted</div>
-            <div style={styles.stepDate}>Oct 30, 2026</div>
+            <div style={styles.stepDate}>{earnedDate}</div>
           </div>
 
           <div style={styles.timelineLineActive} />
 
           {/* Step 3 */}
           <div style={styles.timelineStep}>
-            <div style={styles.timelineCircleCurrent}>⦿</div>
+            <div style={styles.timelineCircleCurrent}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#2563eb" stroke="#2563eb" strokeWidth="2">
+                <circle cx="12" cy="12" r="8" />
+              </svg>
+            </div>
             <div style={styles.stepTitle}>Commission Earned</div>
-            <div style={styles.stepDate}>Oct 28, 2026</div>
+            <div style={styles.stepDate}>{earnedDate}</div>
           </div>
 
-          <div style={styles.timelineLinePending} />
+          <div style={isPaid ? styles.timelineLineActive : styles.timelineLinePending} />
 
           {/* Step 4 */}
           <div style={styles.timelineStep}>
-            <div style={styles.timelineCirclePending}>○</div>
+            <div style={isPaid ? styles.timelineCircleActive : styles.timelineCirclePending}>
+              {isPaid ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : null}
+            </div>
             <div style={styles.stepTitle}>Payout</div>
-            <div style={styles.stepDate}>Pending</div>
+            <div style={styles.stepDate}>{isPaid ? 'Paid' : 'Pending'}</div>
           </div>
         </div>
       </div>

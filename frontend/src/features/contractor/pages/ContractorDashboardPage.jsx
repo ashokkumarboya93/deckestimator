@@ -63,18 +63,18 @@ export default function ContractorDashboardPage() {
       }
       if (leadsRes.status === 'fulfilled') {
         const leadList = leadsRes.value?.data || [];
-        setLeadsCount(leadList.length || 6);
+        setLeadsCount(leadList.length);
       } else {
-        setLeadsCount(6);
+        setLeadsCount(0);
       }
       if (commRes.status === 'fulfilled') {
         setCommissionSummary(commRes.value?.data || null);
       }
       if (discRes.status === 'fulfilled') {
         const discList = discRes.value?.data || [];
-        setDiscountsCount(discList.length || 3);
+        setDiscountsCount(discList.length);
       } else {
-        setDiscountsCount(3);
+        setDiscountsCount(0);
       }
     } catch (err) {
       setError(err?.message || 'Failed to load dashboard data.');
@@ -84,13 +84,23 @@ export default function ContractorDashboardPage() {
   }
 
   // Calculate live KPI metrics from actual database records
-  const totalProjects = projects.length || 12;
-  const totalEstimates = estimates.length || 18;
-  const activeBids = estimates.filter((e) => e.status === 'SUBMITTED' || e.status === 'SENT').length || 5;
-  const wonJobs = estimates.filter((e) => e.status === 'COMPLETED' || e.status === 'APPROVED' || e.status === 'WON').length || 7;
-  const revenuePipeline = estimates.reduce((acc, cur) => acc + (cur.pricingSnapshot?.finalTotal || 0), 0) || 48320;
+  const totalProjects = projects.length;
+  const totalEstimates = estimates.length;
+  const activeBids = estimates.filter((e) => {
+    const s = (e.status || e.estimateStatus || '').toLowerCase();
+    return s === 'submitted' || s === 'sent';
+  }).length;
+  const wonJobs = estimates.filter((e) => {
+    const s = (e.status || e.estimateStatus || '').toLowerCase();
+    return s === 'completed' || s === 'approved' || s === 'won' || s === 'finalized';
+  }).length;
+  const revenuePipeline = estimates.reduce((acc, cur) => {
+    return acc + (cur.pricingSnapshot?.finalTotal || cur.totalAmount || cur.subtotal || 0);
+  }, 0);
 
-  const earnedCommission = commissionSummary?.totalEarned != null ? commissionSummary.totalEarned : 3840;
+  const earnedCommission = commissionSummary?.totalEarned != null
+    ? commissionSummary.totalEarned
+    : (commissionSummary?.totalPaid != null ? commissionSummary.totalPaid : 0);
 
   // Format currency
   const fmt = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -249,123 +259,71 @@ export default function ContractorDashboardPage() {
               </thead>
               <tbody>
                 {projects.length > 0 ? (
-                  projects.slice(0, 5).map((p) => (
-                    <tr key={p._id || p.id} style={styles.tr}>
-                      <td style={styles.td}>
-                        <div style={styles.projectCell}>
-                          <img
-                            src={p.photos?.[0]?.url || "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"}
-                            alt="Deck"
-                            style={styles.deckThumb}
-                          />
-                          <div>
-                            <div style={styles.projectTitle}>{p.projectName || 'Deck Project'}</div>
-                            <div style={styles.clientSub}>{p.owner?.fullName || p.ownerName || 'Client Project'}</div>
+                  projects.slice(0, 5).map((p) => {
+                    const projectEst = estimates.find((e) => {
+                      const dId = e.deckId?._id || e.deckId?.id || e.deckId;
+                      return dId === (p._id || p.id);
+                    });
+                    const estValStr = projectEst
+                      ? `$${Number(projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                      : '$2,378 – $3,566';
+
+                    return (
+                      <tr key={p._id || p.id} style={styles.tr}>
+                        <td style={styles.td}>
+                          <div style={styles.projectCell}>
+                            <img
+                              src={p.photos?.[0]?.url || "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"}
+                              alt="Deck"
+                              style={styles.deckThumb}
+                            />
+                            <div>
+                              <div style={styles.projectTitle}>{p.projectName || 'Deck Project'}</div>
+                              <div style={styles.clientSub}>{p.ownerId?.fullName || p.owner?.fullName || p.ownerName || 'Client Project'}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td style={styles.td}>{p.dimensions?.area ? `${p.dimensions.area} sq ft` : '400 sq ft'}</td>
-                      <td style={styles.td}>
-                        <div style={styles.pillRow}>
-                          <span style={styles.servicePill}>Cleaning</span>
-                          <span style={styles.servicePill}>Staining</span>
-                        </div>
-                      </td>
-                      <td style={styles.tdBold}>$2,378 – $3,566</td>
-                      <td style={styles.td}>
-                        <span style={p.status === 'in_progress' ? styles.statusInProgress : styles.statusCompleted}>
-                          {p.status === 'in_progress' ? 'In Progress' : (p.status || 'Active')}
-                        </span>
-                      </td>
-                      <td style={styles.tdMuted}>
-                        {new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </td>
-                      <td style={{ ...styles.td, textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/contractor/decks/${p._id || p.id}`)}
-                          style={styles.actionViewBtn}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td style={styles.td}>{p.dimensions?.area ? `${p.dimensions.area} sq ft` : (p.area ? `${p.area} sq ft` : '400 sq ft')}</td>
+                        <td style={styles.td}>
+                          <div style={styles.pillRow}>
+                            <span style={styles.servicePill}>Cleaning</span>
+                            <span style={styles.servicePill}>Staining</span>
+                          </div>
+                        </td>
+                        <td style={styles.tdBold}>{estValStr}</td>
+                        <td style={styles.td}>
+                          <span style={p.status === 'in_progress' ? styles.statusInProgress : styles.statusCompleted}>
+                            {p.status === 'in_progress' ? 'In Progress' : (p.status || 'Active')}
+                          </span>
+                        </td>
+                        <td style={styles.tdMuted}>
+                          {new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ ...styles.td, textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/contractor/decks/${p._id || p.id}`)}
+                            style={styles.actionViewBtn}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
-                  <>
-                    <tr style={styles.tr}>
-                      <td style={styles.td}>
-                        <div style={styles.projectCell}>
-                          <img
-                            src="https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80"
-                            alt="Deck"
-                            style={styles.deckThumb}
-                          />
-                          <div>
-                            <div style={styles.projectTitle}>Riverside Deck Restoration</div>
-                            <div style={styles.clientSub}>Jane Homeowner</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={styles.td}>400 sq ft</td>
-                      <td style={styles.td}>
-                        <div style={styles.pillRow}>
-                          <span style={styles.servicePill}>Cleaning</span>
-                          <span style={styles.servicePill}>Staining</span>
-                        </div>
-                      </td>
-                      <td style={styles.tdBold}>$2,378 – $3,566</td>
-                      <td style={styles.td}>
-                        <span style={styles.statusInProgress}>In Progress</span>
-                      </td>
-                      <td style={styles.tdMuted}>Nov 3, 2026</td>
-                      <td style={{ ...styles.td, textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate('/contractor/projects')}
-                          style={styles.actionViewBtn}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                    <tr style={styles.tr}>
-                      <td style={styles.td}>
-                        <div style={styles.projectCell}>
-                          <img
-                            src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=120&q=80"
-                            alt="Deck"
-                            style={styles.deckThumb}
-                          />
-                          <div>
-                            <div style={styles.projectTitle}>Lakeview Deck Refinish</div>
-                            <div style={styles.clientSub}>Mark Johnson</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={styles.td}>300 sq ft</td>
-                      <td style={styles.td}>
-                        <div style={styles.pillRow}>
-                          <span style={styles.servicePill}>Sanding</span>
-                          <span style={styles.servicePill}>Staining</span>
-                        </div>
-                      </td>
-                      <td style={styles.tdBold}>$1,082 – $1,623</td>
-                      <td style={styles.td}>
-                        <span style={styles.statusSubmitted}>Submitted</span>
-                      </td>
-                      <td style={styles.tdMuted}>Oct 28, 2026</td>
-                      <td style={{ ...styles.td, textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate('/contractor/projects')}
-                          style={styles.actionViewBtn}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  </>
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '40px 16px', color: '#64748b' }}>
+                      <p style={{ margin: 0, fontWeight: 500 }}>No deck projects found in database.</p>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/contractor/decks/new')}
+                        style={{ marginTop: '12px', padding: '8px 16px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        + Create New Deck Project
+                      </button>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

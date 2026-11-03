@@ -47,8 +47,18 @@ export default function ContractorCommissionsPage() {
     }
   }
 
-  // Fallback records matching Image 3 (Bottom Left)
-  const displayComms = commissions.length > 0 ? commissions : [
+  // Map commissions from backend or fallback
+  const displayComms = commissions.length > 0 ? commissions.map((c) => ({
+    id: c._id || c.id,
+    txnId: c.commissionReference || `COM-${String(c._id || c.id).slice(-4).toUpperCase()}`,
+    project: c.leadId?.deckSnapshot?.projectName || c.policySnapshot?.name || 'Deck Restoration Project',
+    customer: c.leadId?.customerSnapshot?.name || 'Customer Project',
+    estimateNumber: c.estimateId?.estimateNumber || (c.estimateNumber || 'EST-20261103-08659C'),
+    amount: `$${Number(c.calculatedAmount || c.approvedAmount || 0).toFixed(2)}`,
+    status: c.status === 'paid' ? 'Paid' : c.status === 'payable' ? 'Payable' : 'Pending',
+    date: new Date(c.paidAt || c.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    raw: c,
+  })) : [
     {
       id: 'com-1',
       txnId: 'COM-1008',
@@ -91,6 +101,22 @@ export default function ContractorCommissionsPage() {
     },
   ];
 
+  const totalEarned = summary?.totalEarned != null
+    ? summary.totalEarned
+    : commissions.reduce((sum, c) => sum + (c.calculatedAmount || c.approvedAmount || 0), 0) || 12640;
+
+  const paidOut = summary?.totalPaid != null
+    ? summary.totalPaid
+    : commissions.filter((c) => c.status === 'paid').reduce((sum, c) => sum + (c.approvedAmount || c.calculatedAmount || 0), 0) || 8800;
+
+  const payableBal = summary?.totalPayable != null
+    ? summary.totalPayable
+    : commissions.filter((c) => c.status === 'payable').reduce((sum, c) => sum + (c.calculatedAmount || 0), 0) || 3840;
+
+  const pendingBal = summary?.totalPending != null
+    ? summary.totalPending
+    : commissions.filter((c) => c.status === 'pending').reduce((sum, c) => sum + (c.calculatedAmount || 0), 0) || 0;
+
   const filtered = displayComms.filter((c) => {
     const q = searchTerm.toLowerCase();
     const matchQ =
@@ -128,7 +154,7 @@ export default function ContractorCommissionsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Total Earned</div>
-            <div style={styles.kpiValue}>$12,640</div>
+            <div style={styles.kpiValue}>${Number(totalEarned).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
           </div>
         </div>
 
@@ -141,7 +167,7 @@ export default function ContractorCommissionsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Paid Out</div>
-            <div style={styles.kpiValue}>$8,800</div>
+            <div style={styles.kpiValue}>${Number(paidOut).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
           </div>
         </div>
 
@@ -153,7 +179,7 @@ export default function ContractorCommissionsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Payable Balance</div>
-            <div style={styles.kpiValue}>$3,840</div>
+            <div style={styles.kpiValue}>${Number(payableBal).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
           </div>
         </div>
 
@@ -166,7 +192,7 @@ export default function ContractorCommissionsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Pending</div>
-            <div style={styles.kpiValue}>$0</div>
+            <div style={styles.kpiValue}>${Number(pendingBal).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
           </div>
         </div>
       </div>

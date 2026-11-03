@@ -95,8 +95,42 @@ export default function ContractorVerificationPage() {
     }
   }
 
-  // Fallback records matching Image 3 (Top Left)
-  const displayDocs = documents.length > 0 ? documents : [
+  // Map documents from backend or fallback
+  const displayDocs = documents.length > 0 ? documents.map((d) => {
+    const typeLabel =
+      d.documentType === 'contractor_license'
+        ? 'Contractor License'
+        : d.documentType === 'insurance_certificate'
+        ? 'General Liability Insurance'
+        : d.documentType === 'business_registration'
+        ? 'Business Registration'
+        : (d.name || 'Verification Document');
+
+    const catLabel =
+      d.documentType === 'contractor_license'
+        ? 'License'
+        : d.documentType === 'insurance_certificate'
+        ? 'Insurance'
+        : d.documentType === 'business_registration'
+        ? 'Registration'
+        : (d.category || 'Other');
+
+    const statusLabel =
+      d.documentStatus === 'verified' || d.status === 'Verified' || d.status === 'approved'
+        ? 'Verified'
+        : 'Under Review';
+
+    return {
+      id: d._id || d.id,
+      name: typeLabel,
+      category: catLabel,
+      file: d.originalFileName || d.file || `${catLabel.toLowerCase()}.pdf`,
+      status: statusLabel,
+      uploadedOn: d.uploadedAt
+        ? new Date(d.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : (d.uploadedOn || 'Oct 20, 2026'),
+    };
+  }) : [
     {
       id: 'doc-1',
       name: 'Contractor License',
@@ -137,7 +171,9 @@ export default function ContractorVerificationPage() {
       <div style={styles.profileCard}>
         <div style={styles.profileLeft}>
           <div style={styles.profileIconBox}>
-            <span style={{ fontSize: '20px' }}>🏢</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+            </svg>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -178,7 +214,13 @@ export default function ContractorVerificationPage() {
       <div style={styles.tableCard}>
         <div style={styles.cardHeaderRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>📁</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <line x1="10" y1="9" x2="8" y2="9" />
+            </svg>
             <h2 style={styles.cardHeading}>Verification Documents</h2>
           </div>
           <button
@@ -186,7 +228,11 @@ export default function ContractorVerificationPage() {
             onClick={() => setShowUploadModal(true)}
             style={styles.uploadBtn}
           >
-            <span>⬆️</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
             <span>Upload Document</span>
           </button>
         </div>
@@ -210,7 +256,13 @@ export default function ContractorVerificationPage() {
                   <td style={styles.td}>{d.category || d.documentType}</td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1d4ed8' }}>
-                      <span>📄</span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" x2="8" y1="13" y2="13" />
+                        <line x1="16" x2="8" y1="17" y2="17" />
+                        <line x1="10" x2="8" y1="9" x2="8" y2="9" />
+                      </svg>
                       <span>{d.file || d.originalName || `${d.category || 'document'}.pdf`}</span>
                     </div>
                   </td>

@@ -30,13 +30,27 @@ export default function ContractorDiscountsPage() {
     }
   }
 
-  // Fallback records matching Image 4 (Bottom Right)
-  const displayDiscounts = discounts.length > 0 ? discounts : [
+  // Map discounts from backend or fallback
+  const displayDiscounts = discounts.length > 0 ? discounts.map((d) => ({
+    id: d._id || d.id,
+    name: d.name || 'Contractor Material Discount',
+    type: d.discountType === 'percentage' ? 'Percentage' : 'Fixed Amount',
+    value: d.discountType === 'percentage' ? `${d.discountValue}%` : `$${d.discountValue}`,
+    numericValue: d.discountValue || 0,
+    applicableFor: d.applicableComponent
+      ? d.applicableComponent.charAt(0).toUpperCase() + d.applicableComponent.slice(1)
+      : (d.applicableFor || 'Materials'),
+    validity: d.effectiveStartDate && d.effectiveEndDate
+      ? `${new Date(d.effectiveStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(d.effectiveEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+      : 'Oct 1, 2026 – Dec 31, 2026',
+    status: d.status === 'active' || d.status === 'ACTIVE' ? 'Active' : (d.status || 'Active'),
+  })) : [
     {
       id: 'disc-1',
       name: 'Contractor Material Discount',
       type: 'Percentage',
       value: '15%',
+      numericValue: 15,
       applicableFor: 'Materials',
       validity: 'Oct 1, 2026 – Dec 31, 2026',
       status: 'Active',
@@ -46,6 +60,7 @@ export default function ContractorDiscountsPage() {
       name: 'Restoration Service Partner',
       type: 'Percentage',
       value: '10%',
+      numericValue: 10,
       applicableFor: 'Cleaning, Staining',
       validity: 'Oct 1, 2026 – Dec 31, 2026',
       status: 'Active',
@@ -55,11 +70,18 @@ export default function ContractorDiscountsPage() {
       name: 'Bulk Project Incentive',
       type: 'Fixed Amount',
       value: '$250',
+      numericValue: 250,
       applicableFor: 'Projects ≥ $5,000',
       validity: 'Oct 1, 2026 – Dec 31, 2026',
       status: 'Active',
     },
   ];
+
+  const activeDiscounts = displayDiscounts.filter((d) => d.status === 'Active').length;
+  const percentageDiscounts = displayDiscounts.filter((d) => d.type === 'Percentage');
+  const maxVal = percentageDiscounts.reduce((max, d) => Math.max(max, d.numericValue || 0), 0);
+  const highestDiscount = `${maxVal || 15}%`;
+  const applicableServicesCount = 5;
 
   return (
     <div style={styles.container}>
@@ -80,7 +102,7 @@ export default function ContractorDiscountsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Active Discounts</div>
-            <div style={styles.kpiValue}>3</div>
+            <div style={styles.kpiValue}>{activeDiscounts}</div>
           </div>
         </div>
 
@@ -94,7 +116,7 @@ export default function ContractorDiscountsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Highest Discount</div>
-            <div style={styles.kpiValue}>15%</div>
+            <div style={styles.kpiValue}>{highestDiscount}</div>
           </div>
         </div>
 
@@ -108,7 +130,7 @@ export default function ContractorDiscountsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Applicable Services</div>
-            <div style={styles.kpiValue}>5</div>
+            <div style={styles.kpiValue}>{applicableServicesCount}</div>
           </div>
         </div>
       </div>

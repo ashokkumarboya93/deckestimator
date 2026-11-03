@@ -8,14 +8,62 @@
 // - Document Information card: Category, File Name, File Size, Uploaded On, Verified On, Status
 // - Download button & Replace Document button
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { contractorLeadApi } from '../api/contractorLeadApi';
 
 export default function ContractorDocumentDetailPage() {
   const navigate = useNavigate();
   const { documentId } = useParams();
 
   const [zoom, setZoom] = useState(100);
+  const [doc, setDoc] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDoc() {
+      setLoading(true);
+      try {
+        const res = await contractorLeadApi.getMyDocuments();
+        const list = res?.data || [];
+        const found = list.find((d) => (d._id || d.id) === documentId);
+        if (found) {
+          setDoc(found);
+        }
+      } catch (err) {
+        console.warn('Could not load doc details:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDoc();
+  }, [documentId]);
+
+  const docTitle = doc?.documentType === 'contractor_license'
+    ? 'Contractor License'
+    : doc?.documentType === 'insurance_certificate'
+    ? 'General Liability Insurance'
+    : doc?.documentType === 'business_registration'
+    ? 'Business Registration'
+    : 'Contractor License';
+
+  const docCategory = doc?.documentType === 'contractor_license'
+    ? 'License'
+    : doc?.documentType === 'insurance_certificate'
+    ? 'Insurance'
+    : doc?.documentType === 'business_registration'
+    ? 'Registration'
+    : 'License';
+
+  const docFileName = doc?.originalFileName || 'license.pdf';
+  const docFileSize = doc?.fileSize ? `${(doc.fileSize / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB';
+  const uploadedDateStr = doc?.uploadedAt
+    ? new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Oct 20, 2026';
+  const verifiedDateStr = doc?.reviewedAt
+    ? new Date(doc.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Oct 21, 2026';
+  const isVerified = (doc?.documentStatus || 'verified') === 'verified';
 
   return (
     <div style={styles.container}>
@@ -31,8 +79,8 @@ export default function ContractorDocumentDetailPage() {
       {/* 2. TITLE & STATUS BADGE */}
       <div style={styles.titleRow}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h1 style={styles.pageTitle}>Contractor License</h1>
-          <span style={styles.verifiedBadge}>Verified</span>
+          <h1 style={styles.pageTitle}>{docTitle}</h1>
+          <span style={isVerified ? styles.verifiedBadge : styles.reviewBadge}>{isVerified ? 'Verified' : 'Under Review'}</span>
         </div>
         <p style={styles.pageSub}>Complete details and verification status for this document.</p>
       </div>
@@ -78,7 +126,11 @@ export default function ContractorDocumentDetailPage() {
               >
                 +
               </button>
-              <button type="button" style={styles.zoomBtn}>⛶</button>
+              <button type="button" style={styles.zoomBtn} title="Fullscreen">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -91,27 +143,27 @@ export default function ContractorDocumentDetailPage() {
             <div style={styles.infoList}>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Document Category</span>
-                <span style={styles.infoVal}>License</span>
+                <span style={styles.infoVal}>{docCategory}</span>
               </div>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>File Name</span>
-                <span style={styles.infoVal}>license.pdf</span>
+                <span style={styles.infoVal}>{docFileName}</span>
               </div>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>File Size</span>
-                <span style={styles.infoVal}>1.2 MB</span>
+                <span style={styles.infoVal}>{docFileSize}</span>
               </div>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Uploaded On</span>
-                <span style={styles.infoVal}>Oct 20, 2026</span>
+                <span style={styles.infoVal}>{uploadedDateStr}</span>
               </div>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Verified On</span>
-                <span style={styles.infoVal}>Oct 21, 2026</span>
+                <span style={styles.infoVal}>{verifiedDateStr}</span>
               </div>
               <div style={styles.infoRow}>
                 <span style={styles.infoLabel}>Status</span>
-                <span style={styles.verifiedText}>Verified</span>
+                <span style={isVerified ? styles.verifiedText : styles.reviewText}>{isVerified ? 'Verified' : 'Under Review'}</span>
               </div>
             </div>
 

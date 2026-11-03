@@ -34,9 +34,9 @@ export default function ContractorProjectsPage() {
         const mapped = list.map((d) => ({
           id: d._id || d.id,
           title: d.projectName || 'Deck Project',
-          client: d.owner?.fullName || d.ownerName || 'Jane Homeowner',
+          client: d.ownerId?.fullName || d.owner?.fullName || d.ownerName || 'Jane Homeowner',
           location: d.location?.city ? `${d.location.city}, ${d.location.state || 'TX'}` : 'Austin, TX',
-          deckSize: d.dimensions?.area ? `${d.dimensions.area} sq ft` : '400 sq ft',
+          deckSize: d.dimensions?.area ? `${d.dimensions.area} sq ft` : (d.area ? `${d.area} sq ft` : '400 sq ft'),
           estimatesCount: d.estimatesCount || 1,
           status: d.status === 'in_progress' ? 'In Progress' : (d.status === 'completed' ? 'Submitted' : 'Draft'),
           updated: new Date(d.updatedAt || d.createdAt || Date.now()).toLocaleDateString('en-US', {
@@ -137,7 +137,10 @@ export default function ContractorProjectsPage() {
       {/* 2. CONTROLS BAR: SEARCH + STATUS + DATE */}
       <div style={styles.controlsBar}>
         <div style={styles.searchWrap}>
-          <span style={{ color: '#94a3b8', fontSize: '14px', marginRight: '8px' }}>🔍</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
             type="text"
             value={searchTerm}
@@ -198,7 +201,10 @@ export default function ContractorProjectsPage() {
                   </td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
-                      <span>📍</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
                       <span>{p.location}</span>
                     </div>
                   </td>
@@ -233,7 +239,10 @@ export default function ContractorProjectsPage() {
                         style={styles.dotsBtn}
                         title="Delete project"
                       >
-                        🗑️
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
                       </button>
                     </div>
                   </td>

@@ -123,6 +123,9 @@ export const ENDPOINTS = {
     DOCUMENTS: '/contractors/me/verification/documents',
     DOCUMENT_FILE: (docId) => `/contractors/documents/${docId}/file`,
     ELIGIBLE: '/contractors/eligible',
+    ADMIN_VERIFICATIONS: '/contractors/admin/verifications',
+    ADMIN_VERIFICATION_BY_ID: (id) => `/contractors/admin/verifications/${id}`,
+    ADMIN_VERIFICATION_REVIEW: (id) => `/contractors/admin/verifications/${id}/review`,
   },
 
   // Discounts (Phase 9)

@@ -75,7 +75,8 @@ export function LoginForm() {
         if (data.user.role === 'admin') {
           navigate('/admin/dashboard');
         } else if (data.user.role === 'contractor') {
-          navigate('/contractor/dashboard');
+          const isApproved = data.contractorProfile?.verificationStatus === 'approved';
+          navigate(isApproved ? '/contractor/dashboard' : '/contractor/verification-request');
         } else {
           navigate('/customer/dashboard');
         }
