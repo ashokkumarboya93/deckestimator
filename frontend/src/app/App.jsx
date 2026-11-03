@@ -2,12 +2,13 @@
 // Deck Estimator — Root Application Component
 // =============================================
 
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 
 function App() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   async function handleLogout() {
     await logout();
@@ -59,8 +60,8 @@ function App() {
                     to="/customer/dashboard"
                     style={{
                       fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#0f172a',
+                      fontWeight: location.pathname === '/customer/dashboard' ? '700' : '600',
+                      color: location.pathname === '/customer/dashboard' ? '#16a34a' : '#0f172a',
                       textDecoration: 'none',
                       padding: '4px 8px',
                       borderRadius: '6px',
@@ -72,8 +73,8 @@ function App() {
                     to="/customer/decks/new"
                     style={{
                       fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#16a34a',
+                      fontWeight: location.pathname === '/customer/decks/new' ? '700' : '600',
+                      color: location.pathname === '/customer/decks/new' ? '#16a34a' : '#475569',
                       textDecoration: 'none',
                       padding: '4px 8px',
                       borderRadius: '6px',
@@ -81,27 +82,18 @@ function App() {
                   >
                     Estimator
                   </Link>
-                  <a
-                    href="#estimates-table"
-                    onClick={(e) => {
-                      if (window.location.pathname !== '/customer/dashboard') {
-                        navigate('/customer/dashboard#estimates-table');
-                      } else {
-                        const el = document.getElementById('estimates-table');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
+                  <Link
+                    to="/customer/estimates"
                     style={{
                       fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#475569',
+                      fontWeight: location.pathname === '/customer/estimates' ? '700' : '500',
+                      color: location.pathname === '/customer/estimates' ? '#16a34a' : '#475569',
                       textDecoration: 'none',
                       padding: '4px 8px',
-                      cursor: 'pointer',
                     }}
                   >
                     My Estimates
-                  </a>
+                  </Link>
                 </>
               ) : (
                 <>

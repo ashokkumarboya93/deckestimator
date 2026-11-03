@@ -9,6 +9,7 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardPage';
 import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
 import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
+import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
 import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
 import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
 import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
@@ -93,6 +94,16 @@ const router = createBrowserRouter([
           <RequireAuth>
             <RequireRole allowedRoles={['customer', 'admin']}>
               <EstimateBuilderPage />
+            </RequireRole>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'customer/estimates',
+        element: (
+          <RequireAuth>
+            <RequireRole allowedRoles={['customer', 'admin']}>
+              <CustomerEstimatesPage />
             </RequireRole>
           </RequireAuth>
         ),
@@ -222,6 +233,11 @@ const router = createBrowserRouter([
             </RequireRole>
           </RequireAuth>
         ),
+      },
+      // Fallback
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },
