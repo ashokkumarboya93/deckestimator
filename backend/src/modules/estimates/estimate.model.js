@@ -284,14 +284,10 @@ const estimateSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
-    warnings: [
-      {
-        materialName: String,
-        serviceName: String,
-        type: String,
-        notes: String,
-      },
-    ],
+    warnings: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
     notes: {
       type: String,
       trim: true,
