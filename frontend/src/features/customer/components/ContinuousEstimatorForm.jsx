@@ -76,24 +76,24 @@ const LEVELS = [
 ];
 
 const CONDITIONS = [
-  { id: 'good', label: 'Good', icon: '🛡️', desc: 'Sound wood, clean, light wash required' },
-  { id: 'weathered', label: 'Weathered', icon: '☀️', desc: 'Grayed, sun-worn; needs brightening' },
-  { id: 'peeling_stained', label: 'Peeling / Stained', icon: '🖌️', desc: 'Old coating failing; requires chemical strip' },
-  { id: 'damaged', label: 'Damaged / Rough', icon: '🪵', desc: 'Splintered or deep cracks; needs sanding' },
+  { id: 'good', label: 'Good', img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=300&q=80', desc: 'Sound wood, clean, light wash required' },
+  { id: 'weathered', label: 'Weathered', img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80', desc: 'Grayed, sun-worn; needs brightening' },
+  { id: 'peeling_stained', label: 'Peeling / Stained', img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=80', desc: 'Old coating failing; requires chemical strip' },
+  { id: 'damaged', label: 'Damaged / Rough', img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=300&q=80', desc: 'Splintered or deep cracks; needs sanding' },
 ];
 
 const RESTORATIONS = [
-  { id: 'cleaning', label: 'Deep Cleaning', icon: '🚿', desc: 'Eco scrub & pressure wash' },
-  { id: 'stripping', label: 'Stain Stripping', icon: '🧪', desc: 'Chemical stripping of old stains' },
-  { id: 'sanding', label: 'Deck Sanding', icon: '⚙️', desc: 'Smooth rough grain & splinters' },
-  { id: 'full_restoration', label: 'Full Restoration', icon: '🏆', desc: 'Complete turnkey strip, sand & stain' },
+  { id: 'cleaning', label: 'Deep Cleaning', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80', desc: 'Eco scrub & pressure wash' },
+  { id: 'stripping', label: 'Stain Stripping', img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=300&q=80', desc: 'Chemical stripping of old stains' },
+  { id: 'sanding', label: 'Deck Sanding', img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=300&q=80', desc: 'Smooth rough grain & splinters' },
+  { id: 'full_restoration', label: 'Full Restoration', img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80', desc: 'Complete turnkey strip, sand & stain' },
 ];
 
 const FINISHES = [
-  { id: 'natural', label: 'Natural / Clear', icon: '💧', desc: 'Highlights natural grain; water repellent' },
-  { id: 'semi_transparent_stain', label: 'Semi-Transparent Stain', icon: '🎨', desc: 'Adds rich pigment with visible wood grain' },
-  { id: 'solid_stain', label: 'Solid Stain', icon: '🛡️', desc: 'Opaque protective color coat' },
-  { id: 'clear_sealer', label: 'Clear Sealer', icon: '🔒', desc: 'Hydrophobic moisture lock protection' },
+  { id: 'natural', label: 'Natural / Clear', img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80', desc: 'Highlights natural grain; water repellent' },
+  { id: 'semi_transparent_stain', label: 'Semi-Transparent Stain', img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=300&q=80', desc: 'Adds rich pigment with visible wood grain' },
+  { id: 'solid_stain', label: 'Solid Stain', img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=80', desc: 'Opaque protective color coat' },
+  { id: 'clear_sealer', label: 'Clear Sealer', img: 'https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=300&q=80', desc: 'Hydrophobic moisture lock protection' },
 ];
 
 const INSPIRATION_PHOTOS = [
@@ -641,8 +641,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
                     }}
                   >
-                    <div style={styles.condIconBox}>
-                      <span style={{ fontSize: '32px' }}>{c.icon}</span>
+                    <div style={styles.cardImgWrap}>
+                      <img src={c.img} alt={c.label} style={styles.inputCardImg} />
                       {isSelected && <span style={styles.greenCheckmark}>✓</span>}
                     </div>
                     <strong style={styles.condName}>{c.label}</strong>
@@ -680,8 +680,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
                     }}
                   >
-                    <div style={styles.serviceIconBox}>
-                      <span style={{ fontSize: '30px' }}>{r.icon}</span>
+                    <div style={styles.cardImgWrap}>
+                      <img src={r.img} alt={r.label} style={styles.inputCardImg} />
                       {isSelected && <span style={styles.greenCheckmark}>✓</span>}
                     </div>
                     <strong style={styles.serviceName}>{r.label}</strong>
@@ -730,8 +730,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
                     }}
                   >
-                    <div style={styles.finishIconBox}>
-                      <span style={{ fontSize: '28px' }}>{f.icon}</span>
+                    <div style={styles.cardImgWrap}>
+                      <img src={f.img} alt={f.label} style={styles.inputCardImg} />
                       {isSelected && <span style={styles.greenCheckmark}>✓</span>}
                     </div>
                     <strong style={styles.finishName}>{f.label}</strong>
@@ -1446,6 +1446,21 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '12px',
+  },
+  cardImgWrap: {
+    width: '100%',
+    height: '78px',
+    borderRadius: '6px',
+    overflow: 'hidden',
+    marginBottom: '8px',
+    position: 'relative',
+    backgroundColor: '#f1f5f9',
+  },
+  inputCardImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
   },
   condCard: {
     border: '1.5px solid #e2e8f0',

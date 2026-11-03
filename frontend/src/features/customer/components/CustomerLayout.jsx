@@ -26,7 +26,9 @@ export default function CustomerLayout() {
   // Active path checker
   const isActive = (path) => currentPath === path || (path !== '/customer/dashboard' && currentPath.startsWith(path));
 
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const isEstimatesPage = currentPath === '/customer/estimates' || currentPath.startsWith('/customer/estimates');
+  const isEstimatorPage = currentPath === '/customer/decks/new' || currentPath.includes('/decks/');
 
   if (isEstimatesPage) {
     return (
@@ -86,9 +88,20 @@ export default function CustomerLayout() {
   }
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}) }}>
       {/* 1. STATIC LEFT SIDEBAR */}
-      <aside style={styles.sidebar}>
+      <aside
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+        style={{
+          ...styles.sidebar,
+          width: isSidebarHovered ? '230px' : '68px',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflowX: 'hidden',
+          whiteSpace: 'nowrap',
+          boxShadow: isSidebarHovered ? '4px 0 20px rgba(15, 23, 42, 0.12)' : 'none',
+        }}
+      >
         {/* Brand Header */}
         <div style={styles.brandBox}>
           <div style={styles.brandLogoRow}>
@@ -109,7 +122,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/dashboard' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>🏠</span>
-            <span>Dashboard</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>Dashboard</span>
           </Link>
 
           <Link
@@ -117,7 +130,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/decks/new' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>⊕</span>
-            <span>New Deck Project</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>New Deck Project</span>
           </Link>
 
           <Link
@@ -125,7 +138,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/decks' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>🥞</span>
-            <span>My Deck Projects</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>My Deck Projects</span>
           </Link>
 
           <Link
@@ -133,7 +146,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/estimates' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>📄</span>
-            <span>My Estimates</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>My Estimates</span>
           </Link>
 
           <Link
@@ -141,7 +154,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/estimates/reports' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>📊</span>
-            <span>Estimate Reports</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>Estimate Reports</span>
           </Link>
 
           <div style={styles.navDivider} />
@@ -151,7 +164,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, ...(currentPath === '/customer/settings' ? styles.navItemActive : {}) }}
           >
             <span style={styles.navIcon}>⚙️</span>
-            <span>Profile Settings</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>Profile Settings</span>
           </Link>
 
           <button
@@ -160,7 +173,7 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
           >
             <span style={styles.navIcon}>❓</span>
-            <span>Help & Guide</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>Help & Guide</span>
           </button>
 
           <button
@@ -169,13 +182,13 @@ export default function CustomerLayout() {
             style={{ ...styles.navItem, background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: '#dc2626', marginTop: 'auto' }}
           >
             <span style={styles.navIcon}>🚪</span>
-            <span>Logout</span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, transition: 'opacity 0.15s ease' }}>Logout</span>
           </button>
         </nav>
       </aside>
 
       {/* 2. MAIN CONTENT AREA */}
-      <div style={styles.mainWrapper}>
+      <div style={{ ...styles.mainWrapper, ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}) }}>
         {/* Top Header Bar */}
         <header style={styles.topHeader}>
           <div style={styles.headerLeft}>
@@ -250,7 +263,7 @@ export default function CustomerLayout() {
         </header>
 
         {/* Page Content Body */}
-        <main style={{ ...styles.mainContent, ...(currentPath === '/customer/decks/new' ? { overflow: 'hidden', height: 'calc(100vh - 62px)', display: 'flex', flexDirection: 'column' } : {}) }}>
+        <main style={{ ...styles.mainContent, ...(isEstimatorPage ? { overflow: 'hidden', height: 'calc(100vh - 62px)', maxHeight: 'calc(100vh - 62px)', display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: '0' } : {}) }}>
           <Outlet />
         </main>
       </div>
