@@ -103,7 +103,7 @@ export default function AdminLayout() {
         onMouseLeave={() => setIsSidebarHovered(false)}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '230px' : '68px',
+          width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.12)' : 'none',
         }}
@@ -324,7 +324,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* 2. MAIN VIEW AREA */}
-      <div style={styles.mainWrapper}>
+      <div style={{ ...styles.mainWrapper, marginLeft: isSidebarHovered ? '240px' : '68px', transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {/* TOP NAVIGATION BAR */}
         <header style={styles.topHeader}>
           {/* Left: Breadcrumbs & Page Title */}
@@ -885,3 +885,4 @@ const styles = {
     backgroundColor: '#f8fafc',
   },
 };
+

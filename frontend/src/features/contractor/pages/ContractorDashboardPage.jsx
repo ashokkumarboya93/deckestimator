@@ -113,28 +113,24 @@ export default function ContractorDashboardPage() {
         <div style={styles.heroContent}>
           <div style={styles.heroBadgeRow}>
             <span style={styles.heroTag}>CONTRACTOR PORTAL</span>
-            <span style={styles.verifiedBadge}>✓ VERIFIED CONTRACTOR</span>
+            <span style={styles.verifiedBadge}>VERIFIED CONTRACTOR</span>
           </div>
-          <h1 style={styles.heroHeading}>
-            Welcome Back, {user?.fullName ? user.fullName.split(' ')[0] : 'Alex'}!
+          <h1 style={styles.heroHeading}>Welcome Back, {user?.fullName ? user.fullName.split(' ')[0] : 'Alex'}!
           </h1>
-          <p style={styles.heroSub}>
-            Manage your deck projects, customer leads, estimates, compliance and business earnings—all in one place.
+          <p style={styles.heroSub}>Manage your deck projects, customer leads, estimates, compliance and business earnings—all in one place.
           </p>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
-              onClick={() => navigate('/contractor/decks/new')}
+              onClick={() =>navigate('/contractor/decks/new')}
               style={styles.primaryHeroBtn}
-            >
-              New Deck Project
+            >New Deck Project
             </button>
             <button
               type="button"
-              onClick={() => navigate('/contractor/estimates')}
+              onClick={() =>navigate('/contractor/estimates')}
               style={styles.secondaryHeroBtn}
-            >
-              Create Estimate
+            >Create Estimate
             </button>
           </div>
         </div>
@@ -237,10 +233,9 @@ export default function ContractorDashboardPage() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/contractor/projects')}
+              onClick={() =>navigate('/contractor/projects')}
               style={styles.viewAllBtn}
-            >
-              View All Projects &rarr;
+            >View All Projects &rarr;
             </button>
           </div>
 
@@ -302,10 +297,9 @@ export default function ContractorDashboardPage() {
                         <td style={{ ...styles.td, textAlign: 'center' }}>
                           <button
                             type="button"
-                            onClick={() => navigate(`/contractor/decks/${p._id || p.id}`)}
+                            onClick={() =>navigate(`/contractor/decks/${p._id || p.id}`)}
                             style={styles.actionViewBtn}
-                          >
-                            View
+                          >View
                           </button>
                         </td>
                       </tr>
@@ -317,7 +311,7 @@ export default function ContractorDashboardPage() {
                       <p style={{ margin: 0, fontWeight: 500 }}>No deck projects found in database.</p>
                       <button
                         type="button"
-                        onClick={() => navigate('/contractor/decks/new')}
+                        onClick={() =>navigate('/contractor/decks/new')}
                         style={{ marginTop: '12px', padding: '8px 16px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
                       >
                         + Create New Deck Project
@@ -333,7 +327,7 @@ export default function ContractorDashboardPage() {
         {/* Right: Four Summary Cards */}
         <div style={styles.summaryCol}>
           {/* Summary 1: Assigned Leads & Enquiries */}
-          <div style={styles.summaryCard} onClick={() => navigate('/contractor/leads')}>
+          <div style={styles.summaryCard} onClick={() =>navigate('/contractor/leads')}>
             <div style={styles.summaryCardLeft}>
               <div style={styles.summaryIconBox}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -353,7 +347,7 @@ export default function ContractorDashboardPage() {
           </div>
 
           {/* Summary 2: Verification & Compliance */}
-          <div style={styles.summaryCard} onClick={() => navigate('/contractor/verification')}>
+          <div style={styles.summaryCard} onClick={() =>navigate('/contractor/verification')}>
             <div style={styles.summaryCardLeft}>
               <div style={styles.summaryIconBox}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -371,7 +365,7 @@ export default function ContractorDashboardPage() {
           </div>
 
           {/* Summary 3: Commissions & Earnings */}
-          <div style={styles.summaryCard} onClick={() => navigate('/contractor/commissions')}>
+          <div style={styles.summaryCard} onClick={() =>navigate('/contractor/commissions')}>
             <div style={styles.summaryCardLeft}>
               <div style={styles.summaryIconBox}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -390,7 +384,7 @@ export default function ContractorDashboardPage() {
           </div>
 
           {/* Summary 4: Partner Discounts */}
-          <div style={styles.summaryCard} onClick={() => navigate('/contractor/discounts')}>
+          <div style={styles.summaryCard} onClick={() =>navigate('/contractor/discounts')}>
             <div style={styles.summaryCardLeft}>
               <div style={styles.summaryIconBox}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -424,7 +418,7 @@ export default function ContractorDashboardPage() {
         <div style={styles.quickActionsRow}>
           <button
             type="button"
-            onClick={() => navigate('/contractor/decks/new')}
+            onClick={() =>navigate('/contractor/decks/new')}
             style={styles.qaPrimaryBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -437,7 +431,7 @@ export default function ContractorDashboardPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/contractor/projects')}
+            onClick={() =>navigate('/contractor/projects')}
             style={styles.qaOutlineBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -448,7 +442,7 @@ export default function ContractorDashboardPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/contractor/estimates')}
+            onClick={() =>navigate('/contractor/estimates')}
             style={styles.qaOutlineBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -461,7 +455,7 @@ export default function ContractorDashboardPage() {
 
           <button
             type="button"
-            onClick={() => navigate('/contractor/verification')}
+            onClick={() =>navigate('/contractor/verification')}
             style={styles.qaOutlineBtn}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -56,7 +56,7 @@ export default function ContractorLayout() {
   const initials = user?.fullName
     ? user.fullName
         .split(' ')
-        .map((n) => n[0])
+        .map((n) =>n[0])
         .join('')
         .substring(0, 2)
         .toUpperCase()
@@ -71,11 +71,11 @@ export default function ContractorLayout() {
     >
       {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Identical UX to Customer Dashboard) */}
       <aside
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
+        onMouseEnter={() =>setIsSidebarHovered(true)}
+        onMouseLeave={() =>setIsSidebarHovered(false)}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '230px' : '68px',
+          width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.12)' : 'none',
         }}
@@ -98,8 +98,7 @@ export default function ContractorLayout() {
                 whiteSpace: 'nowrap',
               }}
             >
-              <span style={styles.brandTitle}>
-                DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+              <span style={styles.brandTitle}>DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
               </span>
               <span style={styles.brandSubtitle}>Contractor Portal</span>
             </div>
@@ -125,8 +124,7 @@ export default function ContractorLayout() {
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Dashboard
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Dashboard
             </span>
           </Link>
 
@@ -146,8 +144,7 @@ export default function ContractorLayout() {
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              New Deck Project
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>New Deck Project
             </span>
           </Link>
 
@@ -169,8 +166,7 @@ export default function ContractorLayout() {
                 <polyline points="2 12 12 17 22 12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Projects &amp; Decks
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Projects &amp; Decks
             </span>
           </Link>
 
@@ -191,8 +187,7 @@ export default function ContractorLayout() {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Assigned Leads
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Assigned Leads
             </span>
             {isSidebarHovered && leadsCount > 0 && (
               <span style={isActive('/contractor/leads') ? styles.badgeActive : styles.badge}>
@@ -219,8 +214,7 @@ export default function ContractorLayout() {
                 <line x1="10" y1="9" x2="8" y2="9" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Estimates
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Estimates
             </span>
           </Link>
 
@@ -239,8 +233,7 @@ export default function ContractorLayout() {
                 <path d="m9 12 2 2 4-4" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Verification &amp; Compliance
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Verification &amp; Compliance
             </span>
           </Link>
 
@@ -260,8 +253,7 @@ export default function ContractorLayout() {
                 <line x1="6" y1="20" x2="6" y2="16" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Commissions &amp; Earnings
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Commissions &amp; Earnings
             </span>
           </Link>
 
@@ -280,8 +272,7 @@ export default function ContractorLayout() {
                 <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Partner Discounts
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Partner Discounts
             </span>
           </Link>
 
@@ -302,15 +293,14 @@ export default function ContractorLayout() {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Profile Settings
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Profile Settings
             </span>
           </Link>
 
           {/* Help & Guide Modal Trigger */}
           <button
             type="button"
-            onClick={() => setIsHelpOpen(true)}
+            onClick={() =>setIsHelpOpen(true)}
             style={{ ...styles.navItem, background: 'none', border: 'none', width: '100%', cursor: 'pointer' }}
             title="Help & Guide"
           >
@@ -321,8 +311,7 @@ export default function ContractorLayout() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Help &amp; Guide
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Help &amp; Guide
             </span>
           </button>
 
@@ -348,8 +337,7 @@ export default function ContractorLayout() {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Logout
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Logout
             </span>
           </button>
         </nav>
@@ -359,6 +347,8 @@ export default function ContractorLayout() {
       <div
         style={{
           ...styles.mainWrapper,
+          marginLeft: isSidebarHovered ? '240px' : '68px',
+          transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
         }}
       >
@@ -371,8 +361,7 @@ export default function ContractorLayout() {
                 <Link to="/contractor/projects" style={styles.backLink}>
                   ← Back to Projects
                 </Link>
-                <span style={styles.estimateForTitle}>
-                  Estimate for: <strong>{currentPath.includes('/edit') ? 'Edit Project' : 'New Project'}</strong>
+                <span style={styles.estimateForTitle}>Estimate for: <strong>{currentPath.includes('/edit') ? 'Edit Project' : 'New Project'}</strong>
                 </span>
                 <span style={styles.draftBadge}>Draft</span>
               </div>
@@ -446,9 +435,9 @@ export default function ContractorLayout() {
               {showNotifications && (
                 <div style={styles.notifDropdown}>
                   <div style={styles.notifHeader}>Recent Notifications</div>
-                  <div style={styles.notifItem}>✓ New lead assigned: Riverside Deck Restoration</div>
-                  <div style={styles.notifItem}>✓ Document verified: Contractor License LIC-TX-2026-99</div>
-                  <div style={styles.notifItem}>✓ Commission payable: COM-1007 ($486.00)</div>
+                  <div style={styles.notifItem}>New lead assigned: Riverside Deck Restoration</div>
+                  <div style={styles.notifItem}>Document verified: Contractor License LIC-TX-2026-99</div>
+                  <div style={styles.notifItem}>Commission payable: COM-1007 ($486.00)</div>
                 </div>
               )}
             </div>
@@ -457,7 +446,7 @@ export default function ContractorLayout() {
             <div style={{ position: 'relative' }}>
               <div
                 style={styles.profilePill}
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onClick={() =>setShowProfileMenu(!showProfileMenu)}
               >
                 <div style={styles.avatarCircle}>{initials}</div>
                 <div style={styles.profileText}>
@@ -480,8 +469,7 @@ export default function ContractorLayout() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
                       <path d="m9 12 2 2 4-4" />
-                    </svg>
-                    Profile &amp; Compliance
+                    </svg>Profile &amp; Compliance
                   </button>
                   <button
                     type="button"
@@ -495,8 +483,7 @@ export default function ContractorLayout() {
                       <polygon points="12 2 2 7 12 12 22 7 12 2" />
                       <polyline points="2 17 12 22 22 17" />
                       <polyline points="2 12 12 17 22 12" />
-                    </svg>
-                    My Projects
+                    </svg>My Projects
                   </button>
                   <button
                     type="button"
@@ -507,8 +494,7 @@ export default function ContractorLayout() {
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                       <polyline points="16 17 21 12 16 7" />
                       <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    Logout
+                    </svg>Logout
                   </button>
                 </div>
               )}
@@ -519,8 +505,7 @@ export default function ContractorLayout() {
               type="button"
               onClick={handleLogout}
               style={styles.logoutBtn}
-            >
-              Logout
+            >Logout
             </button>
           </div>
         </header>
@@ -538,36 +523,31 @@ export default function ContractorLayout() {
 
       {/* 3. HELP & GUIDE MODAL */}
       {isHelpOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsHelpOpen(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setIsHelpOpen(false)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>
-                Contractor Portal Guide &amp; Workflow
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>Contractor Portal Guide &amp; Workflow
               </h3>
               <button
                 type="button"
-                onClick={() => setIsHelpOpen(false)}
+                onClick={() =>setIsHelpOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
             <div style={styles.modalBody}>
               <h4>1. Managing Assigned Leads</h4>
-              <p>
-                When admin dispatches customer deck inquiries in your service area, they appear under <strong>Assigned Leads</strong>. Accept leads to initiate contact or create bids.
+              <p>When admin dispatches customer deck inquiries in your service area, they appear under <strong>Assigned Leads</strong>. Accept leads to initiate contact or create bids.
               </p>
               <h4>2. Creating Estimates with Continuous Estimator</h4>
-              <p>
-                Navigate to <strong>New Deck Project</strong>. Enter dimensions, structural height, wood condition, and select services. The live calculation engine calculates total price instantly.
+              <p>Navigate to <strong>New Deck Project</strong>. Enter dimensions, structural height, wood condition, and select services. The live calculation engine calculates total price instantly.
               </p>
               <h4>3. Verification &amp; Compliance</h4>
-              <p>
-                Upload required Contractor License, General Liability Insurance, and Business Registration documents to maintain verified contractor status.
+              <p>Upload required Contractor License, General Liability Insurance, and Business Registration documents to maintain verified contractor status.
               </p>
               <h4>4. Commissions &amp; Earnings</h4>
-              <p>
-                Track earned commissions on converted customer projects and monitor payout ledger history.
+              <p>Track earned commissions on converted customer projects and monitor payout ledger history.
               </p>
             </div>
           </div>

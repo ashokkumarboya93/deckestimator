@@ -81,26 +81,23 @@ export default function CustomerDashboardPage() {
       {/* 1. HERO SECTION */}
       <section style={styles.heroCard}>
         <div style={styles.heroLeft}>
-          <h1 style={styles.heroTitle}>
-            Welcome, {user?.fullName || 'Alice Customer'}! 👋
+          <h1 style={styles.heroTitle}>Welcome, {user?.fullName || 'Alice Customer'}! 
           </h1>
-          <p style={styles.heroSubtitle}>
-            Get an accurate deck restoration estimate, manage your projects and download professional estimates.
+          <p style={styles.heroSubtitle}>Get an accurate deck restoration estimate, manage your projects and download professional estimates.
           </p>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
-              onClick={() => navigate('/customer/decks/new')}
+              onClick={() =>navigate('/customer/decks/new')}
               style={styles.heroPrimaryBtn}
             >
               + Start New Estimate &rarr;
             </button>
             <button
               type="button"
-              onClick={() => setIsGuideOpen(true)}
+              onClick={() =>setIsGuideOpen(true)}
               style={styles.heroSecondaryBtn}
-            >
-              ▶ How It Works
+            >How It Works
             </button>
           </div>
         </div>
@@ -117,8 +114,11 @@ export default function CustomerDashboardPage() {
       {/* 2. SUMMARY KPI CARDS (4 IN A ROW) */}
       <section style={styles.kpiRow}>
         <div style={styles.kpiCard}>
-          <div style={{ ...styles.kpiIconBox, backgroundColor: '#eff6ff', color: '#2563eb' }}>
-            🥞
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
           </div>
           <div>
             <div style={styles.kpiValue}>{kpis.projects}</div>
@@ -127,8 +127,13 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={{ ...styles.kpiIconBox, backgroundColor: '#faf5ff', color: '#9333ea' }}>
-            📄
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
           </div>
           <div>
             <div style={styles.kpiValue}>{kpis.totalEst}</div>
@@ -137,22 +142,28 @@ export default function CustomerDashboardPage() {
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={{ ...styles.kpiIconBox, backgroundColor: '#f0fdf4', color: '#16a34a' }}>
-            ✅
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#ecfdf5', color: '#15803d' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
           </div>
           <div>
-            <div style={{ ...styles.kpiValue, color: '#16a34a' }}>{kpis.completedEst}</div>
+            <div style={{ ...styles.kpiValue, color: '#15803d' }}>{kpis.completedEst}</div>
             <div style={styles.kpiLabel}>Completed Estimates</div>
           </div>
         </div>
 
         <div style={styles.kpiCard}>
-          <div style={{ ...styles.kpiIconBox, backgroundColor: '#fff7ed', color: '#ea580c' }}>
-            🕒
+          <div style={{ ...styles.kpiIconBox, backgroundColor: '#fef3c7', color: '#b45309' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
           </div>
           <div>
-            <div style={{ ...styles.kpiValue, color: '#ea580c' }}>{kpis.draftEst}</div>
-            <div style={styles.kpiLabel}>Draft Estimate</div>
+            <div style={{ ...styles.kpiValue, color: '#b45309' }}>{kpis.draftEst}</div>
+            <div style={styles.kpiLabel}>Draft Estimates</div>
           </div>
         </div>
       </section>
@@ -161,10 +172,14 @@ export default function CustomerDashboardPage() {
       <section style={styles.actionCardsRow}>
         <div
           style={styles.actionCard}
-          onClick={() => navigate('/customer/decks/new')}
+          onClick={() =>navigate('/customer/decks/new')}
         >
-          <div style={{ ...styles.actionIconBox, backgroundColor: '#eff6ff', color: '#2563eb' }}>
-            🧮
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
           </div>
           <div style={{ flex: 1 }}>
             <h4 style={styles.actionCardTitle}>Create Estimate</h4>
@@ -175,10 +190,14 @@ export default function CustomerDashboardPage() {
 
         <div
           style={styles.actionCard}
-          onClick={() => navigate('/customer/dashboard')}
+          onClick={() =>navigate('/customer/dashboard')}
         >
-          <div style={{ ...styles.actionIconBox, backgroundColor: '#e0f2fe', color: '#0284c7' }}>
-            📁
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
           </div>
           <div style={{ flex: 1 }}>
             <h4 style={styles.actionCardTitle}>My Deck Projects</h4>
@@ -189,10 +208,15 @@ export default function CustomerDashboardPage() {
 
         <div
           style={styles.actionCard}
-          onClick={() => navigate('/customer/estimates')}
+          onClick={() =>navigate('/customer/estimates')}
         >
-          <div style={{ ...styles.actionIconBox, backgroundColor: '#fef3c7', color: '#d97706' }}>
-            📄
+          <div style={{ ...styles.actionIconBox, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
           </div>
           <div style={{ flex: 1 }}>
             <h4 style={styles.actionCardTitle}>My Estimates</h4>
@@ -208,11 +232,10 @@ export default function CustomerDashboardPage() {
         <div style={styles.tablePanel}>
           <div style={styles.tablePanelHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>📄</span>
+              <span style={{ fontSize: '18px' }}></span>
               <h3 style={styles.tablePanelTitle}>Recent Estimates</h3>
             </div>
-            <Link to="/customer/estimates" style={styles.viewAllLink}>
-              View All Estimates &rarr;
+            <Link to="/customer/estimates" style={styles.viewAllLink}>View All Estimates &rarr;
             </Link>
           </div>
 
@@ -223,12 +246,12 @@ export default function CustomerDashboardPage() {
             </div>
           ) : estimates.length === 0 ? (
             <div style={styles.emptyBox}>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>📐</div>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
               <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 4px 0' }}>No recent estimates found</p>
               <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px 0' }}>Calculate your first transparent deck restoration estimate.</p>
               <button
                 type="button"
-                onClick={() => navigate('/customer/decks/new')}
+                onClick={() =>navigate('/customer/decks/new')}
                 style={styles.createFirstBtn}
               >
                 + Create Estimate
@@ -273,27 +296,27 @@ export default function CustomerDashboardPage() {
                           <div style={styles.actionBtnsRow}>
                             <button
                               type="button"
-                              onClick={() => navigate(`/customer/estimates/${estId}`)}
+                              onClick={() =>navigate(`/customer/estimates/${estId}`)}
                               style={styles.iconAction}
                               title="View Estimate"
                             >
-                              👁️
+                              
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate('/customer/estimates')}
+                              onClick={() =>navigate('/customer/estimates')}
                               style={styles.iconAction}
                               title="Download PDF"
                             >
-                              ⬇️
+                              ⬇
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/customer/decks/new`)}
+                              onClick={() =>navigate(`/customer/decks/new`)}
                               style={styles.iconAction}
                               title="Edit Details"
                             >
-                              ✏️
+                              
                             </button>
                           </div>
                         </td>
@@ -309,14 +332,14 @@ export default function CustomerDashboardPage() {
         {/* Right: Quick Actions Panel */}
         <div style={styles.quickActionsPanel}>
           <div style={styles.quickHeader}>
-            <span style={{ fontSize: '18px' }}>⚡</span>
+            <span style={{ fontSize: '18px' }}></span>
             <h3 style={styles.quickTitle}>Quick Actions</h3>
           </div>
 
           <div style={styles.quickList}>
             <div
               style={styles.quickItem}
-              onClick={() => navigate('/customer/decks/new')}
+              onClick={() =>navigate('/customer/decks/new')}
             >
               <div style={styles.quickItemLeft}>
                 <span style={{ color: '#2563eb', fontSize: '16px' }}>+</span>
@@ -327,10 +350,10 @@ export default function CustomerDashboardPage() {
 
             <div
               style={styles.quickItem}
-              onClick={() => navigate('/customer/estimates')}
+              onClick={() =>navigate('/customer/estimates')}
             >
               <div style={styles.quickItemLeft}>
-                <span style={{ color: '#0284c7', fontSize: '16px' }}>📄</span>
+                <span style={{ color: '#0284c7', fontSize: '16px' }}></span>
                 <span style={styles.quickItemText}>My Estimates</span>
               </div>
               <span style={styles.quickItemArrow}>&rarr;</span>
@@ -338,10 +361,10 @@ export default function CustomerDashboardPage() {
 
             <div
               style={styles.quickItem}
-              onClick={() => navigate('/customer/settings')}
+              onClick={() =>navigate('/customer/settings')}
             >
               <div style={styles.quickItemLeft}>
-                <span style={{ color: '#64748b', fontSize: '16px' }}>⚙️</span>
+                <span style={{ color: '#64748b', fontSize: '16px' }}></span>
                 <span style={styles.quickItemText}>Profile Settings</span>
               </div>
               <span style={styles.quickItemArrow}>&rarr;</span>
@@ -349,10 +372,10 @@ export default function CustomerDashboardPage() {
 
             <div
               style={styles.quickItem}
-              onClick={() => setIsGuideOpen(true)}
+              onClick={() =>setIsGuideOpen(true)}
             >
               <div style={styles.quickItemLeft}>
-                <span style={{ color: '#d97706', fontSize: '16px' }}>❓</span>
+                <span style={{ color: '#d97706', fontSize: '16px' }}></span>
                 <span style={styles.quickItemText}>Help & Guide</span>
               </div>
               <span style={styles.quickItemArrow}>&rarr;</span>
@@ -363,19 +386,19 @@ export default function CustomerDashboardPage() {
 
       {/* Guide Modal */}
       {isGuideOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsGuideOpen(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setIsGuideOpen(false)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>📖 How Deck Estimator Works</h3>
-              <button type="button" onClick={() => setIsGuideOpen(false)} style={styles.closeBtn}>✕</button>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>How Deck Estimator Works</h3>
+              <button type="button" onClick={() =>setIsGuideOpen(false)} style={styles.closeBtn}></button>
             </div>
             <div style={styles.modalBody}>
               <p>Follow our continuous 7-step estimator to input deck dimensions, evaluate surface wear, and generate an official estimate snapshot.</p>
               <ul>
-                <li><strong>Step 1:</strong> Select Deck Shape and dimensions.</li>
-                <li><strong>Step 2:</strong> Evaluate Wood Condition.</li>
-                <li><strong>Step 3:</strong> Select Restoration Scope.</li>
-                <li><strong>Step 4:</strong> Select Wood Species & Finish.</li>
+                <li><strong>Step 1:</strong>Select Deck Shape and dimensions.</li>
+                <li><strong>Step 2:</strong>Evaluate Wood Condition.</li>
+                <li><strong>Step 3:</strong>Select Restoration Scope.</li>
+                <li><strong>Step 4:</strong>Select Wood Species & Finish.</li>
               </ul>
               <button
                 type="button"
@@ -384,8 +407,7 @@ export default function CustomerDashboardPage() {
                   navigate('/customer/decks/new');
                 }}
                 style={styles.heroPrimaryBtn}
-              >
-                Start New Estimate
+              >Start New Estimate
               </button>
             </div>
           </div>

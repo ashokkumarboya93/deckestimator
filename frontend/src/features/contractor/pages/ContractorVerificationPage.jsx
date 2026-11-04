@@ -162,8 +162,7 @@ export default function ContractorVerificationPage() {
       {/* 1. PAGE TITLE & DESCRIPTION */}
       <div>
         <h1 style={styles.pageTitle}>Verification &amp; Compliance</h1>
-        <p style={styles.pageSub}>
-          Manage your business information and required verification documents.
+        <p style={styles.pageSub}>Manage your business information and required verification documents.
         </p>
       </div>
 
@@ -203,10 +202,9 @@ export default function ContractorVerificationPage() {
 
         <button
           type="button"
-          onClick={() => setShowEditProfileModal(true)}
+          onClick={() =>setShowEditProfileModal(true)}
           style={styles.editBtn}
-        >
-          Edit
+        >Edit
         </button>
       </div>
 
@@ -225,7 +223,7 @@ export default function ContractorVerificationPage() {
           </div>
           <button
             type="button"
-            onClick={() => setShowUploadModal(true)}
+            onClick={() =>setShowUploadModal(true)}
             style={styles.uploadBtn}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -282,10 +280,9 @@ export default function ContractorVerificationPage() {
                     <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                       <button
                         type="button"
-                        onClick={() => navigate(`/contractor/verification/${d.id}`)}
+                        onClick={() =>navigate(`/contractor/verification/${d.id}`)}
                         style={styles.viewBtn}
-                      >
-                        View
+                      >View
                       </button>
                     </div>
                   </td>
@@ -295,25 +292,24 @@ export default function ContractorVerificationPage() {
           </table>
         </div>
 
-        <div style={styles.tableFooter}>
-          Showing 1 – {displayDocs.length} of {displayDocs.length} documents
+        <div style={styles.tableFooter}>Showing 1 – {displayDocs.length} of {displayDocs.length} documents
         </div>
       </div>
 
       {/* Upload Document Modal */}
       {showUploadModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowUploadModal(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setShowUploadModal(false)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Upload Verification Document</h3>
-              <button type="button" onClick={() => setShowUploadModal(false)} style={styles.closeBtn}>✕</button>
+              <button type="button" onClick={() =>setShowUploadModal(false)} style={styles.closeBtn}></button>
             </div>
             <form onSubmit={handleUploadDocument} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={styles.inputLabel}>Document Category</label>
                 <select
                   value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
+                  onChange={(e) =>setUploadCategory(e.target.value)}
                   style={styles.modalSelect}
                 >
                   <option value="License">Contractor License</option>
@@ -329,7 +325,7 @@ export default function ContractorVerificationPage() {
                 <input
                   type="file"
                   required
-                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  onChange={(e) =>setSelectedFile(e.target.files[0])}
                   style={styles.fileInput}
                 />
               </div>
@@ -344,10 +340,9 @@ export default function ContractorVerificationPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() =>setShowUploadModal(false)}
                   style={styles.cancelBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
               </div>
             </form>
@@ -357,11 +352,11 @@ export default function ContractorVerificationPage() {
 
       {/* Edit Profile Modal */}
       {showEditProfileModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowEditProfileModal(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setShowEditProfileModal(false)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Edit Business Profile</h3>
-              <button type="button" onClick={() => setShowEditProfileModal(false)} style={styles.closeBtn}>✕</button>
+              <button type="button" onClick={() =>setShowEditProfileModal(false)} style={styles.closeBtn}></button>
             </div>
             <form onSubmit={handleSaveProfile} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
@@ -369,7 +364,7 @@ export default function ContractorVerificationPage() {
                 <input
                   type="text"
                   value={editLicense}
-                  onChange={(e) => setEditLicense(e.target.value)}
+                  onChange={(e) =>setEditLicense(e.target.value)}
                   style={styles.textInput}
                 />
               </div>
@@ -378,7 +373,7 @@ export default function ContractorVerificationPage() {
                 <input
                   type="text"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(e) =>setEditPhone(e.target.value)}
                   style={styles.textInput}
                 />
               </div>
@@ -387,20 +382,18 @@ export default function ContractorVerificationPage() {
                 <input
                   type="number"
                   value={editExp}
-                  onChange={(e) => setEditExp(e.target.value)}
+                  onChange={(e) =>setEditExp(e.target.value)}
                   style={styles.textInput}
                 />
               </div>
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button type="submit" style={styles.uploadSubmitBtn}>
-                  Save Changes
+                <button type="submit" style={styles.uploadSubmitBtn}>Save Changes
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowEditProfileModal(false)}
+                  onClick={() =>setShowEditProfileModal(false)}
                   style={styles.cancelBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
               </div>
             </form>

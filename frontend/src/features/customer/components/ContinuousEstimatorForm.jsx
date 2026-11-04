@@ -171,15 +171,15 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   // Selected Reference Objects
   const selectedShapeObj = useMemo(() => {
-    return SHAPES.find((s) => s.id === shape) || null;
+    return SHAPES.find((s) =>s.id === shape) || null;
   }, [shape]);
 
   const selectedHeightObj = useMemo(() => {
-    return HEIGHTS.find((h) => h.id === height) || null;
+    return HEIGHTS.find((h) =>h.id === height) || null;
   }, [height]);
 
   const selectedLevelsObj = useMemo(() => {
-    return LEVELS.find((l) => l.id === levels) || null;
+    return LEVELS.find((l) =>l.id === levels) || null;
   }, [levels]);
 
   // DYNAMIC STEP COMPLETION PROGRESS (Starts 0/7 if unselected)
@@ -202,7 +202,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
       { num: 7, name: 'Review & Estimate', done: step7 },
     ];
 
-    const completedCount = steps.filter((s) => s.done).length;
+    const completedCount = steps.filter((s) =>s.done).length;
     return { steps, completedCount };
   }, [floorArea, shape, height, levels, condition, restorationScope, coatingType, woodSpecies, photos, projectName]);
 
@@ -264,7 +264,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     const timer = setTimeout(() => {
       runPricingCalc();
     }, 250);
-    return () => clearTimeout(timer);
+    return () =>clearTimeout(timer);
   }, [runPricingCalc]);
 
   // SINGLE AMOUNT PRICING CALCULATIONS (NO MINIMUM JOB PRICE APPLIED)
@@ -335,7 +335,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         discoloration: 'discoloration',
         other: 'other',
       };
-      const visibleConditions = conditionFlags.map((f) => validConditionsMap[f] || 'surface_wear');
+      const visibleConditions = conditionFlags.map((f) =>validConditionsMap[f] || 'surface_wear');
 
       // 1. Create/Update Deck
       const deckPayload = {
@@ -444,7 +444,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   color: st.done ? '#15803d' : '#475569',
                   borderColor: st.done ? '#86efac' : '#cbd5e1',
                 }}
-                onClick={() => scrollToSection(`step-${st.num}`)}
+                onClick={() =>scrollToSection(`step-${st.num}`)}
               >
                 <span
                   style={{
@@ -453,7 +453,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     color: st.done ? '#ffffff' : '#64748b',
                   }}
                 >
-                  {st.done ? '✓' : st.num}
+                  {st.done ? '' : st.num}
                 </span>
                 <span>{st.name}</span>
               </div>
@@ -471,7 +471,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
           {submitError && (
             <div style={styles.errorBox}>
-              ⚠️ <strong>Error:</strong> {submitError}
+               <strong>Error:</strong> {submitError}
             </div>
           )}
 
@@ -489,7 +489,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 return (
                   <div
                     key={s.id}
-                    onClick={() => setShape(s.id)}
+                    onClick={() =>setShape(s.id)}
                     style={{
                       ...styles.shapeCard,
                       borderColor: isSelected ? '#16a34a' : '#e2e8f0',
@@ -499,7 +499,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.shapeIconWrap}>
                       <IconComponent width={52} height={52} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <div style={styles.shapeTextWrap}>
                       <span style={styles.shapeName}>{s.label}</span>
@@ -534,7 +534,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         type="number"
                         placeholder="e.g. 20"
                         value={length}
-                        onChange={(e) => setLength(e.target.value)}
+                        onChange={(e) =>setLength(e.target.value)}
                         style={styles.inputInner}
                         min="1"
                       />
@@ -549,7 +549,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         type="number"
                         placeholder="e.g. 12"
                         value={width}
-                        onChange={(e) => setWidth(e.target.value)}
+                        onChange={(e) =>setWidth(e.target.value)}
                         style={styles.inputInner}
                         min="1"
                       />
@@ -559,10 +559,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 </div>
 
                 <div style={styles.calcAreaBadge}>
-                  <span style={{ fontSize: '20px' }}>🧮</span>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', textTransform: 'uppercase' }}>
-                      Calculated Deck Area
+                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', textTransform: 'uppercase' }}>Calculated Deck Area
                     </span>
                     <div style={{ fontSize: '18px', fontWeight: '900', color: '#166534' }}>
                       {floorArea > 0 ? `${floorArea} sq ft` : '—'}
@@ -571,17 +570,16 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 </div>
 
                 <div style={styles.tipBox}>
-                  <strong style={{ fontSize: '12px', color: '#92400e' }}>💡 How to measure?</strong>
+                  <strong style={{ fontSize: '12px', color: '#92400e' }}>How to measure?</strong>
                   <ul style={styles.tipList}>
                     <li>Measure the usable deck surface length and width.</li>
                     <li>Do not include separate stairs or railings in main surface area.</li>
                   </ul>
                   <button
                     type="button"
-                    onClick={() => setShowMeasureGuide(true)}
+                    onClick={() =>setShowMeasureGuide(true)}
                     style={styles.linkBtn}
-                  >
-                    View Measurement Guide &rarr;
+                  >View Measurement Guide &rarr;
                   </button>
                 </div>
               </div>
@@ -602,7 +600,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 return (
                   <div
                     key={h.id}
-                    onClick={() => setHeight(h.id)}
+                    onClick={() =>setHeight(h.id)}
                     style={{
                       ...styles.heightCard,
                       borderColor: isSelected ? '#16a34a' : '#e2e8f0',
@@ -612,7 +610,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.heightIconWrap}>
                       <IconComponent width={46} height={46} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <span style={styles.heightName}>{h.label}</span>
                     <span style={styles.heightRange}>{h.range}</span>
@@ -636,7 +634,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 return (
                   <div
                     key={l.id}
-                    onClick={() => setLevels(l.id)}
+                    onClick={() =>setLevels(l.id)}
                     style={{
                       ...styles.levelCard,
                       borderColor: isSelected ? '#16a34a' : '#e2e8f0',
@@ -646,7 +644,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.levelIconWrap}>
                       <IconComponent width={46} height={46} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <span style={styles.levelName}>{l.label}</span>
                     <span style={styles.levelDesc}>{l.desc}</span>
@@ -669,7 +667,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 return (
                   <div
                     key={c.id}
-                    onClick={() => setCondition(c.id)}
+                    onClick={() =>setCondition(c.id)}
                     style={{
                       ...styles.condCard,
                       borderColor: isSelected ? '#16a34a' : '#e2e8f0',
@@ -679,7 +677,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.cardImgWrap}>
                       <img src={c.img} alt={c.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <strong style={styles.condName}>{c.label}</strong>
                     <span style={styles.condDesc}>{c.desc}</span>
@@ -704,7 +702,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     key={r.id}
                     onClick={() => {
                       if (isSelected) {
-                        setRestorationScope(restorationScope.filter((s) => s !== r.id));
+                        setRestorationScope(restorationScope.filter((s) =>s !== r.id));
                       } else {
                         setRestorationScope([...restorationScope, r.id]);
                       }
@@ -718,7 +716,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.cardImgWrap}>
                       <img src={r.img} alt={r.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <strong style={styles.serviceName}>{r.label}</strong>
                     <span style={styles.serviceDesc}>{r.desc}</span>
@@ -739,7 +737,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <label style={styles.inputLabel}>Wood Species / Substrate</label>
               <select
                 value={woodSpecies || ''}
-                onChange={(e) => setWoodSpecies(e.target.value)}
+                onChange={(e) =>setWoodSpecies(e.target.value)}
                 style={styles.dropdownInput}
               >
                 <option value="">Select wood species...</option>
@@ -758,7 +756,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 return (
                   <div
                     key={f.id}
-                    onClick={() => setCoatingType(f.id)}
+                    onClick={() =>setCoatingType(f.id)}
                     style={{
                       ...styles.finishCard,
                       borderColor: isSelected ? '#16a34a' : '#e2e8f0',
@@ -768,7 +766,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.cardImgWrap}>
                       <img src={f.img} alt={f.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}>✓</span>}
+                      {isSelected && <span style={styles.greenCheckmark}></span>}
                     </div>
                     <strong style={styles.finishName}>{f.label}</strong>
                     <span style={styles.finishDesc}>{f.desc}</span>
@@ -787,10 +785,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
             {/* Photo Upload Zone */}
             <div style={styles.uploadDropzone}>
-              <span style={{ fontSize: '32px', marginBottom: '8px' }}>📷</span>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg></div>
               <strong style={{ fontSize: '14px', color: '#0f172a' }}>Upload Deck Photos (Optional)</strong>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 10px 0' }}>
-                Drag and drop your photos here, or browse from your computer.
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 10px 0' }}>Drag and drop your photos here, or browse from your computer.
               </p>
               <input
                 type="file"
@@ -804,15 +801,14 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               />
               {photos.length > 0 && (
                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>
-                  ✓ {photos.length} photo(s) selected
+                   {photos.length} photo(s) selected
                 </div>
               )}
             </div>
 
             {/* Real Deck Photos Gallery from the Internet */}
             <div style={{ marginTop: '20px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '10px' }}>
-                Real Deck Restoration Examples:
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Real Deck Restoration Examples:
               </span>
               <div style={styles.inspirationGrid}>
                 {INSPIRATION_PHOTOS.map((pic, idx) => (
@@ -839,7 +835,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   type="text"
                   placeholder="e.g. Backyard Cedar Deck"
                   value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
+                  onChange={(e) =>setProjectName(e.target.value)}
                   style={styles.textInput}
                 />
               </div>
@@ -850,7 +846,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   type="text"
                   placeholder="Street address (e.g. 742 Evergreen Terrace)"
                   value={propertyAddress.street}
-                  onChange={(e) => setPropertyAddress({ ...propertyAddress, street: e.target.value })}
+                  onChange={(e) =>setPropertyAddress({ ...propertyAddress, street: e.target.value })}
                   style={styles.textInput}
                 />
               </div>
@@ -862,7 +858,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     type="text"
                     placeholder="Springfield"
                     value={propertyAddress.city}
-                    onChange={(e) => setPropertyAddress({ ...propertyAddress, city: e.target.value })}
+                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, city: e.target.value })}
                     style={styles.textInput}
                   />
                 </div>
@@ -872,7 +868,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     type="text"
                     placeholder="IL"
                     value={propertyAddress.state}
-                    onChange={(e) => setPropertyAddress({ ...propertyAddress, state: e.target.value })}
+                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, state: e.target.value })}
                     style={styles.textInput}
                   />
                 </div>
@@ -882,7 +878,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     type="text"
                     placeholder="62704"
                     value={propertyAddress.zipCode}
-                    onChange={(e) => setPropertyAddress({ ...propertyAddress, zipCode: e.target.value })}
+                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, zipCode: e.target.value })}
                     style={styles.textInput}
                   />
                 </div>
@@ -895,16 +891,15 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
             <div style={styles.bottomBtnBar}>
               <button
                 type="button"
-                onClick={() => handleSave('DRAFT')}
+                onClick={() =>handleSave('DRAFT')}
                 disabled={submitting}
                 style={styles.saveDraftBtn}
-              >
-                💾 Save as Draft
+              >Save as Draft
               </button>
 
               <button
                 type="button"
-                onClick={() => handleSave('SUBMITTED')}
+                onClick={() =>handleSave('SUBMITTED')}
                 disabled={submitting || floorArea <= 0}
                 style={styles.submitEstimateBtn}
               >
@@ -950,8 +945,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   <strong style={{ fontSize: '18px', color: '#0f172a' }}>
                     {stepStatus.completedCount}/7
                   </strong>
-                  <span style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase' }}>
-                    Completed
+                  <span style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase' }}>Completed
                   </span>
                 </div>
               </div>
@@ -971,7 +965,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 <div key={st.num} style={styles.checkItem}>
                   <div style={styles.checkItemLeft}>
                     <span style={{ color: st.done ? '#16a34a' : '#94a3b8', fontSize: '13px' }}>
-                      {st.done ? '✓' : '○'}
+                      {st.done ? '' : '○'}
                     </span>
                     <span style={{ ...styles.checkItemText, color: st.done ? '#0f172a' : '#64748b' }}>
                       {st.num}. {st.name}
@@ -997,40 +991,39 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <h4 style={styles.sidebarCardHeading}>Your Selections</h4>
               <button
                 type="button"
-                onClick={() => scrollToSection('step-1')}
+                onClick={() =>scrollToSection('step-1')}
                 style={styles.editBtn}
-              >
-                ✏️ Edit
+              >Edit
               </button>
             </div>
 
             <div style={styles.selList}>
               <div style={styles.selRow}>
-                <span style={styles.selLabel}>📐 Deck Shape</span>
+                <span style={styles.selLabel}>Deck Shape</span>
                 <strong style={styles.selVal}>
                   {selectedShapeObj ? selectedShapeObj.label : '—'}
                 </strong>
               </div>
               <div style={styles.selRow}>
-                <span style={styles.selLabel}>📏 Dimensions</span>
+                <span style={styles.selLabel}>Dimensions</span>
                 <strong style={styles.selVal}>
                   {length && width ? `${length} ft × ${width} ft` : '—'}
                 </strong>
               </div>
               <div style={styles.selRow}>
-                <span style={styles.selLabel}>📑 Deck Area</span>
+                <span style={styles.selLabel}>Deck Area</span>
                 <strong style={styles.selVal}>
                   {floorArea > 0 ? `${floorArea} sq ft` : '—'}
                 </strong>
               </div>
               <div style={styles.selRow}>
-                <span style={styles.selLabel}>🪜 Deck Height</span>
+                <span style={styles.selLabel}>Deck Height</span>
                 <strong style={styles.selVal}>
                   {selectedHeightObj ? `${selectedHeightObj.label} ${selectedHeightObj.range}` : '—'}
                 </strong>
               </div>
               <div style={styles.selRow}>
-                <span style={styles.selLabel}>🪜 Number of Levels</span>
+                <span style={styles.selLabel}>Number of Levels</span>
                 <strong style={styles.selVal}>
                   {selectedLevelsObj ? selectedLevelsObj.label : '—'}
                 </strong>
@@ -1058,8 +1051,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 </div>
               </div>
             ) : (
-              <div style={styles.refEmptyPrompt}>
-                Select a deck shape above to view architectural photo reference.
+              <div style={styles.refEmptyPrompt}>Select a deck shape above to view architectural photo reference.
               </div>
             )}
           </div>
@@ -1068,9 +1060,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           <div style={styles.sidebarCard}>
             <div style={styles.cardHeaderRow}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>🧮</span>
-                <h4 style={{ ...styles.sidebarCardHeading, color: '#15803d' }}>
-                  Live Estimate (Preview)
+                <span></span>
+                <h4 style={{ ...styles.sidebarCardHeading, color: '#15803d' }}>Live Estimate (Preview)
                 </h4>
               </div>
               {calculating && <span style={{ fontSize: '10px', color: '#16a34a' }}>Updating...</span>}
@@ -1115,8 +1106,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 </div>
               </div>
             ) : (
-              <div style={styles.pricingEmptyPrompt}>
-                Enter deck length and width to calculate instant single-amount total.
+              <div style={styles.pricingEmptyPrompt}>Enter deck length and width to calculate instant single-amount total.
               </div>
             )}
           </div>
@@ -1125,18 +1115,18 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
       {/* MEASUREMENT GUIDE MODAL */}
       {showMeasureGuide && (
-        <div style={styles.modalOverlay} onClick={() => setShowMeasureGuide(false)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setShowMeasureGuide(false)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>📐 Deck Measurement &amp; Level Guide</h3>
-              <button type="button" onClick={() => setShowMeasureGuide(false)} style={styles.closeBtn}>✕</button>
+              <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Deck Measurement &amp; Level Guide</h3>
+              <button type="button" onClick={() =>setShowMeasureGuide(false)} style={styles.closeBtn}></button>
             </div>
             <div style={styles.modalBody}>
               <p>Follow these standard tips to measure your deck accurately:</p>
               <ul>
-                <li><strong>Length:</strong> Outer edge from side to side across the main facade.</li>
-                <li><strong>Width:</strong> Outer edge extending out from the house wall.</li>
-                <li><strong>Levels:</strong> Multiple distinct deck tiers count as separate levels.</li>
+                <li><strong>Length:</strong>Outer edge from side to side across the main facade.</li>
+                <li><strong>Width:</strong>Outer edge extending out from the house wall.</li>
+                <li><strong>Levels:</strong>Multiple distinct deck tiers count as separate levels.</li>
               </ul>
             </div>
           </div>
