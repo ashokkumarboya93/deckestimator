@@ -23,7 +23,7 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    if (files.length + selectedFiles.length > availableSlots) {
+    if (files.length + selectedFiles.length >availableSlots) {
       setError(`You can only upload up to ${availableSlots} more photo(s). (Max ${maxAllowed} total per deck)`);
       return;
     }
@@ -36,7 +36,7 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
         setError(`"${file.name}" is not a valid JPEG, PNG, or WebP image.`);
         return;
       }
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size >MAX_FILE_SIZE) {
         setError(`"${file.name}" exceeds the maximum size of 10MB.`);
         return;
       }
@@ -54,10 +54,10 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
   }
 
   function removeSelected(index) {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) =>prev.filter((_, i) =>i !== index));
     setPreviews((prev) => {
       URL.revokeObjectURL(prev[index]?.url);
-      return prev.filter((_, i) => i !== index);
+      return prev.filter((_, i) =>i !== index);
     });
   }
 
@@ -70,12 +70,12 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
 
     try {
       const formData = new FormData();
-      selectedFiles.forEach((file) => formData.append('images', file));
+      selectedFiles.forEach((file) =>formData.append('images', file));
       if (description) formData.append('description', description);
 
       const uploaded = await uploadDeckImages(deckId, formData);
       // Clean up object URLs
-      previews.forEach((p) => URL.revokeObjectURL(p.url));
+      previews.forEach((p) =>URL.revokeObjectURL(p.url));
       setSelectedFiles([]);
       setPreviews([]);
       setDescription('');
@@ -90,8 +90,7 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
   return (
     <div style={styles.container}>
       <h3 style={styles.title}>Upload Deck Photographs</h3>
-      <p style={styles.subtitle}>
-        Upload high-resolution photographs of your deck structure, stairs, railing, and surface condition (JPEG, PNG, or WebP — max 10MB each).
+      <p style={styles.subtitle}>Upload high-resolution photographs of your deck structure, stairs, railing, and surface condition (JPEG, PNG, or WebP — max 10MB each).
         <br />
         <strong>Remaining slots:</strong> {availableSlots} of {maxAllowed} photos.
       </p>
@@ -116,8 +115,7 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
           <span style={styles.dropText}>or drag and drop photos here</span>
         </div>
       ) : (
-        <div style={styles.infoBox}>
-          Maximum limit of {maxAllowed} photos reached for this deck. Delete existing photos to upload new ones.
+        <div style={styles.infoBox}>Maximum limit of {maxAllowed} photos reached for this deck. Delete existing photos to upload new ones.
         </div>
       )}
 
@@ -134,11 +132,11 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
                 </div>
                 <button
                   type="button"
-                  onClick={() => removeSelected(idx)}
+                  onClick={() =>removeSelected(idx)}
                   style={styles.removeBtn}
                   disabled={isUploading}
                 >
-                  ✕
+                  
                 </button>
               </div>
             ))}
@@ -149,7 +147,7 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
               type="text"
               placeholder="Optional photo notes / description (e.g. South rail rot, stairs wear)..."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) =>setDescription(e.target.value)}
               style={styles.captionInput}
               disabled={isUploading}
             />

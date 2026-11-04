@@ -129,7 +129,7 @@ export default function ServiceCategoriesTab() {
             type="text"
             placeholder="Search service categories..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>setSearch(e.target.value)}
             style={styles.searchInput}
           />
           <button type="submit" style={styles.searchBtn}>Search</button>
@@ -141,8 +141,7 @@ export default function ServiceCategoriesTab() {
                 loadCategories(1, '');
               }}
               style={styles.clearBtn}
-            >
-              Clear
+            >Clear
             </button>
           )}
         </form>
@@ -157,10 +156,10 @@ export default function ServiceCategoriesTab() {
           {successMsg}
           <button
             type="button"
-            onClick={() => setSuccessMsg(null)}
+            onClick={() =>setSuccessMsg(null)}
             style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            ✕
+            
           </button>
         </div>
       )}
@@ -173,8 +172,7 @@ export default function ServiceCategoriesTab() {
       ) : categories.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>No service categories found.</p>
-          <button type="button" onClick={openCreateModal} style={styles.addBtn}>
-            Create your first service category
+          <button type="button" onClick={openCreateModal} style={styles.addBtn}>Create your first service category
           </button>
         </div>
       ) : (
@@ -220,14 +218,13 @@ export default function ServiceCategoriesTab() {
                       <div style={styles.actionGroup}>
                         <button
                           type="button"
-                          onClick={() => openEditModal(cat)}
+                          onClick={() =>openEditModal(cat)}
                           style={styles.editBtn}
-                        >
-                          Edit
+                        >Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(cat)}
+                          onClick={() =>handleToggleStatus(cat)}
                           style={isActive ? styles.deactivateBtn : styles.activateBtn}
                         >
                           {isActive ? 'Deactivate' : 'Activate'}
@@ -248,21 +245,19 @@ export default function ServiceCategoriesTab() {
           <button
             type="button"
             disabled={pagination.page <= 1}
-            onClick={() => loadCategories(pagination.page - 1)}
+            onClick={() =>loadCategories(pagination.page - 1)}
             style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
           >
             ← Previous
           </button>
-          <span style={styles.pageInfo}>
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} categories)
+          <span style={styles.pageInfo}>Page {pagination.page} of {pagination.totalPages} ({pagination.total} categories)
           </span>
           <button
             type="button"
             disabled={pagination.page >= pagination.totalPages}
-            onClick={() => loadCategories(pagination.page + 1)}
+            onClick={() =>loadCategories(pagination.page + 1)}
             style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-          >
-            Next →
+          >Next →
           </button>
         </div>
       )}
@@ -277,10 +272,10 @@ export default function ServiceCategoriesTab() {
               </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -288,15 +283,14 @@ export default function ServiceCategoriesTab() {
 
             <form onSubmit={handleModalSubmit} style={styles.modalForm}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Service Category Name <span style={{ color: '#d9534f' }}>*</span>
+                <label style={styles.label}>Service Category Name <span style={{ color: '#d9534f' }}>*</span>
                 </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Surface Preparation, Staining & Sealing, Board Replacement"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, name: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -307,7 +301,7 @@ export default function ServiceCategoriesTab() {
                   rows="3"
                   placeholder="Detailed description of services in this category..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, description: e.target.value })}
                   style={styles.textarea}
                 />
               </div>
@@ -319,7 +313,7 @@ export default function ServiceCategoriesTab() {
                     type="number"
                     min="0"
                     value={formData.displayOrder}
-                    onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, displayOrder: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -328,7 +322,7 @@ export default function ServiceCategoriesTab() {
                   <label style={styles.label}>Initial Status</label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, status: e.target.value })}
                     style={styles.select}
                   >
                     <option value="active">Active</option>
@@ -340,11 +334,10 @@ export default function ServiceCategoriesTab() {
               <div style={styles.modalFooter}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() =>setIsModalOpen(false)}
                   style={styles.cancelBtn}
                   disabled={submitting}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"

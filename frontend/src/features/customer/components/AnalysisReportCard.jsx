@@ -82,15 +82,13 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
             </span>
           </div>
           <h3 style={styles.heading}>Automated Deck Condition Report</h3>
-          <p style={styles.subtext}>
-            Evaluated on {new Date(analysis.createdAt).toLocaleDateString()} at{' '}
+          <p style={styles.subtext}>Evaluated on {new Date(analysis.createdAt).toLocaleDateString()} at{' '}
             {new Date(analysis.createdAt).toLocaleTimeString()}
           </p>
         </div>
 
         {(isFailed || isUnableToAssess) && onRetry && (
-          <button type="button" onClick={() => onRetry(analysis._id || analysis.id)} style={styles.retryBtn}>
-            🔄 Retry Analysis
+          <button type="button" onClick={() =>onRetry(analysis._id || analysis.id)} style={styles.retryBtn}>Retry Analysis
           </button>
         )}
       </div>
@@ -107,8 +105,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
           )}
         </div>
         {analysis.imageQuality?.blurScore !== null && (
-          <span style={styles.metaMuted}>
-            Sharpness Score: {analysis.imageQuality.blurScore} | Exposure: {analysis.imageQuality.brightness}
+          <span style={styles.metaMuted}>Sharpness Score: {analysis.imageQuality.blurScore} | Exposure: {analysis.imageQuality.brightness}
           </span>
         )}
       </div>
@@ -116,13 +113,12 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
       {/* Unable to Assess Warning */}
       {isUnableToAssess && (
         <div style={styles.warningBox}>
-          <strong>⚠️ Unable to Assess Deck Condition</strong>
+          <strong>Unable to Assess Deck Condition</strong>
           <p style={{ margin: '6px 0 0', fontSize: '13px' }}>
             {analysis.manualReview?.reason ||
               'Photograph optical quality is too blurry, dark, or low-resolution for reliable automated assessment.'}
           </p>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#854d0e' }}>
-            Recommendation: Please upload a clear, well-lit photograph focusing on the main deck floorboards.
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#854d0e' }}>Recommendation: Please upload a clear, well-lit photograph focusing on the main deck floorboards.
           </div>
         </div>
       )}
@@ -130,7 +126,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
       {/* Failed Request Notice */}
       {isFailed && (
         <div style={styles.errorBox}>
-          <strong>❌ Analysis Processing Failed</strong>
+          <strong>Analysis Processing Failed</strong>
           <p style={{ margin: '6px 0 0', fontSize: '13px' }}>
             {analysis.errorMessage || 'The automated analysis engine encountered an unexpected error.'}
           </p>
@@ -156,7 +152,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
       {isReviewRequired && !isUnableToAssess && (
         <div style={styles.reviewBox}>
           <div style={styles.reviewHeader}>
-            <span style={{ fontSize: '16px' }}>🔍</span>
+            <span style={{ fontSize: '16px' }}></span>
             <strong>Manual Review Advised</strong>
           </div>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#9a3412' }}>
@@ -182,7 +178,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
                   fontWeight: d.detected ? 600 : 400,
                 }}
               >
-                {d.detected ? '⚠️ ' : '✓ '}
+                {d.detected ? ' ' : ' '}
                 {d.label.replace(/_/g, ' ')}
                 {d.confidence ? ` (${Math.round(d.confidence * 100)}%)` : ''}
               </span>
@@ -193,7 +189,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
 
       {/* Advisory Limitations Notice (Spec §1) */}
       <div style={styles.limitationsBox}>
-        <div style={styles.limitationsHeading}>ℹ️ Important Inspection Notice:</div>
+        <div style={styles.limitationsHeading}>ℹ Important Inspection Notice:</div>
         <ul style={styles.limitationsList}>
           {(analysis.limitations || [
             'Assessment is based strictly on visible exterior photograph surfaces.',
@@ -207,8 +203,7 @@ export default function AnalysisReportCard({ analysis, onRetry }) {
 
       {/* Technical Metadata Footer */}
       <div style={styles.footer}>
-        <span>
-          Model: {analysis.model?.name || 'MobileNetV3'} v{analysis.model?.version || '1.0.0'}
+        <span>Model: {analysis.model?.name || 'MobileNetV3'} v{analysis.model?.version || '1.0.0'}
         </span>
         {analysis.inferenceDurationMs && <span>Latency: {analysis.inferenceDurationMs}ms</span>}
       </div>

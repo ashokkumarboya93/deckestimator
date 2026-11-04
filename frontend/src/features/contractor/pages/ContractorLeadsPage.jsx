@@ -123,9 +123,9 @@ export default function ContractorLeadsPage() {
   ];
 
   const totalLeads = displayLeads.length;
-  const newLeadsCount = displayLeads.filter((l) => l.status === 'New').length;
-  const inProgressCount = displayLeads.filter((l) => l.status === 'In Progress').length;
-  const convertedCount = displayLeads.filter((l) => l.status === 'Converted').length;
+  const newLeadsCount = displayLeads.filter((l) =>l.status === 'New').length;
+  const inProgressCount = displayLeads.filter((l) =>l.status === 'In Progress').length;
+  const convertedCount = displayLeads.filter((l) =>l.status === 'Converted').length;
 
   async function handleAcceptLead(leadId) {
     try {
@@ -181,8 +181,7 @@ export default function ContractorLeadsPage() {
         <div style={styles.heroOverlay} />
         <div style={styles.heroContent}>
           <h1 style={styles.heroTitle}>Assigned Leads &amp; Enquiries</h1>
-          <p style={styles.heroSub}>
-            Customer restoration requests assigned to your business area.
+          <p style={styles.heroSub}>Customer restoration requests assigned to your business area.
           </p>
         </div>
       </div>
@@ -255,7 +254,7 @@ export default function ContractorLeadsPage() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) =>setSearchTerm(e.target.value)}
             placeholder="Search by customer, project or location..."
             style={styles.searchInput}
           />
@@ -263,7 +262,7 @@ export default function ContractorLeadsPage() {
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) =>setStatusFilter(e.target.value)}
           style={styles.selectFilter}
         >
           <option value="ALL">All Lead Statuses</option>
@@ -340,10 +339,9 @@ export default function ContractorLeadsPage() {
                     <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                       <button
                         type="button"
-                        onClick={() => setSelectedLead(l)}
+                        onClick={() =>setSelectedLead(l)}
                         style={styles.viewBtn}
-                      >
-                        View
+                      >View
                       </button>
                       <button type="button" style={styles.moreBtn}>•••</button>
                     </div>
@@ -368,13 +366,12 @@ export default function ContractorLeadsPage() {
 
       {/* View Lead Details Modal */}
       {selectedLead && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedLead(null)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setSelectedLead(null)}>
+          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
-                Lead Details: {selectedLead.customer}
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Lead Details: {selectedLead.customer}
               </h3>
-              <button type="button" onClick={() => setSelectedLead(null)} style={styles.closeBtn}>✕</button>
+              <button type="button" onClick={() =>setSelectedLead(null)} style={styles.closeBtn}></button>
             </div>
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
               <div><strong>Project:</strong> {selectedLead.project}</div>
@@ -389,19 +386,17 @@ export default function ContractorLeadsPage() {
                 {selectedLead.status === 'New' && (
                   <button
                     type="button"
-                    onClick={() => handleAcceptLead(selectedLead.id)}
+                    onClick={() =>handleAcceptLead(selectedLead.id)}
                     style={{ ...styles.modalActionBtn, background: '#1d4ed8' }}
-                  >
-                    Accept Lead
+                  >Accept Lead
                   </button>
                 )}
                 {selectedLead.status === 'In Progress' && (
                   <button
                     type="button"
-                    onClick={() => handleConvertLead(selectedLead.id)}
+                    onClick={() =>handleConvertLead(selectedLead.id)}
                     style={{ ...styles.modalActionBtn, background: '#16a34a' }}
-                  >
-                    Mark as Converted
+                  >Mark as Converted
                   </button>
                 )}
                 <button
@@ -414,24 +409,21 @@ export default function ContractorLeadsPage() {
                     }
                   }}
                   style={styles.modalActionBtn}
-                >
-                  Create Estimate for this Lead
+                >Create Estimate for this Lead
                 </button>
                 {selectedLead.status !== 'Converted' && (
                   <button
                     type="button"
-                    onClick={() => handleRejectLead(selectedLead.id)}
+                    onClick={() =>handleRejectLead(selectedLead.id)}
                     style={{ ...styles.modalSecondaryBtn, color: '#dc2626', borderColor: '#fca5a5' }}
-                  >
-                    Decline Lead
+                  >Decline Lead
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => setSelectedLead(null)}
+                  onClick={() =>setSelectedLead(null)}
                   style={styles.modalSecondaryBtn}
-                >
-                  Close
+                >Close
                 </button>
               </div>
             </div>

@@ -157,7 +157,11 @@ export const ENDPOINTS = {
     CONTRACTOR_SUMMARY: '/commissions/summary',
     BY_ID: (id) => `/commissions/${id}`,
     HISTORY: (id) => `/commissions/${id}/history`,
+    POLICIES: '/commissions/admin/policies',
+    POLICY_BY_ID: (id) => `/commissions/admin/policies/${id}`,
+    POLICY_STATUS: (id) => `/commissions/admin/policies/${id}`,
     ADMIN_ALL: '/commissions/admin/all',
+    ADMIN_GENERATE: '/commissions/admin/generate',
     ADMIN_REVIEW: (id) => `/commissions/admin/${id}/review`,
     ADMIN_PAYMENT: (id) => `/commissions/admin/${id}/record-payment`,
   },
@@ -178,5 +182,20 @@ export const ENDPOINTS = {
   AUDIT: {
     BASE: '/audit-logs',
     BY_ID: (id) => `/audit-logs/${id}`,
+  },
+  // Admin Platform Operations (Phase 10)
+  ADMIN: {
+    DASHBOARD_SUMMARY: '/admin/dashboard/summary',
+    DASHBOARD_ACTIVITY: '/admin/dashboard/activity',
+    USERS: '/admin/users',
+    USER_BY_ID: (id) => `/admin/users/${id}`,
+    USER_STATUS: (id) => `/admin/users/${id}/status`,
+    DECKS: '/admin/decks',
+    ESTIMATES: '/admin/estimates',
+    ANALYSES: '/admin/analyses',
+    SETTINGS: '/admin/settings',
+    SETTING_BY_KEY: (key) => `/admin/settings/${key}`,
+    AUDIT_LOGS: '/admin/audit-logs',
+    REPORTS: (type) => `/admin/reports/${type}`,
   },
 };

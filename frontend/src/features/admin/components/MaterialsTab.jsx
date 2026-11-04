@@ -252,7 +252,7 @@ export default function MaterialsTab() {
       if (exists) {
         return {
           ...prev,
-          compatibleSurfaces: prev.compatibleSurfaces.filter((s) => s !== surface),
+          compatibleSurfaces: prev.compatibleSurfaces.filter((s) =>s !== surface),
         };
       } else {
         return {
@@ -272,13 +272,13 @@ export default function MaterialsTab() {
             type="text"
             placeholder="Search by name, code, brand..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>setSearch(e.target.value)}
             style={styles.searchInput}
           />
 
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) =>setCategoryFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Categories</option>
@@ -291,7 +291,7 @@ export default function MaterialsTab() {
 
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) =>setTypeFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Material Types</option>
@@ -303,8 +303,7 @@ export default function MaterialsTab() {
           </select>
 
           <button type="submit" style={styles.searchBtn}>Filter</button>
-          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>
-            Reset
+          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>Reset
           </button>
         </form>
 
@@ -318,10 +317,10 @@ export default function MaterialsTab() {
           {successMsg}
           <button
             type="button"
-            onClick={() => setSuccessMsg(null)}
+            onClick={() =>setSuccessMsg(null)}
             style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            ✕
+            
           </button>
         </div>
       )}
@@ -334,8 +333,7 @@ export default function MaterialsTab() {
       ) : materials.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>No materials found matching your filters.</p>
-          <button type="button" onClick={openCreateModal} style={styles.addBtn}>
-            Add a material to catalog
+          <button type="button" onClick={openCreateModal} style={styles.addBtn}>Add a material to catalog
           </button>
         </div>
       ) : (
@@ -367,8 +365,7 @@ export default function MaterialsTab() {
                     <td style={styles.td}>
                       <div style={{ fontWeight: 600, color: '#111' }}>{mat.materialName}</div>
                       {mat.brandName && (
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          Brand: {mat.brandName} {mat.productName ? `• ${mat.productName}` : ''}
+                        <div style={{ fontSize: '12px', color: '#666' }}>Brand: {mat.brandName} {mat.productName ? `• ${mat.productName}` : ''}
                         </div>
                       )}
                     </td>
@@ -404,14 +401,13 @@ export default function MaterialsTab() {
                       <div style={styles.actionGroup}>
                         <button
                           type="button"
-                          onClick={() => openEditModal(mat)}
+                          onClick={() =>openEditModal(mat)}
                           style={styles.editBtn}
-                        >
-                          Edit
+                        >Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(mat)}
+                          onClick={() =>handleToggleStatus(mat)}
                           style={isActive ? styles.deactivateBtn : styles.activateBtn}
                         >
                           {isActive ? 'Deactivate' : 'Activate'}
@@ -432,21 +428,19 @@ export default function MaterialsTab() {
           <button
             type="button"
             disabled={pagination.page <= 1}
-            onClick={() => loadMaterials(pagination.page - 1)}
+            onClick={() =>loadMaterials(pagination.page - 1)}
             style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
           >
             ← Previous
           </button>
-          <span style={styles.pageInfo}>
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} materials)
+          <span style={styles.pageInfo}>Page {pagination.page} of {pagination.totalPages} ({pagination.total} materials)
           </span>
           <button
             type="button"
             disabled={pagination.page >= pagination.totalPages}
-            onClick={() => loadMaterials(pagination.page + 1)}
+            onClick={() =>loadMaterials(pagination.page + 1)}
             style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-          >
-            Next →
+          >Next →
           </button>
         </div>
       )}
@@ -461,10 +455,10 @@ export default function MaterialsTab() {
               </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -475,29 +469,27 @@ export default function MaterialsTab() {
               <h4 style={styles.sectionHeader}>1. Identification & Classification</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Material Name <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Material Name <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Olympic Maximum Semi-Transparent Stain"
                     value={formData.materialName}
-                    onChange={(e) => setFormData({ ...formData, materialName: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, materialName: e.target.value })}
                     style={styles.input}
                   />
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Material Code {!editingMaterial && '(Auto-generated if blank)'}
+                  <label style={styles.label}>Material Code {!editingMaterial && '(Auto-generated if blank)'}
                   </label>
                   <input
                     type="text"
                     disabled={!!editingMaterial}
                     placeholder="e.g. OLY-MAX-001"
                     value={formData.materialCode}
-                    onChange={(e) => setFormData({ ...formData, materialCode: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, materialCode: e.target.value })}
                     style={editingMaterial ? styles.inputDisabled : styles.input}
                   />
                 </div>
@@ -505,13 +497,12 @@ export default function MaterialsTab() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Category <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Category <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <select
                     required
                     value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, categoryId: e.target.value })}
                     style={styles.select}
                   >
                     <option value="">Select Category</option>
@@ -524,13 +515,12 @@ export default function MaterialsTab() {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Material Type <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Material Type <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <select
                     required
                     value={formData.materialType}
-                    onChange={(e) => setFormData({ ...formData, materialType: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, materialType: e.target.value })}
                     style={styles.select}
                   >
                     {MATERIAL_TYPES.map((t) => (
@@ -549,7 +539,7 @@ export default function MaterialsTab() {
                     type="text"
                     placeholder="e.g. Olympic, Behr, Cabot"
                     value={formData.brandName}
-                    onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, brandName: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -559,7 +549,7 @@ export default function MaterialsTab() {
                     type="text"
                     placeholder="e.g. Maximum Waterproofing"
                     value={formData.productName}
-                    onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, productName: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -571,7 +561,7 @@ export default function MaterialsTab() {
                   rows="2"
                   placeholder="Detailed material features, durability, application recommendations..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, description: e.target.value })}
                   style={styles.textarea}
                 />
               </div>
@@ -584,7 +574,7 @@ export default function MaterialsTab() {
                     <input
                       type="checkbox"
                       checked={formData.compatibleSurfaces.includes(surface)}
-                      onChange={() => handleSurfaceCheckbox(surface)}
+                      onChange={() =>handleSurfaceCheckbox(surface)}
                     />
                     <span style={{ textTransform: 'capitalize' }}>{surface}</span>
                   </label>
@@ -598,7 +588,7 @@ export default function MaterialsTab() {
                   <label style={styles.label}>Unit of Measure</label>
                   <select
                     value={formData.unitOfMeasure}
-                    onChange={(e) => setFormData({ ...formData, unitOfMeasure: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, unitOfMeasure: e.target.value })}
                     style={styles.select}
                   >
                     {QUANTITY_UNITS.map((u) => (
@@ -617,7 +607,7 @@ export default function MaterialsTab() {
                     min="0"
                     placeholder="e.g. 48.98"
                     value={formData.unitCost}
-                    onChange={(e) => setFormData({ ...formData, unitCost: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, unitCost: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -629,7 +619,7 @@ export default function MaterialsTab() {
                     min="0"
                     placeholder="e.g. 300"
                     value={formData.coverageValue}
-                    onChange={(e) => setFormData({ ...formData, coverageValue: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, coverageValue: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -644,7 +634,7 @@ export default function MaterialsTab() {
                     type="text"
                     placeholder="e.g. Semi-Transparent, Solid, Clear"
                     value={formData.finishType}
-                    onChange={(e) => setFormData({ ...formData, finishType: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, finishType: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -656,7 +646,7 @@ export default function MaterialsTab() {
                     min="0"
                     placeholder="e.g. 24"
                     value={formData.dryingTime}
-                    onChange={(e) => setFormData({ ...formData, dryingTime: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, dryingTime: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -668,7 +658,7 @@ export default function MaterialsTab() {
                     min="1"
                     placeholder="e.g. 2"
                     value={formData.recommendedCoats}
-                    onChange={(e) => setFormData({ ...formData, recommendedCoats: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, recommendedCoats: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -679,7 +669,7 @@ export default function MaterialsTab() {
                   <input
                     type="checkbox"
                     checked={formData.uvResistance}
-                    onChange={(e) => setFormData({ ...formData, uvResistance: e.target.checked })}
+                    onChange={(e) =>setFormData({ ...formData, uvResistance: e.target.checked })}
                   />
                   <span>UV Resistant</span>
                 </label>
@@ -687,7 +677,7 @@ export default function MaterialsTab() {
                   <input
                     type="checkbox"
                     checked={formData.waterResistance}
-                    onChange={(e) => setFormData({ ...formData, waterResistance: e.target.checked })}
+                    onChange={(e) =>setFormData({ ...formData, waterResistance: e.target.checked })}
                   />
                   <span>Water Resistant</span>
                 </label>
@@ -698,7 +688,7 @@ export default function MaterialsTab() {
                 <label style={styles.label}>Catalog Status</label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, status: e.target.value })}
                   style={styles.select}
                 >
                   <option value="active">Active (Available for estimates)</option>
@@ -710,11 +700,10 @@ export default function MaterialsTab() {
               <div style={styles.modalFooter}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() =>setIsModalOpen(false)}
                   style={styles.cancelBtn}
                   disabled={submitting}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"

@@ -55,7 +55,7 @@ export default function ImageGallery({ deckId, images = [], onDeleteSuccess }) {
 
           return (
             <div key={img.id} style={styles.card}>
-              <div style={styles.imgWrapper} onClick={() => setSelectedImage(img)}>
+              <div style={styles.imgWrapper} onClick={() =>setSelectedImage(img)}>
                 <img
                   src={imgUrl}
                   alt={img.originalFilename}
@@ -84,7 +84,7 @@ export default function ImageGallery({ deckId, images = [], onDeleteSuccess }) {
                 <button
                   type="button"
                   style={styles.deleteBtn}
-                  onClick={() => handleDelete(img.id)}
+                  onClick={() =>handleDelete(img.id)}
                   disabled={isDeleting}
                 >
                   {isDeleting ? 'Deleting...' : 'Delete Photo'}
@@ -97,14 +97,14 @@ export default function ImageGallery({ deckId, images = [], onDeleteSuccess }) {
 
       {/* Lightbox Modal */}
       {selectedImage && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedImage(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setSelectedImage(null)}>
+          <div style={styles.modalContent} onClick={(e) =>e.stopPropagation()}>
             <button
               type="button"
               style={styles.modalCloseBtn}
-              onClick={() => setSelectedImage(null)}
+              onClick={() =>setSelectedImage(null)}
             >
-              ✕
+              
             </button>
             <img
               src={getDeckImageUrl(deckId, selectedImage.id)}

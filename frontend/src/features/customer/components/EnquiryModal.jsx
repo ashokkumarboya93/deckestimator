@@ -56,18 +56,16 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
       <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              Request Professional Restoration
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Request Professional Restoration
             </h2>
-            <p className="text-xs text-slate-500">
-              Submit your project enquiry to match with approved local deck contractors.
+            <p className="text-xs text-slate-500">Submit your project enquiry to match with approved local deck contractors.
             </p>
           </div>
           <button
             onClick={onClose}
             className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
           >
-            ✕
+            
           </button>
         </div>
 
@@ -79,13 +77,12 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Enquiry Subject *
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Enquiry Subject *
             </label>
             <input
               type="text"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) =>setSubject(e.target.value)}
               placeholder="e.g. Cedar Deck Restoration & Power Washing"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               required
@@ -93,13 +90,12 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Project Description & Requirements *
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Project Description & Requirements *
             </label>
             <textarea
               rows={4}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) =>setMessage(e.target.value)}
               placeholder="Describe your timeline, desired finish, accessibility, or any questions for the contractor..."
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               required
@@ -108,12 +104,11 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Preferred Contact Method
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Preferred Contact Method
               </label>
               <select
                 value={preferredContactMethod}
-                onChange={(e) => setPreferredContactMethod(e.target.value)}
+                onChange={(e) =>setPreferredContactMethod(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               >
                 <option value="any">Any (Phone or Email)</option>
@@ -123,13 +118,12 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                Preferred Contact Time
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Preferred Contact Time
               </label>
               <input
                 type="text"
                 value={preferredContactTime}
-                onChange={(e) => setPreferredContactTime(e.target.value)}
+                onChange={(e) =>setPreferredContactTime(e.target.value)}
                 placeholder="e.g. Weekdays 2-5 PM"
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
@@ -137,13 +131,12 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Additional Notes (Optional)
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Additional Notes (Optional)
             </label>
             <input
               type="text"
               value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
+              onChange={(e) =>setAdditionalNotes(e.target.value)}
               placeholder="Gate code, dogs on premises, parking notes, etc."
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             />
@@ -155,8 +148,7 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
               onClick={onClose}
               disabled={loading}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              Cancel
+            >Cancel
             </button>
             <button
               type="submit"

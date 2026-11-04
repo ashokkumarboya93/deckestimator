@@ -165,7 +165,7 @@ export default function ServicesTab() {
     setModalError(null);
 
     const equipmentArray = formData.requiredEquipment
-      ? formData.requiredEquipment.split(',').map((item) => item.trim()).filter(Boolean)
+      ? formData.requiredEquipment.split(',').map((item) =>item.trim()).filter(Boolean)
       : [];
 
     const payload = {
@@ -229,13 +229,13 @@ export default function ServicesTab() {
             type="text"
             placeholder="Search by service name, code..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>setSearch(e.target.value)}
             style={styles.searchInput}
           />
 
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) =>setCategoryFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Categories</option>
@@ -248,7 +248,7 @@ export default function ServicesTab() {
 
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) =>setTypeFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Service Types</option>
@@ -260,8 +260,7 @@ export default function ServicesTab() {
           </select>
 
           <button type="submit" style={styles.searchBtn}>Filter</button>
-          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>
-            Reset
+          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>Reset
           </button>
         </form>
 
@@ -275,10 +274,10 @@ export default function ServicesTab() {
           {successMsg}
           <button
             type="button"
-            onClick={() => setSuccessMsg(null)}
+            onClick={() =>setSuccessMsg(null)}
             style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            ✕
+            
           </button>
         </div>
       )}
@@ -291,8 +290,7 @@ export default function ServicesTab() {
       ) : services.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>No services found matching your filters.</p>
-          <button type="button" onClick={openCreateModal} style={styles.addBtn}>
-            Add a service to catalog
+          <button type="button" onClick={openCreateModal} style={styles.addBtn}>Add a service to catalog
           </button>
         </div>
       ) : (
@@ -359,14 +357,13 @@ export default function ServicesTab() {
                       <div style={styles.actionGroup}>
                         <button
                           type="button"
-                          onClick={() => openEditModal(srv)}
+                          onClick={() =>openEditModal(srv)}
                           style={styles.editBtn}
-                        >
-                          Edit
+                        >Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(srv)}
+                          onClick={() =>handleToggleStatus(srv)}
                           style={isActive ? styles.deactivateBtn : styles.activateBtn}
                         >
                           {isActive ? 'Deactivate' : 'Activate'}
@@ -387,21 +384,19 @@ export default function ServicesTab() {
           <button
             type="button"
             disabled={pagination.page <= 1}
-            onClick={() => loadServices(pagination.page - 1)}
+            onClick={() =>loadServices(pagination.page - 1)}
             style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
           >
             ← Previous
           </button>
-          <span style={styles.pageInfo}>
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} services)
+          <span style={styles.pageInfo}>Page {pagination.page} of {pagination.totalPages} ({pagination.total} services)
           </span>
           <button
             type="button"
             disabled={pagination.page >= pagination.totalPages}
-            onClick={() => loadServices(pagination.page + 1)}
+            onClick={() =>loadServices(pagination.page + 1)}
             style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-          >
-            Next →
+          >Next →
           </button>
         </div>
       )}
@@ -416,10 +411,10 @@ export default function ServicesTab() {
               </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -430,29 +425,27 @@ export default function ServicesTab() {
               <h4 style={styles.sectionHeader}>1. Service Identification</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Service Name <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Service Name <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. High Pressure Deck Power Wash"
                     value={formData.serviceName}
-                    onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, serviceName: e.target.value })}
                     style={styles.input}
                   />
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Service Code {!editingService && '(Auto-generated if blank)'}
+                  <label style={styles.label}>Service Code {!editingService && '(Auto-generated if blank)'}
                   </label>
                   <input
                     type="text"
                     disabled={!!editingService}
                     placeholder="e.g. SRV-PW-001"
                     value={formData.serviceCode}
-                    onChange={(e) => setFormData({ ...formData, serviceCode: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, serviceCode: e.target.value })}
                     style={editingService ? styles.inputDisabled : styles.input}
                   />
                 </div>
@@ -460,13 +453,12 @@ export default function ServicesTab() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Category <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Category <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <select
                     required
                     value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, categoryId: e.target.value })}
                     style={styles.select}
                   >
                     <option value="">Select Category</option>
@@ -479,13 +471,12 @@ export default function ServicesTab() {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    Service Type <span style={{ color: '#d9534f' }}>*</span>
+                  <label style={styles.label}>Service Type <span style={{ color: '#d9534f' }}>*</span>
                   </label>
                   <select
                     required
                     value={formData.serviceType}
-                    onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, serviceType: e.target.value })}
                     style={styles.select}
                   >
                     {SERVICE_TYPES.map((t) => (
@@ -503,7 +494,7 @@ export default function ServicesTab() {
                   rows="2"
                   placeholder="Scope of work, standard operational procedures..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, description: e.target.value })}
                   style={styles.textarea}
                 />
               </div>
@@ -515,7 +506,7 @@ export default function ServicesTab() {
                   <label style={styles.label}>Measurement Unit</label>
                   <select
                     value={formData.measurementUnit}
-                    onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, measurementUnit: e.target.value })}
                     style={styles.select}
                   >
                     {MEASUREMENT_UNITS.map((u) => (
@@ -534,7 +525,7 @@ export default function ServicesTab() {
                     min="0"
                     placeholder="e.g. 1.5"
                     value={formData.estimatedDuration}
-                    onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, estimatedDuration: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -543,7 +534,7 @@ export default function ServicesTab() {
                   <label style={styles.label}>Duration Unit</label>
                   <select
                     value={formData.durationUnit}
-                    onChange={(e) => setFormData({ ...formData, durationUnit: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, durationUnit: e.target.value })}
                     style={styles.select}
                   >
                     <option value="minute">Minutes</option>
@@ -561,7 +552,7 @@ export default function ServicesTab() {
                   type="text"
                   placeholder="e.g. Pressure Washer, Rotary Disc Cleaner, Extension Wands"
                   value={formData.requiredEquipment}
-                  onChange={(e) => setFormData({ ...formData, requiredEquipment: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, requiredEquipment: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -573,7 +564,7 @@ export default function ServicesTab() {
                     rows="2"
                     placeholder="e.g. Clear deck furniture, protect surrounding plants..."
                     value={formData.preparationInstructions}
-                    onChange={(e) => setFormData({ ...formData, preparationInstructions: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, preparationInstructions: e.target.value })}
                     style={styles.textarea}
                   />
                 </div>
@@ -584,7 +575,7 @@ export default function ServicesTab() {
                     rows="2"
                     placeholder="e.g. Wear eye protection and non-slip footwear..."
                     value={formData.safetyNotes}
-                    onChange={(e) => setFormData({ ...formData, safetyNotes: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, safetyNotes: e.target.value })}
                     style={styles.textarea}
                   />
                 </div>
@@ -595,7 +586,7 @@ export default function ServicesTab() {
                 <label style={styles.label}>Status</label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, status: e.target.value })}
                   style={styles.select}
                 >
                   <option value="active">Active</option>
@@ -607,11 +598,10 @@ export default function ServicesTab() {
               <div style={styles.modalFooter}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() =>setIsModalOpen(false)}
                   style={styles.cancelBtn}
                   disabled={submitting}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"

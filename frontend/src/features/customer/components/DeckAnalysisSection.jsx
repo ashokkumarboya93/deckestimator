@@ -64,9 +64,8 @@ export default function DeckAnalysisSection({ deckId, isContractor = false }) {
     <div style={styles.container}>
       <div style={styles.topBar}>
         <div>
-          <h2 style={styles.sectionTitle}>🤖 AI Visual Condition Analysis</h2>
-          <p style={styles.sectionSub}>
-            Automated optical inspection assesses visible deck surface wear, peeling, discoloration, and board damage
+          <h2 style={styles.sectionTitle}>AI Visual Condition Analysis</h2>
+          <p style={styles.sectionSub}>Automated optical inspection assesses visible deck surface wear, peeling, discoloration, and board damage
             from your uploaded photographs.
           </p>
         </div>
@@ -78,7 +77,7 @@ export default function DeckAnalysisSection({ deckId, isContractor = false }) {
             disabled={requesting || loading}
             style={styles.requestBtn}
           >
-            {requesting ? 'Analyzing Deck Photos...' : '✨ Run AI Condition Analysis'}
+            {requesting ? 'Analyzing Deck Photos...' : ' Run AI Condition Analysis'}
           </button>
         )}
       </div>
@@ -89,10 +88,9 @@ export default function DeckAnalysisSection({ deckId, isContractor = false }) {
         <div style={styles.loadingBox}>Checking for condition analysis reports...</div>
       ) : !latestAnalysis ? (
         <div style={styles.emptyBox}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📸</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
           <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#0f172a' }}>No Condition Analysis Generated Yet</h4>
-          <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', maxWidth: '500px' }}>
-            Request an automated evaluation to assess visible coating deterioration and surface wear before creating
+          <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', maxWidth: '500px' }}>Request an automated evaluation to assess visible coating deterioration and surface wear before creating
             restoration estimates. Ensure you have uploaded at least one clear photograph of your deck.
           </p>
           {!isContractor && (
@@ -115,7 +113,7 @@ export default function DeckAnalysisSection({ deckId, isContractor = false }) {
             <div style={styles.historyContainer}>
               <button
                 type="button"
-                onClick={() => setShowHistory(!showHistory)}
+                onClick={() =>setShowHistory(!showHistory)}
                 style={styles.historyToggleBtn}
               >
                 {showHistory ? '▲ Hide Analysis History' : `▼ View Earlier Analysis Reports (${historicalAnalyses.length})`}

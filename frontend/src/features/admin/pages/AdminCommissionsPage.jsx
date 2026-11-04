@@ -319,7 +319,7 @@ export default function AdminCommissionsPage() {
       case 'paid':
         return { bg: '#dcfce7', text: '#15803d' };
       case 'payable':
-        return { bg: '#e0f2fe', text: '#0284c7' };
+        return { bg: '#e0f2fe', text: '#1d4ed8' };
       case 'approved':
         return { bg: '#fef3c7', text: '#b45309' };
       case 'under_review':
@@ -340,8 +340,7 @@ export default function AdminCommissionsPage() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Commissions & Discount Policies</h1>
-          <p style={styles.subtitle}>
-            Financial administration, contractor incentives, commission approval lifecycle, and transparent payout recording.
+          <p style={styles.subtitle}>Financial administration, contractor incentives, commission approval lifecycle, and transparent payout recording.
           </p>
         </div>
       </div>
@@ -350,39 +349,36 @@ export default function AdminCommissionsPage() {
       <div style={styles.tabsBar}>
         <button
           type="button"
-          onClick={() => setActiveTab('commissions')}
+          onClick={() =>setActiveTab('commissions')}
           style={{
             ...styles.tabButton,
-            borderBottom: activeTab === 'commissions' ? '3px solid #0284c7' : '3px solid transparent',
-            color: activeTab === 'commissions' ? '#0284c7' : '#64748b',
+            borderBottom: activeTab === 'commissions' ? '3px solid #1d4ed8' : '3px solid transparent',
+            color: activeTab === 'commissions' ? '#1d4ed8' : '#64748b',
             fontWeight: activeTab === 'commissions' ? '700' : '500',
           }}
-        >
-          💰 Commission Payouts & Approvals
+        >Commission Payouts & Approvals
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('commissionPolicies')}
+          onClick={() =>setActiveTab('commissionPolicies')}
           style={{
             ...styles.tabButton,
-            borderBottom: activeTab === 'commissionPolicies' ? '3px solid #0284c7' : '3px solid transparent',
-            color: activeTab === 'commissionPolicies' ? '#0284c7' : '#64748b',
+            borderBottom: activeTab === 'commissionPolicies' ? '3px solid #1d4ed8' : '3px solid transparent',
+            color: activeTab === 'commissionPolicies' ? '#1d4ed8' : '#64748b',
             fontWeight: activeTab === 'commissionPolicies' ? '700' : '500',
           }}
-        >
-          📋 Commission Policies
+        >Commission Policies
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('discountPolicies')}
+          onClick={() =>setActiveTab('discountPolicies')}
           style={{
             ...styles.tabButton,
-            borderBottom: activeTab === 'discountPolicies' ? '3px solid #0284c7' : '3px solid transparent',
-            color: activeTab === 'discountPolicies' ? '#0284c7' : '#64748b',
+            borderBottom: activeTab === 'discountPolicies' ? '3px solid #1d4ed8' : '3px solid transparent',
+            color: activeTab === 'discountPolicies' ? '#1d4ed8' : '#64748b',
             fontWeight: activeTab === 'discountPolicies' ? '700' : '500',
           }}
-        >
-          🏷️ Contractor Discount Policies
+        >Contractor Discount Policies
         </button>
       </div>
 
@@ -390,16 +386,16 @@ export default function AdminCommissionsPage() {
       {actionSuccess && (
         <div style={styles.successAlert}>
           <span>{actionSuccess}</span>
-          <button type="button" onClick={() => setActionSuccess(null)} style={styles.closeAlertBtn}>
-            ✕
+          <button type="button" onClick={() =>setActionSuccess(null)} style={styles.closeAlertBtn}>
+            
           </button>
         </div>
       )}
       {error && (
         <div style={styles.errorAlert}>
           <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} style={styles.closeAlertBtn}>
-            ✕
+          <button type="button" onClick={() =>setError(null)} style={styles.closeAlertBtn}>
+            
           </button>
         </div>
       )}
@@ -413,7 +409,7 @@ export default function AdminCommissionsPage() {
               <label style={styles.filterLabel}>Status:</label>
               <select
                 value={commissionStatusFilter}
-                onChange={(e) => setCommissionStatusFilter(e.target.value)}
+                onChange={(e) =>setCommissionStatusFilter(e.target.value)}
                 style={styles.select}
               >
                 <option value="">All Statuses</option>
@@ -429,10 +425,9 @@ export default function AdminCommissionsPage() {
             </div>
             <button
               type="button"
-              onClick={() => loadCommissions(commissionPagination.page)}
+              onClick={() =>loadCommissions(commissionPagination.page)}
               style={styles.secondaryBtn}
-            >
-              🔄 Refresh List
+            >Refresh List
             </button>
           </div>
 
@@ -483,7 +478,7 @@ export default function AdminCommissionsPage() {
                             : `$${comm.rateApplied?.value || 0}`}
                         </td>
                         <td style={styles.td}>
-                          <strong style={{ color: '#0284c7' }}>${Number(comm.calculatedAmount || 0).toFixed(2)}</strong>
+                          <strong style={{ color: '#1d4ed8' }}>${Number(comm.calculatedAmount || 0).toFixed(2)}</strong>
                         </td>
                         <td style={styles.td}>
                           <span
@@ -500,10 +495,9 @@ export default function AdminCommissionsPage() {
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               type="button"
-                              onClick={() => openCommissionDetail(comm)}
+                              onClick={() =>openCommissionDetail(comm)}
                               style={styles.smallActionBtn}
-                            >
-                              👁️ View
+                            >View
                             </button>
                             {comm.status !== 'PAID' && (
                               <button
@@ -513,8 +507,7 @@ export default function AdminCommissionsPage() {
                                   setIsReviewModalOpen(true);
                                 }}
                                 style={{ ...styles.smallActionBtn, backgroundColor: '#f0fdf4', color: '#166534' }}
-                              >
-                                ✍️ Review
+                              >Review
                               </button>
                             )}
                             {(comm.status === 'PAYABLE' || comm.status === 'APPROVED') && (
@@ -525,8 +518,7 @@ export default function AdminCommissionsPage() {
                                   setIsPaymentModalOpen(true);
                                 }}
                                 style={{ ...styles.smallActionBtn, backgroundColor: '#f0f9ff', color: '#0369a1' }}
-                              >
-                                💳 Record Pay
+                              >Record Pay
                               </button>
                             )}
                           </div>
@@ -545,12 +537,11 @@ export default function AdminCommissionsPage() {
       {activeTab === 'commissionPolicies' && (
         <div>
           <div style={{ ...styles.controlsRow, justifyContent: 'space-between' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>
-              Standard & Tiered Commission Rules
+            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>Standard & Tiered Commission Rules
             </h2>
             <button
               type="button"
-              onClick={() => setIsCreateCommPolicyModalOpen(true)}
+              onClick={() =>setIsCreateCommPolicyModalOpen(true)}
               style={styles.primaryBtn}
             >
               + Create New Commission Policy
@@ -584,8 +575,7 @@ export default function AdminCommissionsPage() {
                       )}
                     </td>
                     <td style={styles.td}>{pol.calculationBasis?.replace(/_/g, ' ')}</td>
-                    <td style={styles.td}>
-                      Min: ${pol.minimumCommission || 0} | Max: {pol.maximumCommission ? `$${pol.maximumCommission}` : 'None'}
+                    <td style={styles.td}>Min: ${pol.minimumCommission || 0} | Max: {pol.maximumCommission ? `$${pol.maximumCommission}` : 'None'}
                     </td>
                     <td style={styles.td}>
                       <span
@@ -601,7 +591,7 @@ export default function AdminCommissionsPage() {
                     <td style={styles.td}>
                       <button
                         type="button"
-                        onClick={() => handleToggleCommPolicyStatus(pol)}
+                        onClick={() =>handleToggleCommPolicyStatus(pol)}
                         style={styles.smallActionBtn}
                       >
                         {pol.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
@@ -619,12 +609,11 @@ export default function AdminCommissionsPage() {
       {activeTab === 'discountPolicies' && (
         <div>
           <div style={{ ...styles.controlsRow, justifyContent: 'space-between' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>
-              Contractor Discount Policies
+            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>Contractor Discount Policies
             </h2>
             <button
               type="button"
-              onClick={() => setIsCreateDiscPolicyModalOpen(true)}
+              onClick={() =>setIsCreateDiscPolicyModalOpen(true)}
               style={styles.primaryBtn}
             >
               + Create Discount Policy
@@ -658,8 +647,7 @@ export default function AdminCommissionsPage() {
                       )}
                     </td>
                     <td style={styles.td}>{pol.applicability?.replace(/_/g, ' ')}</td>
-                    <td style={styles.td}>
-                      Used: {pol.usedCount || 0} / {pol.maxUsageCount || 'Unlimited'}
+                    <td style={styles.td}>Used: {pol.usedCount || 0} / {pol.maxUsageCount || 'Unlimited'}
                     </td>
                     <td style={styles.td}>
                       <span
@@ -676,7 +664,7 @@ export default function AdminCommissionsPage() {
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
                           type="button"
-                          onClick={() => handleToggleDiscPolicyStatus(pol)}
+                          onClick={() =>handleToggleDiscPolicyStatus(pol)}
                           style={styles.smallActionBtn}
                         >
                           {pol.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
@@ -684,10 +672,9 @@ export default function AdminCommissionsPage() {
                         {pol.applicability === 'SPECIFIC_CONTRACTORS' && (
                           <button
                             type="button"
-                            onClick={() => openAssignModal(pol)}
-                            style={{ ...styles.smallActionBtn, backgroundColor: '#f0f9ff', color: '#0284c7' }}
-                          >
-                            👥 Assignments
+                            onClick={() =>openAssignModal(pol)}
+                            style={{ ...styles.smallActionBtn, backgroundColor: '#f0f9ff', color: '#1d4ed8' }}
+                          >Assignments
                           </button>
                         )}
                       </div>
@@ -705,8 +692,7 @@ export default function AdminCommissionsPage() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
             <h3 style={styles.modalTitle}>Review Commission #{selectedCommission.commissionNumber}</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-              Lead: {selectedCommission.leadId?.leadCode || selectedCommission.leadId} | Amount: $
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Lead: {selectedCommission.leadId?.leadCode || selectedCommission.leadId} | Amount: $
               {Number(selectedCommission.calculatedAmount || 0).toFixed(2)}
             </p>
 
@@ -715,7 +701,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Select Action:</label>
                 <select
                   value={reviewAction}
-                  onChange={(e) => setReviewAction(e.target.value)}
+                  onChange={(e) =>setReviewAction(e.target.value)}
                   style={styles.input}
                 >
                   <option value="APPROVE">APPROVE — Mark as Approved</option>
@@ -733,7 +719,7 @@ export default function AdminCommissionsPage() {
                     type="text"
                     required
                     value={reviewReason}
-                    onChange={(e) => setReviewReason(e.target.value)}
+                    onChange={(e) =>setReviewReason(e.target.value)}
                     style={styles.input}
                     placeholder="Provide justification..."
                   />
@@ -744,7 +730,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Audit Notes (Optional):</label>
                 <textarea
                   value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
+                  onChange={(e) =>setReviewNotes(e.target.value)}
                   style={{ ...styles.input, minHeight: '60px' }}
                   placeholder="Internal audit notes..."
                 />
@@ -753,10 +739,9 @@ export default function AdminCommissionsPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsReviewModalOpen(false)}
+                  onClick={() =>setIsReviewModalOpen(false)}
                   style={styles.secondaryBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button type="submit" disabled={loading} style={styles.primaryBtn}>
                   {loading ? 'Processing...' : 'Confirm Action'}
@@ -772,8 +757,7 @@ export default function AdminCommissionsPage() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
             <h3 style={styles.modalTitle}>Record Payment Confirmation</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-              Confirm manual payout of ${Number(selectedCommission.calculatedAmount || 0).toFixed(2)} to{' '}
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Confirm manual payout of ${Number(selectedCommission.calculatedAmount || 0).toFixed(2)} to{' '}
               {selectedCommission.contractorId?.contractorProfile?.businessName || 'Contractor'}.
             </p>
 
@@ -782,7 +766,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Payment Method:</label>
                 <select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  onChange={(e) =>setPaymentMethod(e.target.value)}
                   style={styles.input}
                 >
                   <option value="CHECK">Physical Company Check</option>
@@ -799,7 +783,7 @@ export default function AdminCommissionsPage() {
                   type="text"
                   required
                   value={paymentRef}
-                  onChange={(e) => setPaymentRef(e.target.value)}
+                  onChange={(e) =>setPaymentRef(e.target.value)}
                   style={styles.input}
                   placeholder="e.g. CHK-99042 or ACH-TXN-8812"
                 />
@@ -809,7 +793,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Payment Notes:</label>
                 <textarea
                   value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  onChange={(e) =>setPaymentNotes(e.target.value)}
                   style={{ ...styles.input, minHeight: '60px' }}
                   placeholder="Details regarding transaction settlement..."
                 />
@@ -818,10 +802,9 @@ export default function AdminCommissionsPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsPaymentModalOpen(false)}
+                  onClick={() =>setIsPaymentModalOpen(false)}
                   style={styles.secondaryBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button type="submit" disabled={loading} style={styles.primaryBtn}>
                   {loading ? 'Recording...' : 'Record Payment'}
@@ -844,8 +827,7 @@ export default function AdminCommissionsPage() {
               <div><strong>Rate Applied:</strong> {selectedCommission.rateApplied?.value} ({selectedCommission.rateApplied?.type})</div>
             </div>
 
-            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1e293b' }}>
-              📜 Lifecycle Audit Trail
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1e293b' }}>Lifecycle Audit Trail
             </h4>
             <div style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', fontSize: '12px' }}>
               {commissionHistory.length === 0 ? (
@@ -865,10 +847,9 @@ export default function AdminCommissionsPage() {
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 type="button"
-                onClick={() => setSelectedCommission(null)}
+                onClick={() =>setSelectedCommission(null)}
                 style={styles.secondaryBtn}
-              >
-                Close
+              >Close
               </button>
             </div>
           </div>
@@ -887,7 +868,7 @@ export default function AdminCommissionsPage() {
                   type="text"
                   required
                   value={newCommPolicy.name}
-                  onChange={(e) => setNewCommPolicy({ ...newCommPolicy, name: e.target.value })}
+                  onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, name: e.target.value })}
                   style={styles.input}
                   placeholder="e.g. Standard Tier 1 Commission"
                 />
@@ -898,7 +879,7 @@ export default function AdminCommissionsPage() {
                   type="text"
                   required
                   value={newCommPolicy.code}
-                  onChange={(e) => setNewCommPolicy({ ...newCommPolicy, code: e.target.value })}
+                  onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, code: e.target.value })}
                   style={styles.input}
                   placeholder="e.g. COMM_STD_10"
                 />
@@ -907,7 +888,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Commission Type:</label>
                 <select
                   value={newCommPolicy.commissionType}
-                  onChange={(e) => setNewCommPolicy({ ...newCommPolicy, commissionType: e.target.value })}
+                  onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, commissionType: e.target.value })}
                   style={styles.input}
                 >
                   <option value="PERCENTAGE">Percentage (%)</option>
@@ -925,7 +906,7 @@ export default function AdminCommissionsPage() {
                     step="0.1"
                     required
                     value={newCommPolicy.percentageValue}
-                    onChange={(e) => setNewCommPolicy({ ...newCommPolicy, percentageValue: e.target.value })}
+                    onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, percentageValue: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -938,7 +919,7 @@ export default function AdminCommissionsPage() {
                     step="1"
                     required
                     value={newCommPolicy.fixedAmount}
-                    onChange={(e) => setNewCommPolicy({ ...newCommPolicy, fixedAmount: e.target.value })}
+                    onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, fixedAmount: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -948,7 +929,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Calculation Basis:</label>
                 <select
                   value={newCommPolicy.calculationBasis}
-                  onChange={(e) => setNewCommPolicy({ ...newCommPolicy, calculationBasis: e.target.value })}
+                  onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, calculationBasis: e.target.value })}
                   style={styles.input}
                 >
                   <option value="NET_ESTIMATE">Net Estimate (Subtotal after discounts)</option>
@@ -961,7 +942,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Description:</label>
                 <textarea
                   value={newCommPolicy.description}
-                  onChange={(e) => setNewCommPolicy({ ...newCommPolicy, description: e.target.value })}
+                  onChange={(e) =>setNewCommPolicy({ ...newCommPolicy, description: e.target.value })}
                   style={{ ...styles.input, minHeight: '50px' }}
                 />
               </div>
@@ -969,13 +950,11 @@ export default function AdminCommissionsPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsCreateCommPolicyModalOpen(false)}
+                  onClick={() =>setIsCreateCommPolicyModalOpen(false)}
                   style={styles.secondaryBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Save Policy
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Save Policy
                 </button>
               </div>
             </form>
@@ -995,7 +974,7 @@ export default function AdminCommissionsPage() {
                   type="text"
                   required
                   value={newDiscPolicy.name}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, name: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, name: e.target.value })}
                   style={styles.input}
                   placeholder="e.g. Preferred Partner 5%"
                 />
@@ -1006,7 +985,7 @@ export default function AdminCommissionsPage() {
                   type="text"
                   required
                   value={newDiscPolicy.code}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, code: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, code: e.target.value })}
                   style={styles.input}
                   placeholder="e.g. PARTNER_5"
                 />
@@ -1015,7 +994,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Discount Type:</label>
                 <select
                   value={newDiscPolicy.discountType}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, discountType: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, discountType: e.target.value })}
                   style={styles.input}
                 >
                   <option value="PERCENTAGE">Percentage (%)</option>
@@ -1030,7 +1009,7 @@ export default function AdminCommissionsPage() {
                   step="0.1"
                   required
                   value={newDiscPolicy.discountValue}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, discountValue: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, discountValue: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1038,7 +1017,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Applicability:</label>
                 <select
                   value={newDiscPolicy.applicability}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, applicability: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, applicability: e.target.value })}
                   style={styles.input}
                 >
                   <option value="ALL_CONTRACTORS">All Verified Contractors</option>
@@ -1049,7 +1028,7 @@ export default function AdminCommissionsPage() {
                 <label style={styles.label}>Description:</label>
                 <textarea
                   value={newDiscPolicy.description}
-                  onChange={(e) => setNewDiscPolicy({ ...newDiscPolicy, description: e.target.value })}
+                  onChange={(e) =>setNewDiscPolicy({ ...newDiscPolicy, description: e.target.value })}
                   style={{ ...styles.input, minHeight: '50px' }}
                 />
               </div>
@@ -1057,13 +1036,11 @@ export default function AdminCommissionsPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsCreateDiscPolicyModalOpen(false)}
+                  onClick={() =>setIsCreateDiscPolicyModalOpen(false)}
                   style={styles.secondaryBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Save Policy
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Save Policy
                 </button>
               </div>
             </form>
@@ -1083,7 +1060,7 @@ export default function AdminCommissionsPage() {
                 <select
                   required
                   value={selectedContractorId}
-                  onChange={(e) => setSelectedContractorId(e.target.value)}
+                  onChange={(e) =>setSelectedContractorId(e.target.value)}
                   style={styles.input}
                 >
                   <option value="">-- Choose Contractor --</option>
@@ -1099,7 +1076,7 @@ export default function AdminCommissionsPage() {
                 <input
                   type="text"
                   value={assignNotes}
-                  onChange={(e) => setAssignNotes(e.target.value)}
+                  onChange={(e) =>setAssignNotes(e.target.value)}
                   style={styles.input}
                   placeholder="Reason or authorization reference..."
                 />
@@ -1133,10 +1110,9 @@ export default function AdminCommissionsPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveAssignment(a.contractorId?._id || a.contractorId?.id || a.contractorId)}
+                      onClick={() =>handleRemoveAssignment(a.contractorId?._id || a.contractorId?.id || a.contractorId)}
                       style={{ ...styles.smallActionBtn, color: '#b91c1c', backgroundColor: '#fee2e2' }}
-                    >
-                      Remove
+                    >Remove
                     </button>
                   </div>
                 ))
@@ -1146,10 +1122,9 @@ export default function AdminCommissionsPage() {
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
                 type="button"
-                onClick={() => setIsAssignModalOpen(false)}
+                onClick={() =>setIsAssignModalOpen(false)}
                 style={styles.secondaryBtn}
-              >
-                Done
+              >Done
               </button>
             </div>
           </div>
@@ -1250,7 +1225,7 @@ const styles = {
     display: 'inline-block',
   },
   primaryBtn: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#1d4ed8',
     color: '#ffffff',
     border: 'none',
     padding: '8px 16px',

@@ -66,7 +66,7 @@ export default function EstimateDetailPage() {
       const updated = await updateEstimateStatus(estimateId, newStatus);
       setEstimate(updated);
       setActionMsg(`Estimate status successfully changed to ${newStatus}.`);
-      setTimeout(() => setActionMsg(null), 3000);
+      setTimeout(() =>setActionMsg(null), 3000);
     } catch (err) {
       setError(err.message || 'Failed to update status.');
     } finally {
@@ -85,7 +85,7 @@ export default function EstimateDetailPage() {
       setIsRecalcModalOpen(false);
       setRecalcReason('');
       setActionMsg('Estimate successfully recalculated. New revision archived.');
-      setTimeout(() => setActionMsg(null), 3000);
+      setTimeout(() =>setActionMsg(null), 3000);
       loadEstimateData();
     } catch (err) {
       setError(err.message || 'Failed to recalculate estimate.');
@@ -117,7 +117,7 @@ export default function EstimateDetailPage() {
       setIsDiscountModalOpen(false);
       setSelectedDiscountId('');
       setActionMsg('Discount policy successfully applied to estimate.');
-      setTimeout(() => setActionMsg(null), 3000);
+      setTimeout(() =>setActionMsg(null), 3000);
       loadEstimateData();
     } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Failed to apply discount.');
@@ -133,7 +133,7 @@ export default function EstimateDetailPage() {
       const res = await contractorDiscountApi.removeDiscountFromEstimate(estimateId, 'Removed by contractor/admin');
       setEstimate(res.data?.estimate || res.data);
       setActionMsg('Discount removed and rates restored.');
-      setTimeout(() => setActionMsg(null), 3000);
+      setTimeout(() =>setActionMsg(null), 3000);
       loadEstimateData();
     } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Failed to remove discount.');
@@ -154,7 +154,7 @@ export default function EstimateDetailPage() {
     return (
       <div style={styles.container}>
         <div style={styles.errorBox}>{error || 'Estimate not found.'}</div>
-        <button type="button" onClick={() => navigate(`${basePath}/dashboard`)} style={styles.secondaryBtn}>
+        <button type="button" onClick={() =>navigate(`${basePath}/dashboard`)} style={styles.secondaryBtn}>
           ← Back to Dashboard
         </button>
       </div>
@@ -178,7 +178,7 @@ export default function EstimateDetailPage() {
     <div style={styles.container}>
       <button
         type="button"
-        onClick={() => navigate(`${basePath}/decks/${estimate.deckId?._id || estimate.deckId || ''}`)}
+        onClick={() =>navigate(`${basePath}/decks/${estimate.deckId?._id || estimate.deckId || ''}`)}
         style={styles.secondaryBtn}
       >
         ← Back to Deck Project
@@ -194,8 +194,7 @@ export default function EstimateDetailPage() {
             </span>
             <span style={styles.versionBadge}>v{estimate.version || 1}</span>
           </div>
-          <p style={styles.subtext}>
-            Deck: <strong>{estimate.deckDetails?.projectName || 'Project Deck'}</strong> | Area:{' '}
+          <p style={styles.subtext}>Deck: <strong>{estimate.deckDetails?.projectName || 'Project Deck'}</strong> | Area:{' '}
             <strong>{estimate.deckDetails?.areaSqFt || 0} sq ft</strong> | Created:{' '}
             {new Date(estimate.createdAt).toLocaleDateString()}
           </p>
@@ -204,11 +203,10 @@ export default function EstimateDetailPage() {
         <div style={styles.headerActions}>
           <button
             type="button"
-            onClick={() => setIsRecalcModalOpen(true)}
+            onClick={() =>setIsRecalcModalOpen(true)}
             style={styles.recalcBtn}
             disabled={actionLoading}
-          >
-            🔄 Recalculate Rates
+          >Recalculate Rates
           </button>
 
           {(isAdmin || isContractor) && currentStatus === 'DRAFT' && (
@@ -218,8 +216,7 @@ export default function EstimateDetailPage() {
                 onClick={handleRemoveDiscountClick}
                 style={{ ...styles.recalcBtn, color: '#b91c1c', borderColor: '#fca5a5' }}
                 disabled={actionLoading}
-              >
-                🏷️ Remove Discount
+              >Remove Discount
               </button>
             ) : (
               <button
@@ -227,8 +224,7 @@ export default function EstimateDetailPage() {
                 onClick={handleOpenDiscountModal}
                 style={{ ...styles.recalcBtn, color: '#15803d', borderColor: '#86efac' }}
                 disabled={actionLoading}
-              >
-                🏷️ Apply Discount
+              >Apply Discount
               </button>
             )
           )}
@@ -236,22 +232,20 @@ export default function EstimateDetailPage() {
           {currentStatus === 'DRAFT' && (
             <button
               type="button"
-              onClick={() => handleStatusChange('SUBMITTED')}
+              onClick={() =>handleStatusChange('SUBMITTED')}
               style={styles.primaryActionBtn}
               disabled={actionLoading}
-            >
-              Submit Estimate
+            >Submit Estimate
             </button>
           )}
 
           {(isAdmin || isContractor) && currentStatus === 'SUBMITTED' && (
             <button
               type="button"
-              onClick={() => handleStatusChange('COMPLETED')}
+              onClick={() =>handleStatusChange('COMPLETED')}
               style={styles.approveActionBtn}
               disabled={actionLoading}
-            >
-              Mark Completed
+            >Mark Completed
             </button>
           )}
         </div>
@@ -301,7 +295,7 @@ export default function EstimateDetailPage() {
 
       {/* Materials Breakdown Table */}
       <div style={styles.sectionCard}>
-        <h3 style={styles.sectionHeading}>📦 Material Requirements & Pricing Breakdown</h3>
+        <h3 style={styles.sectionHeading}>Material Requirements & Pricing Breakdown</h3>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
@@ -332,7 +326,7 @@ export default function EstimateDetailPage() {
 
       {/* Services Breakdown Table */}
       <div style={styles.sectionCard}>
-        <h3 style={styles.sectionHeading}>🛠️ Services & Labor Breakdown</h3>
+        <h3 style={styles.sectionHeading}>Services & Labor Breakdown</h3>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
@@ -363,18 +357,18 @@ export default function EstimateDetailPage() {
 
       {/* Transparent Calculation Breakdown */}
       <div style={styles.sectionCard}>
-        <h3 style={styles.sectionHeading}>📐 Transparent Formula Breakdown</h3>
+        <h3 style={styles.sectionHeading}>Transparent Formula Breakdown</h3>
         <p style={styles.sectionSub}>Deterministic pricing calculation single source of truth.</p>
 
         <div style={styles.formulaBox}>
           <div style={styles.formulaItem}>
-            <strong>Material Quantity:</strong> Area ({estimate.deckDetails?.areaSqFt || 0} sq ft) / Coverage &times; (1 + {snapshot.wastePercentage || 10}% waste buffer)
+            <strong>Material Quantity:</strong>Area ({estimate.deckDetails?.areaSqFt || 0} sq ft) / Coverage &times; (1 + {snapshot.wastePercentage || 10}% waste buffer)
           </div>
           <div style={styles.formulaItem}>
             <strong>Labor Rate:</strong> ${Number(snapshot.laborRate || 0).toFixed(2)}/hr applied to estimated service labor hours.
           </div>
           <div style={styles.formulaItem}>
-            <strong>Subtotal:</strong> Materials (${Number(snapshot.materialsTotal || 0).toFixed(2)}) + Services (${Number(snapshot.servicesTotal || 0).toFixed(2)}) + Labor (${Number(snapshot.laborTotal || 0).toFixed(2)}) + Extra Coatings (${Number(snapshot.additionalCoatingTotal || 0).toFixed(2)}) + Travel (${Number(snapshot.travelCharge || 0).toFixed(2)})
+            <strong>Subtotal:</strong>Materials (${Number(snapshot.materialsTotal || 0).toFixed(2)}) + Services (${Number(snapshot.servicesTotal || 0).toFixed(2)}) + Labor (${Number(snapshot.laborTotal || 0).toFixed(2)}) + Extra Coatings (${Number(snapshot.additionalCoatingTotal || 0).toFixed(2)}) + Travel (${Number(snapshot.travelCharge || 0).toFixed(2)})
           </div>
           {estimate.discountBreakdown?.applied && (
             <div style={{ ...styles.formulaItem, color: '#15803d', backgroundColor: '#f0fdf4', padding: '6px 10px', borderRadius: '4px' }}>
@@ -388,7 +382,7 @@ export default function EstimateDetailPage() {
           )}
           {snapshot.minJobAdjustment > 0 && (
             <div style={{ ...styles.formulaItem, color: '#0369a1' }}>
-              <strong>Minimum Job Price Rule:</strong> Raised to minimum threshold of ${Number(snapshot.minimumJobPrice || 0).toFixed(2)} (+${Number(snapshot.minJobAdjustment).toFixed(2)} adjustment)
+              <strong>Minimum Job Price Rule:</strong>Raised to minimum threshold of ${Number(snapshot.minimumJobPrice || 0).toFixed(2)} (+${Number(snapshot.minJobAdjustment).toFixed(2)} adjustment)
             </div>
           )}
         </div>
@@ -396,7 +390,7 @@ export default function EstimateDetailPage() {
 
       {/* Revision History */}
       <div style={styles.sectionCard}>
-        <h3 style={styles.sectionHeading}>📜 Version History & Snapshot Archive</h3>
+        <h3 style={styles.sectionHeading}>Version History & Snapshot Archive</h3>
         <p style={styles.sectionSub}>Historical estimate revisions preserved with original pricing snapshots.</p>
 
         {revisions.length === 0 ? (
@@ -434,19 +428,17 @@ export default function EstimateDetailPage() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <h3 style={{ margin: '0 0 12px', fontSize: '18px' }}>Recalculate Estimate</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-              Recalculating evaluates current catalog rates, labor allowances, and pricing configurations. The current state will be archived as a new revision.
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Recalculating evaluates current catalog rates, labor allowances, and pricing configurations. The current state will be archived as a new revision.
             </p>
             <form onSubmit={handleRecalculate}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                  Reason for Recalculation:
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Reason for Recalculation:
                 </label>
                 <input
                   type="text"
                   required
                   value={recalcReason}
-                  onChange={(e) => setRecalcReason(e.target.value)}
+                  onChange={(e) =>setRecalcReason(e.target.value)}
                   placeholder="e.g. Updated spring catalog pricing or customer requested additional coat"
                   style={styles.input}
                 />
@@ -454,10 +446,9 @@ export default function EstimateDetailPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsRecalcModalOpen(false)}
+                  onClick={() =>setIsRecalcModalOpen(false)}
                   style={styles.cancelBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button type="submit" style={styles.primaryActionBtn} disabled={actionLoading}>
                   {actionLoading ? 'Recalculating...' : 'Confirm Recalculation'}
@@ -473,34 +464,30 @@ export default function EstimateDetailPage() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <h3 style={{ margin: '0 0 12px', fontSize: '18px' }}>Apply Partner Discount</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-              Select an approved contractor discount policy to apply to this estimate. Applying a discount creates an immutable revision snapshot.
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Select an approved contractor discount policy to apply to this estimate. Applying a discount creates an immutable revision snapshot.
             </p>
             {eligibleDiscounts.length === 0 ? (
               <div>
-                <p style={{ fontSize: '13px', color: '#b91c1c', marginBottom: '16px' }}>
-                  No active discount policies currently eligible for your contractor account.
+                <p style={{ fontSize: '13px', color: '#b91c1c', marginBottom: '16px' }}>No active discount policies currently eligible for your contractor account.
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
-                    onClick={() => setIsDiscountModalOpen(false)}
+                    onClick={() =>setIsDiscountModalOpen(false)}
                     style={styles.cancelBtn}
-                  >
-                    Close
+                  >Close
                   </button>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleApplyDiscountSubmit}>
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                    Select Discount Policy:
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Select Discount Policy:
                   </label>
                   <select
                     required
                     value={selectedDiscountId}
-                    onChange={(e) => setSelectedDiscountId(e.target.value)}
+                    onChange={(e) =>setSelectedDiscountId(e.target.value)}
                     style={styles.input}
                   >
                     <option value="">-- Choose Eligible Discount --</option>
@@ -514,10 +501,9 @@ export default function EstimateDetailPage() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setIsDiscountModalOpen(false)}
+                    onClick={() =>setIsDiscountModalOpen(false)}
                     style={styles.cancelBtn}
-                  >
-                    Cancel
+                  >Cancel
                   </button>
                   <button
                     type="submit"

@@ -47,7 +47,7 @@ export default function DeckDetailPage() {
         <div style={styles.errorBox}>{error || 'Deck project not found.'}</div>
         <button
           type="button"
-          onClick={() => navigate('/customer/dashboard')}
+          onClick={() =>navigate('/customer/dashboard')}
           style={styles.backBtn}
         >
           ← Back to Dashboard
@@ -73,7 +73,7 @@ export default function DeckDetailPage() {
     <div style={styles.container}>
       <button
         type="button"
-        onClick={() => navigate('/customer/dashboard')}
+        onClick={() =>navigate('/customer/dashboard')}
         style={styles.backBtn}
       >
         ← Back to Projects Dashboard
@@ -100,7 +100,7 @@ export default function DeckDetailPage() {
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => navigate(`/customer/decks/${deck.id || deck._id}/estimate/new`)}
+            onClick={() =>navigate(`/customer/decks/${deck.id || deck._id}/estimate/new`)}
             style={{
               padding: '8px 16px',
               backgroundColor: '#16a34a',
@@ -111,15 +111,13 @@ export default function DeckDetailPage() {
               fontWeight: 600,
               cursor: 'pointer',
             }}
-          >
-            💰 Calculate Estimate
+          >Calculate Estimate
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/customer/decks/${deck.id || deck._id}/edit`)}
+            onClick={() =>navigate(`/customer/decks/${deck.id || deck._id}/edit`)}
             style={styles.editBtn}
-          >
-            ✎ Edit Specifications
+          >Edit Specifications
           </button>
         </div>
       </div>
@@ -133,7 +131,7 @@ export default function DeckDetailPage() {
       {/* Specifications Grid */}
       <div style={styles.specsGrid}>
         <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>📐 Geometry & Area</h3>
+          <h3 style={styles.specTitle}>Geometry & Area</h3>
           <div style={styles.specRow}>
             <span>Shape:</span>
             <strong>{deck.deckShape?.toUpperCase() || 'RECTANGLE'}</strong>
@@ -153,7 +151,7 @@ export default function DeckDetailPage() {
         </div>
 
         <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>🏗 Structure & Features</h3>
+          <h3 style={styles.specTitle}>Structure & Features</h3>
           <div style={styles.specRow}>
             <span>Levels:</span>
             <strong>{deck.structureDetails?.levels || 1} level(s)</strong>
@@ -187,7 +185,7 @@ export default function DeckDetailPage() {
         </div>
 
         <div style={styles.specCard}>
-          <h3 style={styles.specTitle}>🪵 Surface & Condition</h3>
+          <h3 style={styles.specTitle}>Surface & Condition</h3>
           <div style={styles.specRow}>
             <span>Material:</span>
             <strong>{deck.surfaceDetails?.material?.toUpperCase() || 'WOOD'}</strong>
@@ -226,7 +224,7 @@ export default function DeckDetailPage() {
           onDeleteSuccess={(deletedId) => {
             setDeck((prev) => ({
               ...prev,
-              images: (prev.images || []).filter((img) => img.id !== deletedId),
+              images: (prev.images || []).filter((img) =>img.id !== deletedId),
             }));
           }}
         />

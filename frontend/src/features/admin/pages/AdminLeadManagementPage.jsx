@@ -139,8 +139,7 @@ export default function AdminLeadManagementPage() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Lead Management & Dispatch</h1>
-          <p style={styles.subtitle}>
-            Oversee incoming restoration enquiries, match projects to eligible contractors, and track conversion lifecycles.
+          <p style={styles.subtitle}>Oversee incoming restoration enquiries, match projects to eligible contractors, and track conversion lifecycles.
           </p>
         </div>
       </div>
@@ -191,13 +190,12 @@ export default function AdminLeadManagementPage() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && loadLeads(1)}
+            onChange={(e) =>setSearchTerm(e.target.value)}
+            onKeyDown={(e) =>e.key === 'Enter' && loadLeads(1)}
             placeholder="Search by lead #, customer name, email, or deck name..."
             style={styles.searchInput}
           />
-          <button type="button" onClick={() => loadLeads(1)} style={styles.filterBtn}>
-            Search
+          <button type="button" onClick={() =>loadLeads(1)} style={styles.filterBtn}>Search
           </button>
         </div>
 
@@ -205,7 +203,7 @@ export default function AdminLeadManagementPage() {
           <span style={{ fontSize: '13px', color: '#64748b' }}>Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>setStatusFilter(e.target.value)}
             style={styles.select}
           >
             <option value="">All Statuses</option>
@@ -299,7 +297,7 @@ export default function AdminLeadManagementPage() {
                         {!isClosed && (
                           <button
                             type="button"
-                            onClick={() => handleOpenAssign(l)}
+                            onClick={() =>handleOpenAssign(l)}
                             style={styles.assignBtn}
                           >
                             {l.assignedContractorId ? 'Reassign' : 'Assign'}
@@ -313,8 +311,7 @@ export default function AdminLeadManagementPage() {
                               setShowCloseModal(true);
                             }}
                             style={styles.closeBtn}
-                          >
-                            Close
+                          >Close
                           </button>
                         )}
                       </div>
@@ -333,19 +330,17 @@ export default function AdminLeadManagementPage() {
           <div style={styles.modalBox}>
             <div style={styles.modalHeader}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>
-                  Assign Contractor to Lead {selectedLead.leadNumber}
+                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>Assign Contractor to Lead {selectedLead.leadNumber}
                 </h2>
-                <span style={{ fontSize: '13px', color: '#64748b' }}>
-                  Project: {selectedLead.deckSnapshot?.projectName} ({selectedLead.deckSnapshot?.surfaceMaterial}) • Location: {selectedLead.deckSnapshot?.city}, {selectedLead.deckSnapshot?.state}
+                <span style={{ fontSize: '13px', color: '#64748b' }}>Project: {selectedLead.deckSnapshot?.projectName} ({selectedLead.deckSnapshot?.surfaceMaterial}) • Location: {selectedLead.deckSnapshot?.city}, {selectedLead.deckSnapshot?.state}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedLead(null)}
+                onClick={() =>setSelectedLead(null)}
                 style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -353,13 +348,12 @@ export default function AdminLeadManagementPage() {
               <div>
                 <label style={styles.label}>Select Eligible Approved Contractor *</label>
                 {eligibleContractors.length === 0 ? (
-                  <p style={{ color: '#b91c1c', fontSize: '13px' }}>
-                    No approved contractors match this deck surface or location. Please verify pending contractors first.
+                  <p style={{ color: '#b91c1c', fontSize: '13px' }}>No approved contractors match this deck surface or location. Please verify pending contractors first.
                   </p>
                 ) : (
                   <select
                     value={selectedContractorId}
-                    onChange={(e) => setSelectedContractorId(e.target.value)}
+                    onChange={(e) =>setSelectedContractorId(e.target.value)}
                     style={styles.selectFull}
                     required
                   >
@@ -377,7 +371,7 @@ export default function AdminLeadManagementPage() {
                 <input
                   type="text"
                   value={assignReason}
-                  onChange={(e) => setAssignReason(e.target.value)}
+                  onChange={(e) =>setAssignReason(e.target.value)}
                   placeholder="e.g. Local specialist with cedar restoration experience"
                   style={styles.input}
                 />
@@ -388,7 +382,7 @@ export default function AdminLeadManagementPage() {
                 <textarea
                   rows={2}
                   value={assignNotes}
-                  onChange={(e) => setAssignNotes(e.target.value)}
+                  onChange={(e) =>setAssignNotes(e.target.value)}
                   placeholder="Any contractor instructions or notes..."
                   style={styles.textarea}
                 />
@@ -397,10 +391,9 @@ export default function AdminLeadManagementPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setSelectedLead(null)}
+                  onClick={() =>setSelectedLead(null)}
                   style={styles.cancelBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"
@@ -421,8 +414,7 @@ export default function AdminLeadManagementPage() {
           <div style={styles.modalBox}>
             <div style={styles.modalHeader}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>
-                  Close / Cancel Lead {selectedLead.leadNumber}
+                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>Close / Cancel Lead {selectedLead.leadNumber}
                 </h2>
               </div>
               <button
@@ -433,7 +425,7 @@ export default function AdminLeadManagementPage() {
                 }}
                 style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -442,7 +434,7 @@ export default function AdminLeadManagementPage() {
                 <label style={styles.label}>Closure Type</label>
                 <select
                   value={closeAction}
-                  onChange={(e) => setCloseAction(e.target.value)}
+                  onChange={(e) =>setCloseAction(e.target.value)}
                   style={styles.selectFull}
                 >
                   <option value="CLOSE">Close Lead (Completed / Resolved)</option>
@@ -455,7 +447,7 @@ export default function AdminLeadManagementPage() {
                 <textarea
                   rows={3}
                   value={closeReason}
-                  onChange={(e) => setCloseReason(e.target.value)}
+                  onChange={(e) =>setCloseReason(e.target.value)}
                   placeholder="Explain why this lead is being closed..."
                   style={styles.textarea}
                   required
@@ -470,14 +462,12 @@ export default function AdminLeadManagementPage() {
                     setSelectedLead(null);
                   }}
                   style={styles.cancelBtn}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"
                   style={styles.dangerBtn}
-                >
-                  Confirm {closeAction}
+                >Confirm {closeAction}
                 </button>
               </div>
             </form>

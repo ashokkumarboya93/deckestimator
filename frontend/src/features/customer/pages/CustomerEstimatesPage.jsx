@@ -167,12 +167,16 @@ export default function CustomerEstimatesPage() {
       <section style={styles.heroBanner}>
         <div style={styles.heroLeft}>
           <div style={styles.heroIconBox}>
-            <span style={{ fontSize: '26px' }}>📋</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
           </div>
           <div>
             <h1 style={styles.heroTitle}>My Estimates</h1>
-            <p style={styles.heroSubtitle}>
-              Manage your deck restoration estimates, view details, compare revisions, and download official quotes.
+            <p style={styles.heroSubtitle}>Manage your deck restoration estimates, view details, compare revisions, and download official quotes.
             </p>
           </div>
         </div>
@@ -181,32 +185,52 @@ export default function CustomerEstimatesPage() {
 
       {/* 2. SUMMARY KPI CARDS */}
       <div style={styles.kpiGrid}>
-        <div style={{ ...styles.kpiCard, backgroundColor: '#ecfdf5', borderColor: '#d1fae5' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#d1fae5', color: '#059669' }}>🥞</div>
+        <div style={{ ...styles.kpiCard, backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
+          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dbeafe', color: '#1d4ed8' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          </div>
           <div>
             <span style={styles.kpiLabel}>Total Estimates</span>
             <strong style={styles.kpiValue}>{kpis.total}</strong>
           </div>
         </div>
 
-        <div style={{ ...styles.kpiCard, backgroundColor: '#eff6ff', borderColor: '#dbeafe' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dbeafe', color: '#2563eb' }}>📄</div>
+        <div style={{ ...styles.kpiCard, backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' }}>
+          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dcfce7', color: '#15803d' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
           <div>
-            <span style={styles.kpiLabel}>Official / Submited</span>
+            <span style={styles.kpiLabel}>Official / Submitted</span>
             <strong style={styles.kpiValue}>{kpis.completed}</strong>
           </div>
         </div>
 
         <div style={{ ...styles.kpiCard, backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#fef9c3', color: '#ca8a04' }}>📝</div>
+          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#fef9c3', color: '#b45309' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
           <div>
             <span style={styles.kpiLabel}>Saved Drafts</span>
             <strong style={styles.kpiValue}>{kpis.drafts}</strong>
           </div>
         </div>
 
-        <div style={{ ...styles.kpiCard, backgroundColor: '#faf5ff', borderColor: '#f3e8ff' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#f3e8ff', color: '#9333ea' }}>💲</div>
+        <div style={{ ...styles.kpiCard, backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }}>
+          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
           <div>
             <span style={styles.kpiLabel}>Total Estimated Value</span>
             <strong style={styles.kpiValue}>{formatCurrency(kpis.totalVal)}</strong>
@@ -217,12 +241,17 @@ export default function CustomerEstimatesPage() {
       {/* 3. SEARCH & FILTER TOOLBAR */}
       <div style={styles.toolbarCard}>
         <div style={styles.searchBox}>
-          <span style={styles.searchIcon}>🔍</span>
+          <span style={styles.searchIcon}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
           <input
             type="text"
             placeholder="Search by project name or estimate reference (e.g., EST-...)"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) =>setSearchTerm(e.target.value)}
             style={styles.searchInput}
           />
         </div>
@@ -230,7 +259,7 @@ export default function CustomerEstimatesPage() {
         <div style={styles.filterGroup}>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>setStatusFilter(e.target.value)}
             style={styles.selectDropdown}
           >
             <option value="ALL">All Statuses</option>
@@ -241,11 +270,11 @@ export default function CustomerEstimatesPage() {
 
           <button
             type="button"
-            onClick={() => fetchEstimates(true)}
+            onClick={() =>fetchEstimates(true)}
             disabled={refreshing}
             style={styles.refreshBtn}
           >
-            <span>🔄</span> {refreshing ? 'Refreshing...' : 'Refresh'}
+            <span></span> {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -253,8 +282,8 @@ export default function CustomerEstimatesPage() {
       {/* Error Alert */}
       {error && (
         <div style={styles.errorAlert}>
-          <span>⚠️ {error}</span>
-          <button type="button" onClick={() => fetchEstimates()} style={styles.retryBtn}>Retry</button>
+          <span> {error}</span>
+          <button type="button" onClick={() =>fetchEstimates()} style={styles.retryBtn}>Retry</button>
         </div>
       )}
 
@@ -267,7 +296,7 @@ export default function CustomerEstimatesPage() {
           </div>
         ) : filteredEstimates.length === 0 ? (
           <div style={styles.emptyBox}>
-            <div style={{ fontSize: '36px', marginBottom: '8px' }}>📂</div>
+            <div style={{ fontSize: '36px', marginBottom: '8px' }}></div>
             <h3 style={styles.emptyTitle}>No Estimates Found</h3>
             <p style={styles.emptySubtitle}>
               {searchTerm || statusFilter !== 'ALL'
@@ -350,19 +379,19 @@ export default function CustomerEstimatesPage() {
                         <div style={styles.actionBtnsRow}>
                           <button
                             type="button"
-                            onClick={() => setViewEstimate(est)}
+                            onClick={() =>setViewEstimate(est)}
                             style={styles.viewBtn}
                             title="View Estimate Details"
                           >
-                            <span>👁️</span> View
+                            <span></span>View
                           </button>
                           <button
                             type="button"
-                            onClick={() => setPrintEstimate(est)}
+                            onClick={() =>setPrintEstimate(est)}
                             style={styles.pdfBtn}
                             title="Print or Export PDF"
                           >
-                            <span>🖨️</span> PDF / Print
+                            <span></span>PDF / Print
                           </button>
                         </div>
                       </td>
@@ -374,8 +403,7 @@ export default function CustomerEstimatesPage() {
 
             {/* 5. TABLE FOOTER & PAGINATION */}
             <div style={styles.tableFooter}>
-              <span style={styles.showingText}>
-                Showing 1 – {filteredEstimates.length} of {estimates.length} estimates
+              <span style={styles.showingText}>Showing 1 – {filteredEstimates.length} of {estimates.length} estimates
               </span>
 
               <div style={styles.paginationRow}>
@@ -398,32 +426,31 @@ export default function CustomerEstimatesPage() {
       <div style={styles.bottomBar}>
         <button
           type="button"
-          onClick={() => navigate('/customer/decks/new')}
+          onClick={() =>navigate('/customer/decks/new')}
           style={styles.createBtn}
         >
-          <span style={{ fontSize: '18px', fontWeight: '900' }}>+</span> Create New Estimate
+          <span style={{ fontSize: '18px', fontWeight: '900' }}>+</span>Create New Estimate
         </button>
       </div>
 
       {/* 7. VIEW ESTIMATE MODAL */}
       {viewEstimate && (
-        <div style={styles.modalOverlay} onClick={() => setViewEstimate(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setViewEstimate(null)}>
+          <div style={styles.modalContent} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#0f172a' }}>
                   {viewEstimate.deckDetails?.projectName || viewEstimate.estimateName}
                 </h3>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>
-                  Ref: {viewEstimate.estimateNumber || viewEstimate._id} &bull; Created {formatDate(viewEstimate.createdAt)}
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Ref: {viewEstimate.estimateNumber || viewEstimate._id} &bull; Created {formatDate(viewEstimate.createdAt)}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setViewEstimate(null)}
+                onClick={() =>setViewEstimate(null)}
                 style={styles.modalCloseBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -486,15 +513,13 @@ export default function CustomerEstimatesPage() {
                   setPrintEstimate(est);
                 }}
                 style={styles.modalPrintTriggerBtn}
-              >
-                🖨️ Open Printable PDF
+              >Open Printable PDF
               </button>
               <button
                 type="button"
-                onClick={() => setViewEstimate(null)}
+                onClick={() =>setViewEstimate(null)}
                 style={styles.modalDismissBtn}
-              >
-                Close
+              >Close
               </button>
             </div>
           </div>
@@ -503,12 +528,11 @@ export default function CustomerEstimatesPage() {
 
       {/* 8. PRINT / PDF EXPORT MODAL */}
       {printEstimate && (
-        <div style={styles.modalOverlay} onClick={() => setPrintEstimate(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay} onClick={() =>setPrintEstimate(null)}>
+          <div style={{ ...styles.modalContent, maxWidth: '820px' }} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#0f172a' }}>
-                  Official Restoration Estimate Quote
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#0f172a' }}>Official Restoration Estimate Quote
                 </h3>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>
                   {printEstimate.estimateNumber || printEstimate._id} &bull; Generated for Jane Homeowner
@@ -516,10 +540,10 @@ export default function CustomerEstimatesPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setPrintEstimate(null)}
+                onClick={() =>setPrintEstimate(null)}
                 style={styles.modalCloseBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -528,8 +552,7 @@ export default function CustomerEstimatesPage() {
               {/* Brand Top Header */}
               <div style={styles.pdfHeaderRow}>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#0f172a' }}>
-                    DECK <span style={{ color: '#16a34a' }}>PRO</span>
+                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#0f172a' }}>DECK <span style={{ color: '#16a34a' }}>PRO</span>
                   </h2>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>Deck Restoration Experts &bull; Official Estimate</span>
                 </div>
@@ -597,8 +620,7 @@ export default function CustomerEstimatesPage() {
 
               {/* Total Summary */}
               <div style={styles.pdfTotalBox}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  Total Estimated Range (Tax & Minimum Applied):
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Total Estimated Range (Tax & Minimum Applied):
                 </div>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#15803d' }}>
                   {getPriceRange(printEstimate)}
@@ -611,15 +633,13 @@ export default function CustomerEstimatesPage() {
                 type="button"
                 onClick={triggerBrowserPrint}
                 style={styles.modalPrintTriggerBtn}
-              >
-                🖨️ Print / Save as PDF
+              >Print / Save as PDF
               </button>
               <button
                 type="button"
-                onClick={() => setPrintEstimate(null)}
+                onClick={() =>setPrintEstimate(null)}
                 style={styles.modalDismissBtn}
-              >
-                Close
+              >Close
               </button>
             </div>
           </div>

@@ -168,7 +168,7 @@ export default function CompatibilityTab() {
   }
 
   function renderStatusBadge(status) {
-    const config = COMPATIBILITY_STATUSES.find((s) => s.value === status) || {
+    const config = COMPATIBILITY_STATUSES.find((s) =>s.value === status) || {
       color: '#555',
       bg: '#eee',
       label: status,
@@ -198,7 +198,7 @@ export default function CompatibilityTab() {
         <form onSubmit={handleFilterSubmit} style={styles.filterForm}>
           <select
             value={materialFilter}
-            onChange={(e) => setMaterialFilter(e.target.value)}
+            onChange={(e) =>setMaterialFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Materials</option>
@@ -211,7 +211,7 @@ export default function CompatibilityTab() {
 
           <select
             value={serviceFilter}
-            onChange={(e) => setServiceFilter(e.target.value)}
+            onChange={(e) =>setServiceFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Services</option>
@@ -224,7 +224,7 @@ export default function CompatibilityTab() {
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>setStatusFilter(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="">All Compatibility Statuses</option>
@@ -236,8 +236,7 @@ export default function CompatibilityTab() {
           </select>
 
           <button type="submit" style={styles.searchBtn}>Filter</button>
-          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>
-            Reset
+          <button type="button" onClick={handleClearFilters} style={styles.clearBtn}>Reset
           </button>
         </form>
 
@@ -251,10 +250,10 @@ export default function CompatibilityTab() {
           {successMsg}
           <button
             type="button"
-            onClick={() => setSuccessMsg(null)}
+            onClick={() =>setSuccessMsg(null)}
             style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            ✕
+            
           </button>
         </div>
       )}
@@ -267,8 +266,7 @@ export default function CompatibilityTab() {
       ) : compatibilities.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>No compatibility relationships found matching your filters.</p>
-          <button type="button" onClick={openCreateModal} style={styles.addBtn}>
-            Create your first compatibility relationship
+          <button type="button" onClick={openCreateModal} style={styles.addBtn}>Create your first compatibility relationship
           </button>
         </div>
       ) : (
@@ -312,17 +310,15 @@ export default function CompatibilityTab() {
                     <div style={styles.actionGroup}>
                       <button
                         type="button"
-                        onClick={() => openEditModal(item)}
+                        onClick={() =>openEditModal(item)}
                         style={styles.editBtn}
-                      >
-                        Edit
+                      >Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(item)}
+                        onClick={() =>handleDelete(item)}
                         style={styles.deleteBtn}
-                      >
-                        Remove
+                      >Remove
                       </button>
                     </div>
                   </td>
@@ -339,21 +335,19 @@ export default function CompatibilityTab() {
           <button
             type="button"
             disabled={pagination.page <= 1}
-            onClick={() => loadCompatibilities(pagination.page - 1)}
+            onClick={() =>loadCompatibilities(pagination.page - 1)}
             style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
           >
             ← Previous
           </button>
-          <span style={styles.pageInfo}>
-            Page {pagination.page} of {pagination.totalPages} ({pagination.total} records)
+          <span style={styles.pageInfo}>Page {pagination.page} of {pagination.totalPages} ({pagination.total} records)
           </span>
           <button
             type="button"
             disabled={pagination.page >= pagination.totalPages}
-            onClick={() => loadCompatibilities(pagination.page + 1)}
+            onClick={() =>loadCompatibilities(pagination.page + 1)}
             style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-          >
-            Next →
+          >Next →
           </button>
         </div>
       )}
@@ -368,10 +362,10 @@ export default function CompatibilityTab() {
               </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -379,14 +373,13 @@ export default function CompatibilityTab() {
 
             <form onSubmit={handleModalSubmit} style={styles.modalForm}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Select Material <span style={{ color: '#d9534f' }}>*</span>
+                <label style={styles.label}>Select Material <span style={{ color: '#d9534f' }}>*</span>
                 </label>
                 <select
                   required
                   disabled={!!editingItem}
                   value={formData.materialId}
-                  onChange={(e) => setFormData({ ...formData, materialId: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, materialId: e.target.value })}
                   style={editingItem ? styles.selectDisabled : styles.select}
                 >
                   <option value="">Select Material</option>
@@ -399,14 +392,13 @@ export default function CompatibilityTab() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Select Service <span style={{ color: '#d9534f' }}>*</span>
+                <label style={styles.label}>Select Service <span style={{ color: '#d9534f' }}>*</span>
                 </label>
                 <select
                   required
                   disabled={!!editingItem}
                   value={formData.serviceId}
-                  onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, serviceId: e.target.value })}
                   style={editingItem ? styles.selectDisabled : styles.select}
                 >
                   <option value="">Select Service</option>
@@ -419,13 +411,12 @@ export default function CompatibilityTab() {
               </div>
 
               <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  Compatibility Status <span style={{ color: '#d9534f' }}>*</span>
+                <label style={styles.label}>Compatibility Status <span style={{ color: '#d9534f' }}>*</span>
                 </label>
                 <select
                   required
                   value={formData.compatibilityStatus}
-                  onChange={(e) => setFormData({ ...formData, compatibilityStatus: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, compatibilityStatus: e.target.value })}
                   style={styles.select}
                 >
                   {COMPATIBILITY_STATUSES.map((s) => (
@@ -442,7 +433,7 @@ export default function CompatibilityTab() {
                   rows="3"
                   placeholder="e.g. Wash deck and allow 48h dry time before stain application. Do not apply in direct midday sun."
                   value={formData.compatibilityNotes}
-                  onChange={(e) => setFormData({ ...formData, compatibilityNotes: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, compatibilityNotes: e.target.value })}
                   style={styles.textarea}
                 />
               </div>
@@ -450,11 +441,10 @@ export default function CompatibilityTab() {
               <div style={styles.modalFooter}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() =>setIsModalOpen(false)}
                   style={styles.cancelBtn}
                   disabled={submitting}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button
                   type="submit"

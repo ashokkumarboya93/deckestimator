@@ -194,22 +194,19 @@ export function RegistrationForm() {
   return (
     <div
       style={{
-        maxWidth: '520px',
-        margin: '2rem auto',
-        padding: '2.5rem',
+        width: '100%',
+        padding: '36px 32px',
         background: '#ffffff',
-        borderRadius: '12px',
+        borderRadius: '16px',
         border: '1px solid #e2e8f0',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
+        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
       <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>
-          Join DECK PRO
+        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>Join DECK PRO
         </h1>
-        <p style={{ color: '#64748b', fontSize: '0.925rem', marginTop: '0.35rem' }}>
-          Create your account to start calculating and managing professional deck estimates.
+        <p style={{ color: '#64748b', fontSize: '0.925rem', marginTop: '0.35rem' }}>Create your account to start calculating and managing professional deck estimates.
         </p>
       </div>
 
@@ -228,7 +225,7 @@ export function RegistrationForm() {
             gap: '0.5rem',
           }}
         >
-          <span style={{ fontSize: '1.25rem' }}>✓</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           <span>{registrationSuccess}</span>
         </div>
       )}
@@ -248,7 +245,7 @@ export function RegistrationForm() {
             gap: '0.5rem',
           }}
         >
-          <span>⚠</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
           <span>{serverError}</span>
         </div>
       )}
@@ -256,13 +253,12 @@ export function RegistrationForm() {
       <form onSubmit={handleSubmit} noValidate>
         {/* Role Selection Tabs */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>
-            I want to register as:
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>I want to register as:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <button
               type="button"
-              onClick={() => setFormData((p) => ({ ...p, role: 'customer' }))}
+              onClick={() =>setFormData((p) => ({ ...p, role: 'customer' }))}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -282,13 +278,12 @@ export function RegistrationForm() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              Homeowner / Customer
+              </svg>Homeowner / Customer
             </button>
             <button
               type="button"
               data-role-btn="contractor"
-              onClick={() => setFormData((p) => ({ ...p, role: 'contractor' }))}
+              onClick={() =>setFormData((p) => ({ ...p, role: 'contractor' }))}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -307,8 +302,7 @@ export function RegistrationForm() {
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-              </svg>
-              Deck Contractor
+              </svg>Deck Contractor
             </button>
           </div>
         </div>
@@ -318,7 +312,7 @@ export function RegistrationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
             <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>Full Name *</label>
             {touched.fullName && !errors.fullName && formData.fullName.trim() && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>✓ Valid</span>
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>Valid</span>
             )}
           </div>
           <input
@@ -349,7 +343,7 @@ export function RegistrationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
             <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>Email Address *</label>
             {touched.email && isValidEmail && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>✓ Valid format</span>
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>Valid format</span>
             )}
           </div>
           <input
@@ -382,7 +376,7 @@ export function RegistrationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
             <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>Phone Number (Optional)</label>
             {formData.phone && !errors.phone && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>✓ Valid</span>
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>Valid</span>
             )}
           </div>
           <input
@@ -412,7 +406,7 @@ export function RegistrationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
             <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>Password *</label>
             {isPasswordValid && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>✓ Strong password</span>
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>Strong password</span>
             )}
           </div>
           <input
@@ -446,19 +440,19 @@ export function RegistrationForm() {
             <p style={{ margin: '0 0 0.35rem', fontWeight: '600', color: '#475569' }}>Password must include:</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem' }}>
               <span style={{ color: passwordCheck.length ? '#16a34a' : '#94a3b8' }}>
-                {passwordCheck.length ? '✓' : '○'} At least 8 characters
+                {passwordCheck.length ? '' : '○'} At least 8 characters
               </span>
               <span style={{ color: passwordCheck.upper ? '#16a34a' : '#94a3b8' }}>
-                {passwordCheck.upper ? '✓' : '○'} Uppercase letter (A-Z)
+                {passwordCheck.upper ? '' : '○'} Uppercase letter (A-Z)
               </span>
               <span style={{ color: passwordCheck.lower ? '#16a34a' : '#94a3b8' }}>
-                {passwordCheck.lower ? '✓' : '○'} Lowercase letter (a-z)
+                {passwordCheck.lower ? '' : '○'} Lowercase letter (a-z)
               </span>
               <span style={{ color: passwordCheck.number ? '#16a34a' : '#94a3b8' }}>
-                {passwordCheck.number ? '✓' : '○'} At least 1 number (0-9)
+                {passwordCheck.number ? '' : '○'} At least 1 number (0-9)
               </span>
               <span style={{ color: passwordCheck.special ? '#16a34a' : '#94a3b8' }}>
-                {passwordCheck.special ? '✓' : '○'} Special character (!@#$)
+                {passwordCheck.special ? '' : '○'} Special character (!@#$)
               </span>
             </div>
           </div>
@@ -469,7 +463,7 @@ export function RegistrationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
             <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#334155' }}>Confirm Password *</label>
             {isPasswordsMatching && (
-              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>✓ Passwords match</span>
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>Passwords match</span>
             )}
           </div>
           <input
@@ -506,14 +500,12 @@ export function RegistrationForm() {
               borderRadius: '8px',
             }}
           >
-            <h4 style={{ margin: '0 0 0.85rem', fontSize: '0.9rem', color: '#0f172a', fontWeight: '700' }}>
-              Contractor Business Profile
+            <h4 style={{ margin: '0 0 0.85rem', fontSize: '0.9rem', color: '#0f172a', fontWeight: '700' }}>Contractor Business Profile
             </h4>
 
             {/* Business Name */}
             <div style={{ marginBottom: '0.85rem' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>
-                Business Name *
+              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>Business Name *
               </label>
               <input
                 type="text"
@@ -538,8 +530,7 @@ export function RegistrationForm() {
 
             {/* License Number */}
             <div style={{ marginBottom: '0.85rem' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>
-                Contractor License # *
+              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>Contractor License # *
               </label>
               <input
                 type="text"
@@ -564,8 +555,7 @@ export function RegistrationForm() {
 
             {/* License Jurisdiction */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>
-                Issuing State / Jurisdiction
+              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: '600', color: '#334155', marginBottom: '0.25rem' }}>Issuing State / Jurisdiction
               </label>
               <input
                 type="text"
@@ -604,14 +594,12 @@ export function RegistrationForm() {
             boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)',
           }}
         >
-          {submitting ? 'Creating Account...' : registrationSuccess ? 'Account Created ✓' : 'Complete Registration'}
+          {submitting ? 'Creating Account...' : registrationSuccess ? 'Account Created ' : 'Complete Registration'}
         </button>
       </form>
 
-      <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem', color: '#64748b' }}>
-        Already have an account?{' '}
-        <Link to="/login" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>
-          Sign In here →
+      <div style={{ marginTop: '1.75rem', textAlign: 'center', fontSize: '0.9rem', color: '#64748b' }}>Already have an account?{' '}
+        <Link to="/login" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>Sign In here →
         </Link>
       </div>
     </div>

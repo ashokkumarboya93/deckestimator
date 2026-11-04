@@ -84,7 +84,7 @@ export default function PricingConfigTab() {
     try {
       await togglePricingConfigurationStatus(cfg._id || cfg.id, !cfg.isActive);
       setSuccessMsg(`Configuration "${cfg.configurationName}" status updated.`);
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setTimeout(() =>setSuccessMsg(null), 3000);
       fetchConfigs();
     } catch (err) {
       setError(err.message || 'Failed to toggle status.');
@@ -119,7 +119,7 @@ export default function PricingConfigTab() {
         setSuccessMsg('New pricing configuration created successfully.');
       }
       setIsModalOpen(false);
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setTimeout(() =>setSuccessMsg(null), 3000);
       fetchConfigs();
     } catch (err) {
       setModalError(err.message || 'Operation failed.');
@@ -134,8 +134,7 @@ export default function PricingConfigTab() {
       <div style={styles.actionBar}>
         <div>
           <h2 style={styles.tabHeading}>Pricing Configurations & Calculation Rules</h2>
-          <p style={styles.tabSubheading}>
-            Configure base square-foot rates, labor allowances, minimum project thresholds, waste margins, and tax rules.
+          <p style={styles.tabSubheading}>Configure base square-foot rates, labor allowances, minimum project thresholds, waste margins, and tax rules.
             The calculation engine applies active configurations deterministically.
           </p>
         </div>
@@ -153,8 +152,7 @@ export default function PricingConfigTab() {
       ) : configs.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>No pricing configurations found.</p>
-          <button type="button" onClick={openCreateModal} style={styles.primaryBtn}>
-            Create Initial Configuration
+          <button type="button" onClick={openCreateModal} style={styles.primaryBtn}>Create Initial Configuration
           </button>
         </div>
       ) : (
@@ -203,14 +201,13 @@ export default function PricingConfigTab() {
                       <div style={styles.actionBtnRow}>
                         <button
                           type="button"
-                          onClick={() => openEditModal(cfg)}
+                          onClick={() =>openEditModal(cfg)}
                           style={styles.editBtn}
-                        >
-                          Edit
+                        >Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(cfg)}
+                          onClick={() =>handleToggleStatus(cfg)}
                           style={cfg.isActive ? styles.deactivateBtn : styles.activateBtn}
                         >
                           {cfg.isActive ? 'Deactivate' : 'Activate'}
@@ -235,10 +232,10 @@ export default function PricingConfigTab() {
               </h3>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -251,7 +248,7 @@ export default function PricingConfigTab() {
                   type="text"
                   required
                   value={formData.configurationName}
-                  onChange={(e) => setFormData({ ...formData, configurationName: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, configurationName: e.target.value })}
                   style={styles.input}
                   placeholder="e.g. Standard Regional Deck Pricing 2026"
                 />
@@ -266,7 +263,7 @@ export default function PricingConfigTab() {
                     min="0"
                     required
                     value={formData.basePricePerSqFt}
-                    onChange={(e) => setFormData({ ...formData, basePricePerSqFt: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, basePricePerSqFt: e.target.value })}
                     style={styles.input}
                   />
                   <small style={styles.hint}>Baseline area calculation rate</small>
@@ -279,7 +276,7 @@ export default function PricingConfigTab() {
                     min="0"
                     required
                     value={formData.minimumJobPrice}
-                    onChange={(e) => setFormData({ ...formData, minimumJobPrice: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, minimumJobPrice: e.target.value })}
                     style={styles.input}
                   />
                   <small style={styles.hint}>Floor price for any completed estimate</small>
@@ -294,7 +291,7 @@ export default function PricingConfigTab() {
                     step="0.01"
                     min="0"
                     value={formData.laborRate}
-                    onChange={(e) => setFormData({ ...formData, laborRate: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, laborRate: e.target.value })}
                     style={styles.input}
                   />
                   <small style={styles.hint}>Applied to service estimated hours</small>
@@ -307,7 +304,7 @@ export default function PricingConfigTab() {
                     min="0"
                     max="100"
                     value={formData.wastePercentage}
-                    onChange={(e) => setFormData({ ...formData, wastePercentage: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, wastePercentage: e.target.value })}
                     style={styles.input}
                   />
                   <small style={styles.hint}>Standard cut and margin buffer (e.g. 10%)</small>
@@ -322,7 +319,7 @@ export default function PricingConfigTab() {
                     step="0.01"
                     min="0"
                     value={formData.travelCharge}
-                    onChange={(e) => setFormData({ ...formData, travelCharge: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, travelCharge: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -333,7 +330,7 @@ export default function PricingConfigTab() {
                     step="0.01"
                     min="0"
                     value={formData.additionalCoatingPrice}
-                    onChange={(e) => setFormData({ ...formData, additionalCoatingPrice: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, additionalCoatingPrice: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -348,7 +345,7 @@ export default function PricingConfigTab() {
                     min="0"
                     max="100"
                     value={formData.taxPercentage}
-                    onChange={(e) => setFormData({ ...formData, taxPercentage: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, taxPercentage: e.target.value })}
                     style={styles.input}
                   />
                 </div>
@@ -357,7 +354,7 @@ export default function PricingConfigTab() {
                   <input
                     type="text"
                     value={formData.taxName}
-                    onChange={(e) => setFormData({ ...formData, taxName: e.target.value })}
+                    onChange={(e) =>setFormData({ ...formData, taxName: e.target.value })}
                     style={styles.input}
                     placeholder="e.g. State Sales Tax"
                   />
@@ -369,7 +366,7 @@ export default function PricingConfigTab() {
                 <textarea
                   rows={2}
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) =>setFormData({ ...formData, notes: e.target.value })}
                   style={styles.textarea}
                   placeholder="Optional context about this pricing revision..."
                 />
@@ -380,7 +377,7 @@ export default function PricingConfigTab() {
                   <input
                     type="checkbox"
                     checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    onChange={(e) =>setFormData({ ...formData, isActive: e.target.checked })}
                   />
                   <span style={{ fontWeight: 600, fontSize: '14px' }}>Set as active configuration</span>
                 </label>
@@ -389,11 +386,10 @@ export default function PricingConfigTab() {
               <div style={styles.modalActions}>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() =>setIsModalOpen(false)}
                   style={styles.cancelBtn}
                   disabled={submitting}
-                >
-                  Cancel
+                >Cancel
                 </button>
                 <button type="submit" style={styles.primaryBtn} disabled={submitting}>
                   {submitting ? 'Saving...' : editingConfig ? 'Save Changes' : 'Create Configuration'}
