@@ -36,7 +36,7 @@ export default function AdminCatalogPage() {
             <span style={styles.phaseBadge}>Phase 5 Catalog</span>
             <button
               type="button"
-              onClick={() => navigate('/admin/contractor-verifications')}
+              onClick={() =>navigate('/admin/contractor-verifications')}
               style={{
                 marginLeft: '12px',
                 padding: '4px 10px',
@@ -48,12 +48,11 @@ export default function AdminCatalogPage() {
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
-            >
-              🛡 Contractor Verifications →
+            >Contractor Verifications →
             </button>
             <button
               type="button"
-              onClick={() => navigate('/admin/leads')}
+              onClick={() =>navigate('/admin/leads')}
               style={{
                 marginLeft: '6px',
                 padding: '4px 10px',
@@ -65,13 +64,11 @@ export default function AdminCatalogPage() {
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
-            >
-              📥 Leads Hub →
+            >Leads Hub →
             </button>
           </div>
           <h1 style={styles.pageTitle}>Material & Service Catalog Management</h1>
-          <p style={styles.subtitle}>
-            Manage manufacturer products, specifications, service definitions, and compatibility matrices.
+          <p style={styles.subtitle}>Manage manufacturer products, specifications, service definitions, and compatibility matrices.
             Catalog modifications are restricted to administrators with audit trail recording.
           </p>
         </div>
@@ -91,7 +88,7 @@ export default function AdminCatalogPage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() =>setActiveTab(tab.id)}
               style={isActive ? styles.tabBtnActive : styles.tabBtn}
             >
               {tab.label}

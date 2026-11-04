@@ -32,7 +32,8 @@ import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import CustomerLayout from '../features/customer/components/CustomerLayout';
-import { GuestOnly, RequireAuth, RequireRole, RequireApprovedContractor } from './routeGuards';
+import AdminLayout from '../features/admin/components/AdminLayout';
+import { GuestOnly, RequireAuth, RequireRole, RequireApprovedContractor, RootRedirect } from './routeGuards';
 
 const router = createBrowserRouter([
   {
@@ -41,7 +42,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/customer/dashboard" replace />,
+        element: <RootRedirect />,
       },
       {
         path: 'login',
@@ -198,60 +199,42 @@ const router = createBrowserRouter([
           },
         ],
       },
-      // Admin Routes (Phase 5, 8, 9, 10)
-      {
-        path: 'admin/dashboard',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['admin']}>
-              <AdminDashboardPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
+      // Admin Portal Routes (Integrated AdminLayout with Collapsible Hover Sidebar & Topbar)
       {
         path: 'admin',
-        element: <Navigate to="/admin/dashboard" replace />,
-      },
-      {
-        path: 'admin/catalog',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['admin']}>
-              <AdminCatalogPage />
+              <AdminLayout />
             </RequireRole>
           </RequireAuth>
         ),
-      },
-      {
-        path: 'admin/contractor-verifications',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['admin']}>
-              <AdminContractorVerificationPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'admin/leads',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['admin']}>
-              <AdminLeadManagementPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      {
-        path: 'admin/commissions',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['admin']}>
-              <AdminCommissionsPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/admin/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <AdminDashboardPage />,
+          },
+          {
+            path: 'catalog',
+            element: <AdminCatalogPage />,
+          },
+          {
+            path: 'contractor-verifications',
+            element: <AdminContractorVerificationPage />,
+          },
+          {
+            path: 'leads',
+            element: <AdminLeadManagementPage />,
+          },
+          {
+            path: 'commissions',
+            element: <AdminCommissionsPage />,
+          },
+        ],
       },
       // Fallback
       {

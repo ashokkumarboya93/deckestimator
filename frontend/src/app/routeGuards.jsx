@@ -34,15 +34,15 @@ export function RequireAuth({ children }) {
 
 /**
  * Restrict routes to specific roles.
- * Redirects to root if user role is not permitted.
+ * Redirects to role-appropriate home if user role is not permitted (avoids infinite redirect loop).
  */
 export function RequireRole({ allowedRoles, children }) {
-  const { user, loading } = useAuth();
+  const { user, contractorProfile, loading } = useAuth();
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Verifying permissions...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc' }}>
+        <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Verifying permissions...</p>
       </div>
     );
   }
@@ -52,10 +52,49 @@ export function RequireRole({ allowedRoles, children }) {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+    if (user.role === 'contractor') {
+      const isApproved = contractorProfile?.verificationStatus === 'approved';
+      return <Navigate to={isApproved ? "/contractor/dashboard" : "/contractor/verification-request"} replace />;
+    }
+    return <Navigate to="/customer/dashboard" replace />;
   }
 
   return children;
+}
+
+/**
+ * Root route smart router: sends authenticated users to their role-appropriate portal,
+ * or unauthenticated users to /login, preventing blank screens or redirect loops.
+ */
+export function RootRedirect() {
+  const { user, contractorProfile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid #e2e8f0', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+          <p style={{ color: '#64748b', marginTop: '14px', fontSize: '14px', fontWeight: '500' }}>Loading Deck Pro...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (user.role === 'contractor') {
+    const isApproved = contractorProfile?.verificationStatus === 'approved';
+    return <Navigate to={isApproved ? "/contractor/dashboard" : "/contractor/verification-request"} replace />;
+  }
+
+  return <Navigate to="/customer/dashboard" replace />;
 }
 
 /**

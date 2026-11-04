@@ -147,8 +147,7 @@ export default function AdminContractorVerificationPage() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Contractor Verification Portal</h1>
-          <p style={styles.subtitle}>
-            Review contractor business applications, license documentation, and manage platform authorization.
+          <p style={styles.subtitle}>Review contractor business applications, license documentation, and manage platform authorization.
           </p>
         </div>
       </div>
@@ -162,13 +161,12 @@ export default function AdminContractorVerificationPage() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && loadContractors(1)}
+            onChange={(e) =>setSearchTerm(e.target.value)}
+            onKeyDown={(e) =>e.key === 'Enter' && loadContractors(1)}
             placeholder="Search by business name, license #, or email..."
             style={styles.searchInput}
           />
-          <button type="button" onClick={() => loadContractors(1)} style={styles.filterBtn}>
-            Search
+          <button type="button" onClick={() =>loadContractors(1)} style={styles.filterBtn}>Search
           </button>
         </div>
 
@@ -176,7 +174,7 @@ export default function AdminContractorVerificationPage() {
           <span style={{ fontSize: '13px', color: '#64748b' }}>Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) =>setStatusFilter(e.target.value)}
             style={styles.select}
           >
             <option value="">All Statuses</option>
@@ -243,30 +241,27 @@ export default function AdminContractorVerificationPage() {
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button
                           type="button"
-                          onClick={() => handleOpenReview(contractorId)}
+                          onClick={() =>handleOpenReview(contractorId)}
                           style={styles.reviewBtn}
                           title="View full application details"
-                        >
-                          Review
+                        >Review
                         </button>
                         {status !== 'approved' && (
                           <button
                             type="button"
-                            onClick={() => handleQuickApprove(contractorId, c.businessName)}
+                            onClick={() =>handleQuickApprove(contractorId, c.businessName)}
                             style={styles.quickApproveBtn}
                             title="Approve contractor immediately"
-                          >
-                            Approve
+                          >Approve
                           </button>
                         )}
                         {status !== 'rejected' && (
                           <button
                             type="button"
-                            onClick={() => handleQuickReject(contractorId, c.businessName)}
+                            onClick={() =>handleQuickReject(contractorId, c.businessName)}
                             style={styles.quickRejectBtn}
                             title="Reject contractor application"
-                          >
-                            Reject
+                          >Reject
                           </button>
                         )}
                       </div>
@@ -285,19 +280,17 @@ export default function AdminContractorVerificationPage() {
           <div style={styles.modalBox}>
             <div style={styles.modalHeader}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>
-                  Review Application: {selectedApp.profile?.businessName}
+                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0 }}>Review Application: {selectedApp.profile?.businessName}
                 </h2>
-                <span style={{ fontSize: '13px', color: '#64748b' }}>
-                  License: {selectedApp.profile?.licenseNumber} • Status: {selectedApp.profile?.verificationStatus?.toUpperCase()}
+                <span style={{ fontSize: '13px', color: '#64748b' }}>License: {selectedApp.profile?.licenseNumber} • Status: {selectedApp.profile?.verificationStatus?.toUpperCase()}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedApp(null)}
+                onClick={() =>setSelectedApp(null)}
                 style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
               >
-                ✕
+                
               </button>
             </div>
 
@@ -318,8 +311,7 @@ export default function AdminContractorVerificationPage() {
               </div>
 
               <div style={styles.modalSection}>
-                <h4 style={styles.sectionHeader}>
-                  Uploaded Verification Documents ({selectedApp.documents?.length || 0})
+                <h4 style={styles.sectionHeader}>Uploaded Verification Documents ({selectedApp.documents?.length || 0})
                 </h4>
                 {selectedApp.documents?.length === 0 ? (
                   <p style={{ fontSize: '13px', color: '#94a3b8' }}>No verification documents uploaded yet.</p>
@@ -329,8 +321,7 @@ export default function AdminContractorVerificationPage() {
                       <div key={d.id} style={styles.docItem}>
                         <div>
                           <span style={{ fontWeight: '600', fontSize: '13px' }}>{d.originalFileName}</span>
-                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
-                            Type: {d.documentType?.replace(/_/g, ' ').toUpperCase()} • Uploaded: {new Date(d.createdAt).toLocaleDateString()}
+                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>Type: {d.documentType?.replace(/_/g, ' ').toUpperCase()} • Uploaded: {new Date(d.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                         <a
@@ -338,8 +329,7 @@ export default function AdminContractorVerificationPage() {
                           target="_blank"
                           rel="noreferrer"
                           style={styles.downloadLink}
-                        >
-                          View / Download ↗
+                        >View / Download ↗
                         </a>
                       </div>
                     ))}
@@ -355,7 +345,7 @@ export default function AdminContractorVerificationPage() {
                   <label style={styles.label}>Action</label>
                   <select
                     value={reviewAction}
-                    onChange={(e) => setReviewAction(e.target.value)}
+                    onChange={(e) =>setReviewAction(e.target.value)}
                     style={styles.selectFull}
                   >
                     <option value="START_REVIEW">Start Review (Mark Under Review)</option>
@@ -369,13 +359,12 @@ export default function AdminContractorVerificationPage() {
 
                 {['REJECT', 'REQUEST_INFORMATION', 'SUSPEND'].includes(reviewAction) && (
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={styles.label}>
-                      Reason for {reviewAction.replace(/_/g, ' ')} *
+                    <label style={styles.label}>Reason for {reviewAction.replace(/_/g, ' ')} *
                     </label>
                     <textarea
                       rows={2}
                       value={reviewReason}
-                      onChange={(e) => setReviewReason(e.target.value)}
+                      onChange={(e) =>setReviewReason(e.target.value)}
                       placeholder="Explain to the contractor what is required or why the application was declined..."
                       style={styles.textarea}
                       required
@@ -388,7 +377,7 @@ export default function AdminContractorVerificationPage() {
                   <input
                     type="text"
                     value={reviewNotes}
-                    onChange={(e) => setReviewNotes(e.target.value)}
+                    onChange={(e) =>setReviewNotes(e.target.value)}
                     placeholder="Internal reference or verification notes..."
                     style={styles.input}
                   />
@@ -397,10 +386,9 @@ export default function AdminContractorVerificationPage() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setSelectedApp(null)}
+                    onClick={() =>setSelectedApp(null)}
                     style={styles.cancelBtn}
-                  >
-                    Close
+                  >Close
                   </button>
                   <button
                     type="submit"

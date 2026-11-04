@@ -33,6 +33,13 @@ router.get(
 );
 
 router.get(
+  '/admin/all',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  commissionController.getCommissions
+);
+
+router.get(
   '/:id',
   authenticate,
   authorize(ROLES.CONTRACTOR, ROLES.ADMIN),

@@ -368,8 +368,7 @@ export default function AdminDashboardPage() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.pageTitle}>Administrative Operations Hub</h1>
-          <p style={styles.subtitle}>
-            Platform-wide governance, user management, deck & estimate oversight, system configurations, and audit telemetry.
+          <p style={styles.subtitle}>Platform-wide governance, user management, deck & estimate oversight, system configurations, and audit telemetry.
           </p>
         </div>
       </div>
@@ -378,59 +377,51 @@ export default function AdminDashboardPage() {
       <div style={styles.tabBar}>
         <button
           type="button"
-          onClick={() => setActiveTab('overview')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'overview' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'overview' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'overview' ? '700' : '500' }}
-        >
-          📊 Operations Overview
+          onClick={() =>setActiveTab('overview')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'overview' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'overview' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'overview' ? '700' : '500' }}
+        >Operations Overview
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('users')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'users' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'users' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'users' ? '700' : '500' }}
-        >
-          👥 User Directory
+          onClick={() =>setActiveTab('users')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'users' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'users' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'users' ? '700' : '500' }}
+        >User Directory
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('decks')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'decks' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'decks' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'decks' ? '700' : '500' }}
-        >
-          🛠️ Deck Records
+          onClick={() =>setActiveTab('decks')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'decks' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'decks' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'decks' ? '700' : '500' }}
+        >Deck Records
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('estimates')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'estimates' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'estimates' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'estimates' ? '700' : '500' }}
-        >
-          📐 Estimates Oversight
+          onClick={() =>setActiveTab('estimates')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'estimates' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'estimates' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'estimates' ? '700' : '500' }}
+        >Estimates Oversight
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('analyses')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'analyses' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'analyses' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'analyses' ? '700' : '500' }}
-        >
-          🧠 AI Condition Telemetry
+          onClick={() =>setActiveTab('analyses')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'analyses' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'analyses' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'analyses' ? '700' : '500' }}
+        >AI Condition Telemetry
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('settings')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'settings' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'settings' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'settings' ? '700' : '500' }}
-        >
-          ⚙️ Platform Settings
+          onClick={() =>setActiveTab('settings')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'settings' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'settings' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'settings' ? '700' : '500' }}
+        >Platform Settings
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('audit')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'audit' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'audit' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'audit' ? '700' : '500' }}
-        >
-          📜 Audit Logs
+          onClick={() =>setActiveTab('audit')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'audit' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'audit' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'audit' ? '700' : '500' }}
+        >Audit Logs
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('reports')}
-          style={{ ...styles.tabBtn, borderBottom: activeTab === 'reports' ? '3px solid #0284c7' : '3px solid transparent', color: activeTab === 'reports' ? '#0284c7' : '#64748b', fontWeight: activeTab === 'reports' ? '700' : '500' }}
-        >
-          📈 Reports & CSV
+          onClick={() =>setActiveTab('reports')}
+          style={{ ...styles.tabBtn, borderBottom: activeTab === 'reports' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'reports' ? '#1d4ed8' : '#64748b', fontWeight: activeTab === 'reports' ? '700' : '500' }}
+        >Reports & CSV
         </button>
       </div>
 
@@ -438,13 +429,13 @@ export default function AdminDashboardPage() {
       {successMsg && (
         <div style={styles.successBanner}>
           <span>{successMsg}</span>
-          <button type="button" onClick={() => setSuccessMsg(null)} style={styles.closeAlertBtn}>✕</button>
+          <button type="button" onClick={() =>setSuccessMsg(null)} style={styles.closeAlertBtn}></button>
         </div>
       )}
       {error && (
         <div style={styles.errorBanner}>
           <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} style={styles.closeAlertBtn}>✕</button>
+          <button type="button" onClick={() =>setError(null)} style={styles.closeAlertBtn}></button>
         </div>
       )}
 
@@ -455,9 +446,9 @@ export default function AdminDashboardPage() {
             <div>
               {/* KPI Grid */}
               <div style={styles.grid}>
-                <div style={{ ...styles.card, borderLeft: '4px solid #0284c7' }}>
+                <div style={{ ...styles.card, borderLeft: '4px solid #1d4ed8' }}>
                   <div style={styles.metricLabel}>Total Platform Users</div>
-                  <div style={{ ...styles.metricValue, color: '#0284c7' }}>{summary.users.totalUsers}</div>
+                  <div style={{ ...styles.metricValue, color: '#1d4ed8' }}>{summary.users.totalUsers}</div>
                   <div style={styles.metricSub}>{summary.users.totalCustomers} Customers | {summary.users.totalContractors} Contractors</div>
                 </div>
                 <div style={{ ...styles.card, borderLeft: '4px solid #15803d' }}>
@@ -492,9 +483,8 @@ export default function AdminDashboardPage() {
                     {activities.map((act) => (
                       <div key={act._id || act.id} style={styles.activityRow}>
                         <div>
-                          <strong>{act.action}</strong> on <code>{act.entityType}</code>
-                          <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>
-                            By {act.performedBy?.fullName || act.performedBy?.email || 'System'} ({act.performedBy?.role || 'Admin'})
+                          <strong>{act.action}</strong>on <code>{act.entityType}</code>
+                          <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>By {act.performedBy?.fullName || act.performedBy?.email || 'System'} ({act.performedBy?.role || 'Admin'})
                           </span>
                         </div>
                         <span style={{ fontSize: '12px', color: '#94a3b8' }}>
@@ -521,12 +511,12 @@ export default function AdminDashboardPage() {
                 type="text"
                 placeholder="Search name, email, phone..."
                 value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
+                onChange={(e) =>setUserSearch(e.target.value)}
                 style={styles.input}
               />
               <select
                 value={userRoleFilter}
-                onChange={(e) => setUserRoleFilter(e.target.value)}
+                onChange={(e) =>setUserRoleFilter(e.target.value)}
                 style={styles.select}
               >
                 <option value="">All Roles</option>
@@ -536,7 +526,7 @@ export default function AdminDashboardPage() {
               </select>
               <select
                 value={userStatusFilter}
-                onChange={(e) => setUserStatusFilter(e.target.value)}
+                onChange={(e) =>setUserStatusFilter(e.target.value)}
                 style={styles.select}
               >
                 <option value="">All Statuses</option>
@@ -544,11 +534,10 @@ export default function AdminDashboardPage() {
                 <option value="suspended">Suspended</option>
                 <option value="deactivated">Deactivated</option>
               </select>
-              <button type="button" onClick={() => loadUsers(1)} style={styles.secondaryBtn}>
-                Filter
+              <button type="button" onClick={() =>loadUsers(1)} style={styles.secondaryBtn}>Filter
               </button>
             </div>
-            <button type="button" onClick={() => setIsCreateUserModalOpen(true)} style={styles.primaryBtn}>
+            <button type="button" onClick={() =>setIsCreateUserModalOpen(true)} style={styles.primaryBtn}>
               + Create User
             </button>
           </div>
@@ -588,8 +577,7 @@ export default function AdminDashboardPage() {
                     </td>
                     <td style={styles.td}>{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td style={styles.td}>
-                      <button type="button" onClick={() => openEditUser(u)} style={styles.smallActionBtn}>
-                        Edit / Status
+                      <button type="button" onClick={() =>openEditUser(u)} style={styles.smallActionBtn}>Edit / Status
                       </button>
                     </td>
                   </tr>
@@ -632,21 +620,18 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   disabled={deckPagination.page <= 1}
-                  onClick={() => loadDecks(deckPagination.page - 1)}
+                  onClick={() =>loadDecks(deckPagination.page - 1)}
                   style={styles.pageBtn}
-                >
-                  Previous
+                >Previous
                 </button>
-                <span style={{ fontSize: '13px', alignSelf: 'center' }}>
-                  Page {deckPagination.page} of {deckPagination.totalPages || 1}
+                <span style={{ fontSize: '13px', alignSelf: 'center' }}>Page {deckPagination.page} of {deckPagination.totalPages || 1}
                 </span>
                 <button
                   type="button"
                   disabled={deckPagination.page >= deckPagination.totalPages}
-                  onClick={() => loadDecks(deckPagination.page + 1)}
+                  onClick={() =>loadDecks(deckPagination.page + 1)}
                   style={styles.pageBtn}
-                >
-                  Next
+                >Next
                 </button>
               </div>
             </div>
@@ -686,21 +671,18 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   disabled={estimatePagination.page <= 1}
-                  onClick={() => loadEstimates(estimatePagination.page - 1)}
+                  onClick={() =>loadEstimates(estimatePagination.page - 1)}
                   style={styles.pageBtn}
-                >
-                  Previous
+                >Previous
                 </button>
-                <span style={{ fontSize: '13px', alignSelf: 'center' }}>
-                  Page {estimatePagination.page} of {estimatePagination.totalPages || 1}
+                <span style={{ fontSize: '13px', alignSelf: 'center' }}>Page {estimatePagination.page} of {estimatePagination.totalPages || 1}
                 </span>
                 <button
                   type="button"
                   disabled={estimatePagination.page >= estimatePagination.totalPages}
-                  onClick={() => loadEstimates(estimatePagination.page + 1)}
+                  onClick={() =>loadEstimates(estimatePagination.page + 1)}
                   style={styles.pageBtn}
-                >
-                  Next
+                >Next
                 </button>
               </div>
             </div>
@@ -728,7 +710,7 @@ export default function AdminDashboardPage() {
                     <td style={styles.td}><code>{a._id}</code></td>
                     <td style={styles.td}>{a.deckId?.name || 'Deck'}</td>
                     <td style={styles.td}>Level {a.conditionAssessment?.overallConditionLevel || 'N/A'}</td>
-                    <td style={styles.td}>{a.requiresManualReview ? '⚠️ Flagged' : 'Normal'}</td>
+                    <td style={styles.td}>{a.requiresManualReview ? ' Flagged' : 'Normal'}</td>
                     <td style={styles.td}>{a.status}</td>
                   </tr>
                 ))}
@@ -740,21 +722,18 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   disabled={analysisPagination.page <= 1}
-                  onClick={() => loadAnalyses(analysisPagination.page - 1)}
+                  onClick={() =>loadAnalyses(analysisPagination.page - 1)}
                   style={styles.pageBtn}
-                >
-                  Previous
+                >Previous
                 </button>
-                <span style={{ fontSize: '13px', alignSelf: 'center' }}>
-                  Page {analysisPagination.page} of {analysisPagination.totalPages || 1}
+                <span style={{ fontSize: '13px', alignSelf: 'center' }}>Page {analysisPagination.page} of {analysisPagination.totalPages || 1}
                 </span>
                 <button
                   type="button"
                   disabled={analysisPagination.page >= analysisPagination.totalPages}
-                  onClick={() => loadAnalyses(analysisPagination.page + 1)}
+                  onClick={() =>loadAnalyses(analysisPagination.page + 1)}
                   style={styles.pageBtn}
-                >
-                  Next
+                >Next
                 </button>
               </div>
             </div>
@@ -767,7 +746,7 @@ export default function AdminDashboardPage() {
         <div>
           <div style={{ ...styles.controlsRow, justifyContent: 'space-between' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>Platform Configuration Engine</h3>
-            <button type="button" onClick={() => setIsSettingModalOpen(true)} style={styles.primaryBtn}>
+            <button type="button" onClick={() =>setIsSettingModalOpen(true)} style={styles.primaryBtn}>
               + Add Platform Setting
             </button>
           </div>
@@ -808,7 +787,7 @@ export default function AdminDashboardPage() {
                     <td style={styles.td}>
                       <button
                         type="button"
-                        onClick={() => handleToggleSettingStatus(s)}
+                        onClick={() =>handleToggleSettingStatus(s)}
                         style={{
                           ...styles.smallActionBtn,
                           backgroundColor: s.isActive ? '#fee2e2' : '#dcfce7',
@@ -820,10 +799,9 @@ export default function AdminDashboardPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleOpenEditSetting(s)}
+                        onClick={() =>handleOpenEditSetting(s)}
                         style={styles.smallActionBtn}
-                      >
-                        Edit Value
+                      >Edit Value
                       </button>
                     </td>
                   </tr>
@@ -864,21 +842,18 @@ export default function AdminDashboardPage() {
                 <button
                   type="button"
                   disabled={auditPagination.page <= 1}
-                  onClick={() => loadAuditLogs(auditPagination.page - 1)}
+                  onClick={() =>loadAuditLogs(auditPagination.page - 1)}
                   style={styles.pageBtn}
-                >
-                  Previous
+                >Previous
                 </button>
-                <span style={{ fontSize: '13px', alignSelf: 'center' }}>
-                  Page {auditPagination.page} of {auditPagination.totalPages || 1}
+                <span style={{ fontSize: '13px', alignSelf: 'center' }}>Page {auditPagination.page} of {auditPagination.totalPages || 1}
                 </span>
                 <button
                   type="button"
                   disabled={auditPagination.page >= auditPagination.totalPages}
-                  onClick={() => loadAuditLogs(auditPagination.page + 1)}
+                  onClick={() =>loadAuditLogs(auditPagination.page + 1)}
                   style={styles.pageBtn}
-                >
-                  Next
+                >Next
                 </button>
               </div>
             </div>
@@ -904,12 +879,10 @@ export default function AdminDashboardPage() {
                 <option value="estimates">Estimates & Revenue Report</option>
                 <option value="commissions">Commission Payouts Report</option>
               </select>
-              <button type="button" onClick={() => loadReport(reportType)} style={styles.secondaryBtn}>
-                Refresh
+              <button type="button" onClick={() =>loadReport(reportType)} style={styles.secondaryBtn}>Refresh
               </button>
             </div>
-            <button type="button" onClick={handleDownloadCsv} style={{ ...styles.primaryBtn, backgroundColor: '#15803d' }}>
-              📥 Export CSV
+            <button type="button" onClick={handleDownloadCsv} style={{ ...styles.primaryBtn, backgroundColor: '#15803d' }}>Export CSV
             </button>
           </div>
 
@@ -952,7 +925,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={editUserForm.fullName}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, fullName: e.target.value })}
+                  onChange={(e) =>setEditUserForm({ ...editUserForm, fullName: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -961,7 +934,7 @@ export default function AdminDashboardPage() {
                 <input
                   type="text"
                   value={editUserForm.phone}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                  onChange={(e) =>setEditUserForm({ ...editUserForm, phone: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -969,7 +942,7 @@ export default function AdminDashboardPage() {
                 <label style={styles.label}>Role:</label>
                 <select
                   value={editUserForm.role}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                  onChange={(e) =>setEditUserForm({ ...editUserForm, role: e.target.value })}
                   style={styles.input}
                 >
                   <option value="customer">Customer</option>
@@ -981,7 +954,7 @@ export default function AdminDashboardPage() {
                 <label style={styles.label}>Account Status:</label>
                 <select
                   value={editUserForm.accountStatus}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, accountStatus: e.target.value })}
+                  onChange={(e) =>setEditUserForm({ ...editUserForm, accountStatus: e.target.value })}
                   style={styles.input}
                 >
                   <option value="active">Active</option>
@@ -995,16 +968,14 @@ export default function AdminDashboardPage() {
                   type="text"
                   placeholder="Audit reason for status/role change..."
                   value={editUserForm.reason}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, reason: e.target.value })}
+                  onChange={(e) =>setEditUserForm({ ...editUserForm, reason: e.target.value })}
                   style={styles.input}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setIsEditUserModalOpen(false)} style={styles.secondaryBtn}>
-                  Cancel
+                <button type="button" onClick={() =>setIsEditUserModalOpen(false)} style={styles.secondaryBtn}>Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Save Changes
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Save Changes
                 </button>
               </div>
             </form>
@@ -1024,7 +995,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={createUserForm.fullName}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, fullName: e.target.value })}
+                  onChange={(e) =>setCreateUserForm({ ...createUserForm, fullName: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1034,7 +1005,7 @@ export default function AdminDashboardPage() {
                   type="email"
                   required
                   value={createUserForm.email}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, email: e.target.value })}
+                  onChange={(e) =>setCreateUserForm({ ...createUserForm, email: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1045,7 +1016,7 @@ export default function AdminDashboardPage() {
                   required
                   minLength={8}
                   value={createUserForm.password}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
+                  onChange={(e) =>setCreateUserForm({ ...createUserForm, password: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1053,7 +1024,7 @@ export default function AdminDashboardPage() {
                 <label style={styles.label}>Platform Role:</label>
                 <select
                   value={createUserForm.role}
-                  onChange={(e) => setCreateUserForm({ ...createUserForm, role: e.target.value })}
+                  onChange={(e) =>setCreateUserForm({ ...createUserForm, role: e.target.value })}
                   style={styles.input}
                 >
                   <option value="customer">Customer</option>
@@ -1062,11 +1033,9 @@ export default function AdminDashboardPage() {
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setIsCreateUserModalOpen(false)} style={styles.secondaryBtn}>
-                  Cancel
+                <button type="button" onClick={() =>setIsCreateUserModalOpen(false)} style={styles.secondaryBtn}>Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Create User
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Create User
                 </button>
               </div>
             </form>
@@ -1086,7 +1055,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={newSetting.key}
-                  onChange={(e) => setNewSetting({ ...newSetting, key: e.target.value })}
+                  onChange={(e) =>setNewSetting({ ...newSetting, key: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1094,7 +1063,7 @@ export default function AdminDashboardPage() {
                 <label style={styles.label}>Category:</label>
                 <select
                   value={newSetting.category}
-                  onChange={(e) => setNewSetting({ ...newSetting, category: e.target.value })}
+                  onChange={(e) =>setNewSetting({ ...newSetting, category: e.target.value })}
                   style={styles.input}
                 >
                   <option value="GENERAL">General</option>
@@ -1111,7 +1080,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={newSetting.label}
-                  onChange={(e) => setNewSetting({ ...newSetting, label: e.target.value })}
+                  onChange={(e) =>setNewSetting({ ...newSetting, label: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1119,7 +1088,7 @@ export default function AdminDashboardPage() {
                 <label style={styles.label}>Value Type:</label>
                 <select
                   value={newSetting.valueType}
-                  onChange={(e) => setNewSetting({ ...newSetting, valueType: e.target.value })}
+                  onChange={(e) =>setNewSetting({ ...newSetting, valueType: e.target.value })}
                   style={styles.input}
                 >
                   <option value="STRING">String</option>
@@ -1134,16 +1103,14 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={newSetting.value}
-                  onChange={(e) => setNewSetting({ ...newSetting, value: e.target.value })}
+                  onChange={(e) =>setNewSetting({ ...newSetting, value: e.target.value })}
                   style={styles.input}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setIsSettingModalOpen(false)} style={styles.secondaryBtn}>
-                  Cancel
+                <button type="button" onClick={() =>setIsSettingModalOpen(false)} style={styles.secondaryBtn}>Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Save Setting
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Save Setting
                 </button>
               </div>
             </form>
@@ -1163,7 +1130,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={editSettingForm.label}
-                  onChange={(e) => setEditSettingForm({ ...editSettingForm, label: e.target.value })}
+                  onChange={(e) =>setEditSettingForm({ ...editSettingForm, label: e.target.value })}
                   style={styles.input}
                 />
               </div>
@@ -1182,16 +1149,14 @@ export default function AdminDashboardPage() {
                   type="text"
                   required
                   value={editSettingForm.value}
-                  onChange={(e) => setEditSettingForm({ ...editSettingForm, value: e.target.value })}
+                  onChange={(e) =>setEditSettingForm({ ...editSettingForm, value: e.target.value })}
                   style={styles.input}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setIsEditSettingModalOpen(false)} style={styles.secondaryBtn}>
-                  Cancel
+                <button type="button" onClick={() =>setIsEditSettingModalOpen(false)} style={styles.secondaryBtn}>Cancel
                 </button>
-                <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                  Update Setting
+                <button type="submit" disabled={loading} style={styles.primaryBtn}>Update Setting
                 </button>
               </div>
             </form>
@@ -1222,7 +1187,7 @@ const styles = {
   controlsRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' },
   input: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' },
   select: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' },
-  primaryBtn: { backgroundColor: '#0284c7', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
+  primaryBtn: { backgroundColor: '#1d4ed8', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   secondaryBtn: { backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
   smallActionBtn: { padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '11px', fontWeight: '600', cursor: 'pointer' },
   tableCard: { backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' },
