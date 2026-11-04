@@ -44,3 +44,4 @@ if os.path.exists(contractor_layout_path):
     with open(contractor_layout_path, 'w', encoding='utf-8') as f:
         f.write(content)
     print("ContractorLayout updated.")
+
