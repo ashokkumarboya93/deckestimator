@@ -99,8 +99,8 @@ export default function AdminDashboardPage() {
         adminApi.getDashboardSummary(),
         adminApi.getRecentActivity(10),
       ]);
-      setSummary(sumRes.data);
-      setActivities(actRes.data || []);
+      setSummary(sumRes?.data || sumRes);
+      setActivities(Array.isArray(actRes?.data) ? actRes.data : Array.isArray(actRes) ? actRes : []);
     } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Failed to load dashboard overview.');
     } finally {
