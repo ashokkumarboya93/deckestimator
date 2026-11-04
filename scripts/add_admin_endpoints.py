@@ -31,3 +31,4 @@ if 'ADMIN:' not in c:
         print('Could not find closing }; in endpoints.js')
 else:
     print('ADMIN already present in endpoints.js')
+

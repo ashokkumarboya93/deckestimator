@@ -974,3 +974,4 @@ with open(path, 'w', encoding='utf-8') as f:
     f.write(c)
 
 print('AdminDashboardPage upgraded with rich visualizations and live metrics.')
+
