@@ -138,6 +138,54 @@ export function RequireApprovedContractor({ children }) {
 /**
  * Redirect authenticated users away from guest pages (login, register).
  */
+/**
+ * Isolated Admin Authentication Guard.
+ * Strictly redirects unauthenticated users to /admin/login (not /login).
+ * If user is logged in but not an admin, redirects to their role dashboard.
+ */
+export function RequireAdminAuth({ children }) {
+  const { user, loading, contractorProfile } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0a1628' }}>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>Verifying administrator credentials...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+  }
+
+  if (user.role !== 'admin') {
+    if (user.role === 'contractor') {
+      const isApproved = contractorProfile?.verificationStatus === 'approved';
+      return <Navigate to={isApproved ? "/contractor/dashboard" : "/contractor/verification-request"} replace />;
+    }
+    return <Navigate to="/customer/dashboard" replace />;
+  }
+
+  return children;
+}
+
+/**
+ * Guest-only guard for /admin/login.
+ * If already logged in as admin, redirect to /admin/dashboard.
+ */
+export function AdminGuestOnly({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
+  if (user && user.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+}
+
 export function GuestOnly({ children }) {
   const { user, contractorProfile, loading } = useAuth();
 

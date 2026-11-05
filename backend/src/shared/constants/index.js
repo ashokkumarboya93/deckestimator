@@ -13,7 +13,9 @@ const ROLES = Object.freeze({
 const ACCOUNT_STATUS = Object.freeze({
   PENDING_VERIFICATION: 'pending_verification',
   ACTIVE: 'active',
+  INACTIVE: 'inactive',
   SUSPENDED: 'suspended',
+  BLOCKED: 'blocked',
   DISABLED: 'disabled',
 });
 

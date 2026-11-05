@@ -5,6 +5,7 @@
 // Does NOT start the server — that is server.js's job.
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -20,13 +21,14 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 
 // --------------- Security middleware ---------------
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors(corsOptions));
 
 // --------------- Request parsing ---------------
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // --------------- Request tracing ---------------
 app.use(requestId);
@@ -103,7 +105,15 @@ app.use('/api/v1/commissions', commissionRoutes);
 const adminRoutes = require('./modules/admin/admin.routes');
 const adminController = require('./modules/admin/admin.controller');
 
-app.get('/api/v1/settings/public', adminController.getPublicSettings);
+app.get('/api/v1/settings/public', async (req, res, next) => {
+  try {
+    const PlatformSetting = require('./modules/admin/platformSetting.model');
+    const settings = await PlatformSetting.find({ isPublic: true });
+    res.status(200).json({ success: true, data: settings });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use('/api/v1/admin', adminRoutes);
 
 // -----------------------------------------------

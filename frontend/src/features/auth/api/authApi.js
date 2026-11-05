@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Auth API Client
 // =============================================
 
@@ -11,6 +11,16 @@ export const authApi = {
    */
   async login(credentials) {
     return apiClient(ENDPOINTS.AUTH.LOGIN, {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  /**
+   * Log in administrator specifically via dedicated endpoint.
+   */
+  async adminLogin(credentials) {
+    return apiClient('/auth/admin/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });

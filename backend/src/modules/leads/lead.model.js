@@ -136,6 +136,32 @@ const leadSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    userType: {
+      type: String,
+      enum: ['Customer', 'Contractor', 'customer', 'contractor'],
+      default: 'Customer',
+    },
+    contactSource: {
+      type: String,
+      default: 'Contact Us',
+    },
+    contactCount: {
+      type: Number,
+      default: 1,
+    },
+    firstContactDate: {
+      type: Date,
+      default: Date.now,
+    },
+    latestContactDate: {
+      type: Date,
+      default: Date.now,
+    },
+    priority: {
+      type: String,
+      enum: ['HOT', 'WARM', 'COLD', 'NORMAL'],
+      default: 'NORMAL',
+    },
   },
   {
     timestamps: true,
