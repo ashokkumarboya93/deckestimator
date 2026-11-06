@@ -42,6 +42,19 @@ async function getUserProfile(req, res, next) {
   }
 }
 
+
+async function exportSingleUserDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleUserDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function updateUserStatus(req, res, next) {
   try {
     const { status, reason } = req.body;
@@ -152,6 +165,28 @@ async function exportLeads(req, res, next) {
 }
 
 // 6. Estimator Configuration
+
+async function getLeadDetails(req, res, next) {
+  try {
+    const details = await adminService.getLeadDetails(req.params.id);
+    res.status(200).json({ success: true, data: details });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportSingleLeadDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleLeadDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listEstimatorFields(req, res, next) {
   try {
     const fields = await adminService.listEstimatorFields();
@@ -406,6 +441,30 @@ async function savePermissionsMatrix(req, res, next) {
 }
 
 // 12. Reports & Analytics
+async function exportReports(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportReportsData(format, req.query);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportSingleProjectDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleProjectDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getReportsAnalytics(req, res, next) {
   try {
     const data = await adminService.getReportsAnalyticsData(req.query.tab, req.query);
@@ -448,6 +507,7 @@ module.exports = {
   getBusinessActivityTrend,
   listUsers,
   getUserProfile,
+  exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
   listVerifications,
@@ -458,6 +518,8 @@ module.exports = {
   updateProjectProgress,
   exportProjects,
   listLeads,
+  getLeadDetails,
+  exportSingleLeadDossier,
   exportLeads,
   listEstimatorFields,
   saveEstimatorField,
@@ -487,6 +549,8 @@ module.exports = {
   getPermissionsMatrix,
   savePermissionsMatrix,
   getReportsAnalytics,
+  exportReports,
+  exportSingleProjectDossier,
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,

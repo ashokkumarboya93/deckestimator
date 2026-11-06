@@ -5,6 +5,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../users/users.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
+const VerificationHistory = require('../contractors/verificationHistory.model');
 const { env } = require('../../config/env');
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
 const { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError } = require('../../shared/errors');
@@ -78,8 +79,24 @@ async function registerUser(userData) {
         businessPhone: userData.phone ? userData.phone.trim() : '',
         licenseNumber: userData.licenseNumber.trim(),
         licenseJurisdiction: userData.licenseJurisdiction ? userData.licenseJurisdiction.trim() : '',
-        verificationStatus: VERIFICATION_STATUS.DRAFT,
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+        submittedAt: new Date(),
       });
+
+      try {
+        await VerificationHistory.create({
+          contractorId: contractorProfile._id,
+          userId: user._id,
+          previousStatus: 'none',
+          newStatus: VERIFICATION_STATUS.PENDING,
+          action: 'SUBMIT_APPLICATION',
+          reason: 'Contractor registered with business details and license',
+          performedBy: user._id,
+          performedByRole: ROLES.CONTRACTOR,
+        });
+      } catch (e) {
+        console.warn('[VerificationHistory] Initial log warning:', e.message);
+      }
     } catch (profileErr) {
       // Clean up orphaned user record if contractor profile creation fails
       await User.findByIdAndDelete(user._id);

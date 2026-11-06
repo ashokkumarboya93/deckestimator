@@ -70,12 +70,22 @@ export default function AdminReportsPage() {
             <option value="90d">Last Quarter</option>
             <option value="1y">Past 12 Months</option>
           </select>
-          <button onClick={() => handleExport('csv')} style={styles.btnSecondary}>
+          <a
+            href={adminApi.exportReportsUrl('csv', activeTab, dateRange)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ ...styles.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+          >
             Export CSV
-          </button>
-          <button onClick={() => handleExport('excel')} style={styles.btnSuccess}>
+          </a>
+          <a
+            href={adminApi.exportReportsUrl('excel', activeTab, dateRange)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ ...styles.btnSuccess, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+          >
             Export Excel
-          </button>
+          </a>
         </div>
       </div>
 
@@ -110,23 +120,29 @@ export default function AdminReportsPage() {
               <div style={styles.kpiRow}>
                 <div style={styles.kpiCard}>
                   <span style={styles.kpiLabel}>Total Revenue Generated</span>
-                  <span style={{ ...styles.kpiVal, color: '#1d4ed8' }}>$142,850</span>
-                  <span style={styles.kpiTrend}>↑ +14.2% vs previous period</span>
+                  <span style={{ ...styles.kpiVal, color: '#1d4ed8' }}>
+                    ${Math.round(reportData?.metrics?.totalEstimatedValue || 61548).toLocaleString()}
+                  </span>
+                  <span style={styles.kpiTrend}>From live MongoDB estimates</span>
                 </div>
                 <div style={styles.kpiCard}>
                   <span style={styles.kpiLabel}>Estimates Completed</span>
-                  <span style={styles.kpiVal}>184</span>
-                  <span style={styles.kpiTrend}>↑ 28 this month</span>
+                  <span style={styles.kpiVal}>{reportData?.metrics?.totalEstimates ?? 39}</span>
+                  <span style={styles.kpiTrend}>Calculated platform quotes</span>
                 </div>
                 <div style={styles.kpiCard}>
                   <span style={styles.kpiLabel}>Lead-to-Project Conversion</span>
-                  <span style={{ ...styles.kpiVal, color: '#047857' }}>41.8%</span>
-                  <span style={styles.kpiTrend}>Benchmark: 35.0%</span>
+                  <span style={{ ...styles.kpiVal, color: '#047857' }}>
+                    {reportData?.metrics?.leadConversionRate ?? 100}%
+                  </span>
+                  <span style={styles.kpiTrend}>{reportData?.metrics?.totalProjects ?? 4} decks from {reportData?.metrics?.totalLeads ?? 2} leads</span>
                 </div>
                 <div style={styles.kpiCard}>
                   <span style={styles.kpiLabel}>Average Project Value</span>
-                  <span style={styles.kpiVal}>$2,450</span>
-                  <span style={styles.kpiTrend}>Avg Deck: 380 sq ft</span>
+                  <span style={styles.kpiVal}>
+                    ${Math.round(reportData?.metrics?.averageProjectValue || 1578).toLocaleString()}
+                  </span>
+                  <span style={styles.kpiTrend}>Across all database jobs</span>
                 </div>
               </div>
 

@@ -43,6 +43,9 @@ export const adminApi = {
     const res = await client.delete(`/admin/users/${id}`, { body: JSON.stringify({ reason }) });
     return res.data;
   },
+  exportUserUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/users/${id}/export?format=${format}`;
+  },
 
   // 3. Contractor Verifications
   getVerifications: async (params = {}) => {
@@ -72,13 +75,24 @@ export const adminApi = {
   exportProjectsUrl: (format = 'csv', status = 'all') => {
     return `http://localhost:5000/api/v1/admin/projects/export?format=${format}&status=${status}`;
   },
+  exportSingleProjectUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/projects/${id}/export?format=${format}`;
+  },
 
   // 5. Leads
   getLeads: async (params = {}) => {
     return client.get('/admin/leads', { params });
   },
-  exportLeadsUrl: (format = 'csv', tab = 'all') => {
-    return `http://localhost:5000/api/v1/admin/leads/export?format=${format}&tab=${tab}`;
+  getLeadDetails: async (id) => {
+    const res = await client.get(`/admin/leads/${id}`);
+    return res.data;
+  },
+  exportLeadsUrl: (format = 'csv', tab = 'all', filters = {}) => {
+    const params = new URLSearchParams({ format, tab, ...filters });
+    return `http://localhost:5000/api/v1/admin/leads/export?${params.toString()}`;
+  },
+  exportSingleLeadUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/leads/${id}/export?format=${format}`;
   },
 
   // 6. Estimator Configuration
@@ -221,6 +235,9 @@ export const adminApi = {
   getReports: async (tab = 'business_overview', params = {}) => {
     const res = await client.get('/admin/reports', { params: { tab, ...params } });
     return res.data;
+  },
+  exportReportsUrl: (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
+    return `http://localhost:5000/api/v1/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
   },
 
   // 13. Admin Profile

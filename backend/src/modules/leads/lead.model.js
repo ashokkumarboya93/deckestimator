@@ -16,13 +16,19 @@ const leadSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Customer ID is required'],
+      default: null,
+      index: true,
+    },
+    contractorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
       index: true,
     },
     deckId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Deck',
-      required: [true, 'Associated deck project ID is required'],
+      default: null,
       index: true,
     },
     estimateId: {
@@ -67,12 +73,27 @@ const leadSchema = new mongoose.Schema(
       },
     },
     customerSnapshot: {
-      name: { type: String, required: true },
-      email: { type: String, required: true },
+      name: { type: String, default: '' },
+      email: { type: String, default: '' },
       phone: { type: String, default: '' },
     },
+    contractorSnapshot: {
+      name: { type: String, default: '' },
+      email: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      businessName: { type: String, default: '' },
+      licenseNumber: { type: String, default: '' },
+    },
+    contactHistory: [
+      {
+        date: { type: Date, default: Date.now },
+        source: { type: String, default: 'Contact Us' },
+        subject: { type: String, default: '' },
+        message: { type: String, default: '' },
+      },
+    ],
     deckSnapshot: {
-      projectName: { type: String, required: true },
+      projectName: { type: String, default: '' },
       city: { type: String, default: '' },
       state: { type: String, default: '' },
       postalCode: { type: String, default: '' },
@@ -95,6 +116,11 @@ const leadSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
       index: true,
+    },
+    contractorProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ContractorProfile',
+      default: null,
     },
     assignedContractorProfileId: {
       type: mongoose.Schema.Types.ObjectId,

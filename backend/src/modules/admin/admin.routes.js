@@ -37,6 +37,7 @@ router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
 
 // 2. User Management & Moderation
 router.get('/users', adminController.listUsers);
+router.get('/users/:id/export', adminController.exportSingleUserDossier);
 router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.updateUserStatus);
 router.delete('/users/:id', adminController.softDeleteUser);
@@ -51,10 +52,13 @@ router.get('/verifications/:contractorId/history', adminController.getVerificati
 router.get('/projects', adminController.listProjects);
 router.patch('/projects/:id/progress', adminController.updateProjectProgress);
 router.get('/projects/export', adminController.exportProjects);
+router.get('/projects/:id/export', adminController.exportSingleProjectDossier);
 
 // 5. Lead Management (4 Tabs & Auto Hot Priority)
 router.get('/leads', adminController.listLeads);
 router.get('/leads/export', adminController.exportLeads);
+router.get('/leads/:id/export', adminController.exportSingleLeadDossier);
+router.get('/leads/:id', adminController.getLeadDetails);
 
 // 6. Estimator Configuration (Fields & Dependencies)
 router.get('/estimator-config/fields', adminController.listEstimatorFields);
@@ -103,6 +107,7 @@ router.get('/permissions', adminController.getPermissionsMatrix);
 router.put('/permissions', adminController.savePermissionsMatrix);
 
 // 12. Reports & Analytics
+router.get('/reports/export', adminController.exportReports);
 router.get('/reports', adminController.getReportsAnalytics);
 
 // 13. Admin Profile

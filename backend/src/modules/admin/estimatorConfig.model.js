@@ -7,35 +7,42 @@ const mongoose = require('mongoose');
 
 const estimatorFieldSchema = new mongoose.Schema(
   {
+    fieldKey: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     fieldName: {
       type: String,
-      required: [true, 'Field name is required'],
       trim: true,
-      unique: true,
+    },
+    label: {
+      type: String,
+      trim: true,
     },
     displayLabel: {
       type: String,
-      required: [true, 'Display label is required'],
       trim: true,
+    },
+    fieldType: {
+      type: String,
+      default: 'number',
     },
     inputType: {
       type: String,
-      enum: ['Number', 'Dropdown', 'Text', 'Checkbox', 'Radio'],
       default: 'Number',
     },
     unit: {
       type: String,
-      enum: ['ft', 'in', 'sq ft', 'count', 'none'],
-      default: 'ft',
+      default: '',
     },
     required: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     section: {
       type: String,
-      enum: ['Dimensions', 'Materials', 'Components', 'Surface', 'Other'],
-      default: 'Dimensions',
+      default: 'dimensions',
     },
     options: {
       type: [String],
@@ -43,7 +50,7 @@ const estimatorFieldSchema = new mongoose.Schema(
     },
     order: {
       type: Number,
-      default: 1,
+      default: 10,
     },
     status: {
       type: String,
@@ -51,8 +58,20 @@ const estimatorFieldSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    active: {
+      type: Boolean,
+      default: true,
+    },
     defaultValue: {
       type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    minValue: {
+      type: Number,
+      default: null,
+    },
+    maxValue: {
+      type: Number,
       default: null,
     },
   },
@@ -60,8 +79,11 @@ const estimatorFieldSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform(_doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
+        ret.id = ret._id ? ret._id.toString() : '';
+        ret.fieldKey = ret.fieldKey || ret.fieldName || '';
+        ret.label = ret.label || ret.displayLabel || '';
+        ret.fieldType = ret.fieldType || ret.inputType || 'text';
+        ret.active = ret.active !== undefined ? ret.active : ret.status !== 'inactive';
         delete ret.__v;
         return ret;
       },
@@ -71,26 +93,38 @@ const estimatorFieldSchema = new mongoose.Schema(
 
 const estimatorDependencySchema = new mongoose.Schema(
   {
-    parentField: {
+    sourceField: {
       type: String,
-      required: [true, 'Parent field name is required'],
       trim: true,
       index: true,
     },
+    parentField: {
+      type: String,
+      trim: true,
+    },
     condition: {
       type: String,
-      enum: ['equals', 'not_equals', 'contains'],
       default: 'equals',
+    },
+    conditionValue: {
+      type: String,
+      trim: true,
     },
     value: {
       type: String,
-      required: [true, 'Condition matching value is required'],
+      trim: true,
+    },
+    targetField: {
+      type: String,
       trim: true,
     },
     showField: {
       type: String,
-      required: [true, 'Target field to show is required'],
       trim: true,
+    },
+    action: {
+      type: String,
+      default: 'show',
     },
     status: {
       type: String,
@@ -98,13 +132,20 @@ const estimatorDependencySchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
     toJSON: {
       transform(_doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
+        ret.id = ret._id ? ret._id.toString() : '';
+        ret.sourceField = ret.sourceField || ret.parentField || '';
+        ret.targetField = ret.targetField || ret.showField || '';
+        ret.conditionValue = ret.conditionValue || ret.value || '';
+        ret.active = ret.active !== undefined ? ret.active : ret.status !== 'inactive';
         delete ret.__v;
         return ret;
       },
@@ -119,4 +160,3 @@ module.exports = {
   EstimatorField,
   EstimatorDependency,
 };
-

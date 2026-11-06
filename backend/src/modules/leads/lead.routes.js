@@ -22,6 +22,9 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Direct Reach Out / Contact Us / Help from Customer or Contractor
+router.post('/reach-out', leadController.submitReachOut);
+
 // ----------------------------------------------------
 // Customer Enquiry & Lead APIs
 // ----------------------------------------------------

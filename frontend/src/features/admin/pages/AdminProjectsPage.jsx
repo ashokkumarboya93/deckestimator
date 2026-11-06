@@ -455,7 +455,25 @@ export default function AdminProjectsPage() {
               </div>
             </div>
 
-            <div style={styles.modalFooter}>
+            <div style={{ ...styles.modalFooter, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={adminApi.exportSingleProjectUrl(selectedProject._id || selectedProject.id, 'csv')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={styles.actionBtnOutline}
+                >
+                  Export Project CSV
+                </a>
+                <a
+                  href={adminApi.exportSingleProjectUrl(selectedProject._id || selectedProject.id, 'excel')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ ...styles.actionBtnPrimary, textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Export Project Excel
+                </a>
+              </div>
               <button onClick={() => setIsDetailsModalOpen(false)} style={styles.btnSecondary}>Close</button>
             </div>
           </div>

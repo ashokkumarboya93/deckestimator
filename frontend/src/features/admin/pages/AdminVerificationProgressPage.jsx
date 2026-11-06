@@ -48,11 +48,26 @@ export default function AdminVerificationProgressPage() {
   const [savingProgress, setSavingProgress] = useState(false);
 
   useEffect(() => {
-    loadTabData();
+    loadTabData(false);
+
+    const interval = setInterval(() => {
+      loadTabData(true);
+    }, 10000);
+
+    const handleFocus = () => {
+      loadTabData(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [activeTab, verifFilter]);
 
-  const loadTabData = async () => {
-    setLoading(true);
+  const loadTabData = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       if (activeTab === 'verifications') {
