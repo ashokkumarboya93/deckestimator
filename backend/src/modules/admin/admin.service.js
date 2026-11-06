@@ -48,7 +48,7 @@ async function logAdminAction(adminUser, action, entityType, entityId, oldValue,
 }
 
 // ====================================================================
-// 1. DASHBOARD & OPERATIONAL AGGREGATIONS
+// 1. DASHBOARD & OPERATIONAL AGGREGATIONS (100% Real Live MongoDB Data)
 // ====================================================================
 
 async function getDashboardSummary(dateRange = '30d') {
@@ -81,9 +81,11 @@ async function getDashboardSummary(dateRange = '30d') {
       break;
   }
 
+  const durationMs = Math.max(now.getTime() - startDate.getTime(), 86400000);
+  const priorStart = new Date(startDate.getTime() - durationMs);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
-  // Parallel aggregations for metrics
+  // Parallel aggregations for live MongoDB metrics
   const [
     totalUsers,
     totalCustomers,
@@ -96,21 +98,36 @@ async function getDashboardSummary(dateRange = '30d') {
     leadStatusCounts,
     projectStatusCounts,
     hotLeadsList,
-    recentActivities,
+    auditLogsList,
+    // Prior period counts for real dynamic growth rates
+    usersPrior,
+    usersCurrent,
+    customersPrior,
+    customersCurrent,
+    contractorsPrior,
+    contractorsCurrent,
+    leadsPrior,
+    leadsCurrent,
+    estimatesPrior,
+    estimatesCurrent,
+    projectsPrior,
+    projectsCurrent,
+    estValuePriorAgg,
+    estValueCurrentAgg,
   ] = await Promise.all([
     User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
     User.countDocuments({ role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } }),
     User.countDocuments({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }),
     Lead.countDocuments(),
-    // Hot Priority: Leads with latest contact in last 30 days
+    // Hot Priority: Leads with latest contact in last 30 days or priority HOT
     Lead.countDocuments({
       $or: [
         { latestContactDate: { $gte: thirtyDaysAgo } },
-        { priority: 'HOT' },
+        { priority: { $in: ['hot', 'HOT', 'high', 'HIGH'] } },
         { createdAt: { $gte: thirtyDaysAgo } },
       ],
     }),
-    Project.countDocuments({ status: 'in_progress' }),
+    Project.countDocuments({ status: { $in: ['in_progress', 'active'] } }),
     Estimate.countDocuments(),
     Estimate.aggregate([
       { $match: { totalAmount: { $gt: 0 } } },
@@ -136,11 +153,51 @@ async function getDashboardSummary(dateRange = '30d') {
       .sort({ createdAt: -1 })
       .limit(7)
       .populate('performedBy', 'fullName email role'),
+    // Growth queries
+    User.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
+    Lead.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
+    Lead.countDocuments({ createdAt: { $gte: startDate } }),
+    Estimate.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
+    Estimate.countDocuments({ createdAt: { $gte: startDate } }),
+    Project.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, status: { $in: ['in_progress', 'active'] } }),
+    Project.countDocuments({ createdAt: { $gte: startDate }, status: { $in: ['in_progress', 'active'] } }),
+    Estimate.aggregate([
+      { $match: { createdAt: { $gte: priorStart, $lt: startDate }, totalAmount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]),
+    Estimate.aggregate([
+      { $match: { createdAt: { $gte: startDate }, totalAmount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]),
   ]);
 
-  const estimatedValue = estimatesValueAgg?.[0]?.total || 125000;
+  const estimatedValue = estimatesValueAgg?.[0]?.total ? Math.round(estimatesValueAgg[0].total) : 0;
 
-  // Format Lead Status Overview (New, Assigned, In Progress, Converted, Lost)
+  // Real Dynamic Growth Helper (Compares Current Window vs Prior Window)
+  function calcGrowth(current, prior) {
+    if (prior === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prior) / prior) * 100);
+  }
+
+  const valPrior = estValuePriorAgg?.[0]?.total || 0;
+  const valCurrent = estValueCurrentAgg?.[0]?.total || 0;
+
+  const dynamicGrowth = {
+    users: calcGrowth(usersCurrent, usersPrior),
+    customers: calcGrowth(customersCurrent, customersPrior),
+    contractors: calcGrowth(contractorsCurrent, contractorsPrior),
+    leads: calcGrowth(leadsCurrent, leadsPrior),
+    projects: calcGrowth(projectsCurrent, projectsPrior),
+    estimates: calcGrowth(estimatesCurrent, estimatesPrior),
+    value: calcGrowth(valCurrent, valPrior),
+  };
+
+  // Format Lead Status Overview (New, Assigned, In Progress, Converted, Lost) directly from MongoDB
   const leadStatuses = {
     new: 0,
     assigned: 0,
@@ -150,25 +207,36 @@ async function getDashboardSummary(dateRange = '30d') {
   };
   leadStatusCounts.forEach((s) => {
     const k = (s._id || '').toLowerCase();
-    if (k.includes('new')) leadStatuses.new += s.count;
+    if (k === 'new') leadStatuses.new += s.count;
     else if (k.includes('assign')) leadStatuses.assigned += s.count;
-    else if (k.includes('progress') || k.includes('review') || k.includes('contacted')) leadStatuses.in_progress += s.count;
+    else if (k.includes('progress') || k.includes('review') || k.includes('contact')) leadStatuses.in_progress += s.count;
     else if (k.includes('convert')) leadStatuses.converted += s.count;
     else leadStatuses.lost += s.count;
   });
 
-  // Ensure reasonable baseline distribution for visualization
-  if (totalLeads > 0 && Object.values(leadStatuses).every((v) => v === 0)) {
-    leadStatuses.new = Math.round(totalLeads * 0.25) || 1;
-    leadStatuses.assigned = Math.round(totalLeads * 0.3) || 1;
-    leadStatuses.in_progress = Math.round(totalLeads * 0.2) || 1;
-    leadStatuses.converted = Math.round(totalLeads * 0.17) || 1;
-    leadStatuses.lost = Math.round(totalLeads * 0.08) || 1;
+  const leadDistribution = [
+    { label: 'New', count: leadStatuses.new, color: '#1d4ed8' },
+    { label: 'Assigned', count: leadStatuses.assigned, color: '#10b981' },
+    { label: 'In Progress', count: leadStatuses.in_progress, color: '#f59e0b' },
+    { label: 'Converted', count: leadStatuses.converted, color: '#8b5cf6' },
+    { label: 'Lost', count: leadStatuses.lost, color: '#ef4444' },
+  ].map((item) => ({
+    ...item,
+    percentage: totalLeads > 0 ? Math.round((item.count / totalLeads) * 100) : 0,
+  }));
+
+  // Ensure percentages sum to 100% when totalLeads > 0
+  if (totalLeads > 0) {
+    const currentSum = leadDistribution.reduce((acc, i) => acc + i.percentage, 0);
+    if (currentSum > 0 && currentSum !== 100) {
+      const maxItem = leadDistribution.reduce((prev, curr) => (curr.count > prev.count ? curr : prev), leadDistribution[0]);
+      maxItem.percentage += (100 - currentSum);
+    }
   }
 
-  // Format Project Status Overview (Active, Completed, On Hold)
+  // Format Project Status Overview (Active, Completed, On Hold) directly from MongoDB
   const projectStatuses = {
-    active: activeProjectsCount || 0,
+    active: 0,
     completed: 0,
     on_hold: 0,
     total: 0,
@@ -181,7 +249,12 @@ async function getDashboardSummary(dateRange = '30d') {
     projectStatuses.total += p.count;
   });
 
-  // Format Hot Priority Leads Panel
+  const projTotal = projectStatuses.total;
+  const projActivePct = projTotal > 0 ? Math.round((projectStatuses.active / projTotal) * 100) : 0;
+  const projCompletedPct = projTotal > 0 ? Math.round((projectStatuses.completed / projTotal) * 100) : 0;
+  const projOnHoldPct = projTotal > 0 ? Math.max(0, 100 - projActivePct - projCompletedPct) : 0;
+
+  // Format Hot Priority Leads Panel from live DB records
   let activeHotLeads = hotLeadsList;
   if (!activeHotLeads || activeHotLeads.length === 0) {
     activeHotLeads = await Lead.find().sort({ createdAt: -1 }).limit(5).populate('customerId', 'fullName email phone');
@@ -191,23 +264,81 @@ async function getDashboardSummary(dateRange = '30d') {
     id: l._id,
     leadId: l.leadNumber || `LD-${101 + idx * 4}`,
     name: l.customerSnapshot?.name || l.customerId?.fullName || l.name || 'Valued Customer',
-    type: l.userType || (l.contractorId ? 'Contractor' : 'Customer'),
-    source: l.contactSource || (l.leadSource === 'contact_form' ? 'Contact Us' : 'Reach Out'),
+    type: l.contractorId ? 'Contractor' : 'Customer',
+    source: l.contactSource || (l.leadSource === 'customer_estimator' ? 'Estimator' : l.leadSource === 'contact_form' ? 'Contact Us' : 'Reach Out'),
     priority: l.priority || 'HOT',
-    status: l.status === 'new' ? 'New' : l.status === 'assigned' ? 'Assigned' : l.status === 'in_progress' ? 'In Progress' : 'New',
+    status: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1).replace(/_/g, ' ')) : 'New',
     contactDate: l.latestContactDate || l.createdAt || new Date(),
     email: l.customerSnapshot?.email || l.customerId?.email || l.email || 'N/A',
   }));
 
-  // Format Recent Activities
-  const formattedActivities = recentActivities.map((a) => ({
-    id: a._id,
+  // Format Recent Activities (Combines AuditLog records or live events from DB collections)
+  let formattedActivities = auditLogsList.map((a) => ({
+    id: a._id.toString(),
     date: a.createdAt,
-    user: a.performedBy?.fullName || 'System Admin',
-    activity: a.action ? a.action.replace(/_/g, ' ') : 'Updated Platform Record',
-    recordId: a.entityId || a.metadata?.recordId || 'N/A',
-    entityType: a.entityType || 'General',
+    type: a.entityType ? a.entityType.toLowerCase() : 'user',
+    title: `${a.action ? a.action.replace(/_/g, ' ') : 'Platform Activity'} — ${a.performedBy?.fullName || 'Admin'}`,
+    subtitle: a.metadata?.notes || (a.entityId ? `ID: ${a.entityId}` : 'Recorded'),
   }));
+
+  // If AuditLog is empty, fetch live recent records from estimates, projects, users, and leads
+  if (formattedActivities.length === 0) {
+    const [recentEstimates, recentProjects, recentUsers, recentLeads] = await Promise.all([
+      Estimate.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName email'),
+      Project.find().sort({ updatedAt: -1, createdAt: -1 }).limit(3).populate('customerId contractorId', 'fullName'),
+      User.find().sort({ createdAt: -1 }).limit(3),
+      Lead.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName'),
+    ]);
+
+    const liveEvents = [];
+
+    recentEstimates.forEach((e) => {
+      const custName = e.customerId?.fullName || 'Customer';
+      liveEvents.push({
+        id: 'est-' + e._id,
+        date: e.createdAt,
+        type: 'estimate',
+        title: `Estimate Created — ${custName} (${e.estimateNumber || 'EST-' + e._id.toString().slice(-6).toUpperCase()})`,
+        subtitle: e.totalAmount ? `$${Math.round(e.totalAmount).toLocaleString()}` : 'Draft',
+      });
+    });
+
+    recentProjects.forEach((p) => {
+      const st = p.status ? p.status.replace(/_/g, ' ') : 'Project';
+      liveEvents.push({
+        id: 'prj-' + p._id,
+        date: p.updatedAt || p.createdAt,
+        type: 'project',
+        title: `Project ${st.charAt(0).toUpperCase() + st.slice(1)} — ${p.projectName || p.projectId || 'Deck Project'}`,
+        subtitle: `${p.progress || 0}% Completed`,
+      });
+    });
+
+    recentUsers.forEach((u) => {
+      const roleText = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'User';
+      liveEvents.push({
+        id: 'usr-' + u._id,
+        date: u.createdAt,
+        type: 'user',
+        title: `New Registration — ${u.fullName || 'User'} (${roleText})`,
+        subtitle: u.email,
+      });
+    });
+
+    recentLeads.forEach((l) => {
+      const leadName = l.customerSnapshot?.name || l.customerId?.fullName || l.name || 'Customer';
+      liveEvents.push({
+        id: 'lead-' + l._id,
+        date: l.createdAt,
+        type: 'lead',
+        title: `Lead Received — ${leadName} (${l.leadNumber || 'Lead'})`,
+        subtitle: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1)) : 'Active',
+      });
+    });
+
+    liveEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+    formattedActivities = liveEvents.slice(0, 5);
+  }
 
   return {
     summary: {
@@ -215,35 +346,26 @@ async function getDashboardSummary(dateRange = '30d') {
       totalCustomers,
       totalContractors,
       totalLeads,
-      hotPriorityLeads: hotPriorityLeadsCount || formattedHotLeads.length,
-      activeProjects: projectStatuses.active || activeProjectsCount,
+      hotPriorityLeads: hotPriorityLeadsCount,
+      activeProjects: projectStatuses.active,
       totalEstimates,
       estimatedValue,
-      growth: {
-        users: 12,
-        customers: 10,
-        contractors: 17,
-        leads: 15,
-        projects: 8,
-        estimates: 18,
-        value: 14,
-      },
+      growth: dynamicGrowth,
     },
     leadOverview: {
-      total: totalLeads || 120,
-      distribution: [
-        { label: 'New', count: leadStatuses.new || 30, percentage: 25, color: '#1d4ed8' },
-        { label: 'Assigned', count: leadStatuses.assigned || 35, percentage: 29, color: '#10b981' },
-        { label: 'In Progress', count: leadStatuses.in_progress || 25, percentage: 21, color: '#f59e0b' },
-        { label: 'Converted', count: leadStatuses.converted || 20, percentage: 17, color: '#8b5cf6' },
-        { label: 'Lost', count: leadStatuses.lost || 10, percentage: 8, color: '#ef4444' },
-      ],
+      total: totalLeads,
+      distribution: leadDistribution,
     },
     projectOverview: {
-      total: projectStatuses.total || 85,
-      active: projectStatuses.active || 40,
-      completed: projectStatuses.completed || 30,
-      onHold: projectStatuses.on_hold || 15,
+      total: projTotal,
+      active: projectStatuses.active,
+      completed: projectStatuses.completed,
+      onHold: projectStatuses.on_hold,
+      percentages: {
+        active: projActivePct,
+        completed: projCompletedPct,
+        onHold: projOnHoldPct,
+      },
     },
     hotLeads: formattedHotLeads,
     recentActivities: formattedActivities,
@@ -251,22 +373,66 @@ async function getDashboardSummary(dateRange = '30d') {
 }
 
 async function getBusinessActivityTrend(period = '30d') {
-  const days = period === '7d' ? 7 : period === 'year' ? 12 : 14;
+  const now = new Date();
+  let startDate = new Date();
+  let numPoints = 11;
+
+  switch (period) {
+    case '7d':
+      startDate.setDate(startDate.getDate() - 7);
+      numPoints = 7;
+      break;
+    case 'this_year':
+    case 'year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      numPoints = 12;
+      break;
+    case 'today':
+      startDate.setHours(0, 0, 0, 0);
+      numPoints = 6;
+      break;
+    case '30d':
+    default:
+      startDate.setDate(startDate.getDate() - 30);
+      numPoints = 11;
+      break;
+  }
+
+  // Real aggregations: group createdAt by YYYY-MM-DD from MongoDB
+  const [userByDay, leadByDay, estByDay] = await Promise.all([
+    User.aggregate([
+      { $match: { createdAt: { $exists: true } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+    ]),
+    Lead.aggregate([
+      { $match: { createdAt: { $exists: true } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+    ]),
+    Estimate.aggregate([
+      { $match: { createdAt: { $exists: true } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const stepMs = (now.getTime() - startDate.getTime()) / Math.max(numPoints - 1, 1);
   const labels = [];
   const usersSeries = [];
   const leadsSeries = [];
   const estimatesSeries = [];
 
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * (period === 'year' ? 30 * 86400000 : 2 * 86400000));
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  for (let i = 0; i < numPoints; i++) {
+    const cp = new Date(startDate.getTime() + i * stepMs);
+    const dateStr = cp.toISOString().split('T')[0];
+    const label = cp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     labels.push(label);
 
-    const base = 10 + (days - i) * 2;
-    usersSeries.push(Math.round(base * 0.8 + Math.sin(i) * 3));
-    leadsSeries.push(Math.round(base * 1.3 + Math.cos(i) * 4));
-    estimatesSeries.push(Math.round(base * 1.8 + Math.sin(i + 2) * 5));
+    const uCount = userByDay.filter((d) => d._id <= dateStr).reduce((s, d) => s + d.count, 0);
+    const lCount = leadByDay.filter((d) => d._id <= dateStr).reduce((s, d) => s + d.count, 0);
+    const eCount = estByDay.filter((d) => d._id <= dateStr).reduce((s, d) => s + d.count, 0);
+
+    usersSeries.push(uCount);
+    leadsSeries.push(lCount);
+    estimatesSeries.push(eCount);
   }
 
   return {

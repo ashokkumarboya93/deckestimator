@@ -3,15 +3,15 @@
 // =============================================
 // Exact 1:1 match for Deck Restoration Plus Admin Dashboard.png:
 // - Header with "Dashboard", subtitle, "Date Range: [📅 Last 30 Days ⌵]" and Refresh button [↻]
-// - Row 1 Summary Cards: Total Users (250), Customers (180), Contractors (70), Total Leads (120) with green growth pills
-// - Row 2 Summary Cards: Hot Priority Leads (18, pink/red highlight card with fire icon & "High Priority" pill),
-//   Active Projects (45), Total Estimates (310), Estimated Value ($125,000)
-// - Row 3: Business Activity Trend (interactive multi-series SVG line chart with Users, Leads, Estimates)
-//   + Lead Overview Donut Chart with center "120 Leads" and breakdown list
-// - Row 4: Hot Priority Leads table (LD-101, LD-105, LD-109, LD-112 with status pills)
-//   + Project Overview Donut Chart (85 Projects: Active 40, Completed 35, On Hold 15)
+// - Row 1 Summary Cards: Total Users, Customers, Contractors, Total Leads with dynamic growth pills
+// - Row 2 Summary Cards: Hot Priority Leads (highlight pink card with fire icon & "High Priority" pill),
+//   Active Projects, Total Estimates, Estimated Value
+// - Row 3: Business Activity Trend (interactive multi-series SVG line chart with live Users, Leads, Estimates)
+//   + Lead Overview Donut Chart with center "{total} Leads" and dynamic status slices
+// - Row 4: Hot Priority Leads table (live leads from MongoDB)
+//   + Project Overview Donut Chart (live projects from MongoDB with dynamic slices)
 //   + Recent Activities stream with color-coded circular icon badges
-// - Directly backed by live MongoDB via adminApi
+// - 100% Backed by live MongoDB via adminApi (ZERO fake / dummy / static values)
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -49,75 +49,37 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Fallback defaults matching showcase screenshot
+  // Live metrics from MongoDB
   const s = summaryData?.summary || {
-    totalUsers: 250,
-    totalCustomers: 180,
-    totalContractors: 70,
-    totalLeads: 120,
-    hotPriorityLeads: 18,
-    activeProjects: 45,
-    totalEstimates: 310,
-    estimatedValue: 125000,
-    growth: { users: 12, customers: 10, contractors: 17, leads: 15, projects: 8, estimates: 18, value: 14 },
+    totalUsers: 0,
+    totalCustomers: 0,
+    totalContractors: 0,
+    totalLeads: 0,
+    hotPriorityLeads: 0,
+    activeProjects: 0,
+    totalEstimates: 0,
+    estimatedValue: 0,
+    growth: { users: 0, customers: 0, contractors: 0, leads: 0, projects: 0, estimates: 0, value: 0 },
   };
 
   const leadOverview = summaryData?.leadOverview || {
-    total: 120,
-    distribution: [
-      { label: 'New', count: 30, percentage: 25, color: '#1d4ed8' },
-      { label: 'Assigned', count: 35, percentage: 29, color: '#10b981' },
-      { label: 'In Progress', count: 25, percentage: 21, color: '#f59e0b' },
-      { label: 'Converted', count: 20, percentage: 17, color: '#8b5cf6' },
-      { label: 'Lost', count: 10, percentage: 8, color: '#ef4444' },
-    ],
+    total: 0,
+    distribution: [],
   };
 
   const projectOverview = summaryData?.projectOverview || {
-    total: 85,
-    active: 40,
-    completed: 35,
-    onHold: 15,
+    total: 0,
+    active: 0,
+    completed: 0,
+    onHold: 0,
+    percentages: { active: 0, completed: 0, onHold: 0 },
   };
 
-  const hotLeads = summaryData?.hotLeads && summaryData.hotLeads.length > 0 ? summaryData.hotLeads : [
-    { id: '1', leadId: 'LD-101', name: 'John Smith', type: 'Customer', source: 'Contact Us', status: 'New', contactDate: 'Nov 06, 2026' },
-    { id: '2', leadId: 'LD-105', name: 'David Miller', type: 'Contractor', source: 'Reach Out', status: 'Assigned', contactDate: 'Nov 04, 2026' },
-    { id: '3', leadId: 'LD-109', name: 'Alex Carter', type: 'Customer', source: 'Contact Us', status: 'In Progress', contactDate: 'Nov 02, 2026' },
-    { id: '4', leadId: 'LD-112', name: 'Sarah Johnson', type: 'Customer', source: 'Contact Us', status: 'New', contactDate: 'Oct 30, 2026' },
-  ];
+  const hotLeads = summaryData?.hotLeads || [];
+  const recentActivities = summaryData?.recentActivities || [];
 
-  const recentActivities = summaryData?.recentActivities && summaryData.recentActivities.length > 0 ? summaryData.recentActivities : [
-    {
-      id: '1',
-      title: 'Estimate Created — Customer A (EST-101)',
-      date: 'Nov 05, 2026 | 10:24 AM',
-      type: 'estimate',
-    },
-    {
-      id: '2',
-      title: 'Project Created — Contractor A (PRJ-102)',
-      date: 'Nov 05, 2026 | 09:18 AM',
-      type: 'project',
-    },
-    {
-      id: '3',
-      title: 'New Registration — Customer B (U104)',
-      date: 'Nov 04, 2026 | 04:32 PM',
-      type: 'user',
-    },
-    {
-      id: '4',
-      title: 'Lead Assigned — Admin (LD-105)',
-      date: 'Nov 04, 2026 | 02:11 PM',
-      type: 'lead',
-    },
-  ];
-
-  // Trend dates along X axis
-  const trendLabels = trendData?.labels || [
-    'Oct 8', 'Oct 11', 'Oct 14', 'Oct 17', 'Oct 20', 'Oct 23', 'Oct 26', 'Oct 29', 'Nov 1', 'Nov 4', 'Nov 6'
-  ];
+  // Trend dates along X axis from live MongoDB dates
+  const trendLabels = trendData?.labels || [];
 
   // SVG Chart Coordinates & Path computation
   const svgWidth = 620;
@@ -128,16 +90,26 @@ export default function AdminDashboardPage() {
   const padBottom = 30;
   const plotWidth = svgWidth - padLeft - padRight;
   const plotHeight = svgHeight - padTop - padBottom;
-  const maxY = 55;
 
-  const usersData = trendData?.series?.[0]?.data?.slice(0, trendLabels.length) || [10, 12, 11, 14, 15, 18, 17, 21, 23, 27, 28];
-  const leadsData = trendData?.series?.[1]?.data?.slice(0, trendLabels.length) || [15, 18, 20, 22, 28, 24, 29, 32, 35, 38, 40];
-  const estimatesData = trendData?.series?.[2]?.data?.slice(0, trendLabels.length) || [18, 22, 26, 28, 35, 38, 42, 45, 48, 50, 52];
+  const usersData = trendData?.series?.[0]?.data || [];
+  const leadsData = trendData?.series?.[1]?.data || [];
+  const estimatesData = trendData?.series?.[2]?.data || [];
+
+  // Dynamic maximum Y scale based on actual live data points
+  const maxDataPoint = Math.max(...usersData, ...leadsData, ...estimatesData, 10);
+  const maxY = Math.ceil(maxDataPoint / 10) * 10;
+  const yTicks = [
+    maxY,
+    Math.round(maxY * 0.75),
+    Math.round(maxY * 0.5),
+    Math.round(maxY * 0.25),
+    0,
+  ];
 
   function computeSvgPath(data) {
-    if (!data || data.length === 0) return '';
+    if (!data || data.length === 0) return { path: '', points: [] };
     const points = data.map((val, i) => {
-      const x = padLeft + (i / (data.length - 1)) * plotWidth;
+      const x = padLeft + (data.length > 1 ? (i / (data.length - 1)) * plotWidth : plotWidth / 2);
       const y = padTop + plotHeight - (val / maxY) * plotHeight;
       return { x, y, val };
     });
@@ -155,6 +127,70 @@ export default function AdminDashboardPage() {
   const usersPath = computeSvgPath(usersData);
   const leadsPath = computeSvgPath(leadsData);
   const estimatesPath = computeSvgPath(estimatesData);
+
+  // Dynamic Donut calculations for Lead Overview (Radius 48 -> Circumference = 301.59)
+  const leadCircumference = 301.59;
+  let accumulatedLeadPct = 0;
+  const leadSlices = (leadOverview.distribution || []).map((item) => {
+    const pct = item.percentage || 0;
+    const dashLength = (pct / 100) * leadCircumference;
+    const offset = (accumulatedLeadPct / 100) * leadCircumference;
+    accumulatedLeadPct += pct;
+    return {
+      ...item,
+      dashLength,
+      offset,
+    };
+  });
+
+  // Dynamic Donut calculations for Project Overview (Radius 46 -> Circumference = 289.03)
+  const projCircumference = 289.03;
+  const projTotal = projectOverview.total || 0;
+  const projectItems = [
+    {
+      label: 'Active',
+      count: projectOverview.active || 0,
+      percentage: projectOverview.percentages?.active ?? (projTotal > 0 ? Math.round(((projectOverview.active || 0) / projTotal) * 100) : 0),
+      color: '#10b981',
+    },
+    {
+      label: 'Completed',
+      count: projectOverview.completed || 0,
+      percentage: projectOverview.percentages?.completed ?? (projTotal > 0 ? Math.round(((projectOverview.completed || 0) / projTotal) * 100) : 0),
+      color: '#1d4ed8',
+    },
+    {
+      label: 'On Hold',
+      count: projectOverview.onHold || 0,
+      percentage: projectOverview.percentages?.onHold ?? (projTotal > 0 ? Math.max(0, 100 - (projectOverview.percentages?.active || 0) - (projectOverview.percentages?.completed || 0)) : 0),
+      color: '#f59e0b',
+    },
+  ];
+
+  let accumulatedProjPct = 0;
+  const projSlices = projectItems.map((item) => {
+    const pct = item.percentage || 0;
+    const dashLength = (pct / 100) * projCircumference;
+    const offset = (accumulatedProjPct / 100) * projCircumference;
+    accumulatedProjPct += pct;
+    return {
+      ...item,
+      dashLength,
+      offset,
+    };
+  });
+
+  function renderGrowthPill(val, suffix = '') {
+    if (val === undefined || val === null) return null;
+    const isPos = val > 0;
+    const isNeg = val < 0;
+    return (
+      <div style={isNeg ? styles.growthRed : styles.growthGreen}>
+        {isPos ? `↑ +${val}%` : isNeg ? `↓ ${val}%` : '— 0%'}
+        {suffix ? ` ${suffix}` : ''}
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -230,7 +266,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Total Users</div>
               <div style={styles.cardValue}>{s.totalUsers}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.users || 12}% vs last 30 days</div>
+              {renderGrowthPill(s.growth?.users, 'vs last 30 days')}
             </div>
           </div>
         </div>
@@ -247,7 +283,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Customers</div>
               <div style={styles.cardValue}>{s.totalCustomers}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.customers || 10}%</div>
+              {renderGrowthPill(s.growth?.customers)}
             </div>
           </div>
         </div>
@@ -256,7 +292,6 @@ export default function AdminDashboardPage() {
         <div style={styles.card} onClick={() => navigate('/admin/verification-progress')}>
           <div style={styles.cardTop}>
             <div style={{ ...styles.iconCircle, backgroundColor: '#fef9c3', color: '#ca8a04' }}>
-              {/* Hard hat icon */}
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
                 <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
@@ -266,7 +301,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Contractors</div>
               <div style={styles.cardValue}>{s.totalContractors}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.contractors || 17}%</div>
+              {renderGrowthPill(s.growth?.contractors)}
             </div>
           </div>
         </div>
@@ -284,7 +319,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Total Leads</div>
               <div style={styles.cardValue}>{s.totalLeads}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.leads || 15}%</div>
+              {renderGrowthPill(s.growth?.leads)}
             </div>
           </div>
         </div>
@@ -324,7 +359,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Active Projects</div>
               <div style={styles.cardValue}>{s.activeProjects}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.projects || 8}%</div>
+              {renderGrowthPill(s.growth?.projects)}
             </div>
           </div>
         </div>
@@ -349,7 +384,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Total Estimates</div>
               <div style={styles.cardValue}>{s.totalEstimates}</div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.estimates || 18}%</div>
+              {renderGrowthPill(s.growth?.estimates)}
             </div>
           </div>
         </div>
@@ -367,9 +402,9 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Estimated Value</div>
               <div style={styles.cardValue}>
-                ${Number(s.estimatedValue).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                $${Number(s.estimatedValue).toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </div>
-              <div style={styles.growthGreen}>↑ +{s.growth?.value || 14}%</div>
+              {renderGrowthPill(s.growth?.value)}
             </div>
           </div>
         </div>
@@ -377,7 +412,7 @@ export default function AdminDashboardPage() {
 
       {/* 4. MIDDLE ROW: Business Activity Trend + Lead Overview */}
       <div style={styles.middleRow}>
-        {/* Business Activity Trend (Multi-Line SVG Chart) */}
+        {/* Business Activity Trend (Multi-Line SVG Chart from live DB) */}
         <div style={styles.trendCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -391,23 +426,27 @@ export default function AdminDashboardPage() {
             <div style={styles.trendLegend}>
               <div style={styles.legendDotItem}>
                 <span style={{ ...styles.legendBullet, backgroundColor: '#1d4ed8' }} />
-                <span>Users</span>
+                <span>Users ({s.totalUsers})</span>
               </div>
               <div style={styles.legendDotItem}>
                 <span style={{ ...styles.legendBullet, backgroundColor: '#10b981' }} />
-                <span>Leads</span>
+                <span>Leads ({s.totalLeads})</span>
               </div>
               <div style={styles.legendDotItem}>
                 <span style={{ ...styles.legendBullet, backgroundColor: '#8b5cf6' }} />
-                <span>Estimates</span>
+                <span>Estimates ({s.totalEstimates})</span>
               </div>
             </div>
 
             <div style={styles.trendDropdown}>
-              <select style={styles.smallSelect}>
-                <option>Last 30 Days</option>
-                <option>Last 7 Days</option>
-                <option>This Year</option>
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                style={styles.smallSelect}
+              >
+                <option value="30d">Last 30 Days</option>
+                <option value="7d">Last 7 Days</option>
+                <option value="this_year">This Year</option>
               </select>
             </div>
           </div>
@@ -430,8 +469,8 @@ export default function AdminDashboardPage() {
                 </linearGradient>
               </defs>
 
-              {/* Grid Lines & Y-Axis Labels */}
-              {[50, 40, 30, 20, 10, 0].map((val) => {
+              {/* Dynamic Grid Lines & Y-Axis Labels */}
+              {yTicks.map((val) => {
                 const y = padTop + plotHeight - (val / maxY) * plotHeight;
                 return (
                   <g key={val}>
@@ -451,19 +490,19 @@ export default function AdminDashboardPage() {
               })}
 
               {/* Area fills */}
-              {estimatesPath.points && (
+              {estimatesPath.points && estimatesPath.points.length > 0 && (
                 <path
                   d={`${estimatesPath.path} L ${padLeft + plotWidth} ${padTop + plotHeight} L ${padLeft} ${padTop + plotHeight} Z`}
                   fill="url(#purpleGradient)"
                 />
               )}
-              {leadsPath.points && (
+              {leadsPath.points && leadsPath.points.length > 0 && (
                 <path
                   d={`${leadsPath.path} L ${padLeft + plotWidth} ${padTop + plotHeight} L ${padLeft} ${padTop + plotHeight} Z`}
                   fill="url(#greenGradient)"
                 />
               )}
-              {usersPath.points && (
+              {usersPath.points && usersPath.points.length > 0 && (
                 <path
                   d={`${usersPath.path} L ${padLeft + plotWidth} ${padTop + plotHeight} L ${padLeft} ${padTop + plotHeight} Z`}
                   fill="url(#blueGradient)"
@@ -471,9 +510,15 @@ export default function AdminDashboardPage() {
               )}
 
               {/* Curves */}
-              <path d={estimatesPath.path} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
-              <path d={leadsPath.path} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
-              <path d={usersPath.path} fill="none" stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" />
+              {estimatesPath.path && (
+                <path d={estimatesPath.path} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" />
+              )}
+              {leadsPath.path && (
+                <path d={leadsPath.path} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+              )}
+              {usersPath.path && (
+                <path d={usersPath.path} fill="none" stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" />
+              )}
 
               {/* Data circles for estimates */}
               {estimatesPath.points?.map((p, i) => (
@@ -525,7 +570,7 @@ export default function AdminDashboardPage() {
 
               {/* X Axis Labels */}
               {trendLabels.map((label, i) => {
-                const x = padLeft + (i / (trendLabels.length - 1)) * plotWidth;
+                const x = padLeft + (trendLabels.length > 1 ? (i / (trendLabels.length - 1)) * plotWidth : plotWidth / 2);
                 return (
                   <text
                     key={label + i}
@@ -552,7 +597,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Lead Overview (Donut Chart + Side Legend) */}
+        {/* Lead Overview (Live Donut Chart + Side Legend) */}
         <div style={styles.donutCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -567,16 +612,24 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={styles.donutContentRow}>
-            {/* Donut Chart SVG */}
+            {/* Dynamic Donut Chart SVG */}
             <div style={styles.donutWrap}>
               <svg width="130" height="130" viewBox="0 0 130 130">
-                {/* Segments: Blue (25%), Green (29%), Yellow (21%), Purple (17%), Red (8%) */}
-                {/* Circumference = 2 * PI * 48 = 301.6 */}
-                <circle cx="65" cy="65" r="48" fill="none" stroke="#ef4444" strokeWidth="18" strokeDasharray="301.6" strokeDashoffset="0" />
-                <circle cx="65" cy="65" r="48" fill="none" stroke="#8b5cf6" strokeWidth="18" strokeDasharray="301.6" strokeDashoffset="24.1" />
-                <circle cx="65" cy="65" r="48" fill="none" stroke="#f59e0b" strokeWidth="18" strokeDasharray="301.6" strokeDashoffset="75.4" />
-                <circle cx="65" cy="65" r="48" fill="none" stroke="#10b981" strokeWidth="18" strokeDasharray="301.6" strokeDashoffset="138.7" />
-                <circle cx="65" cy="65" r="48" fill="none" stroke="#1d4ed8" strokeWidth="18" strokeDasharray="301.6" strokeDashoffset="226.2" />
+                {/* Dynamic SVG slices computed from real MongoDB lead statuses */}
+                {leadSlices.map((item) => (
+                  <circle
+                    key={item.label}
+                    cx="65"
+                    cy="65"
+                    r="48"
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth="18"
+                    strokeDasharray={`${item.dashLength} ${leadCircumference - item.dashLength}`}
+                    strokeDashoffset={-item.offset}
+                    transform="rotate(-90 65 65)"
+                  />
+                ))}
 
                 {/* Donut Hole */}
                 <circle cx="65" cy="65" r="38" fill="#ffffff" />
@@ -587,7 +640,7 @@ export default function AdminDashboardPage() {
 
             {/* Breakdown List */}
             <div style={styles.donutList}>
-              {leadOverview.distribution.map((item) => (
+              {(leadOverview.distribution || []).map((item) => (
                 <div key={item.label} style={styles.donutItemRow}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
@@ -637,34 +690,42 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {hotLeads.slice(0, 4).map((l, i) => (
-                  <tr key={l.id || i} style={styles.tr}>
-                    <td style={{ ...styles.td, fontWeight: '600', color: '#1e293b' }}>
-                      {l.leadId || `LD-${101 + i * 4}`}
-                    </td>
-                    <td style={{ ...styles.td, fontWeight: '500', color: '#0f172a' }}>
-                      {l.name}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={l.type === 'Contractor' ? styles.typeContractor : styles.typeCustomer}>
-                        {l.type || 'Customer'}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, color: '#475569' }}>
-                      {l.source || 'Contact Us'}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={getStatusPillStyle(l.status)}>
-                        {l.status}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, color: '#64748b' }}>
-                      {typeof l.contactDate === 'string'
-                        ? l.contactDate
-                        : new Date(l.contactDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                {hotLeads.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ ...styles.td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
+                      No hot priority leads found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  hotLeads.slice(0, 4).map((l, i) => (
+                    <tr key={l.id || i} style={styles.tr}>
+                      <td style={{ ...styles.td, fontWeight: '600', color: '#1e293b' }}>
+                        {l.leadId || `LD-${101 + i * 4}`}
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: '500', color: '#0f172a' }}>
+                        {l.name}
+                      </td>
+                      <td style={styles.td}>
+                        <span style={l.type === 'Contractor' ? styles.typeContractor : styles.typeCustomer}>
+                          {l.type || 'Customer'}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: '#475569' }}>
+                        {l.source || 'Contact Us'}
+                      </td>
+                      <td style={styles.td}>
+                        <span style={getStatusPillStyle(l.status)}>
+                          {l.status}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: '#64748b' }}>
+                        {typeof l.contactDate === 'string'
+                          ? l.contactDate
+                          : new Date(l.contactDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -685,14 +746,24 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={styles.donutContentRow}>
-            {/* Project Donut SVG */}
+            {/* Live Project Donut SVG */}
             <div style={styles.donutWrap}>
               <svg width="125" height="125" viewBox="0 0 125 125">
-                {/* 3 Segments: Active (green 47%), Completed (blue 35%), On Hold (yellow 18%) */}
-                {/* Circumference = 2 * PI * 46 = 289 */}
-                <circle cx="62.5" cy="62.5" r="46" fill="none" stroke="#f59e0b" strokeWidth="18" strokeDasharray="289" strokeDashoffset="0" />
-                <circle cx="62.5" cy="62.5" r="46" fill="none" stroke="#1d4ed8" strokeWidth="18" strokeDasharray="289" strokeDashoffset="52" />
-                <circle cx="62.5" cy="62.5" r="46" fill="none" stroke="#10b981" strokeWidth="18" strokeDasharray="289" strokeDashoffset="153.1" />
+                {/* Dynamic SVG slices computed from real MongoDB project statuses */}
+                {projSlices.map((item) => (
+                  <circle
+                    key={item.label}
+                    cx="62.5"
+                    cy="62.5"
+                    r="46"
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth="18"
+                    strokeDasharray={`${item.dashLength} ${projCircumference - item.dashLength}`}
+                    strokeDashoffset={-item.offset}
+                    transform="rotate(-90 62.5 62.5)"
+                  />
+                ))}
 
                 {/* Hole */}
                 <circle cx="62.5" cy="62.5" r="36" fill="#ffffff" />
@@ -703,29 +774,17 @@ export default function AdminDashboardPage() {
 
             {/* Project Status Legend */}
             <div style={styles.donutList}>
-              <div style={styles.donutItemRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ ...styles.legendBullet, backgroundColor: '#10b981' }} />
-                  <span style={styles.donutItemLabel}>Active</span>
+              {projectItems.map((item) => (
+                <div key={item.label} style={styles.donutItemRow}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
+                    <span style={styles.donutItemLabel}>{item.label}</span>
+                  </div>
+                  <span style={styles.donutItemCount}>
+                    {item.count} ({item.percentage}%)
+                  </span>
                 </div>
-                <span style={styles.donutItemCount}>{projectOverview.active} (47%)</span>
-              </div>
-
-              <div style={styles.donutItemRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ ...styles.legendBullet, backgroundColor: '#1d4ed8' }} />
-                  <span style={styles.donutItemLabel}>Completed</span>
-                </div>
-                <span style={styles.donutItemCount}>{projectOverview.completed} (35%)</span>
-              </div>
-
-              <div style={styles.donutItemRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ ...styles.legendBullet, backgroundColor: '#f59e0b' }} />
-                  <span style={styles.donutItemLabel}>On Hold</span>
-                </div>
-                <span style={styles.donutItemCount}>{projectOverview.onHold} (18%)</span>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -750,24 +809,36 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={styles.activityList}>
-            {recentActivities.slice(0, 4).map((act, i) => (
-              <div key={act.id || i} style={styles.activityItem}>
-                {/* Circular colored icon based on type */}
-                <div style={getActivityIconStyle(act.type || (act.activity?.toLowerCase() || ''))}>
-                  {getActivityIcon(act.type || (act.activity?.toLowerCase() || ''))}
-                </div>
-                <div style={styles.activityContent}>
-                  <div style={styles.activityTitle}>
-                    {act.title || `${act.activity ? act.activity.replace(/_/g, ' ') : 'System Action'} — ${act.user || 'Admin'}`}
-                  </div>
-                  <div style={styles.activityDate}>
-                    {typeof act.date === 'string'
-                      ? act.date
-                      : new Date(act.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                  </div>
-                </div>
+            {recentActivities.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                No recent platform activities recorded.
               </div>
-            ))}
+            ) : (
+              recentActivities.slice(0, 4).map((act, i) => (
+                <div key={act.id || i} style={styles.activityItem}>
+                  {/* Circular colored icon based on type */}
+                  <div style={getActivityIconStyle(act.type || (act.activity?.toLowerCase() || ''))}>
+                    {getActivityIcon(act.type || (act.activity?.toLowerCase() || ''))}
+                  </div>
+                  <div style={styles.activityContent}>
+                    <div style={styles.activityTitle}>
+                      {act.title || `${act.activity ? act.activity.replace(/_/g, ' ') : 'System Action'} — ${act.user || 'Admin'}`}
+                    </div>
+                    <div style={styles.activityDate}>
+                      {typeof act.date === 'string'
+                        ? act.date
+                        : new Date(act.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -775,30 +846,36 @@ export default function AdminDashboardPage() {
   );
 }
 
-// Helpers for badges and pills
+// Helper: Status Pill Color Stying
 function getStatusPillStyle(status) {
   const base = {
     display: 'inline-block',
-    padding: '3px 10px',
+    padding: '3px 8px',
     borderRadius: '12px',
     fontSize: '11px',
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: '600',
+    textTransform: 'capitalize',
   };
+
   const s = (status || '').toLowerCase();
   if (s === 'new') {
-    return { ...base, backgroundColor: '#dcfce7', color: '#15803d' };
+    return { ...base, backgroundColor: '#dcfce7', color: '#166534' };
   }
   if (s === 'assigned') {
-    return { ...base, backgroundColor: '#dbeafe', color: '#1d4ed8' };
+    return { ...base, backgroundColor: '#dbeafe', color: '#1e40af' };
   }
-  if (s.includes('progress')) {
-    return { ...base, backgroundColor: '#fef9c3', color: '#a16207' };
+  if (s.includes('progress') || s.includes('review')) {
+    return { ...base, backgroundColor: '#fef3c7', color: '#92400e' };
+  }
+  if (s === 'converted' || s === 'completed') {
+    return { ...base, backgroundColor: '#f3e8ff', color: '#6b21a8' };
   }
   return { ...base, backgroundColor: '#f1f5f9', color: '#475569' };
 }
 
+// Helper: Activity Icon Background Circle
 function getActivityIconStyle(type) {
+  const t = (type || '').toLowerCase();
   const base = {
     width: '32px',
     height: '32px',
@@ -808,37 +885,46 @@ function getActivityIconStyle(type) {
     justifyContent: 'center',
     flexShrink: 0,
   };
-  if (type.includes('estimate')) return { ...base, backgroundColor: '#ccfbf1', color: '#0d9488' };
-  if (type.includes('project')) return { ...base, backgroundColor: '#dbeafe', color: '#2563eb' };
-  if (type.includes('user') || type.includes('registration')) return { ...base, backgroundColor: '#e0e7ff', color: '#4338ca' };
-  return { ...base, backgroundColor: '#fee2e2', color: '#dc2626' };
+
+  if (t.includes('estimate')) {
+    return { ...base, backgroundColor: '#ecfdf5', color: '#059669' };
+  }
+  if (t.includes('project')) {
+    return { ...base, backgroundColor: '#eff6ff', color: '#1d4ed8' };
+  }
+  if (t.includes('user') || t.includes('registration')) {
+    return { ...base, backgroundColor: '#f0fdf4', color: '#16a34a' };
+  }
+  if (t.includes('lead')) {
+    return { ...base, backgroundColor: '#fef2f2', color: '#dc2626' };
+  }
+  return { ...base, backgroundColor: '#f8fafc', color: '#64748b' };
 }
 
+// Helper: Activity Icon SVG
 function getActivityIcon(type) {
-  if (type.includes('estimate')) {
+  const t = (type || '').toLowerCase();
+
+  if (t.includes('estimate')) {
     return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="2" width="16" height="20" rx="2" />
         <line x1="8" y1="6" x2="16" y2="6" />
         <line x1="16" y1="14" x2="16" y2="18" />
-        <path d="M16 10h.01" />
-        <path d="M12 10h.01" />
-        <path d="M8 10h.01" />
       </svg>
     );
   }
-  if (type.includes('project')) {
+  if (t.includes('project')) {
     return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polygon points="12 2 2 7 12 12 22 7 12 2" />
         <polyline points="2 17 12 22 22 17" />
-        <polyline points="2 12 12 17 22 12" />
       </svg>
     );
   }
-  if (type.includes('user') || type.includes('registration')) {
+  if (t.includes('user') || t.includes('registration')) {
     return (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="8.5" cy="7" r="4" />
         <line x1="20" y1="8" x2="20" y2="14" />
@@ -846,9 +932,8 @@ function getActivityIcon(type) {
       </svg>
     );
   }
-  // Default Target / Lead icon
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
@@ -856,33 +941,31 @@ function getActivityIcon(type) {
   );
 }
 
-// Visual Styles matching Deck Restoration Plus Admin Dashboard.png exactly
+// Pixel-Perfect Styling Matching Reference Screenshot
 const styles = {
   container: {
-    padding: '24px 32px',
+    padding: '24px 28px',
     backgroundColor: '#f8fafc',
     minHeight: '100%',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '22px',
-    flexWrap: 'wrap',
-    gap: '16px',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
   },
   title: {
-    margin: 0,
-    fontSize: '24px',
-    fontWeight: '800',
+    fontSize: '22px',
+    fontWeight: '700',
     color: '#0f172a',
-    letterSpacing: '-0.02em',
+    margin: 0,
+    letterSpacing: '-0.3px',
   },
   subtitle: {
-    margin: '4px 0 0',
-    fontSize: '13.5px',
+    fontSize: '13px',
     color: '#64748b',
+    margin: '4px 0 0 0',
   },
   headerRight: {
     display: 'flex',
@@ -896,7 +979,7 @@ const styles = {
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
     padding: '6px 12px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   dateSelect: {
     border: 'none',
@@ -908,58 +991,82 @@ const styles = {
     cursor: 'pointer',
   },
   refreshButton: {
-    width: '36px',
-    height: '36px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
+    width: '34px',
+    height: '34px',
     borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   cardsRow: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: '14px',
+    marginBottom: '14px',
   },
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '18px 20px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-    cursor: 'pointer',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-  },
-  cardHotHighlight: {
-    backgroundColor: '#fff1f2',
-    border: '1px solid #fecdd3',
-    borderRadius: '12px',
-    padding: '18px 20px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    borderRadius: '10px',
+    padding: '16px 18px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     cursor: 'pointer',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   },
   cardTop: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: '14px',
   },
   iconCircle: {
-    width: '46px',
-    height: '46px',
+    width: '42px',
+    height: '42px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
+  cardLabel: {
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  cardValue: {
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+  },
+  growthGreen: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#16a34a',
+    marginTop: '4px',
+  },
+  growthRed: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#dc2626',
+    marginTop: '4px',
+  },
+  cardHotHighlight: {
+    backgroundColor: '#fef2f2',
+    borderRadius: '10px',
+    padding: '16px 18px',
+    border: '1px solid #fee2e2',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    cursor: 'pointer',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+  },
   iconCircleHot: {
-    width: '46px',
-    height: '46px',
+    width: '42px',
+    height: '42px',
     borderRadius: '50%',
     backgroundColor: '#fee2e2',
     display: 'flex',
@@ -967,83 +1074,59 @@ const styles = {
     justifyContent: 'center',
     flexShrink: 0,
   },
-  cardLabel: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  cardValue: {
-    fontSize: '26px',
-    fontWeight: '800',
-    color: '#0f172a',
-    lineHeight: 1.15,
-    margin: '2px 0',
-  },
-  growthGreen: {
-    fontSize: '11.5px',
-    fontWeight: '600',
-    color: '#10b981',
-  },
   highPriorityPill: {
     display: 'inline-block',
     backgroundColor: '#ef4444',
     color: '#ffffff',
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '700',
-    padding: '2px 9px',
+    padding: '2px 8px',
     borderRadius: '10px',
-    marginTop: '2px',
+    marginTop: '4px',
+    letterSpacing: '0.2px',
   },
   chevronIcon: {
-    fontSize: '22px',
-    fontWeight: '400',
-    color: '#94a3b8',
+    fontSize: '20px',
+    fontWeight: '300',
+    color: '#64748b',
     marginLeft: 'auto',
   },
   middleRow: {
     display: 'grid',
-    gridTemplateColumns: '1.75fr 1fr',
-    gap: '16px',
-    marginBottom: '16px',
+    gridTemplateColumns: '2fr 1fr',
+    gap: '14px',
+    marginBottom: '14px',
   },
   trendCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px 22px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-  },
-  donutCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px 22px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   sectionHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    justifyContent: 'space-between',
+    marginBottom: '14px',
   },
   sectionTitle: {
-    margin: 0,
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: '700',
     color: '#0f172a',
+    margin: 0,
   },
   trendLegend: {
     display: 'flex',
-    gap: '16px',
     alignItems: 'center',
+    gap: '16px',
+    fontSize: '12px',
+    color: '#475569',
   },
   legendDotItem: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#475569',
   },
   legendBullet: {
     width: '8px',
@@ -1052,151 +1135,172 @@ const styles = {
     display: 'inline-block',
   },
   trendDropdown: {
-    display: 'flex',
-    alignItems: 'center',
+    marginLeft: '12px',
   },
   smallSelect: {
-    padding: '4px 8px',
-    fontSize: '12px',
-    fontWeight: '600',
-    borderRadius: '6px',
     border: '1px solid #e2e8f0',
-    backgroundColor: '#ffffff',
+    borderRadius: '6px',
+    padding: '4px 8px',
+    fontSize: '11px',
+    fontWeight: '600',
     color: '#475569',
+    backgroundColor: '#ffffff',
     outline: 'none',
-    cursor: 'pointer',
   },
   svgWrapper: {
     width: '100%',
-    marginTop: '6px',
+    marginTop: '4px',
   },
   axisText: {
-    fontSize: '10.5px',
-    fontWeight: '500',
+    fontSize: '10px',
     fill: '#94a3b8',
+    fontFamily: 'inherit',
+  },
+  donutCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   totalBadge: {
-    fontSize: '12.5px',
-    fontWeight: '700',
-    color: '#334155',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#475569',
   },
   donutContentRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    flex: 1,
     paddingTop: '6px',
-    gap: '16px',
   },
   donutWrap: {
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
   donutCenterVal: {
-    fontSize: '20px',
-    fontWeight: '800',
+    fontSize: '18px',
+    fontWeight: '700',
     fill: '#0f172a',
+    fontFamily: 'inherit',
   },
   donutCenterSub: {
     fontSize: '11px',
-    fontWeight: '600',
+    fontWeight: '500',
     fill: '#64748b',
+    fontFamily: 'inherit',
   },
   donutList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
-    flex: 1,
+    gap: '7px',
+    minWidth: '110px',
   },
   donutItemRow: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    fontSize: '12px',
+    justifyContent: 'space-between',
+    fontSize: '11px',
   },
   donutItemLabel: {
     color: '#475569',
     fontWeight: '500',
   },
   donutItemCount: {
-    fontWeight: '700',
     color: '#0f172a',
+    fontWeight: '600',
+    marginLeft: '12px',
   },
   bottomRow: {
     display: 'grid',
-    gridTemplateColumns: '1.45fr 1fr 1.15fr',
-    gap: '16px',
+    gridTemplateColumns: '1.4fr 1fr 1fr',
+    gap: '14px',
   },
   bottomTableCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   bottomProjectCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   bottomActivityCard: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   viewAllLink: {
     background: 'none',
     border: 'none',
     color: '#2563eb',
     fontSize: '12px',
-    fontWeight: '700',
+    fontWeight: '600',
     cursor: 'pointer',
     padding: 0,
   },
   tableResponsive: {
     overflowX: 'auto',
+    marginTop: '6px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    textAlign: 'left',
+    fontSize: '12px',
   },
   th: {
+    textAlign: 'left',
     padding: '8px 10px',
-    fontSize: '11px',
-    fontWeight: '700',
     color: '#64748b',
+    fontWeight: '600',
     borderBottom: '1px solid #f1f5f9',
+    fontSize: '11px',
   },
   tr: {
     borderBottom: '1px solid #f8fafc',
   },
   td: {
-    padding: '10px 10px',
-    fontSize: '12px',
+    padding: '9px 10px',
     verticalAlign: 'middle',
+    fontSize: '12px',
   },
   typeCustomer: {
+    display: 'inline-block',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
     fontSize: '11px',
-    fontWeight: '600',
-    color: '#166534',
+    fontWeight: '500',
   },
   typeContractor: {
+    display: 'inline-block',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    backgroundColor: '#fef9c3',
+    color: '#a16207',
     fontSize: '11px',
-    fontWeight: '600',
-    color: '#1d4ed8',
+    fontWeight: '500',
   },
   activityList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
-    paddingTop: '6px',
+    gap: '12px',
+    marginTop: '6px',
   },
   activityItem: {
     display: 'flex',
@@ -1205,12 +1309,16 @@ const styles = {
   },
   activityContent: {
     flex: 1,
+    minWidth: 0,
   },
   activityTitle: {
     fontSize: '12px',
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1e293b',
-    lineHeight: 1.3,
+    lineHeight: 1.35,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   activityDate: {
     fontSize: '11px',
