@@ -421,6 +421,35 @@ async function updateSystemSettings(req, res, next) {
   }
 }
 
+
+// Notification Dispatcher
+async function dispatchNotification(req, res, next) {
+  try {
+    const result = await adminService.dispatchAdminNotification(req.user, req.body);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getNotificationHistory(req, res, next) {
+  try {
+    const data = await adminService.getNotificationBroadcastHistory(req.query.limit);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function searchRecipients(req, res, next) {
+  try {
+    const data = await adminService.searchNotificationRecipients(req.query.q);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 11. Permissions Matrix
 async function getPermissionsMatrix(req, res, next) {
   try {
@@ -546,6 +575,9 @@ module.exports = {
   setContractorIndividualDiscount,
   getSystemSettings,
   updateSystemSettings,
+  dispatchNotification,
+  getNotificationHistory,
+  searchRecipients,
   getPermissionsMatrix,
   savePermissionsMatrix,
   getReportsAnalytics,

@@ -38,12 +38,10 @@ import AdminUserManagementPage from '../features/admin/pages/AdminUserManagement
 import AdminVerificationProgressPage from '../features/admin/pages/AdminVerificationProgressPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
 import AdminProjectsPage from '../features/admin/pages/AdminProjectsPage';
-import AdminEstimatorConfigPage from '../features/admin/pages/AdminEstimatorConfigPage';
-import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
-import AdminPricingPage from '../features/admin/pages/AdminPricingPage';
-import AdminDiscountsPage from '../features/admin/pages/AdminDiscountsPage';
+import AdminPricingDiscountsPage from '../features/admin/pages/AdminPricingDiscountsPage';
 import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
 import AdminSettingsPage from '../features/admin/pages/AdminSettingsPage';
+import AdminGuidelinesPage from '../features/admin/pages/AdminGuidelinesPage';
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage';
 
 // Route Guards
@@ -303,40 +301,43 @@ const router = createBrowserRouter([
             path: 'projects',
             element: <AdminProjectsPage />,
           },
-          // 6. Estimator Configuration
-          {
-            path: 'estimator-config',
-            element: <AdminEstimatorConfigPage />,
-          },
-          // 7. Catalog Management
-          {
-            path: 'catalog',
-            element: <AdminCatalogPage />,
-          },
-          // 8. Pricing Management
+          // 6. Pricing & Discounts Unified Engine
           {
             path: 'pricing',
-            element: <AdminPricingPage />,
+            element: <AdminPricingDiscountsPage />,
           },
-          // 9. Discounts Management
-          {
-            path: 'discounts',
-            element: <AdminDiscountsPage />,
-          },
-          // 10. Reports & Analytics
+          // 7. Reports & Analytics
           {
             path: 'reports',
             element: <AdminReportsPage />,
           },
-          // 11. System Settings
+          // 8. System Settings & Communications
           {
             path: 'settings',
             element: <AdminSettingsPage />,
+          },
+          // 9. Administrator Guidelines & SOP Manual
+          {
+            path: 'guidelines',
+            element: <AdminGuidelinesPage />,
           },
           // My Profile
           {
             path: 'profile',
             element: <AdminProfilePage />,
+          },
+          // Removed features / redirects
+          {
+            path: 'estimator-config',
+            element: <Navigate to="/admin/pricing" replace />,
+          },
+          {
+            path: 'catalog',
+            element: <Navigate to="/admin/pricing" replace />,
+          },
+          {
+            path: 'discounts',
+            element: <Navigate to="/admin/pricing" replace />,
           },
           // Route Compatibility Aliases
           {
