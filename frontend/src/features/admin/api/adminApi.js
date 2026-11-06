@@ -43,6 +43,9 @@ export const adminApi = {
     const res = await client.delete(`/admin/users/${id}`, { body: JSON.stringify({ reason }) });
     return res.data;
   },
+  exportUserUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/users/${id}/export?format=${format}`;
+  },
 
   // 3. Contractor Verifications
   getVerifications: async (params = {}) => {

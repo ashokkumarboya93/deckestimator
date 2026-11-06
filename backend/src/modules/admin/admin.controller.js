@@ -42,6 +42,19 @@ async function getUserProfile(req, res, next) {
   }
 }
 
+
+async function exportSingleUserDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleUserDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function updateUserStatus(req, res, next) {
   try {
     const { status, reason } = req.body;
@@ -470,6 +483,7 @@ module.exports = {
   getBusinessActivityTrend,
   listUsers,
   getUserProfile,
+  exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
   listVerifications,

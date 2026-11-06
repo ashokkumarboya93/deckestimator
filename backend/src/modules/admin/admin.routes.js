@@ -37,6 +37,7 @@ router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
 
 // 2. User Management & Moderation
 router.get('/users', adminController.listUsers);
+router.get('/users/:id/export', adminController.exportSingleUserDossier);
 router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.updateUserStatus);
 router.delete('/users/:id', adminController.softDeleteUser);

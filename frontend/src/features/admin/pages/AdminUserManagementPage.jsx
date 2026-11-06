@@ -34,6 +34,9 @@ export default function AdminUserManagementPage() {
   // Modals
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [detailedUserProfile, setDetailedUserProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [profileModalTab, setProfileModalTab] = useState('profile');
   const [actionModal, setActionModal] = useState({ open: false, type: '', user: null, reason: '' });
   const [actionSubmitting, setActionSubmitting] = useState(false);
 
@@ -99,13 +102,21 @@ export default function AdminUserManagementPage() {
   };
 
   const openUserProfile = async (user) => {
+    const targetId = user._id || user.id;
     setSelectedUser(user);
+    setDetailedUserProfile(null);
     setIsProfileModalOpen(true);
+    setLoadingProfile(true);
+    setProfileModalTab('profile');
     try {
-      const detailed = await adminApi.getUserProfile(user._id);
-      if (detailed?.user) setSelectedUser(detailed.user);
-    } catch {
-      // Use cached user if fetch fails
+      const detailed = await adminApi.getUserProfile(targetId);
+      const data = detailed.data || detailed;
+      setDetailedUserProfile(data);
+      if (data?.user) setSelectedUser(data.user);
+    } catch (e) {
+      console.warn('Failed to fetch detailed profile:', e.message);
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -1123,5 +1134,180 @@ const styles = {
     outline: 'none',
     boxSizing: 'border-box',
     fontFamily: 'inherit',
+  },
+
+  modalHeaderTop: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '6px',
+  },
+  modalHeaderRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  popupExportBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#2563eb',
+    backgroundColor: '#ffffff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '6px',
+    textDecoration: 'none',
+    cursor: 'pointer',
+  },
+  modalTabBar: {
+    display: 'flex',
+    borderBottom: '1px solid #e2e8f0',
+    backgroundColor: '#f8fafc',
+    padding: '0 16px',
+  },
+  modalTabBtn: {
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#64748b',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+  },
+  modalTabBtnActive: {
+    color: '#2563eb',
+    fontWeight: '600',
+    borderBottom: '2px solid #2563eb',
+    backgroundColor: '#ffffff',
+  },
+  modalLoaderBox: {
+    padding: '40px 0',
+    textAlign: 'center',
+  },
+  sectionHeading: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    margin: '0 0 12px 0',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  modalStatsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '10px',
+    marginBottom: '16px',
+  },
+  statMetricCard: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '12px',
+    textAlign: 'center',
+  },
+  statMetricVal: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  statMetricLbl: {
+    fontSize: '11px',
+    color: '#64748b',
+    marginTop: '2px',
+  },
+  subTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '12px',
+    marginBottom: '16px',
+  },
+  subTh: {
+    backgroundColor: '#f8fafc',
+    padding: '8px 10px',
+    fontWeight: '600',
+    color: '#475569',
+    borderBottom: '1px solid #e2e8f0',
+    textAlign: 'left',
+  },
+  subTd: {
+    padding: '9px 10px',
+    borderBottom: '1px solid #f1f5f9',
+    color: '#1e293b',
+  },
+  subStatusPill: {
+    display: 'inline-block',
+    padding: '2px 6px',
+    fontSize: '10px',
+    fontWeight: '700',
+    borderRadius: '4px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+  },
+  subEmpty: {
+    padding: '20px',
+    textAlign: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: '6px',
+    color: '#64748b',
+    fontSize: '13px',
+    marginBottom: '14px',
+  },
+  enquiriesList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  enquiryCardItem: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '12px',
+  },
+  enquiryTopRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '6px',
+  },
+  enquiryLeadNum: {
+    fontSize: '11px',
+    fontFamily: 'monospace',
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  enquirySourcePill: {
+    padding: '2px 6px',
+    fontSize: '11px',
+    fontWeight: '600',
+    borderRadius: '4px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+  },
+  enquiryDateText: {
+    fontSize: '11px',
+    color: '#94a3b8',
+    marginLeft: 'auto',
+  },
+  enquirySubjectText: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: '4px',
+  },
+  enquiryMsgText: {
+    fontSize: '12px',
+    color: '#475569',
+    lineHeight: '1.4',
+  },
+  modalFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 24px',
+    borderTop: '1px solid #e2e8f0',
+    backgroundColor: '#f8fafc',
   },
 };

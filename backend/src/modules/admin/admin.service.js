@@ -559,25 +559,147 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
   };
 }
 
+
 async function getUserProfile(userId) {
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError('User not found.');
 
-  const [decks, estimates, profile, activities] = await Promise.all([
-    Deck.find({ ownerId: user._id }).sort({ createdAt: -1 }).limit(10),
-    Estimate.find({ customerId: user._id }).sort({ createdAt: -1 }).limit(10),
+  const isCust = (user.role || '').toLowerCase() === 'customer';
+  const isCont = (user.role || '').toLowerCase() === 'contractor';
+
+  const [decks, estimates, profile, leads, activities] = await Promise.all([
+    Deck.find({ ownerId: user._id }).sort({ createdAt: -1 }),
+    Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }] }).populate('deckId').sort({ createdAt: -1 }),
     ContractorProfile.findOne({ userId: user._id }),
-    AuditLog.find({ performedBy: user._id }).sort({ createdAt: -1 }).limit(10),
+    Lead.find({ $or: [{ customerId: user._id }, { contractorId: user._id }, { assignedContractorId: user._id }] }).sort({ createdAt: -1 }),
+    AuditLog.find({ performedBy: user._id }).sort({ createdAt: -1 }).limit(15),
   ]);
+
+  const activeEstimatesCount = estimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length;
+  const totalEstimatedValue = estimates.reduce((sum, e) => sum + (e.totalCost || e.pricing?.totalCost || 0), 0);
 
   return {
     user: user.toJSON(),
     contractorProfile: profile ? profile.toJSON() : null,
+    customerData: isCust ? {
+      decksCount: decks.length,
+      decks: decks.map((d) => ({
+        id: d._id.toString(),
+        name: d.name,
+        area: d.area,
+        dimensions: d.dimensions,
+        surfaceMaterial: d.surfaceMaterial,
+        conditionLevel: d.conditionLevel,
+        createdAt: d.createdAt,
+      })),
+      estimatesCount: estimates.length,
+      activeEstimatesCount,
+      totalEstimatedValue,
+      estimates: estimates.map((e) => ({
+        id: e._id.toString(),
+        estimateReference: e.estimateReference || `EST-${e._id.toString().slice(-4).toUpperCase()}`,
+        deckName: e.deckId?.name || 'Deck',
+        totalCost: e.totalCost || e.pricing?.totalCost || 0,
+        status: e.status || 'draft',
+        createdAt: e.createdAt,
+      })),
+    } : null,
+    contractorData: isCont ? {
+      profile: profile ? profile.toJSON() : null,
+      assignedLeadsCount: leads.filter((l) => l.assignedContractorId?.toString() === user._id.toString()).length,
+      assignedLeads: leads.filter((l) => l.assignedContractorId?.toString() === user._id.toString()).map((l) => ({
+        id: l._id.toString(),
+        leadNumber: l.leadNumber,
+        status: l.status,
+        createdAt: l.createdAt,
+      })),
+    } : null,
+    enquiriesCount: leads.length,
+    enquiries: leads.map((l) => ({
+      id: l._id.toString(),
+      leadNumber: l.leadNumber,
+      source: l.contactSource || (isCont ? 'Reach Out' : 'Contact Us'),
+      contactCount: l.contactCount || 1,
+      latestContactDate: l.latestContactDate || l.createdAt,
+      status: l.status,
+      subject: l.enquiry?.subject,
+      message: l.enquiry?.message,
+      priority: l.priority,
+    })),
     projects: decks,
     estimates,
     recentActivities: activities,
   };
 }
+
+async function exportSingleUserDossier(userId, format = 'csv') {
+  const profileData = await getUserProfile(userId);
+  const u = profileData.user;
+  const cp = profileData.contractorProfile;
+  const cd = profileData.customerData;
+  const kd = profileData.contractorData;
+
+  const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+  const sections = [];
+
+  // Section 1: Overview
+  sections.push(['--- USER ACCOUNT PROFILE & REGISTRATION ---']);
+  sections.push(['Field', 'Value']);
+  sections.push(['User ID', (u._id || u.id || '').toString()]);
+  sections.push(['Full Name', u.fullName]);
+  sections.push(['Email Address', u.email]);
+  sections.push(['Phone Number', u.phone || 'N/A']);
+  sections.push(['Account Role', u.role?.toUpperCase()]);
+  sections.push(['Account Status', u.accountStatus || 'active']);
+  sections.push(['Registered Date', u.createdAt ? new Date(u.createdAt).toISOString() : 'N/A']);
+  sections.push(['Email Verified', u.emailVerifiedAt ? 'Yes' : 'No']);
+  sections.push(['Phone Verified', u.phoneVerifiedAt ? 'Yes' : 'No']);
+
+  if (cp) {
+    sections.push([]);
+    sections.push(['--- CONTRACTOR CREDENTIALS & LICENSING ---']);
+    sections.push(['Business / Company Name', cp.businessName || 'N/A']);
+    sections.push(['Contractor License #', cp.licenseNumber || 'N/A']);
+    sections.push(['Jurisdiction / State', cp.licenseJurisdiction || 'N/A']);
+    sections.push(['Years Experience', cp.yearsOfExperience || 0]);
+    sections.push(['Verification Status', cp.verificationStatus || 'pending']);
+    sections.push(['Approved At', cp.approvedAt ? new Date(cp.approvedAt).toISOString() : 'N/A']);
+    sections.push(['Business Phone', cp.businessPhone || 'N/A']);
+    sections.push(['Business Email', cp.businessEmail || 'N/A']);
+  }
+
+  if (cd) {
+    sections.push([]);
+    sections.push(['--- CUSTOMER ESTIMATES & DECK PROJECTS ---']);
+    sections.push(['Total Decks', cd.decksCount]);
+    sections.push(['Total Estimates', cd.estimatesCount]);
+    sections.push(['Active Estimates', cd.activeEstimatesCount]);
+    sections.push(['Total Estimated Value ($)', cd.totalEstimatedValue]);
+    sections.push([]);
+    sections.push(['Estimate Ref', 'Deck Project', 'Estimated Cost ($)', 'Status', 'Date']);
+    cd.estimates.forEach((e) => {
+      sections.push([e.estimateReference, e.deckName, e.totalCost, e.status, new Date(e.createdAt).toISOString().split('T')[0]]);
+    });
+  }
+
+  if (u.moderationHistory && u.moderationHistory.length > 0) {
+    sections.push([]);
+    sections.push(['--- ACCOUNT MODERATION HISTORY ---']);
+    sections.push(['Date', 'New Status', 'Reason']);
+    u.moderationHistory.forEach((h) => {
+      sections.push([new Date(h.changedAt || h.updatedAt || Date.now()).toISOString(), h.newStatus || h.status, h.reason || 'N/A']);
+    });
+  }
+
+  const csv = sections.map((row) => row.map(escape).join(',')).join('\n');
+
+  return {
+    data: csv,
+    contentType: format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv',
+    filename: `user-profile-${u.fullName.replace(/\s+/g, '_')}-${Date.now()}.${format === 'excel' ? 'xls' : 'csv'}`,
+  };
+}
+
 
 async function updateUserStatus(adminUser, targetUserId, status, reason = '') {
   const user = await User.findById(targetUserId).select('+passwordHash');
@@ -1932,6 +2054,7 @@ module.exports = {
   // 2. Users
   listUsers,
   getUserProfile,
+  exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
 
