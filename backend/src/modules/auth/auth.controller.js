@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Auth Controller
 // =============================================
 
@@ -50,6 +50,24 @@ async function login(req, res, next) {
 }
 
 /**
+ * Handle dedicated administrator login.
+ */
+async function adminLogin(req, res, next) {
+  try {
+    const result = await authService.loginAdmin(req.body);
+
+    res.cookie('token', result.token, COOKIE_OPTIONS);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Handle user logout.
  */
 async function logout(req, res, next) {
@@ -86,6 +104,7 @@ async function getMe(req, res, next) {
 module.exports = {
   register,
   login,
+  adminLogin,
   logout,
   getMe,
 };

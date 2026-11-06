@@ -10,6 +10,11 @@ import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardP
 import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
 import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
 import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
+import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
+import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
+import CustomerLayout from '../features/customer/components/CustomerLayout';
+
+// Contractor Pages & Layout
 import ContractorLayout from '../features/contractor/components/ContractorLayout';
 import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
 import ContractorLeadsPage from '../features/contractor/pages/ContractorLeadsPage';
@@ -24,16 +29,33 @@ import ContractorCommissionsPage from '../features/contractor/pages/ContractorCo
 import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
 import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
 import ContractorVerificationRequestPage from '../features/contractor/pages/ContractorVerificationRequestPage';
-import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
-import AdminContractorVerificationPage from '../features/admin/pages/AdminContractorVerificationPage';
-import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
-import AdminCommissionsPage from '../features/admin/pages/AdminCommissionsPage';
-import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
-import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
-import CustomerLayout from '../features/customer/components/CustomerLayout';
+
+// Admin Portal Pages & Layout
+import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
 import AdminLayout from '../features/admin/components/AdminLayout';
-import { GuestOnly, RequireAuth, RequireRole, RequireApprovedContractor, RootRedirect } from './routeGuards';
+import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
+import AdminUserManagementPage from '../features/admin/pages/AdminUserManagementPage';
+import AdminVerificationProgressPage from '../features/admin/pages/AdminVerificationProgressPage';
+import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
+import AdminProjectsPage from '../features/admin/pages/AdminProjectsPage';
+import AdminEstimatorConfigPage from '../features/admin/pages/AdminEstimatorConfigPage';
+import AdminCatalogPage from '../features/admin/pages/AdminCatalogPage';
+import AdminPricingPage from '../features/admin/pages/AdminPricingPage';
+import AdminDiscountsPage from '../features/admin/pages/AdminDiscountsPage';
+import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
+import AdminSettingsPage from '../features/admin/pages/AdminSettingsPage';
+import AdminProfilePage from '../features/admin/pages/AdminProfilePage';
+
+// Route Guards
+import {
+  GuestOnly,
+  RequireAuth,
+  RequireRole,
+  RequireApprovedContractor,
+  RequireAdminAuth,
+  AdminGuestOnly,
+  RootRedirect,
+} from './routeGuards';
 
 const router = createBrowserRouter([
   {
@@ -44,6 +66,7 @@ const router = createBrowserRouter([
         index: true,
         element: <RootRedirect />,
       },
+      // Customer & Contractor Login
       {
         path: 'login',
         element: (
@@ -60,6 +83,16 @@ const router = createBrowserRouter([
           </GuestOnly>
         ),
       },
+      // Dedicated Admin Login (Completely separate from Customer/Contractor)
+      {
+        path: 'admin/login',
+        element: (
+          <AdminGuestOnly>
+            <AdminLoginPage />
+          </AdminGuestOnly>
+        ),
+      },
+
       // Customer Routes
       {
         path: 'customer',
@@ -105,26 +138,14 @@ const router = createBrowserRouter([
           },
         ],
       },
-      // Standalone Verification Request Route for Contractors (Accessible before Admin Approval)
-      {
-        path: 'contractor/verification-request',
-        element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorVerificationRequestPage />
-            </RequireRole>
-          </RequireAuth>
-        ),
-      },
-      // Contractor Portal Routes (Requires Admin Approval)
+
+      // Contractor Routes
       {
         path: 'contractor',
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
-              <RequireApprovedContractor>
-                <ContractorLayout />
-              </RequireApprovedContractor>
+              <ContractorLayout />
             </RequireRole>
           </RequireAuth>
         ),
@@ -135,47 +156,79 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard',
-            element: <ContractorDashboardPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorDashboardPage />
+              </RequireApprovedContractor>
+            ),
+          },
+          {
+            path: 'verification-request',
+            element: <ContractorVerificationRequestPage />,
           },
           {
             path: 'leads',
-            element: <ContractorLeadsPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorLeadsPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'projects',
-            element: <ContractorProjectsPage />,
-          },
-          {
-            path: 'decks',
-            element: <Navigate to="/contractor/projects" replace />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorProjectsPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'decks/new',
-            element: <ContractorDeckEstimatorPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorDeckEstimatorPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'decks/:deckId',
-            element: <ContractorDeckDetailPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorDeckDetailPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'decks/:deckId/edit',
-            element: <ContractorDeckEstimatorPage />,
-          },
-          {
-            path: 'decks/:deckId/estimate/new',
-            element: <ContractorEstimateBuilderPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorDeckEstimatorPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'estimates',
-            element: <ContractorEstimatesPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorEstimatesPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'estimates/new',
-            element: <ContractorEstimateBuilderPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorEstimateBuilderPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'estimates/:estimateId',
-            element: <EstimateDetailPage />,
+            element: (
+              <RequireApprovedContractor>
+                <EstimateDetailPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'verification',
@@ -187,55 +240,116 @@ const router = createBrowserRouter([
           },
           {
             path: 'commissions',
-            element: <ContractorCommissionsPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorCommissionsPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'commissions/:commissionId',
-            element: <ContractorCommissionDetailPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorCommissionDetailPage />
+              </RequireApprovedContractor>
+            ),
           },
           {
             path: 'discounts',
-            element: <ContractorDiscountsPage />,
+            element: (
+              <RequireApprovedContractor>
+                <ContractorDiscountsPage />
+              </RequireApprovedContractor>
+            ),
           },
         ],
       },
-      // Admin Portal Routes (Integrated AdminLayout with Collapsible Hover Sidebar & Topbar)
+
+      // Admin Portal Routes (Strict sequence: 11 Pages + Profile + Aliases)
       {
         path: 'admin',
         element: (
-          <RequireAuth>
-            <RequireRole allowedRoles={['admin']}>
-              <AdminLayout />
-            </RequireRole>
-          </RequireAuth>
+          <RequireAdminAuth>
+            <AdminLayout />
+          </RequireAdminAuth>
         ),
         children: [
           {
             index: true,
             element: <Navigate to="/admin/dashboard" replace />,
           },
+          // 1. Dashboard
           {
             path: 'dashboard',
             element: <AdminDashboardPage />,
           },
+          // 2. User Management
           {
-            path: 'catalog',
-            element: <AdminCatalogPage />,
+            path: 'users',
+            element: <AdminUserManagementPage />,
           },
+          // 3. Verification & Progress
           {
-            path: 'contractor-verifications',
-            element: <AdminContractorVerificationPage />,
+            path: 'verification-progress',
+            element: <AdminVerificationProgressPage />,
           },
+          // 4. Lead Management
           {
             path: 'leads',
             element: <AdminLeadManagementPage />,
           },
+          // 5. Projects
+          {
+            path: 'projects',
+            element: <AdminProjectsPage />,
+          },
+          // 6. Estimator Configuration
+          {
+            path: 'estimator-config',
+            element: <AdminEstimatorConfigPage />,
+          },
+          // 7. Catalog Management
+          {
+            path: 'catalog',
+            element: <AdminCatalogPage />,
+          },
+          // 8. Pricing Management
+          {
+            path: 'pricing',
+            element: <AdminPricingPage />,
+          },
+          // 9. Discounts Management
+          {
+            path: 'discounts',
+            element: <AdminDiscountsPage />,
+          },
+          // 10. Reports & Analytics
+          {
+            path: 'reports',
+            element: <AdminReportsPage />,
+          },
+          // 11. System Settings
+          {
+            path: 'settings',
+            element: <AdminSettingsPage />,
+          },
+          // My Profile
+          {
+            path: 'profile',
+            element: <AdminProfilePage />,
+          },
+          // Route Compatibility Aliases
+          {
+            path: 'contractor-verifications',
+            element: <Navigate to="/admin/verification-progress" replace />,
+          },
           {
             path: 'commissions',
-            element: <AdminCommissionsPage />,
+            element: <Navigate to="/admin/discounts" replace />,
           },
         ],
       },
+
       // Fallback
       {
         path: '*',

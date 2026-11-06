@@ -97,6 +97,44 @@ async function registerUser(userData) {
 }
 
 /**
+ * Dedicated Admin Login — strictly verifies role is ADMIN.
+ */
+async function loginAdmin({ email, password }) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+  if (!user) {
+    throw new UnauthorizedError('Invalid administrator credentials.');
+  }
+
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
+    throw new UnauthorizedError('Invalid administrator credentials.');
+  }
+
+  if (user.role !== ROLES.ADMIN) {
+    throw new ForbiddenError('Access denied: Administrator privileges required.');
+  }
+
+  if (user.accountStatus === ACCOUNT_STATUS.SUSPENDED) {
+    throw new ForbiddenError('Administrator account has been suspended.');
+  }
+  if (user.accountStatus === ACCOUNT_STATUS.DISABLED) {
+    throw new ForbiddenError('Administrator account is disabled.');
+  }
+
+  user.lastLoginAt = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  const token = generateToken(user);
+
+  return {
+    user: user.toJSON(),
+    token,
+  };
+}
+
+/**
  * Login user with email and password.
  */
 async function loginUser({ email, password }) {
@@ -164,5 +202,6 @@ module.exports = {
   generateToken,
   registerUser,
   loginUser,
+  loginAdmin,
   getCurrentUser,
 };

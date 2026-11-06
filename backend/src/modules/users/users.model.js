@@ -54,6 +54,18 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    moderationHistory: [
+      {
+        status: { type: String, required: true },
+        reason: { type: String, default: '' },
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

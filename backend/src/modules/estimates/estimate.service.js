@@ -10,6 +10,8 @@ const Deck = require('../decks/deck.model');
 const Material = require('../catalogs/material.model');
 const Service = require('../catalogs/service.model');
 const MaterialServiceCompatibility = require('../catalogs/materialServiceCompatibility.model');
+const DiscountPolicy = require('../discounts/discountPolicy.model');
+const DiscountAssignment = require('../discounts/discountAssignment.model');
 const pricingService = require('../pricing/pricing.service');
 const pricingEngine = require('../pricing/pricingEngine');
 const AuditLog = require('../../shared/models/auditLog.model');
@@ -296,6 +298,37 @@ async function createEstimate(data, user, ipAddress) {
   const estimateType = user.role === ROLES.CONTRACTOR ? 'CONTRACTOR' : 'CUSTOMER';
   const estimateNumber = generateEstimateNumber();
 
+  // Apply Contractor Discount if role is Contractor
+  let discountBreakdown = { applied: false, discountPercentage: 0, discountAmount: 0 };
+  if (user.role === ROLES.CONTRACTOR) {
+    let appliedDiscount = 10;
+    try {
+      const assignment = await DiscountAssignment.findOne({
+        contractorId: user.id || user._id,
+        status: 'active',
+      }).populate('discountPolicyId');
+      if (assignment && assignment.discountPolicyId && assignment.discountPolicyId.discountValue) {
+        appliedDiscount = assignment.discountPolicyId.discountValue;
+      } else {
+        const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+        if (defaultPol?.discountValue) appliedDiscount = defaultPol.discountValue;
+      }
+    } catch (err) {
+      console.warn('[Estimate Discount Warning]:', err.message);
+    }
+
+    const discountAmount = pricingEngine.round2((totalAmountVal * appliedDiscount) / 100);
+    const discountedTotal = pricingEngine.round2(totalAmountVal - discountAmount);
+
+    discountBreakdown = {
+      applied: true,
+      discountPercentage: appliedDiscount,
+      discountAmount,
+      discountedSubtotal: discountedTotal,
+    };
+    totalAmountVal = discountedTotal;
+  }
+
   // 8. Persist Estimate
   const estimate = await Estimate.create({
     estimateNumber,
@@ -317,6 +350,7 @@ async function createEstimate(data, user, ipAddress) {
     taxPercentage: taxPercentageVal,
     taxAmount: taxAmountVal,
     totalAmount: totalAmountVal,
+    discountBreakdown,
     pricingSnapshot: pricingSnapshotData,
     estimateStatus: 'DRAFT',
     version: 1,

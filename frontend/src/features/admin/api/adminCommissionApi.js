@@ -7,65 +7,54 @@ import { ENDPOINTS } from '../../../api/endpoints';
 
 export const adminCommissionApi = {
   getPolicies: async (params = {}) => {
-    const res = await client.get(ENDPOINTS.COMMISSIONS.POLICIES, { params });
-    return res.data;
+    return client.get(ENDPOINTS.COMMISSIONS.POLICIES, { params });
   },
 
   getPolicyById: async (id) => {
-    const res = await client.get(ENDPOINTS.COMMISSIONS.POLICY_BY_ID(id));
-    return res.data;
+    return client.get(ENDPOINTS.COMMISSIONS.POLICY_BY_ID(id));
   },
 
   createPolicy: async (payload) => {
-    const res = await client.post(ENDPOINTS.COMMISSIONS.POLICIES, payload);
-    return res.data;
+    return client.post(ENDPOINTS.COMMISSIONS.POLICIES, payload);
   },
 
   updatePolicy: async (id, payload) => {
-    const res = await client.put(ENDPOINTS.COMMISSIONS.POLICY_BY_ID(id), payload);
-    return res.data;
+    return client.put(ENDPOINTS.COMMISSIONS.POLICY_BY_ID(id), payload);
   },
 
   updatePolicyStatus: async (id, status, reason = '') => {
-    const res = await client.patch(ENDPOINTS.COMMISSIONS.POLICY_STATUS(id), { status, reason });
-    return res.data;
+    return client.patch(ENDPOINTS.COMMISSIONS.POLICY_STATUS(id), { status, reason });
   },
 
   generateCommission: async (leadId, commissionPolicyId, notes = '') => {
-    const res = await client.post(ENDPOINTS.COMMISSIONS.ADMIN_GENERATE, {
+    return client.post(ENDPOINTS.COMMISSIONS.ADMIN_GENERATE, {
       leadId,
       commissionPolicyId,
       notes,
     });
-    return res.data;
   },
 
   getAllCommissions: async (params = {}) => {
-    const res = await client.get(ENDPOINTS.COMMISSIONS.ADMIN_ALL, { params });
-    return res.data;
+    return client.get(ENDPOINTS.COMMISSIONS.ADMIN_ALL, { params });
   },
 
   reviewCommission: async (id, action, rejectionReason = '', notes = '') => {
-    const res = await client.post(ENDPOINTS.COMMISSIONS.ADMIN_REVIEW(id), {
+    return client.post(ENDPOINTS.COMMISSIONS.ADMIN_REVIEW(id), {
       action,
       rejectionReason,
       notes,
     });
-    return res.data;
   },
 
   recordPayment: async (id, payload) => {
-    const res = await client.post(ENDPOINTS.COMMISSIONS.ADMIN_RECORD_PAYMENT(id), payload);
-    return res.data;
+    return client.post(ENDPOINTS.COMMISSIONS.ADMIN_RECORD_PAYMENT(id), payload);
   },
 
   getCommissionById: async (id) => {
-    const res = await client.get(ENDPOINTS.COMMISSIONS.BY_ID(id));
-    return res.data;
+    return client.get(ENDPOINTS.COMMISSIONS.BY_ID(id));
   },
 
   getCommissionHistory: async (id) => {
-    const res = await client.get(ENDPOINTS.COMMISSIONS.HISTORY(id));
-    return res.data;
+    return client.get(ENDPOINTS.COMMISSIONS.HISTORY(id));
   },
 };

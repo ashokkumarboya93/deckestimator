@@ -56,6 +56,52 @@ const pricingConfigurationSchema = new mongoose.Schema(
       trim: true,
       default: 'Sales Tax',
     },
+    calculatorPricing: {
+      materialCosts: [
+        {
+          name: { type: String, required: true },
+          price: { type: Number, required: true },
+          unit: { type: String, default: 'Gallon' },
+        },
+      ],
+      laborAndProductivity: {
+        laborBillingRate: { type: Number, default: 75 },
+        floorProductionRate: { type: Number, default: 50 },
+        maintenancePercentage: { type: Number, default: 70 },
+      },
+      adjustmentFactors: {
+        woodSpecies: [
+          {
+            name: { type: String, required: true },
+            laborMultiplier: { type: Number, required: true },
+            coverage: { type: mongoose.Schema.Types.Mixed, default: 'N/A' },
+          },
+        ],
+        accessConditions: [
+          {
+            name: { type: String, required: true },
+            multiplier: { type: Number, required: true },
+          },
+        ],
+        coatingConditions: [
+          {
+            name: { type: String, required: true },
+            multiplier: { type: Number, required: true },
+          },
+        ],
+        surfaceConditions: [
+          {
+            name: { type: String, required: true },
+            factorPercentage: { type: Number, required: true },
+          },
+        ],
+      },
+      quoteSettings: {
+        baseVariationPercentage: { type: Number, default: 12 },
+        mediumConfidenceVariation: { type: Number, default: 8 },
+        lowConfidenceVariation: { type: Number, default: 20 },
+      },
+    },
     effectiveFrom: {
       type: Date,
       default: Date.now,

@@ -61,6 +61,22 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const adminLogin = useCallback(async (credentials) => {
+    setError(null);
+    try {
+      const response = await authApi.adminLogin(credentials);
+      if (response?.data) {
+        setUser(response.data.user);
+        setContractorProfile(null);
+        return response.data;
+      }
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    }
+  }, []);
+
   const register = useCallback(async (userData) => {
     setError(null);
     try {
@@ -111,6 +127,7 @@ export function AuthProvider({ children }) {
     isContractor: user?.role === 'contractor',
     isAdmin: user?.role === 'admin',
     login,
+    adminLogin,
     register,
     logout,
     refreshUser,
