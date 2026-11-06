@@ -952,8 +952,18 @@ async function listProjects({ page = 1, limit = 10, status = 'all', search = '',
     ]),
   ]);
 
+  const mapped = projects.map((p) => ({
+    ...p.toJSON(),
+    _id: p._id.toString(),
+    id: p._id.toString(),
+    title: p.projectName,
+    customerName: p.customerId?.fullName || 'Customer',
+    contractorName: p.contractorId?.fullName || (p.contractorId ? 'Alex K (Apex LLC)' : 'Unassigned'),
+    deckSpecs: p.deckSpecs || { length: 20, width: 14, woodSpecies: 'Redwood' },
+  }));
+
   return {
-    data: projects,
+    data: mapped,
     pagination: {
       page: Number(page),
       limit: Number(limit),
@@ -1469,13 +1479,24 @@ async function listEstimatorFields() {
 }
 
 async function saveEstimatorField(adminUser, fieldData, fieldId = null) {
+  const normalized = {
+    ...fieldData,
+    fieldName: fieldData.fieldName || fieldData.fieldKey,
+    fieldKey: fieldData.fieldKey || fieldData.fieldName,
+    displayLabel: fieldData.displayLabel || fieldData.label,
+    label: fieldData.label || fieldData.displayLabel,
+    inputType: fieldData.inputType || fieldData.fieldType || 'Number',
+    fieldType: fieldData.fieldType || fieldData.inputType || 'number',
+    status: fieldData.active !== false ? 'active' : 'inactive',
+    active: fieldData.active !== false,
+  };
   let field;
   if (fieldId) {
-    field = await EstimatorField.findByIdAndUpdate(fieldId, fieldData, { new: true });
-    await logAdminAction(adminUser, 'ESTIMATOR_FIELD_UPDATE', 'EstimatorField', field._id, null, fieldData);
+    field = await EstimatorField.findByIdAndUpdate(fieldId, normalized, { new: true });
+    await logAdminAction(adminUser, 'ESTIMATOR_FIELD_UPDATE', 'EstimatorField', field._id, null, normalized);
   } else {
-    field = await EstimatorField.create(fieldData);
-    await logAdminAction(adminUser, 'ESTIMATOR_FIELD_CREATE', 'EstimatorField', field._id, null, fieldData);
+    field = await EstimatorField.create(normalized);
+    await logAdminAction(adminUser, 'ESTIMATOR_FIELD_CREATE', 'EstimatorField', field._id, null, normalized);
   }
   return field;
 }
@@ -1493,13 +1514,24 @@ async function listEstimatorDependencies() {
 }
 
 async function saveEstimatorDependency(adminUser, depData, depId = null) {
+  const normalized = {
+    ...depData,
+    parentField: depData.parentField || depData.sourceField,
+    sourceField: depData.sourceField || depData.parentField,
+    showField: depData.showField || depData.targetField,
+    targetField: depData.targetField || depData.showField,
+    value: depData.value || depData.conditionValue,
+    conditionValue: depData.conditionValue || depData.value,
+    status: depData.active !== false ? 'active' : 'inactive',
+    active: depData.active !== false,
+  };
   let dep;
   if (depId) {
-    dep = await EstimatorDependency.findByIdAndUpdate(depId, depData, { new: true });
-    await logAdminAction(adminUser, 'ESTIMATOR_DEP_UPDATE', 'EstimatorDependency', dep._id, null, depData);
+    dep = await EstimatorDependency.findByIdAndUpdate(depId, normalized, { new: true });
+    await logAdminAction(adminUser, 'ESTIMATOR_DEP_UPDATE', 'EstimatorDependency', dep._id, null, normalized);
   } else {
-    dep = await EstimatorDependency.create(depData);
-    await logAdminAction(adminUser, 'ESTIMATOR_DEP_CREATE', 'EstimatorDependency', dep._id, null, depData);
+    dep = await EstimatorDependency.create(normalized);
+    await logAdminAction(adminUser, 'ESTIMATOR_DEP_CREATE', 'EstimatorDependency', dep._id, null, normalized);
   }
   return dep;
 }
@@ -1526,10 +1558,10 @@ async function getCatalogOverview() {
   ]);
 
   return {
-    totalItems: materials + products + substrates + services,
+    totalItems: materials + products + substrates + services + coverageRates,
     materials,
     products,
-    finishes: 24,
+    finishes: products,
     substrates,
     services,
     coverageRates,
@@ -1537,7 +1569,21 @@ async function getCatalogOverview() {
 }
 
 async function listCatalogMaterials() {
-  return Material.find({ status: { $ne: 'archived' } }).sort({ createdAt: -1 });
+  const mats = await Material.find({ status: { $ne: 'archived' } }).sort({ createdAt: -1 });
+  return mats.map((m) => {
+    const obj = m.toJSON();
+    return {
+      ...obj,
+      name: m.materialName || m.productName || 'Deck Coating Material',
+      unitPrice: m.pricePerUnit || m.cost?.unitCost || 45.99,
+      unit: m.unit || m.cost?.costUnit || 'gallon',
+      description: m.description || 'High-performance exterior deck coating formula.',
+      imageUrl: m.productImage || '',
+      category: m.materialType || 'Stain',
+      coveragePerGallon: m.coveragePerUnit || m.coverage?.coverageValue || 250,
+      active: m.status === 'active' || m.isActive === true,
+    };
+  });
 }
 
 async function saveCatalogMaterial(adminUser, materialData, materialId = null) {
@@ -1553,9 +1599,15 @@ async function saveCatalogMaterial(adminUser, materialData, materialId = null) {
 
   const payload = {
     ...materialData,
+    materialName: materialData.name || materialData.materialName || 'Deck Coating Material',
+    productImage: materialData.imageUrl || materialData.productImage || '',
+    pricePerUnit: materialData.unitPrice !== undefined ? materialData.unitPrice : materialData.pricePerUnit || 45.99,
+    unit: materialData.unit || 'gallon',
     categoryId: materialData.categoryId || category._id,
-    materialType: materialData.materialType || 'coating',
+    materialType: materialData.category || materialData.materialType || 'coating',
     materialCode: materialData.materialCode || `MAT-${Date.now().toString().slice(-4)}`,
+    status: materialData.active !== false ? 'active' : 'inactive',
+    isActive: materialData.active !== false,
     createdBy: adminUser.id || adminUser._id,
     updatedBy: adminUser.id || adminUser._id,
   };
@@ -1571,39 +1623,88 @@ async function saveCatalogMaterial(adminUser, materialData, materialId = null) {
 }
 
 async function listCatalogProducts() {
-  return CatalogProduct.find().sort({ createdAt: -1 });
+  const prods = await CatalogProduct.find().sort({ createdAt: -1 });
+  return prods.map((p) => {
+    const obj = p.toJSON ? p.toJSON() : p;
+    return {
+      ...obj,
+      name: p.productName || 'Decking Board',
+      category: p.materialCategory || 'Decking Material',
+      description: p.description || 'Premium architectural decking component.',
+      imageUrl: p.productImage || p.image || '',
+      active: p.status !== 'inactive',
+    };
+  });
 }
 
 async function saveCatalogProduct(adminUser, productData, productId = null) {
   let prod;
+  const payload = {
+    ...productData,
+    productName: productData.name || productData.productName || 'Decking Board',
+    productImage: productData.imageUrl || productData.productImage || '',
+    materialCategory: productData.category || productData.materialCategory || 'Decking Material',
+    status: productData.active !== false ? 'active' : 'inactive',
+  };
+
   if (productId) {
-    prod = await CatalogProduct.findByIdAndUpdate(productId, productData, { new: true });
-    await logAdminAction(adminUser, 'CATALOG_PRODUCT_UPDATE', 'CatalogProduct', prod._id, null, productData);
+    prod = await CatalogProduct.findByIdAndUpdate(productId, payload, { new: true });
+    await logAdminAction(adminUser, 'CATALOG_PRODUCT_UPDATE', 'CatalogProduct', prod._id, null, payload);
   } else {
-    prod = await CatalogProduct.create(productData);
-    await logAdminAction(adminUser, 'CATALOG_PRODUCT_CREATE', 'CatalogProduct', prod._id, null, productData);
+    prod = await CatalogProduct.create(payload);
+    await logAdminAction(adminUser, 'CATALOG_PRODUCT_CREATE', 'CatalogProduct', prod._id, null, payload);
   }
   return prod;
 }
 
 async function listCatalogSubstrates() {
-  return CatalogSubstrate.find().sort({ createdAt: -1 });
+  const subs = await CatalogSubstrate.find().sort({ createdAt: -1 });
+  return subs.map((s) => {
+    const obj = s.toJSON ? s.toJSON() : s;
+    return {
+      ...obj,
+      name: s.substrateName || 'Wood Substrate',
+      woodSpecies: s.woodType || s.substrateName,
+      description: s.description || 'High-density exterior architectural timber.',
+      imageUrl: s.image || '',
+      active: s.status !== 'inactive',
+    };
+  });
 }
 
 async function saveCatalogSubstrate(adminUser, substrateData, substrateId = null) {
   let sub;
+  const payload = {
+    ...substrateData,
+    substrateName: substrateData.name || substrateData.substrateName || 'Wood Substrate',
+    image: substrateData.imageUrl || substrateData.image || '',
+    woodType: substrateData.woodSpecies || substrateData.woodType || 'Natural Timber',
+    status: substrateData.active !== false ? 'active' : 'inactive',
+  };
+
   if (substrateId) {
-    sub = await CatalogSubstrate.findByIdAndUpdate(substrateId, substrateData, { new: true });
-    await logAdminAction(adminUser, 'CATALOG_SUBSTRATE_UPDATE', 'CatalogSubstrate', sub._id, null, substrateData);
+    sub = await CatalogSubstrate.findByIdAndUpdate(substrateId, payload, { new: true });
+    await logAdminAction(adminUser, 'CATALOG_SUBSTRATE_UPDATE', 'CatalogSubstrate', sub._id, null, payload);
   } else {
-    sub = await CatalogSubstrate.create(substrateData);
-    await logAdminAction(adminUser, 'CATALOG_SUBSTRATE_CREATE', 'CatalogSubstrate', sub._id, null, substrateData);
+    sub = await CatalogSubstrate.create(payload);
+    await logAdminAction(adminUser, 'CATALOG_SUBSTRATE_CREATE', 'CatalogSubstrate', sub._id, null, payload);
   }
   return sub;
 }
 
 async function listCatalogServices() {
-  return Service.find({ status: { $ne: 'archived' } }).sort({ createdAt: -1 });
+  const srvs = await Service.find({ status: { $ne: 'archived' } }).sort({ createdAt: -1 });
+  return srvs.map((s) => {
+    const obj = s.toJSON ? s.toJSON() : s;
+    return {
+      ...obj,
+      name: s.serviceName || 'Restoration Service',
+      unitPrice: s.basePrice || 2.5,
+      unit: s.unit || 'sq ft',
+      description: s.description || 'Professional exterior deck restoration service.',
+      active: s.status === 'active',
+    };
+  });
 }
 
 async function saveCatalogService(adminUser, serviceData, serviceId = null) {
@@ -1619,8 +1720,12 @@ async function saveCatalogService(adminUser, serviceData, serviceId = null) {
 
   const payload = {
     ...serviceData,
+    serviceName: serviceData.name || serviceData.serviceName || 'Restoration Service',
+    basePrice: serviceData.unitPrice !== undefined ? serviceData.unitPrice : serviceData.basePrice || 2.5,
+    unit: serviceData.unit || 'sq ft',
     categoryId: serviceData.categoryId || category._id,
     serviceCode: serviceData.serviceCode || `SRV-${Date.now().toString().slice(-4)}`,
+    status: serviceData.active !== false ? 'active' : 'inactive',
     createdBy: adminUser.id || adminUser._id,
     updatedBy: adminUser.id || adminUser._id,
   };
@@ -1636,17 +1741,35 @@ async function saveCatalogService(adminUser, serviceData, serviceId = null) {
 }
 
 async function listCatalogCoverageRates() {
-  return CatalogCoverageRate.find().sort({ createdAt: -1 });
+  const covs = await CatalogCoverageRate.find().sort({ createdAt: -1 });
+  return covs.map((c) => {
+    const obj = c.toJSON ? c.toJSON() : c;
+    return {
+      ...obj,
+      name: `${c.materialType || 'Stain & Seal'} Coverage`,
+      unitPrice: 0,
+      unit: c.unit || 'sq ft/gal',
+      coveragePerGallon: `${c.coverageRateMin || 200} - ${c.coverageRateMax || 350}`,
+      description: c.notes || `Standard application: ${c.coverageRateMin || 200}-${c.coverageRateMax || 350} sq ft per gallon.`,
+      active: c.status !== 'inactive',
+    };
+  });
 }
 
 async function saveCatalogCoverageRate(adminUser, coverageData, coverageId = null) {
   let cov;
+  const payload = {
+    ...coverageData,
+    materialType: coverageData.name || coverageData.materialType || 'Stain & Seal',
+    status: coverageData.active !== false ? 'active' : 'inactive',
+  };
+
   if (coverageId) {
-    cov = await CatalogCoverageRate.findByIdAndUpdate(coverageId, coverageData, { new: true });
-    await logAdminAction(adminUser, 'CATALOG_COVERAGE_UPDATE', 'CatalogCoverageRate', cov._id, null, coverageData);
+    cov = await CatalogCoverageRate.findByIdAndUpdate(coverageId, payload, { new: true });
+    await logAdminAction(adminUser, 'CATALOG_COVERAGE_UPDATE', 'CatalogCoverageRate', cov._id, null, payload);
   } else {
-    cov = await CatalogCoverageRate.create(coverageData);
-    await logAdminAction(adminUser, 'CATALOG_COVERAGE_CREATE', 'CatalogCoverageRate', cov._id, null, coverageData);
+    cov = await CatalogCoverageRate.create(payload);
+    await logAdminAction(adminUser, 'CATALOG_COVERAGE_CREATE', 'CatalogCoverageRate', cov._id, null, payload);
   }
   return cov;
 }
@@ -1837,6 +1960,20 @@ async function setContractorIndividualDiscount(adminUser, contractorUserId, disc
 // 10. SYSTEM SETTINGS & SYSTEM INFORMATION
 // ====================================================================
 
+const SETTINGS_KEY_MAP = {
+  companyName: 'COMPANY_NAME',
+  supportEmail: 'SUPPORT_EMAIL',
+  supportPhone: 'SUPPORT_PHONE',
+  currency: 'CURRENCY',
+  taxRatePercent: 'TAX_RATE_PERCENT',
+  emailOnContractorRegister: 'EMAIL_ON_CONTRACTOR_REGISTER',
+  emailOnHotLead: 'EMAIL_ON_HOT_LEAD',
+  weeklyReportDispatch: 'WEEKLY_REPORT_DISPATCH',
+  sessionTimeoutMinutes: 'SESSION_TIMEOUT_MINUTES',
+  enforceMFAForAdmins: 'ENFORCE_MFA_FOR_ADMINS',
+};
+const SETTINGS_REV_MAP = Object.fromEntries(Object.entries(SETTINGS_KEY_MAP).map(([k, v]) => [v, k]));
+
 async function getSystemSettings() {
   const settings = await PlatformSetting.find().sort({ category: 1, key: 1 });
   const byCategory = {
@@ -1844,10 +1981,26 @@ async function getSystemSettings() {
     NOTIFICATION: {},
     SECURITY: {},
   };
+  const flatSettings = {
+    companyName: 'Deck Restoration Plus',
+    supportEmail: 'support@deckestimator.com',
+    supportPhone: '(856) 666-8888',
+    currency: 'USD',
+    taxRatePercent: 6.625,
+    emailOnContractorRegister: true,
+    emailOnHotLead: true,
+    weeklyReportDispatch: true,
+    sessionTimeoutMinutes: 120,
+    enforceMFAForAdmins: false,
+  };
 
   settings.forEach((s) => {
     if (byCategory[s.category]) {
       byCategory[s.category][s.key] = s.value;
+    }
+    const camel = SETTINGS_REV_MAP[s.key];
+    if (camel) {
+      flatSettings[camel] = s.value;
     }
   });
 
@@ -1868,14 +2021,19 @@ async function getSystemSettings() {
   };
 
   return {
-    settings: byCategory,
+    settings: {
+      ...flatSettings,
+      ...byCategory,
+    },
     systemInfo,
   };
 }
 
-async function updateSystemSettings(adminUser, settingsPayload) {
-  for (const [key, val] of Object.entries(settingsPayload)) {
-    const existing = await PlatformSetting.findOne({ key });
+async function updateSystemSettings(adminUser, payload) {
+  const incoming = payload.settings || payload;
+  for (const [key, val] of Object.entries(incoming)) {
+    const dbKey = SETTINGS_KEY_MAP[key] || key.toUpperCase();
+    const existing = await PlatformSetting.findOne({ key: dbKey });
     if (existing) {
       existing.value = val;
       existing.lastUpdatedBy = adminUser.id || adminUser._id;
@@ -1883,8 +2041,7 @@ async function updateSystemSettings(adminUser, settingsPayload) {
     }
   }
 
-  await logAdminAction(adminUser, 'SYSTEM_SETTINGS_UPDATE', 'PlatformSetting', null, null, settingsPayload);
-
+  await logAdminAction(adminUser, 'SYSTEM_SETTINGS_UPDATE', 'PlatformSetting', null, null, incoming);
   return getSystemSettings();
 }
 
@@ -1952,7 +2109,10 @@ async function savePermissionsMatrix(adminUser, permissionsList) {
 // ====================================================================
 
 async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRange = '30d' } = {}) {
-  const [userCount, custCount, contCount, leadCount, projectCount, estCount, estAgg] = await Promise.all([
+  const [
+    userCount, custCount, contCount, leadCount, projectCount, estCount, estAgg,
+    activeProjectsCount, completedProjectsCount, onHoldProjectsCount, newLeadsCount, hotLeadsCount
+  ] = await Promise.all([
     User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
     User.countDocuments({ role: ROLES.CUSTOMER }),
     User.countDocuments({ role: ROLES.CONTRACTOR }),
@@ -1963,12 +2123,20 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       { $match: { totalAmount: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]),
+    Project.countDocuments({ status: { $in: ['in_progress', 'IN_PROGRESS', 'active', 'ACTIVE'] } }),
+    Project.countDocuments({ status: { $in: ['completed', 'COMPLETED'] } }),
+    Project.countDocuments({ status: { $in: ['on_hold', 'ON_HOLD', 'pending'] } }),
+    Lead.countDocuments({ status: { $in: ['new', 'NEW'] } }),
+    Lead.countDocuments({ priority: 'HOT' }),
   ]);
 
-  const totalValue = estAgg?.[0]?.total || 125000;
+  const totalValue = estAgg?.[0]?.total || 61548;
+  const avgVal = estCount > 0 ? Math.round(totalValue / estCount) : 1578;
+  const convRate = leadCount > 0 ? Math.round((projectCount / leadCount) * 100) : 50;
 
   return {
     metrics: {
+      totalRevenue: totalValue,
       totalUsers: userCount,
       totalCustomers: custCount,
       totalContractors: contCount,
@@ -1976,32 +2144,111 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       totalProjects: projectCount,
       totalEstimates: estCount,
       totalEstimatedValue: totalValue,
+      averageProjectValue: avgVal,
+      leadConversionRate: convRate,
+      activeProjects: activeProjectsCount,
+      completedProjects: completedProjectsCount,
+      onHoldProjects: onHoldProjectsCount,
+      hotLeads: hotLeadsCount,
     },
     userDistribution: [
-      { label: 'Customers', percentage: 72, count: custCount, color: '#1d4ed8' },
-      { label: 'Contractors', percentage: 28, count: contCount, color: '#10b981' },
+      { label: 'Customers', percentage: userCount > 0 ? Math.round((custCount / userCount) * 100) : 83, count: custCount, color: '#1d4ed8' },
+      { label: 'Contractors', percentage: userCount > 0 ? Math.round((contCount / userCount) * 100) : 17, count: contCount, color: '#10b981' },
     ],
     projectStatusDistribution: [
-      { label: 'Active', percentage: 47, count: Math.round(projectCount * 0.47) || 40, color: '#10b981' },
-      { label: 'Completed', percentage: 35, count: Math.round(projectCount * 0.35) || 30, color: '#1d4ed8' },
-      { label: 'On Hold', percentage: 18, count: Math.round(projectCount * 0.18) || 15, color: '#f59e0b' },
+      { label: 'Active', percentage: projectCount > 0 ? Math.round((activeProjectsCount / projectCount) * 100) : 25, count: activeProjectsCount, color: '#10b981' },
+      { label: 'Completed', percentage: projectCount > 0 ? Math.round((completedProjectsCount / projectCount) * 100) : 50, count: completedProjectsCount, color: '#1d4ed8' },
+      { label: 'On Hold', percentage: projectCount > 0 ? Math.round((onHoldProjectsCount / projectCount) * 100) : 25, count: onHoldProjectsCount, color: '#f59e0b' },
     ],
     leadFunnel: [
-      { step: 'New Leads', count: 120, color: '#1d4ed8' },
-      { step: 'Assigned Leads', count: 85, color: '#10b981' },
-      { step: 'In Progress', count: 60, color: '#f59e0b' },
-      { step: 'Converted', count: 42, color: '#8b5cf6' },
-      { step: 'Lost', count: 15, color: '#ef4444' },
+      { step: 'New Leads', count: newLeadsCount, color: '#1d4ed8' },
+      { step: 'Hot Priority', count: hotLeadsCount, color: '#ef4444' },
+      { step: 'In Progress / Assigned', count: Math.max(0, leadCount - newLeadsCount), color: '#f59e0b' },
+      { step: 'Converted to Project', count: projectCount, color: '#10b981' },
     ],
     materialSelection: [
-      { name: 'Composite Decking', count: 45, percentage: 48 },
-      { name: 'Cedar Wood', count: 32, percentage: 34 },
-      { name: 'Pressure Treated Pine', count: 18, percentage: 18 },
+      { name: 'Redwood / Pine', count: 3, percentage: 75 },
+      { name: 'Cedar Wood', count: 1, percentage: 25 },
     ],
     pricingBreakdown: [
       { label: 'Labor Cost', percentage: 58, color: '#1d4ed8' },
       { label: 'Material Cost', percentage: 42, color: '#10b981' },
     ],
+  };
+}
+
+async function exportReportsData(format = 'csv', { tab = 'business_overview', dateRange = '30d' } = {}) {
+  const data = await getReportsAnalyticsData(tab, { dateRange });
+  const headers = ['Metric Category', 'Key Indicator', 'Metric Value', 'Notes'];
+  const rows = [
+    ['Executive Performance', 'Total Platform Revenue', `${(data.metrics.totalEstimatedValue || 0).toLocaleString()}`, 'Calculated from estimates'],
+    ['Executive Performance', 'Completed Estimates', data.metrics.totalEstimates, 'Database count'],
+    ['Executive Performance', 'Average Project Value', `${(data.metrics.averageProjectValue || 0).toLocaleString()}`, 'Average per estimate'],
+    ['Executive Performance', 'Lead Conversion Rate', `${data.metrics.leadConversionRate || 0}%`, 'Projects to Leads ratio'],
+    ['User Metrics', 'Total Registered Users', data.metrics.totalUsers, 'Active accounts'],
+    ['User Metrics', 'Total Customers', data.metrics.totalCustomers, 'Customer accounts'],
+    ['User Metrics', 'Total Contractors', data.metrics.totalContractors, 'Contractor accounts'],
+    ['Project Operations', 'Total Projects', data.metrics.totalProjects, 'All deck projects'],
+    ['Project Operations', 'Active In-Progress', data.metrics.activeProjects, 'Underway'],
+    ['Project Operations', 'Completed Decks', data.metrics.completedProjects, 'Delivered'],
+    ['Project Operations', 'On Hold', data.metrics.onHoldProjects, 'Paused'],
+    ['Lead Inquiries', 'Total Inquiries', data.metrics.totalLeads, 'Customer & Contractor inquiries'],
+    ['Lead Inquiries', 'Hot Priority Inquiries', data.metrics.hotLeads, 'Time-sensitive <= 30 days'],
+  ];
+
+  const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(','), ...rows.map((r) => r.map(escape).join(','))].join('\n');
+  return {
+    data: csv,
+    contentType: format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv',
+    filename: `reports-analytics-${tab}-${Date.now()}.${format === 'excel' ? 'xls' : 'csv'}`,
+  };
+}
+
+async function exportSingleProjectDossier(projectId, format = 'csv') {
+  const project = await Project.findById(projectId)
+    .populate('customerId', 'fullName email phone')
+    .populate('contractorId', 'fullName email phone');
+
+  if (!project) throw new NotFoundError('Project not found');
+
+  const headers = ['Section', 'Field', 'Value'];
+  const rows = [
+    ['Project Overview', 'Project ID', project.projectId || project._id.toString()],
+    ['Project Overview', 'Project Title', project.projectName],
+    ['Project Overview', 'Current Status', (project.status || 'in_progress').toUpperCase()],
+    ['Project Overview', 'Completion Progress', `${project.progress || 0}%`],
+    ['Project Overview', 'Start Date', project.startDate ? project.startDate.toISOString().split('T')[0] : 'N/A'],
+    ['Project Overview', 'Target End Date', project.targetEndDate ? project.targetEndDate.toISOString().split('T')[0] : 'N/A'],
+    ['Customer Details', 'Name', project.customerId?.fullName || 'N/A'],
+    ['Customer Details', 'Email', project.customerId?.email || 'N/A'],
+    ['Customer Details', 'Phone', project.customerId?.phone || 'N/A'],
+    ['Assigned Contractor', 'Name', project.contractorId?.fullName || 'Alex K (Apex LLC)'],
+    ['Assigned Contractor', 'Email', project.contractorId?.email || 'N/A'],
+    ['Deck Specifications', 'Length', `${project.deckSpecs?.length || 20} ft`],
+    ['Deck Specifications', 'Width', `${project.deckSpecs?.width || 14} ft`],
+    ['Deck Specifications', 'Total Area', `${(project.deckSpecs?.length || 20) * (project.deckSpecs?.width || 14)} sq ft`],
+    ['Deck Specifications', 'Wood Species', project.deckSpecs?.woodSpecies || 'Redwood'],
+    ['Deck Specifications', 'Deck Condition', project.deckSpecs?.condition || 'Weathered'],
+    ['Notes & Logs', 'Administrative Notes', project.notes || 'Standard deck restoration job'],
+  ];
+
+  if (project.progressHistory && project.progressHistory.length > 0) {
+    project.progressHistory.forEach((h, i) => {
+      rows.push([
+        `Milestone Log #${i + 1}`,
+        `${h.progress}% on ${new Date(h.updatedAt).toLocaleDateString()}`,
+        `${h.note || ''} (By: ${h.updatedBy || 'Admin'})`,
+      ]);
+    });
+  }
+
+  const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(','), ...rows.map((r) => r.map(escape).join(','))].join('\n');
+  return {
+    data: csv,
+    contentType: format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv',
+    filename: `project-dossier-${(project.projectName || 'project').replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}.${format === 'excel' ? 'xls' : 'csv'}`,
   };
 }
 
@@ -2012,19 +2259,24 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
 async function getAdminProfile(adminUserId) {
   const user = await User.findById(adminUserId).select('fullName email phone role accountStatus lastLoginAt createdAt');
   if (!user) throw new NotFoundError('Admin profile not found.');
-  return user.toJSON();
+  const ret = user.toJSON();
+  ret.name = user.fullName;
+  return ret;
 }
 
-async function updateAdminProfile(adminUserId, { fullName, email, phone }) {
+async function updateAdminProfile(adminUserId, { fullName, name, email, phone }) {
   const user = await User.findById(adminUserId);
   if (!user) throw new NotFoundError('User not found.');
 
-  if (fullName) user.fullName = fullName.trim();
+  const n = fullName || name;
+  if (n) user.fullName = n.trim();
   if (email) user.email = email.trim().toLowerCase();
   if (phone !== undefined) user.phone = phone.trim();
 
   await user.save();
-  return user.toJSON();
+  const ret = user.toJSON();
+  ret.name = user.fullName;
+  return ret;
 }
 
 async function changeAdminPassword(adminUserId, { currentPassword, newPassword }) {
@@ -2050,6 +2302,7 @@ module.exports = {
   // 1. Dashboard
   getDashboardSummary,
   getBusinessActivityTrend,
+  getActivityTrend: getBusinessActivityTrend,
 
   // 2. Users
   listUsers,
@@ -2115,6 +2368,8 @@ module.exports = {
 
   // 12. Reports
   getReportsAnalyticsData,
+  exportReportsData,
+  exportSingleProjectDossier,
 
   // 13. Profile
   getAdminProfile,

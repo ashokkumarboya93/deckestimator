@@ -5,6 +5,7 @@
 // Route: /admin/login
 
 import React, { useState } from 'react';
+import DeckHomeLogo from '../components/DeckHomeLogo';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 
@@ -51,11 +52,7 @@ export default function AdminLoginPage() {
         {/* Portal Header */}
         <div style={styles.brandHeader}>
           <div style={styles.logoBadge}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
+            <DeckHomeLogo size={32} color="#ffffff" strokeWidth={2.2} />
           </div>
           <h1 style={styles.brandTitle}>DECK RESTORATION PLUS</h1>
           <div style={styles.portalTag}>ADMINISTRATIVE MANAGEMENT PORTAL</div>

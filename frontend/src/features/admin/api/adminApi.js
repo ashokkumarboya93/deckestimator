@@ -75,6 +75,9 @@ export const adminApi = {
   exportProjectsUrl: (format = 'csv', status = 'all') => {
     return `http://localhost:5000/api/v1/admin/projects/export?format=${format}&status=${status}`;
   },
+  exportSingleProjectUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/projects/${id}/export?format=${format}`;
+  },
 
   // 5. Leads
   getLeads: async (params = {}) => {
@@ -232,6 +235,9 @@ export const adminApi = {
   getReports: async (tab = 'business_overview', params = {}) => {
     const res = await client.get('/admin/reports', { params: { tab, ...params } });
     return res.data;
+  },
+  exportReportsUrl: (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
+    return `http://localhost:5000/api/v1/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
   },
 
   // 13. Admin Profile

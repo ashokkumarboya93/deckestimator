@@ -52,6 +52,7 @@ router.get('/verifications/:contractorId/history', adminController.getVerificati
 router.get('/projects', adminController.listProjects);
 router.patch('/projects/:id/progress', adminController.updateProjectProgress);
 router.get('/projects/export', adminController.exportProjects);
+router.get('/projects/:id/export', adminController.exportSingleProjectDossier);
 
 // 5. Lead Management (4 Tabs & Auto Hot Priority)
 router.get('/leads', adminController.listLeads);
@@ -106,6 +107,7 @@ router.get('/permissions', adminController.getPermissionsMatrix);
 router.put('/permissions', adminController.savePermissionsMatrix);
 
 // 12. Reports & Analytics
+router.get('/reports/export', adminController.exportReports);
 router.get('/reports', adminController.getReportsAnalytics);
 
 // 13. Admin Profile

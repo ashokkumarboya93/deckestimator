@@ -441,6 +441,30 @@ async function savePermissionsMatrix(req, res, next) {
 }
 
 // 12. Reports & Analytics
+async function exportReports(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportReportsData(format, req.query);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportSingleProjectDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleProjectDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getReportsAnalytics(req, res, next) {
   try {
     const data = await adminService.getReportsAnalyticsData(req.query.tab, req.query);
@@ -525,6 +549,8 @@ module.exports = {
   getPermissionsMatrix,
   savePermissionsMatrix,
   getReportsAnalytics,
+  exportReports,
+  exportSingleProjectDossier,
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,

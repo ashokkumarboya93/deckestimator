@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import DeckHomeLogo from './DeckHomeLogo';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -223,11 +224,7 @@ export default function AdminLayout() {
         <div style={styles.brandBox}>
           <Link to="/admin/dashboard" style={styles.brandLink}>
             <div style={styles.brandIconBox}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M3 9h18" />
-                <path d="M9 21V9" />
-              </svg>
+              <DeckHomeLogo size={24} color="#ffffff" strokeWidth={2.2} />
             </div>
             {isSidebarOpen && (
               <div style={styles.brandTextWrap}>
