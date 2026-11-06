@@ -449,12 +449,14 @@ async function getBusinessActivityTrend(period = '30d') {
 // 2. USER MANAGEMENT (4 Tabs & Account Moderation)
 // ====================================================================
 
-async function listUsers({ page = 1, limit = 10, userType, accountStatus, search, sort = 'newest', registrationDate }) {
+async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, search, sort = 'newest', registrationDate }) {
+  const roleFilter = role || userType;
   const query = { accountStatus: { $ne: 'disabled' } };
-
-  if (userType && userType !== 'all') {
-    query.role = userType.toLowerCase();
+  if (roleFilter && roleFilter !== 'all') {
+    query.role = roleFilter.toLowerCase();
   }
+
+
   if (accountStatus && accountStatus !== 'all') {
     query.accountStatus = accountStatus.toLowerCase();
   }
@@ -516,13 +518,26 @@ async function listUsers({ page = 1, limit = 10, userType, accountStatus, search
     estMap[e._id.toString()] = e.count;
   });
 
+  const contractorProfiles = await ContractorProfile.find({ userId: { $in: userIds } }).lean();
+  const profileMap = {};
+  contractorProfiles.forEach((cp) => {
+    profileMap[cp.userId.toString()] = cp;
+  });
+
   const enrichedUsers = users.map((u) => {
     const idStr = u._id.toString();
+    const cp = profileMap[idStr] || null;
     return {
       ...u.toJSON(),
       userId: `U-${idStr.slice(-4).toUpperCase()}`,
       projectsCount: deckMap[idStr] || 0,
       estimatesCount: estMap[idStr] || 0,
+      contractorProfile: cp ? {
+        ...cp,
+        companyName: cp.businessName,
+        verificationStatus: cp.verificationStatus,
+        licenseNumber: cp.licenseNumber,
+      } : null,
     };
   });
 
@@ -611,7 +626,11 @@ async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative 
 async function listVerifications({ page = 1, limit = 10, status = 'all', search = '' }) {
   const query = {};
   if (status && status !== 'all') {
-    query.verificationStatus = status.toLowerCase();
+    if (status.toLowerCase() === 'pending') {
+      query.verificationStatus = { $in: ['pending', 'draft', 'under_review', 'pending_verification'] };
+    } else {
+      query.verificationStatus = status.toLowerCase();
+    }
   }
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -623,7 +642,7 @@ async function listVerifications({ page = 1, limit = 10, status = 'all', search 
       .skip(skip)
       .limit(Number(limit)),
     ContractorProfile.countDocuments(query),
-    ContractorProfile.countDocuments({ verificationStatus: 'pending' }),
+    ContractorProfile.countDocuments({ verificationStatus: { $in: ['pending', 'draft', 'under_review', 'pending_verification'] } }),
     ContractorProfile.countDocuments({ verificationStatus: 'approved' }),
     ContractorProfile.countDocuments({ verificationStatus: 'rejected' }),
   ]);
@@ -640,8 +659,36 @@ async function listVerifications({ page = 1, limit = 10, status = 'all', search 
     );
   }
 
+  const mapped = filtered.map((p) => {
+    const st = (p.verificationStatus === 'draft' || p.verificationStatus === 'under_review' || p.verificationStatus === 'pending_verification')
+      ? 'pending'
+      : (p.verificationStatus || 'pending');
+
+    return {
+      _id: p._id.toString(),
+      contractorId: p._id.toString(),
+      userId: p.userId?._id?.toString() || p.userId?.toString(),
+      contractorName: p.userId?.fullName || p.businessName || 'Contractor',
+      contractorEmail: p.userId?.email || p.businessEmail || 'N/A',
+      contractorPhone: p.userId?.phone || p.businessPhone || 'N/A',
+      companyName: p.businessName || 'Contractor Company',
+      businessName: p.businessName || 'Contractor Company',
+      licenseNumber: p.licenseNumber || 'N/A',
+      licenseJurisdiction: p.licenseJurisdiction || 'N/A',
+      yearsOfExperience: p.yearsOfExperience || 0,
+      status: st,
+      verificationStatus: p.verificationStatus,
+      submittedAt: p.submittedAt || p.createdAt,
+      createdAt: p.createdAt,
+      approvedAt: p.approvedAt,
+      rejectionReason: p.rejectionReason,
+      documents: p.documents || [],
+      businessAddress: p.businessAddress,
+    };
+  });
+
   return {
-    data: filtered,
+    data: mapped,
     pagination: {
       page: Number(page),
       limit: Number(limit),
@@ -657,7 +704,10 @@ async function listVerifications({ page = 1, limit = 10, status = 'all', search 
 }
 
 async function approveContractorVerification(adminUser, profileId) {
-  const profile = await ContractorProfile.findById(profileId);
+  let profile = await ContractorProfile.findById(profileId);
+  if (!profile) {
+    profile = await ContractorProfile.findOne({ userId: profileId });
+  }
   if (!profile) throw new NotFoundError('Contractor profile not found.');
 
   const previousStatus = profile.verificationStatus;
@@ -665,6 +715,7 @@ async function approveContractorVerification(adminUser, profileId) {
   profile.approvedAt = new Date();
   profile.reviewedBy = adminUser.id || adminUser._id;
   profile.reviewedAt = new Date();
+  profile.rejectionReason = '';
   await profile.save();
 
   if (profile.userId) {
@@ -692,7 +743,10 @@ async function rejectContractorVerification(adminUser, profileId, reason) {
     throw new BadRequestError('Rejection reason is required.');
   }
 
-  const profile = await ContractorProfile.findById(profileId);
+  let profile = await ContractorProfile.findById(profileId);
+  if (!profile) {
+    profile = await ContractorProfile.findOne({ userId: profileId });
+  }
   if (!profile) throw new NotFoundError('Contractor profile not found.');
 
   const previousStatus = profile.verificationStatus;
@@ -701,6 +755,10 @@ async function rejectContractorVerification(adminUser, profileId, reason) {
   profile.reviewedBy = adminUser.id || adminUser._id;
   profile.reviewedAt = new Date();
   await profile.save();
+
+  if (profile.userId) {
+    await User.findByIdAndUpdate(profile.userId, { accountStatus: 'suspended' });
+  }
 
   await VerificationHistory.create({
     contractorId: profile._id,
@@ -719,7 +777,19 @@ async function rejectContractorVerification(adminUser, profileId, reason) {
 }
 
 async function getVerificationHistoryList(contractorProfileId) {
-  const query = contractorProfileId ? { contractorId: contractorProfileId } : {};
+  let query = {};
+  if (contractorProfileId && contractorProfileId !== 'all') {
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(contractorProfileId)) {
+      query = {
+        $or: [
+          { contractorId: contractorProfileId },
+          { userId: contractorProfileId }
+        ]
+      };
+    }
+  }
+
   return VerificationHistory.find(query)
     .sort({ createdAt: -1 })
     .populate('performedBy', 'fullName email')
@@ -1403,18 +1473,40 @@ async function getPermissionsMatrix() {
       ],
     });
   }
-  return policy;
+
+  // Format array for frontend table
+  const formatted = (policy.permissions || []).map((p) => ({
+    module: p.moduleKey,
+    label: p.permissionName || p.moduleKey,
+    roles: {
+      admin: p.admin ?? true,
+      contractor: p.contractor ?? false,
+      customer: p.customer ?? false,
+    },
+  }));
+
+  return formatted;
 }
 
 async function savePermissionsMatrix(adminUser, permissionsList) {
   let policy = await PermissionsPolicy.findOne();
   if (!policy) policy = new PermissionsPolicy();
-  policy.permissions = permissionsList;
+
+  // Normalize frontend structure { module, label, roles } back to schema
+  const normalized = (permissionsList || []).map((item) => ({
+    moduleKey: item.module || item.moduleKey,
+    permissionName: item.label || item.permissionName || item.module,
+    admin: item.roles?.admin ?? item.admin ?? true,
+    contractor: item.roles?.contractor ?? item.contractor ?? false,
+    customer: item.roles?.customer ?? item.customer ?? false,
+  }));
+
+  policy.permissions = normalized;
   policy.updatedBy = adminUser.id || adminUser._id;
   await policy.save();
 
-  await logAdminAction(adminUser, 'PERMISSIONS_MATRIX_UPDATE', 'PermissionsPolicy', policy._id, null, permissionsList);
-  return policy;
+  await logAdminAction(adminUser, 'PERMISSIONS_MATRIX_UPDATE', 'PermissionsPolicy', policy._id, null, normalized);
+  return getPermissionsMatrix();
 }
 
 // ====================================================================
