@@ -3,6 +3,7 @@
 // =============================================
 // Exact 1:1 match for Deck Restoration Plus Admin Dashboard.png:
 // - Header with "Dashboard", subtitle, "Date Range: [📅 Last 30 Days ⌵]" and Refresh button [↻]
+// - Continuous Real-Time DB Sync (10s interval + window focus + manual refresh)
 // - Row 1 Summary Cards: Total Users, Customers, Contractors, Total Leads with dynamic growth pills
 // - Row 2 Summary Cards: Hot Priority Leads (highlight pink card with fire icon & "High Priority" pill),
 //   Active Projects, Total Estimates, Estimated Value
@@ -26,23 +27,61 @@ export default function AdminDashboardPage() {
   const [summaryData, setSummaryData] = useState(null);
   const [trendData, setTrendData] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
+  // Initial load + Continuous Auto-Update (every 10s & on window focus)
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(true);
+
+    const interval = setInterval(() => {
+      loadDashboard(false);
+    }, 10000);
+
+    const handleFocus = () => {
+      loadDashboard(false);
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [dateRange]);
 
-  async function loadDashboard() {
-    setLoading(true);
+  async function loadDashboard(showInitialSpinner = false) {
+    if (showInitialSpinner && !summaryData) {
+      setLoading(true);
+    }
     setIsRefreshing(true);
     try {
       const [sumRes, trRes] = await Promise.all([
         adminApi.getDashboardSummary(dateRange),
         adminApi.getActivityTrend(dateRange),
       ]);
-      setSummaryData(sumRes?.data || sumRes);
-      setTrendData(trRes?.data || trRes);
+
+      // Robust response payload extraction
+      const summaryPayload = sumRes?.summary
+        ? sumRes
+        : sumRes?.data?.summary
+        ? sumRes.data
+        : sumRes?.data || sumRes;
+
+      const trendPayload = trRes?.series
+        ? trRes
+        : trRes?.data?.series
+        ? trRes.data
+        : trRes?.data || trRes;
+
+      if (summaryPayload && summaryPayload.summary) {
+        setSummaryData(summaryPayload);
+      }
+      if (trendPayload && trendPayload.series) {
+        setTrendData(trendPayload);
+      }
+      setLastUpdated(new Date());
     } catch (err) {
-      console.error('Dashboard load error:', err);
+      console.error('Live Dashboard fetch error:', err);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -197,8 +236,21 @@ export default function AdminDashboardPage() {
       {/* 1. TOP HEADER & DATE RANGE CONTROLS */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Dashboard</h1>
-          <p style={styles.subtitle}>Business overview and key insights for Deck Restoration Plus.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={styles.title}>Dashboard</h1>
+            <div style={styles.liveBadge} title="Real-time continuous sync with MongoDB">
+              <span style={styles.liveDot} />
+              <span>LIVE MONGODB SYNC</span>
+            </div>
+          </div>
+          <p style={styles.subtitle}>
+            Business overview and key insights for Deck Restoration Plus.
+            {lastUpdated && (
+              <span style={{ marginLeft: 8, fontSize: '11px', color: '#94a3b8' }}>
+                (Last updated: {lastUpdated.toLocaleTimeString()})
+              </span>
+            )}
+          </p>
         </div>
 
         <div style={styles.headerRight}>
@@ -225,9 +277,9 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
-            onClick={loadDashboard}
+            onClick={() => loadDashboard(false)}
             style={styles.refreshButton}
-            title="Refresh Dashboard Data"
+            title="Refresh Live Data Now"
           >
             <svg
               width="16"
@@ -265,7 +317,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Total Users</div>
-              <div style={styles.cardValue}>{s.totalUsers}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalUsers}</div>
               {renderGrowthPill(s.growth?.users, 'vs last 30 days')}
             </div>
           </div>
@@ -282,14 +334,14 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Customers</div>
-              <div style={styles.cardValue}>{s.totalCustomers}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalCustomers}</div>
               {renderGrowthPill(s.growth?.customers)}
             </div>
           </div>
         </div>
 
         {/* Contractors */}
-        <div style={styles.card} onClick={() => navigate('/admin/verification-progress')}>
+        <div style={styles.card} onClick={() => navigate('/admin/users?role=contractor')}>
           <div style={styles.cardTop}>
             <div style={{ ...styles.iconCircle, backgroundColor: '#fef9c3', color: '#ca8a04' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -300,7 +352,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Contractors</div>
-              <div style={styles.cardValue}>{s.totalContractors}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalContractors}</div>
               {renderGrowthPill(s.growth?.contractors)}
             </div>
           </div>
@@ -318,7 +370,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Total Leads</div>
-              <div style={styles.cardValue}>{s.totalLeads}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalLeads}</div>
               {renderGrowthPill(s.growth?.leads)}
             </div>
           </div>
@@ -338,7 +390,7 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <div style={{ ...styles.cardLabel, color: '#475569' }}>Hot Priority Leads</div>
-                <div style={styles.cardValue}>{s.hotPriorityLeads}</div>
+                <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.hotPriorityLeads}</div>
                 <div style={styles.highPriorityPill}>High Priority</div>
               </div>
             </div>
@@ -358,7 +410,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Active Projects</div>
-              <div style={styles.cardValue}>{s.activeProjects}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.activeProjects}</div>
               {renderGrowthPill(s.growth?.projects)}
             </div>
           </div>
@@ -383,7 +435,7 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <div style={styles.cardLabel}>Total Estimates</div>
-              <div style={styles.cardValue}>{s.totalEstimates}</div>
+              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalEstimates}</div>
               {renderGrowthPill(s.growth?.estimates)}
             </div>
           </div>
@@ -402,7 +454,7 @@ export default function AdminDashboardPage() {
             <div>
               <div style={styles.cardLabel}>Estimated Value</div>
               <div style={styles.cardValue}>
-                $${Number(s.estimatedValue).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                ${Number(s.estimatedValue).toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </div>
               {renderGrowthPill(s.growth?.value)}
             </div>
@@ -961,6 +1013,26 @@ const styles = {
     color: '#0f172a',
     margin: 0,
     letterSpacing: '-0.3px',
+  },
+  liveBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ecfdf5',
+    border: '1px solid #a7f3d0',
+    color: '#065f46',
+    fontSize: '10px',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+    padding: '3px 8px',
+    borderRadius: '12px',
+  },
+  liveDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#10b981',
+    display: 'inline-block',
   },
   subtitle: {
     fontSize: '13px',
