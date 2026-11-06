@@ -77,8 +77,16 @@ export const adminApi = {
   getLeads: async (params = {}) => {
     return client.get('/admin/leads', { params });
   },
-  exportLeadsUrl: (format = 'csv', tab = 'all') => {
-    return `http://localhost:5000/api/v1/admin/leads/export?format=${format}&tab=${tab}`;
+  getLeadDetails: async (id) => {
+    const res = await client.get(`/admin/leads/${id}`);
+    return res.data;
+  },
+  exportLeadsUrl: (format = 'csv', tab = 'all', filters = {}) => {
+    const params = new URLSearchParams({ format, tab, ...filters });
+    return `http://localhost:5000/api/v1/admin/leads/export?${params.toString()}`;
+  },
+  exportSingleLeadUrl: (id, format = 'csv') => {
+    return `http://localhost:5000/api/v1/admin/leads/${id}/export?format=${format}`;
   },
 
   // 6. Estimator Configuration

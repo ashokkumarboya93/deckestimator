@@ -917,55 +917,134 @@ async function exportProjectsData(format = 'csv', filters = {}) {
 }
 
 // ====================================================================
+// ====================================================================
 // 5. LEAD MANAGEMENT (Hot Priority <= 30 Days & Filters)
 // ====================================================================
 
-async function listLeads({ tab = 'all', page = 1, limit = 10, search = '', dateRange = 'all', status = 'all' }) {
+async function listLeads({
+  tab = 'all',
+  page = 1,
+  limit = 10,
+  search = '',
+  dateRange = 'all',
+  startDate,
+  endDate,
+  status = 'all',
+  source = 'all',
+  sort = 'newest',
+}) {
   const query = {};
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+  const normalizedTab = (tab || 'all').toLowerCase();
 
-  if (tab === 'hot_priority') {
+  // Tab Filtering
+  if (normalizedTab === 'hot' || normalizedTab === 'hot_priority') {
     query.$or = [
       { latestContactDate: { $gte: thirtyDaysAgo } },
+      { createdAt: { $gte: thirtyDaysAgo } },
       { priority: 'HOT' },
     ];
-  } else if (tab === 'customer_leads') {
+  } else if (normalizedTab === 'customer' || normalizedTab === 'customer_leads') {
     query.userType = { $in: ['Customer', 'customer'] };
-  } else if (tab === 'contractor_leads') {
+  } else if (normalizedTab === 'contractor' || normalizedTab === 'contractor_leads') {
     query.userType = { $in: ['Contractor', 'contractor'] };
   }
 
+  // Status Filter
   if (status && status !== 'all') {
     query.status = status.toLowerCase();
   }
 
+  // Source Filter
+  if (source && source !== 'all') {
+    query.contactSource = new RegExp(source.replace(/[_-]/g, ' '), 'i');
+  }
+
+  // Date Range Filter
   if (dateRange && dateRange !== 'all') {
     const now = new Date();
     let past = new Date();
-    if (dateRange === 'today') past.setHours(0, 0, 0, 0);
-    else if (dateRange === '7d') past.setDate(now.getDate() - 7);
-    else if (dateRange === '30d') past.setDate(now.getDate() - 30);
-    else if (dateRange === 'this_month') past = new Date(now.getFullYear(), now.getMonth(), 1);
-    query.createdAt = { $gte: past };
+    if (dateRange === 'today') {
+      past.setHours(0, 0, 0, 0);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === 'yesterday') {
+      const startYesterday = new Date();
+      startYesterday.setDate(startYesterday.getDate() - 1);
+      startYesterday.setHours(0, 0, 0, 0);
+      const endYesterday = new Date();
+      endYesterday.setDate(endYesterday.getDate() - 1);
+      endYesterday.setHours(23, 59, 59, 999);
+      query.$or = [
+        { latestContactDate: { $gte: startYesterday, $lte: endYesterday } },
+        { createdAt: { $gte: startYesterday, $lte: endYesterday } },
+      ];
+    } else if (dateRange === '7d') {
+      past.setDate(now.getDate() - 7);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === '30d') {
+      past.setDate(now.getDate() - 30);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === 'this_month') {
+      past = new Date(now.getFullYear(), now.getMonth(), 1);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === 'last_month') {
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      query.$or = [
+        { latestContactDate: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
+        { createdAt: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
+      ];
+    } else if (dateRange === 'custom' && startDate) {
+      const start = new Date(startDate);
+      const end = endDate ? new Date(endDate) : new Date();
+      end.setHours(23, 59, 59, 999);
+      query.$or = [
+        { latestContactDate: { $gte: start, $lte: end } },
+        { createdAt: { $gte: start, $lte: end } },
+      ];
+    }
   }
 
-  if (search) {
+  // Search Filter
+  if (search && search.trim()) {
     const reg = new RegExp(search.trim(), 'i');
     query.$or = [
       { leadNumber: reg },
       { 'customerSnapshot.name': reg },
       { 'customerSnapshot.email': reg },
       { 'customerSnapshot.phone': reg },
+      { 'contractorSnapshot.name': reg },
+      { 'contractorSnapshot.email': reg },
+      { 'contractorSnapshot.phone': reg },
+      { 'contractorSnapshot.businessName': reg },
+      { 'deckSnapshot.city': reg },
+      { 'deckSnapshot.state': reg },
+      { 'deckSnapshot.projectName': reg },
     ];
+  }
+
+  // Sort Options
+  let sortOption = { latestContactDate: -1, createdAt: -1 };
+  if (sort === 'oldest') {
+    sortOption = { latestContactDate: 1, createdAt: 1 };
+  } else if (sort === 'most_contacted') {
+    sortOption = { contactCount: -1, latestContactDate: -1 };
+  } else if (sort === 'name_asc') {
+    sortOption = { 'customerSnapshot.name': 1, 'contractorSnapshot.name': 1 };
+  } else if (sort === 'name_desc') {
+    sortOption = { 'customerSnapshot.name': -1, 'contractorSnapshot.name': -1 };
   }
 
   const skip = (Number(page) - 1) * Number(limit);
 
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
-      .populate('customerId', 'fullName email phone')
-      .populate('assignedContractorId', 'fullName email phone')
-      .sort({ latestContactDate: -1, createdAt: -1 })
+      .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
+      .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
+      .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
+      .populate('deckId', 'name dimensions area surfaceMaterial conditionLevel')
+      .populate('estimateId', 'estimateReference totalCost calculationDetails status')
+      .sort(sortOption)
       .skip(skip)
       .limit(Number(limit)),
     Lead.countDocuments(query),
@@ -973,6 +1052,7 @@ async function listLeads({ tab = 'all', page = 1, limit = 10, search = '', dateR
       Lead.countDocuments({
         $or: [
           { latestContactDate: { $gte: thirtyDaysAgo } },
+          { createdAt: { $gte: thirtyDaysAgo } },
           { priority: 'HOT' },
         ],
       }),
@@ -982,8 +1062,69 @@ async function listLeads({ tab = 'all', page = 1, limit = 10, search = '', dateR
     ]),
   ]);
 
+  const mapped = leads.map((l) => {
+    const isCust = (l.userType || '').toLowerCase() === 'customer';
+    const userObj = isCust ? l.customerId : l.contractorId;
+    const cpObj = l.contractorProfileId;
+
+    const contactName = userObj?.fullName ||
+      (isCust ? l.customerSnapshot?.name : (l.contractorSnapshot?.name || cpObj?.businessName)) ||
+      (isCust ? 'Customer' : 'Contractor');
+
+    const contactEmail = userObj?.email ||
+      (isCust ? l.customerSnapshot?.email : l.contractorSnapshot?.email) ||
+      'N/A';
+
+    const contactPhone = userObj?.phone ||
+      (isCust ? l.customerSnapshot?.phone : l.contractorSnapshot?.phone) ||
+      '—';
+
+    const contactDate = l.latestContactDate || l.createdAt || new Date();
+    const diffDays = Math.floor((Date.now() - new Date(contactDate).getTime()) / (1000 * 60 * 60 * 24));
+    const isHot = diffDays <= 30;
+
+    const locationStr = l.deckSnapshot?.city
+      ? `${l.deckSnapshot.city}${l.deckSnapshot.state ? `, ${l.deckSnapshot.state}` : ''}`
+      : '—';
+
+    return {
+      _id: l._id.toString(),
+      id: l._id.toString(),
+      leadId: l.leadNumber,
+      leadNumber: l.leadNumber,
+      name: contactName,
+      email: contactEmail,
+      phone: contactPhone,
+      userType: isCust ? 'Customer' : 'Contractor',
+      contactSource: l.contactSource || (isCust ? 'Contact Us' : 'Reach Out'),
+      contactCount: l.contactCount || 1,
+      priority: isHot ? 'hot' : (l.priority?.toLowerCase() || 'standard'),
+      isHot,
+      daysSinceContact: diffDays,
+      firstContactDate: l.firstContactDate || l.createdAt,
+      latestContactDate: contactDate,
+      createdAt: l.createdAt,
+      status: l.status || 'new',
+      location: locationStr,
+      city: l.deckSnapshot?.city || '',
+      state: l.deckSnapshot?.state || '',
+      businessName: cpObj?.businessName || l.contractorSnapshot?.businessName || '',
+      licenseNumber: cpObj?.licenseNumber || l.contractorSnapshot?.licenseNumber || '',
+      licenseJurisdiction: cpObj?.licenseJurisdiction || '',
+      enquiry: l.enquiry || {},
+      contactHistory: l.contactHistory || [],
+      userId: userObj?._id?.toString() || null,
+      customerId: l.customerId?._id?.toString() || null,
+      contractorId: l.contractorId?._id?.toString() || null,
+      deckSnapshot: l.deckSnapshot,
+      estimateSnapshot: l.estimateSnapshot,
+      deckId: l.deckId,
+      estimateId: l.estimateId,
+    };
+  });
+
   return {
-    data: leads,
+    data: mapped,
     pagination: {
       page: Number(page),
       limit: Number(limit),
@@ -999,18 +1140,131 @@ async function listLeads({ tab = 'all', page = 1, limit = 10, search = '', dateR
   };
 }
 
+async function getLeadDetails(leadId) {
+  const query = mongoose.Types.ObjectId.isValid(leadId)
+    ? { $or: [{ _id: leadId }, { leadNumber: leadId }] }
+    : { leadNumber: leadId };
+
+  const lead = await Lead.findOne(query)
+    .populate('customerId')
+    .populate('contractorId')
+    .populate('contractorProfileId')
+    .populate('deckId')
+    .populate('estimateId')
+    .lean();
+
+  if (!lead) {
+    const error = new Error('Lead record not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const isCust = (lead.userType || '').toLowerCase() === 'customer';
+  const userObj = isCust ? lead.customerId : lead.contractorId;
+  const userId = userObj?._id || (isCust ? lead.customerId : lead.contractorId);
+
+  let customerEstimates = [];
+  let customerDecks = [];
+  let contractorProfile = null;
+  let contractorAssignedProjects = [];
+
+  const Deck = mongoose.model('Deck');
+  const Estimate = mongoose.model('Estimate');
+  const ContractorProfile = mongoose.model('ContractorProfile');
+
+  if (isCust && userId) {
+    customerDecks = await Deck.find({ ownerId: userId }).sort({ createdAt: -1 }).lean();
+    customerEstimates = await Estimate.find({ ownerId: userId }).populate('deckId').sort({ createdAt: -1 }).lean();
+  } else if (!isCust && userId) {
+    contractorProfile = await ContractorProfile.findOne({ userId }).lean();
+    contractorAssignedProjects = await Lead.find({ assignedContractorId: userId }).lean();
+  }
+
+  const contactDate = lead.latestContactDate || lead.createdAt || new Date();
+  const diffDays = Math.floor((Date.now() - new Date(contactDate).getTime()) / (1000 * 60 * 60 * 24));
+
+  return {
+    lead: {
+      ...lead,
+      _id: lead._id.toString(),
+      id: lead._id.toString(),
+      leadId: lead.leadNumber,
+      isHot: diffDays <= 30,
+      daysSinceContact: diffDays,
+      name: userObj?.fullName || (isCust ? lead.customerSnapshot?.name : lead.contractorSnapshot?.name) || 'User',
+      email: userObj?.email || (isCust ? lead.customerSnapshot?.email : lead.contractorSnapshot?.email) || 'N/A',
+      phone: userObj?.phone || (isCust ? lead.customerSnapshot?.phone : lead.contractorSnapshot?.phone) || '—',
+      userType: isCust ? 'Customer' : 'Contractor',
+    },
+    user: userObj ? {
+      _id: userObj._id.toString(),
+      fullName: userObj.fullName,
+      email: userObj.email,
+      phone: userObj.phone,
+      role: userObj.role,
+      accountStatus: userObj.accountStatus || 'active',
+      createdAt: userObj.createdAt,
+      emailVerifiedAt: userObj.emailVerifiedAt,
+      phoneVerifiedAt: userObj.phoneVerifiedAt,
+    } : null,
+    customerData: isCust ? {
+      decksCount: customerDecks.length,
+      decks: customerDecks.map((d) => ({
+        id: d._id.toString(),
+        name: d.name,
+        area: d.area,
+        dimensions: d.dimensions,
+        surfaceMaterial: d.surfaceMaterial,
+        conditionLevel: d.conditionLevel,
+        createdAt: d.createdAt,
+      })),
+      estimatesCount: customerEstimates.length,
+      activeEstimatesCount: customerEstimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length,
+      estimates: customerEstimates.map((e) => ({
+        id: e._id.toString(),
+        estimateReference: e.estimateReference || `EST-${e._id.toString().slice(-4).toUpperCase()}`,
+        deckName: e.deckId?.name || 'Deck',
+        totalCost: e.totalCost || e.pricing?.totalCost || 0,
+        status: e.status || 'draft',
+        createdAt: e.createdAt,
+      })),
+    } : null,
+    contractorData: !isCust ? {
+      profile: contractorProfile ? {
+        businessName: contractorProfile.businessName,
+        licenseNumber: contractorProfile.licenseNumber,
+        licenseJurisdiction: contractorProfile.licenseJurisdiction,
+        businessPhone: contractorProfile.businessPhone,
+        businessEmail: contractorProfile.businessEmail,
+        yearsOfExperience: contractorProfile.yearsOfExperience,
+        verificationStatus: contractorProfile.verificationStatus,
+        businessAddress: contractorProfile.businessAddress,
+        approvedAt: contractorProfile.approvedAt,
+      } : null,
+      assignedLeadsCount: contractorAssignedProjects.length,
+      assignedLeads: contractorAssignedProjects.map((p) => ({
+        leadNumber: p.leadNumber,
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
+    } : null,
+  };
+}
+
 async function exportLeadsData(format = 'csv', tab = 'all', filters = {}) {
   const result = await listLeads({ tab, page: 1, limit: 1000, ...filters });
-  const headers = ['Lead ID', 'Name', 'User Type', 'Email', 'Phone', 'Source', 'Contact Date', 'Status'];
+  const headers = ['Lead ID', 'Name', 'User Type', 'Email', 'Phone', 'Source', 'Contact Count', 'Contact Date', 'Status', 'Location'];
   const rows = result.data.map((l) => [
-    l.leadNumber || 'N/A',
-    l.customerSnapshot?.name || l.customerId?.fullName || 'N/A',
+    l.leadNumber || l.leadId || 'N/A',
+    l.name || 'N/A',
     l.userType || 'Customer',
-    l.customerSnapshot?.email || l.customerId?.email || 'N/A',
-    l.customerSnapshot?.phone || l.customerId?.phone || 'N/A',
+    l.email || 'N/A',
+    l.phone || 'N/A',
     l.contactSource || 'Contact Us',
-    l.latestContactDate ? l.latestContactDate.toISOString().split('T')[0] : 'N/A',
+    l.contactCount || 1,
+    l.latestContactDate ? new Date(l.latestContactDate).toISOString().split('T')[0] : 'N/A',
     l.status || 'New',
+    l.location || 'N/A',
   ]);
 
   const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
@@ -1022,7 +1276,69 @@ async function exportLeadsData(format = 'csv', tab = 'all', filters = {}) {
   };
 }
 
-// ====================================================================
+async function exportSingleLeadDossier(leadId, format = 'csv') {
+  const details = await getLeadDetails(leadId);
+  const l = details.lead;
+  const u = details.user;
+  const cd = details.customerData;
+  const kd = details.contractorData;
+
+  const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+
+  const sections = [];
+
+  // Section 1: Overview
+  sections.push(['--- LEAD OVERVIEW & REGISTRATION ---']);
+  sections.push(['Field', 'Value']);
+  sections.push(['Lead Number', l.leadNumber]);
+  sections.push(['Contact Name', l.name]);
+  sections.push(['Email', l.email]);
+  sections.push(['Phone', l.phone]);
+  sections.push(['User Type', l.userType]);
+  sections.push(['Account Status', u?.accountStatus || 'active']);
+  sections.push(['Account Registered', u?.createdAt ? new Date(u.createdAt).toISOString() : 'N/A']);
+  sections.push(['Contact Source', l.contactSource]);
+  sections.push(['Contact Count', l.contactCount]);
+  sections.push(['First Contact Date', l.firstContactDate ? new Date(l.firstContactDate).toISOString() : 'N/A']);
+  sections.push(['Latest Contact Date', l.latestContactDate ? new Date(l.latestContactDate).toISOString() : 'N/A']);
+  sections.push(['Status', l.status]);
+  sections.push(['Enquiry Subject', l.enquiry?.subject || 'N/A']);
+  sections.push(['Enquiry Message', l.enquiry?.message || 'N/A']);
+
+  if (cd) {
+    sections.push([]);
+    sections.push(['--- CUSTOMER ESTIMATES & DECK PROJECTS ---']);
+    sections.push(['Total Decks', cd.decksCount]);
+    sections.push(['Total Estimates', cd.estimatesCount]);
+    sections.push(['Active Estimates', cd.activeEstimatesCount]);
+    sections.push([]);
+    sections.push(['Estimate Ref', 'Deck Name', 'Total Amount ($)', 'Status', 'Date']);
+    cd.estimates.forEach((e) => {
+      sections.push([e.estimateReference, e.deckName, e.totalCost, e.status, new Date(e.createdAt).toISOString().split('T')[0]]);
+    });
+  }
+
+  if (kd) {
+    sections.push([]);
+    sections.push(['--- CONTRACTOR CREDENTIALS & LICENSING ---']);
+    const prof = kd.profile;
+    sections.push(['Business Name', prof?.businessName || 'N/A']);
+    sections.push(['License Number', prof?.licenseNumber || 'N/A']);
+    sections.push(['License Jurisdiction', prof?.licenseJurisdiction || 'N/A']);
+    sections.push(['Years Experience', prof?.yearsOfExperience || 0]);
+    sections.push(['Verification Status', prof?.verificationStatus || 'pending']);
+    sections.push(['Approved At', prof?.approvedAt ? new Date(prof.approvedAt).toISOString() : 'N/A']);
+  }
+
+  const csv = sections.map((row) => row.map(escape).join(',')).join('\n');
+
+  return {
+    data: csv,
+    contentType: format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv',
+    filename: `lead-dossier-${l.leadNumber}-${Date.now()}.${format === 'excel' ? 'xls' : 'csv'}`,
+  };
+}
+
 // 6. ESTIMATOR CONFIGURATION (Input Fields & Dependencies)
 // ====================================================================
 
@@ -1632,6 +1948,8 @@ module.exports = {
 
   // 5. Leads
   listLeads,
+  getLeadDetails,
+  exportSingleLeadDossier,
   exportLeadsData,
 
   // 6. Estimator Config

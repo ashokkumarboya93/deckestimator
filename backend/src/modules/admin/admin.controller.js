@@ -152,6 +152,28 @@ async function exportLeads(req, res, next) {
 }
 
 // 6. Estimator Configuration
+
+async function getLeadDetails(req, res, next) {
+  try {
+    const details = await adminService.getLeadDetails(req.params.id);
+    res.status(200).json({ success: true, data: details });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportSingleLeadDossier(req, res, next) {
+  try {
+    const { format = 'csv' } = req.query;
+    const file = await adminService.exportSingleLeadDossier(req.params.id, format);
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listEstimatorFields(req, res, next) {
   try {
     const fields = await adminService.listEstimatorFields();
@@ -458,6 +480,8 @@ module.exports = {
   updateProjectProgress,
   exportProjects,
   listLeads,
+  getLeadDetails,
+  exportSingleLeadDossier,
   exportLeads,
   listEstimatorFields,
   saveEstimatorField,

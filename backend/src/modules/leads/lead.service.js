@@ -825,7 +825,103 @@ async function getAdminLeadAnalytics() {
   };
 }
 
+
+/**
+ * Submit Reach Out / Contact Us / Help enquiry from Customer or Contractor
+ */
+async function submitReachOutEnquiry(user, payload = {}) {
+  const isContractor = user.role === ROLES.CONTRACTOR;
+  const isCustomer = user.role === ROLES.CUSTOMER;
+
+  const userType = isContractor ? 'Contractor' : 'Customer';
+  const defaultSource = isContractor ? 'Reach Out' : 'Contact Us';
+  const source = payload.contactSource || defaultSource;
+
+  let cp = null;
+  if (isContractor) {
+    cp = await ContractorProfile.findOne({ userId: user.id || user._id });
+  }
+
+  // Check if an existing open lead exists for this user
+  const query = isContractor
+    ? { contractorId: user.id || user._id, status: { $ne: 'closed' } }
+    : { customerId: user.id || user._id, status: { $ne: 'closed' } };
+
+  let lead = await Lead.findOne(query).sort({ createdAt: -1 });
+
+  if (lead) {
+    lead.contactCount = (lead.contactCount || 1) + 1;
+    lead.latestContactDate = new Date();
+    lead.contactSource = source;
+    lead.priority = 'HOT';
+    lead.enquiry = {
+      subject: payload.subject || lead.enquiry?.subject || `${source} Enquiry`,
+      message: payload.message || lead.enquiry?.message || `${userType} requested support.`,
+      preferredContactMethod: payload.preferredContactMethod || lead.enquiry?.preferredContactMethod || 'any',
+      preferredContactTime: payload.preferredContactTime || lead.enquiry?.preferredContactTime || 'any',
+      additionalNotes: payload.additionalNotes || lead.enquiry?.additionalNotes || '',
+    };
+    if (!lead.contactHistory) lead.contactHistory = [];
+    lead.contactHistory.push({
+      date: new Date(),
+      source,
+      subject: payload.subject || `${source} Enquiry`,
+      message: payload.message || `${userType} submitted enquiry via ${source}`,
+    });
+    await lead.save();
+    return lead;
+  }
+
+  // Create new relational lead
+  lead = new Lead({
+    leadNumber: generateLeadNumber(),
+    userType,
+    contactSource: source,
+    contactCount: 1,
+    firstContactDate: new Date(),
+    latestContactDate: new Date(),
+    priority: 'HOT',
+    status: 'new',
+    customerId: isCustomer ? (user.id || user._id) : null,
+    contractorId: isContractor ? (user.id || user._id) : null,
+    contractorProfileId: cp?._id || null,
+    deckId: payload.deckId || null,
+    estimateId: payload.estimateId || null,
+    customerSnapshot: isCustomer ? {
+      name: user.fullName || 'Customer',
+      email: user.email || '',
+      phone: user.phone || '',
+    } : undefined,
+    contractorSnapshot: isContractor ? {
+      name: user.fullName || 'Contractor',
+      email: user.email || '',
+      phone: user.phone || '',
+      businessName: cp?.businessName || '',
+      licenseNumber: cp?.licenseNumber || '',
+    } : undefined,
+    enquiry: {
+      subject: payload.subject || `${source} Enquiry`,
+      message: payload.message || `${userType} submitted enquiry via ${source}`,
+      preferredContactMethod: payload.preferredContactMethod || 'any',
+      preferredContactTime: payload.preferredContactTime || 'any',
+      additionalNotes: payload.additionalNotes || '',
+    },
+    contactHistory: [
+      {
+        date: new Date(),
+        source,
+        subject: payload.subject || `${source} Enquiry`,
+        message: payload.message || `${userType} submitted enquiry via ${source}`,
+      },
+    ],
+  });
+
+  await lead.save();
+  return lead;
+}
+
 module.exports = {
+  submitReachOutEnquiry,
   createCustomerLead,
   getCustomerLeads,
   getLeadById,

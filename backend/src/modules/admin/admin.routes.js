@@ -55,6 +55,8 @@ router.get('/projects/export', adminController.exportProjects);
 // 5. Lead Management (4 Tabs & Auto Hot Priority)
 router.get('/leads', adminController.listLeads);
 router.get('/leads/export', adminController.exportLeads);
+router.get('/leads/:id/export', adminController.exportSingleLeadDossier);
+router.get('/leads/:id', adminController.getLeadDetails);
 
 // 6. Estimator Configuration (Fields & Dependencies)
 router.get('/estimator-config/fields', adminController.listEstimatorFields);
