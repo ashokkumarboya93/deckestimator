@@ -24,6 +24,20 @@ export default function ContractorLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(6);
+  const [projectName, setProjectName] = useState('');
+
+  // Sync project name updates from active estimator
+  useEffect(() => {
+    const handleProjectName = (e) => {
+      if (e?.detail !== undefined) {
+        setProjectName(e.detail);
+      }
+    };
+    window.addEventListener('deck_project_name_updated', handleProjectName);
+    return () => {
+      window.removeEventListener('deck_project_name_updated', handleProjectName);
+    };
+  }, []);
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
@@ -343,12 +357,11 @@ export default function ContractorLayout() {
         </nav>
       </aside>
 
-      {/* 2. MAIN CONTENT WRAPPER */}
+      {/* 2. MAIN CONTENT WRAPPER (Fixed marginLeft so sidebar floats over without shifting page) */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarHovered ? '240px' : '68px',
-          transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          marginLeft: '68px',
           ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
         }}
       >
@@ -358,12 +371,31 @@ export default function ContractorLayout() {
           <div style={styles.headerLeft}>
             {isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Link to="/contractor/projects" style={styles.backLink}>
-                  ← Back to Projects
+                <Link
+                  to="/contractor/projects"
+                  style={styles.outlinedBackBtn}
+                  title="← Back to Projects"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Back</span>
                 </Link>
-                <span style={styles.estimateForTitle}>Estimate for: <strong>{currentPath.includes('/edit') ? 'Edit Project' : 'New Project'}</strong>
-                </span>
-                <span style={styles.draftBadge}>Draft</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>
+                    {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
+                  </span>
+                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -590,7 +622,7 @@ const styles = {
     borderRight: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
-    zIndex: 50,
+    zIndex: 90,
     overflowX: 'hidden',
     overflowY: 'auto',
     whiteSpace: 'nowrap',
@@ -718,6 +750,22 @@ const styles = {
     fontWeight: '700',
     color: '#0f172a',
     margin: 0,
+  },
+  outlinedBackBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    color: '#334155',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '7px 14px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   backLink: {
     color: '#1d4ed8',

@@ -449,6 +449,11 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     }
   }, [shape, length]);
 
+  // --- SYNC PROJECT NAME TO TOP NAVBAR ---
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('deck_project_name_updated', { detail: projectName }));
+  }, [projectName]);
+
   // Usable Floor Area (L × W)
   const floorArea = useMemo(() => {
     const l = Number(length) || 0;

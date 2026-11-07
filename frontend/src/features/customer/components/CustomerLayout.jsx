@@ -22,9 +22,23 @@ export default function CustomerLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [projectName, setProjectName] = useState('');
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+
+  // Sync project name updates from active estimator
+  useEffect(() => {
+    const handleProjectName = (e) => {
+      if (e?.detail !== undefined) {
+        setProjectName(e.detail);
+      }
+    };
+    window.addEventListener('deck_project_name_updated', handleProjectName);
+    return () => {
+      window.removeEventListener('deck_project_name_updated', handleProjectName);
+    };
+  }, []);
 
   // Click-outside listener for notifications & profile dropdowns
   useEffect(() => {
@@ -203,7 +217,7 @@ export default function CustomerLayout() {
             type="button"
             onClick={() => setIsHelpOpen(true)}
             style={styles.navItemButton}
-            title="How It Works Guide"
+            title="Restoration Calculator Guide & How It Works"
           >
             <span style={styles.navIcon}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -213,7 +227,7 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Restoration Guide
+              Restoration Calculator Guide
             </span>
           </button>
         </nav>
@@ -240,44 +254,80 @@ export default function CustomerLayout() {
         </div>
       </aside>
 
-      {/* 2. MAIN VIEW AREA (Smoothly shifts so content is NEVER overlapped by sidebar) */}
+      {/* 2. MAIN VIEW AREA (Fixed marginLeft so sidebar floats over without shifting page) */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarHovered ? '240px' : '68px',
-          transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          marginLeft: '68px',
         }}
       >
         {/* TOP NAVIGATION BAR */}
         <header style={styles.topHeader}>
-          {/* Left: Interactive Back Button with Breadcrumbs & Title */}
+          {/* Left: Dynamic Back Button / Project Name */}
           <div style={styles.headerLeft}>
-            <button
-              type="button"
-              onClick={() => {
-                if (window.history.length > 1) {
-                  navigate(-1);
-                } else {
-                  navigate('/customer/dashboard');
-                }
-              }}
-              style={styles.headerBackBtn}
-              title="← Back to Dashboard / Previous Page"
-            >
-              <div style={styles.backIconCircle}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="19" y1="12" x2="5" y2="12" />
-                  <polyline points="12 19 5 12 12 5" />
-                </svg>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={styles.breadcrumbText}>
-                  <span style={{ color: '#034EA2', fontWeight: '700' }}>← </span>
-                  {pageInfo.breadcrumb}
+            {currentPath === '/customer/dashboard' ? null : isEstimatorPage ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.history.length > 1) {
+                      navigate(-1);
+                    } else {
+                      navigate('/customer/dashboard');
+                    }
+                  }}
+                  style={styles.outlinedBackBtn}
+                  title="← Back to Dashboard / Previous Page"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Back</span>
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
+                  <span style={styles.headerProjectName}>
+                    {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
+                  </span>
                 </div>
-                <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
               </div>
-            </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                  } else {
+                    navigate('/customer/dashboard');
+                  }
+                }}
+                style={styles.headerBackBtn}
+                title="← Back to Dashboard / Previous Page"
+              >
+                <div style={styles.backIconCircle}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={styles.breadcrumbText}>
+                    <span style={{ color: '#034EA2', fontWeight: '700' }}>← </span>
+                    {pageInfo.breadcrumb}
+                  </div>
+                  <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Right: Notifications, Profile, Logout */}
@@ -468,7 +518,7 @@ export default function CustomerLayout() {
                     <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
                 </div>
-                <h3 style={styles.modalTitle}>How Deck Estimator Works</h3>
+                <h3 style={styles.modalTitle}>Restoration Calculator Guide &amp; How It Works</h3>
               </div>
               <button
                 type="button"
@@ -486,29 +536,50 @@ export default function CustomerLayout() {
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>1</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Enter Deck Dimensions &amp; Shape</h4>
-                  <p style={styles.stepDesc}>Provide the length and width of your deck. The interactive blueprint visualizer immediately calculates square footage.</p>
+                  <h4 style={styles.stepTitle}>Dimensions &amp; Shape Calculation</h4>
+                  <p style={styles.stepDesc}>Choose your deck perimeter shape (Rectangle, Square, L-Shape, Multi-Level, or Custom). Total billable surface area is calculated automatically in real time.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>2</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Assess Surface Condition &amp; Services</h4>
-                  <p style={styles.stepDesc}>Select existing wood conditions (peeling, discoloration, weathering) and choose power washing, sanding, or staining treatments.</p>
+                  <h4 style={styles.stepTitle}>Components &amp; Stairs (Count-Based)</h4>
+                  <p style={styles.stepDesc}>Stairs are calculated precisely by total number of stair steps (not by square footage), along with linear railings, benches, and perimeter fascia boards.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>3</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Select Finishes &amp; Materials</h4>
-                  <p style={styles.stepDesc}>Choose premium wood stains, transparent sealers, and protective coatings with live coverage and pricing calculation.</p>
+                  <h4 style={styles.stepTitle}>Wood Species &amp; Substrate Rules</h4>
+                  <p style={styles.stepDesc}>Select Pressure-Treated Pine, Cedar, Redwood, Mahogany, or Composite/Trex. Trex substrates automatically enforce cleaning-only scope per manufacturer standards.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>4</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Instant Accurate Estimate &amp; Contractor Match</h4>
-                  <p style={styles.stepDesc}>Receive a transparent breakdown of materials, labor, and taxes, and connect directly with verified licensed contractors.</p>
+                  <h4 style={styles.stepTitle}>Elevation &amp; Existing Coating</h4>
+                  <p style={styles.stepDesc}>Configure height and whether your deck has bare wood, transparent toner, semi-transparent stain, or solid paint requiring stripping.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>5</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Scope of Work &amp; Chemical Treatments</h4>
+                  <p style={styles.stepDesc}>Combine deep pressure washing, sodium metasilicate stripping, brightening pH neutralizer, and precision mechanical sanding.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>6</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Condition Assessment &amp; Photo Upload</h4>
+                  <p style={styles.stepDesc}>Note specific rotted or cracked boards. Upload optional daylight photos to help certified technicians verify your quote without home disruption.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>7</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Guaranteed Official Price &amp; Dispatch</h4>
+                  <p style={styles.stepDesc}>Receive a transparent, guaranteed estimate adhering to commercial standards ($2,500 local min job price / $3,000 extended travel) and book your inspection instantly.</p>
                 </div>
               </div>
             </div>
@@ -521,7 +592,7 @@ export default function CustomerLayout() {
                 }}
                 style={styles.modalPrimaryBtn}
               >
-                Start New Estimate
+                Launch Restoration Calculator &rarr;
               </button>
             </div>
           </div>
@@ -545,7 +616,7 @@ const styles = {
     bottom: 0,
     backgroundColor: '#ffffff',
     borderRight: '1px solid #e2e8f0',
-    zIndex: 50,
+    zIndex: 90,
     display: 'flex',
     flexDirection: 'column',
     overflowX: 'hidden',
@@ -686,6 +757,27 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+  },
+  outlinedBackBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    color: '#334155',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '7px 14px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+  },
+  headerProjectName: {
+    fontSize: '1.05rem',
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: '-0.2px',
   },
   headerBackBtn: {
     display: 'flex',
