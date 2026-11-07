@@ -27,6 +27,22 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    avatar: {
+      type: String,
+      default: '',
+    },
+    address: {
+      street: { type: String, default: '', trim: true },
+      city: { type: String, default: '', trim: true },
+      state: { type: String, default: '', trim: true },
+      zipCode: { type: String, default: '', trim: true },
+      country: { type: String, default: 'USA', trim: true },
+    },
+    preferredContactMethod: {
+      type: String,
+      enum: ['email', 'phone', 'sms'],
+      default: 'email',
+    },
     passwordHash: {
       type: String,
       required: [true, 'Password hash is required'],

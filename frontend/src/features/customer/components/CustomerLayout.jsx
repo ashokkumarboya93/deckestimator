@@ -8,7 +8,7 @@
 // - Zero emojis; clean SVG line icons throughout
 // - Dynamic top navigation with breadcrumbs, notifications dropdown, user avatar, and logout
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 
@@ -22,6 +22,25 @@ export default function CustomerLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Click-outside listener for notifications & profile dropdowns
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -48,6 +67,9 @@ export default function CustomerLayout() {
 
   // Compute page title and breadcrumbs
   const getPageInfo = () => {
+    if (currentPath.includes('/customer/profile')) {
+      return { title: 'Profile Settings', breadcrumb: 'Customer / Account' };
+    }
     if (currentPath.includes('/customer/decks/new')) {
       return { title: 'Deck Estimator Builder', breadcrumb: 'Customer / New Deck Project' };
     }
@@ -261,19 +283,27 @@ export default function CustomerLayout() {
           {/* Right: Notifications, Profile, Logout */}
           <div style={styles.headerRight}>
             {/* Quick Action Button */}
-            <Link to="/customer/decks/new" style={styles.primaryActionBtn} title="Start New Estimate">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>+ New Estimate</span>
+            <Link
+              to="/customer/decks/new"
+              style={styles.primaryActionBtn}
+              title="Start New Estimation"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F0F7FF';
+                e.currentTarget.style.borderColor = '#003B7A';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#034EA2';
+              }}
+            >
+              <span>+ New Estimation</span>
             </Link>
 
             {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
+            <div ref={notifRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => setShowNotifications((prev) => !prev)}
                 style={styles.iconButton}
                 title="Notifications"
               >
@@ -321,16 +351,29 @@ export default function CustomerLayout() {
             </div>
 
             {/* Profile Dropdown */}
-            <div style={{ position: 'relative' }}>
+            <div ref={profileRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onClick={() => setShowProfileMenu((prev) => !prev)}
                 style={styles.profileBtn}
               >
-                <div style={styles.avatar}>{initials}</div>
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName || 'User'}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '1.5px solid #E2E8F0',
+                    }}
+                  />
+                ) : (
+                  <div style={styles.avatar}>{initials}</div>
+                )}
                 <div style={styles.profileText}>
                   <span style={styles.profileName}>{user?.fullName || 'Jane Homeowner'}</span>
-                  <span style={styles.profileRole}>Customer</span>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
@@ -340,7 +383,7 @@ export default function CustomerLayout() {
               {showProfileMenu && (
                 <div style={styles.profileMenu}>
                   <div style={styles.profileMenuHeader}>
-                    <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>
+                    <p style={{ fontWeight: '700', fontSize: '13.5px', margin: 0, color: '#0f172a' }}>
                       {user?.fullName || 'Jane Homeowner'}
                     </p>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
@@ -349,26 +392,42 @@ export default function CustomerLayout() {
                   </div>
                   <div style={styles.menuDivider} />
                   <Link
-                    to="/customer/dashboard"
+                    to="/customer/profile"
                     onClick={() => setShowProfileMenu(false)}
-                    style={styles.menuItem}
+                    style={{ ...styles.menuItem, display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    Dashboard Home
-                  </Link>
-                  <Link
-                    to="/customer/estimates"
-                    onClick={() => setShowProfileMenu(false)}
-                    style={styles.menuItem}
-                  >
-                    Saved Estimates
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span>Profile Settings</span>
                   </Link>
                   <div style={styles.menuDivider} />
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    style={{ ...styles.menuItem, color: '#b91c1c', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleLogout();
+                    }}
+                    style={{
+                      ...styles.menuItem,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#b91c1c',
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
-                    Sign Out
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Logout</span>
                   </button>
                 </div>
               )}
@@ -697,19 +756,18 @@ const styles = {
   primaryActionBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#034EA2',
-    backgroundImage: 'linear-gradient(135deg, #034EA2 0%, #0057B8 100%)',
-    color: '#ffffff',
-    padding: '10px 22px',
-    borderRadius: '10px',
-    fontSize: '14px',
+    gap: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#034EA2',
+    padding: '8px 18px',
+    borderRadius: '9px',
+    fontSize: '13.5px',
     fontWeight: '700',
     textDecoration: 'none',
-    boxShadow: '0 4px 14px rgba(3, 78, 162, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-    border: 'none',
-    letterSpacing: '-0.2px',
+    border: '1.5px solid #034EA2',
+    boxShadow: '0 1px 4px rgba(3, 78, 162, 0.08)',
+    transition: 'all 0.18s ease',
+    letterSpacing: '-0.1px',
     cursor: 'pointer',
   },
   iconButton: {

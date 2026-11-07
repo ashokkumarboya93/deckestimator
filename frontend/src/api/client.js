@@ -114,6 +114,6 @@ apiClient.patch = (endpoint, body, options = {}) =>
 
 apiClient.delete = (endpoint, options = {}) => apiClient(endpoint, { method: 'DELETE', ...options });
 
-export { apiClient as client };
+export { apiClient, apiClient as client };
 export default apiClient;
 

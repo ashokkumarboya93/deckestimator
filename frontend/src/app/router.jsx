@@ -13,6 +13,7 @@ import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesP
 import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import CustomerLayout from '../features/customer/components/CustomerLayout';
+import CustomerProfilePage from '../features/customer/pages/CustomerProfilePage';
 
 // Contractor Pages & Layout
 import ContractorLayout from '../features/contractor/components/ContractorLayout';
@@ -133,6 +134,10 @@ const router = createBrowserRouter([
           {
             path: 'estimates/:estimateId',
             element: <EstimateDetailPage />,
+          },
+          {
+            path: 'profile',
+            element: <CustomerProfilePage />,
           },
         ],
       },
