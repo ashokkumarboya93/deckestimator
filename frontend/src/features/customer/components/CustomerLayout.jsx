@@ -99,7 +99,7 @@ export default function CustomerLayout() {
               }}
             >
               <span style={styles.brandTitle}>
-                DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+                DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
               </span>
               <span style={styles.brandSubtitle}>Customer Portal</span>
             </div>

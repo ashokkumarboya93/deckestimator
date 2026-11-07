@@ -11,6 +11,11 @@ export const leadApi = {
     return res.data;
   },
 
+  submitReachOut: async (payload = {}) => {
+    const res = await client.post('/leads/reach-out', payload);
+    return res.data;
+  },
+
   getMyLeads: async (params = {}) => {
     const res = await client.get(ENDPOINTS.LEADS.MY_LEADS, { params });
     return res.data;

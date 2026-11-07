@@ -98,7 +98,7 @@ export default function ContractorLayout() {
                 whiteSpace: 'nowrap',
               }}
             >
-              <span style={styles.brandTitle}>DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+              <span style={styles.brandTitle}>DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
               </span>
               <span style={styles.brandSubtitle}>Contractor Portal</span>
             </div>

@@ -4,12 +4,13 @@
    ============================================= */
 
 :root {
-  /* Brand Theme: Light Navy & Royal Blue */
-  --color-primary: #1d4ed8;
-  --color-primary-dark: #1e40af;
-  --color-primary-light: #3b82f6;
-  --color-primary-subtle: #eff6ff;
-  --color-primary-border: #bfdbfe;
+  /* Brand Theme: Dark Navy Blue & Crisp White */
+  --color-primary: #0B192C;
+  --color-primary-dark: #07101C;
+  --color-primary-light: #1E3E62;
+  --color-primary-accent: #2563EB;
+  --color-primary-subtle: #F0F7FF;
+  --color-primary-border: #BFDBFE;
   
   /* Slate & Navy Neutrals */
   --color-navy: #0f172a;

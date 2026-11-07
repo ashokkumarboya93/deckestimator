@@ -1235,3 +1235,4 @@ const styles = {
     animation: 'spin 0.8s linear infinite',
   },
 };
+

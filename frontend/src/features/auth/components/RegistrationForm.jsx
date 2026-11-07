@@ -204,8 +204,7 @@ export function RegistrationForm() {
       }}
     >
       <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>Join DECK PRO
-        </h1>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.025em' }}>Join DECK RESTORATION PLUS</h1>
         <p style={{ color: '#64748b', fontSize: '0.925rem', marginTop: '0.35rem' }}>Create your account to start calculating and managing professional deck estimates.
         </p>
       </div>

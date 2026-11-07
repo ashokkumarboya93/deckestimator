@@ -156,59 +156,71 @@ async function createEstimate(data, user, ipAddress) {
 
     const clientCalc = pricingEngine.calculateClientPricing(clientParams);
 
-    selectedMaterialsItems = Object.entries(clientCalc.productRequirements)
-      .filter(([_, prod]) => prod.active)
-      .map(([key, prod]) => ({
+    selectedMaterialsItems = [
+      {
         materialId: new mongoose.Types.ObjectId(),
-        materialName: prod.name,
-        materialCode: key.toUpperCase(),
-        brandName: 'Standard Professional',
-        unit: prod.unit,
-        quantity: prod.displayQuantity,
-        unitPrice: prod.unitPrice,
-        coveragePerUnit: prod.coverageRate,
-        baseQuantity: prod.rawQuantity,
+        materialName: `Restoration Materials & Preps (${clientCalc.prep || 'clean'})`,
+        materialCode: `MAT-${(clientCalc.finish || 'standard').toUpperCase()}`,
+        brandName: 'Deck Restoration Plus Pro Line',
+        unit: 'package',
+        quantity: 1,
+        unitPrice: clientCalc.basePrice,
+        coveragePerUnit: clientCalc.billableArea,
+        baseQuantity: clientCalc.billableArea,
         wastePercentage: 0,
         wasteQuantity: 0,
-        subtotal: pricingEngine.round2(prod.cost),
-        formula: `${prod.rawQuantity.toFixed(3)} gal × $${prod.unitPrice} = $${prod.cost.toFixed(2)}`,
-      }));
-
-    selectedServicesItems = [
-      {
-        serviceId: new mongoose.Types.ObjectId(),
-        serviceName: 'Deck Surface Restoration Service',
-        serviceCode: 'SRV-RESTORE',
-        serviceType: 'restoration',
-        unit: 'square_foot',
-        quantity: clientCalc.billableArea,
-        price: clientCalc.laborCost,
-        subtotal: clientCalc.laborCost,
-        formula: `${clientCalc.laborBreakdown.totalHours.toFixed(2)} hrs @ $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+        subtotal: clientCalc.basePrice,
+        formula: `${clientCalc.billableArea} sqft @ $${clientCalc.rate}/sqft = $${clientCalc.basePrice.toFixed(2)}`,
       },
     ];
 
+    selectedServicesItems = (data.services || data.restorationScope || ['cleaning']).map((srv) => ({
+      serviceId: new mongoose.Types.ObjectId(),
+      serviceName: String(srv).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      serviceCode: `SRV-${String(srv).toUpperCase().slice(0, 8)}`,
+      serviceType: 'restoration',
+      unit: 'service',
+      quantity: 1,
+      price: 0,
+      subtotal: 0,
+      formula: 'Included in package sqft rate card',
+    }));
+
     laborBreakdownData = {
       enabled: true,
-      laborRate: clientCalc.laborBreakdown.billingRate,
-      totalHours: clientCalc.laborBreakdown.totalHours,
-      subtotal: clientCalc.laborCost,
-      notes: `5-Part Labor: Base(${clientCalc.laborBreakdown.H1_base.toFixed(2)}h) + Coating(${clientCalc.laborBreakdown.H2_coating.toFixed(2)}h) + Species(${clientCalc.laborBreakdown.H3_species.toFixed(2)}h) + Access(${clientCalc.laborBreakdown.H4_access.toFixed(2)}h) + Condition(${clientCalc.laborBreakdown.H5_condition.toFixed(2)}h)`,
-      formula: `${clientCalc.laborBreakdown.totalHours.toFixed(3)} hrs × $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+      laborRate: clientCalc.labourRate || 250,
+      totalHours: clientCalc.addHours || 0,
+      subtotal: clientCalc.labourAdj || 0,
+      notes: `Additive labor adjustment: Wood hours (${clientCalc.woodHours || 0}h) + Access hours (${clientCalc.accessHours || 0}h) = ${clientCalc.addHours || 0} additional hours @ $${clientCalc.labourRate || 250}/hr`,
+      formula: `${clientCalc.addHours || 0} add. hrs × $${clientCalc.labourRate || 250}/hr = $${(clientCalc.labourAdj || 0).toFixed(2)}`,
     };
 
-    subtotalAmount = clientCalc.baseEstimate;
-    minAdjustmentAmount = 0;
-    minJobPriceVal = 0;
-    preTaxAmount = clientCalc.baseEstimate;
+    if (clientCalc.travelFee > 0) {
+      additionalChargesData = {
+        items: [
+          {
+            type: 'travel',
+            name: 'Travel Fee (>45 min distance)',
+            amount: clientCalc.travelFee,
+            notes: 'Flat distance mobilization surcharge',
+          },
+        ],
+        subtotal: clientCalc.travelFee,
+      };
+    }
+
+    subtotalAmount = clientCalc.rawSubtotal || clientCalc.total;
+    minAdjustmentAmount = clientCalc.minJobApplied ? (clientCalc.minJob - (clientCalc.rawSubtotal || 0)) : 0;
+    minJobPriceVal = clientCalc.minJob || 2500;
+    preTaxAmount = clientCalc.total;
     taxPercentageVal = 0;
     taxAmountVal = 0;
-    totalAmountVal = clientCalc.baseEstimate;
+    totalAmountVal = clientCalc.total;
     pricingSnapshotData = clientCalc;
     warningsList = (clientCalc.warnings || []).map((w) => ({
       materialName: 'Restoration Scope',
       serviceName: 'Deck Restoration',
-      type: w.type || 'warning',
+      type: w.type || 'info',
       notes: w.message || '',
     }));
   } else {
