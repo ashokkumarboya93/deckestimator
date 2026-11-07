@@ -52,11 +52,12 @@ function validate(schema) {
     }
 
     if (errors.length > 0) {
+      const detailedMsg = errors.map((e) => e.message).join('; ');
       return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Please correct the invalid input.',
+          message: detailedMsg || 'Please correct the invalid input.',
           details: errors,
         },
       });

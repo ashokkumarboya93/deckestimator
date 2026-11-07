@@ -55,16 +55,27 @@ const DEFAULT_PRICING_CONFIG = {
   },
   production: {
     cleaning: 100,
+    deck_cleaning: 100,
+    deep_cleaning: 100,
     pressure_washing: 100,
     sanding: 60,
+    deck_sanding: 60,
+    floor_railing_sanding: 60,
     mechanical_sanding: 60,
     detail_sanding: 90,
     paint_removal: 40,
     stain_stripping: 50,
+    deck_stripping: 50,
     stripping: 50,
     staining: 100,
+    deck_staining: 100,
+    staining_conditioning: 100,
     sealing: 100,
+    deck_sealing: 100,
+    clear_sealing: 100,
+    wood_brightening: 100,
     waterproofing: 100,
+    waterproofing_barrier: 100,
   },
   wood: {
     pt_pine: { label: 'Pressure-treated pine', pct: 0 },
@@ -426,7 +437,18 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   const railingSqftVal = inp.railingSqft != null && inp.railingSqft !== ''
     ? n(inp.railingSqft)
     : n(inp.railingLf || inp.railingLength) * (a.railingSqftPerLf || 4);
-  const stairsSqftVal = n(inp.stairSteps || inp.stairCount) * (a.stairSqftPerStep || 12);
+  const stairsSqftVal = inp.stairSqft != null && inp.stairSqft !== ''
+    ? n(inp.stairSqft)
+    : n(inp.stairSteps || inp.stairCount) * (a.stairSqftPerStep || 12);
+  const pergolaSqftVal = inp.pergolaSqft != null && inp.pergolaSqft !== ''
+    ? n(inp.pergolaSqft)
+    : n(inp.pergolaLength || inp.pergolaLf) * (a.pergolaSqftPerLf || 1.5);
+  const privacyWallSqftVal = inp.privacyWallSqft != null && inp.privacyWallSqft !== ''
+    ? n(inp.privacyWallSqft)
+    : n(inp.privacyWallLength || inp.privacyWallLf) * 2;
+  const sidingSqftVal = inp.sidingSqft != null && inp.sidingSqft !== ''
+    ? n(inp.sidingSqft)
+    : n(inp.sidingArea || 0);
   const postsSqftVal = n(inp.postCount || inp.posts) * (a.postSqftEach || 6);
 
   const hasJoists = Boolean(inp.joists || inp.includeJoists);
@@ -445,6 +467,9 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     flooring: round2(floorVal),
     railings: round2(railingSqftVal),
     stairs: round2(stairsSqftVal),
+    pergola: round2(pergolaSqftVal),
+    privacyWall: round2(privacyWallSqftVal),
+    siding: round2(sidingSqftVal),
     posts: round2(postsSqftVal),
     joists: round2(joistsSqftVal),
     fascia: round2(fasciaSqftVal),
@@ -463,9 +488,12 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     : (Array.isArray(inp.restorationScope) ? inp.restorationScope : ['cleaning']);
 
   const S = new Set(rawServices.map((s) => normKey(s)));
-  const stripping = S.has('paint_removal') || S.has('stain_stripping') || S.has('stripping');
-  const sanding = S.has('sanding') || S.has('mechanical_sanding') || S.has('detail_sanding');
-  const finishes = ['staining', 'sealing', 'waterproofing'].filter((s) => S.has(s));
+  const stripping = S.has('paint_removal') || S.has('stain_stripping') || S.has('stripping') || S.has('deck_stripping');
+  const sanding = S.has('sanding') || S.has('mechanical_sanding') || S.has('detail_sanding') || S.has('deck_sanding');
+  const hasNoCoating = S.has('no_coating');
+  const finishes = hasNoCoating
+    ? []
+    : ['staining', 'deck_staining', 'sealing', 'deck_sealing', 'waterproofing', 'waterproofing_barrier'].filter((s) => S.has(s));
 
   // Stain & Finish Column Lookup (including Semi-Solid Stain Q4)
   const rawStain = normKey(inp.stainType || inp.finishType || inp.coatingType || '');

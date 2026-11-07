@@ -66,7 +66,7 @@ const deckSchema = new mongoose.Schema(
     // Deck Shape
     deckShape: {
       type: String,
-      enum: ['rectangle', 'square', 'l_shaped', 'custom', 'other'],
+      enum: ['rectangle', 'square', 'l_shaped', 'multi_level', 'custom', 'other'],
       default: 'rectangle',
     },
     // Structure & Features
@@ -76,6 +76,14 @@ const deckSchema = new mongoose.Schema(
         min: 1,
         max: 5,
         default: 1,
+      },
+      height: {
+        type: String,
+        default: 'ground',
+      },
+      exactHeightFt: {
+        type: Number,
+        default: null,
       },
       isAttached: {
         type: Boolean,
@@ -90,11 +98,66 @@ const deckSchema = new mongoose.Schema(
         min: 0,
         default: 0,
       },
+      railingSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
       hasStairs: {
         type: Boolean,
         default: false,
       },
       stairStepCount: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      stairSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      hasPergola: {
+        type: Boolean,
+        default: false,
+      },
+      pergolaSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      hasPrivacyWall: {
+        type: Boolean,
+        default: false,
+      },
+      privacyWallSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      hasSiding: {
+        type: Boolean,
+        default: false,
+      },
+      sidingSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      hasFascia: {
+        type: Boolean,
+        default: false,
+      },
+      fasciaSqft: {
+        type: Number,
+        min: 0,
+        default: 0,
+      },
+      includeJoists: {
+        type: Boolean,
+        default: false,
+      },
+      joistsSqft: {
         type: Number,
         min: 0,
         default: 0,
@@ -114,12 +177,14 @@ const deckSchema = new mongoose.Schema(
     surfaceDetails: {
       material: {
         type: String,
-        enum: ['wood', 'composite', 'other', 'unknown'],
         default: 'wood',
+      },
+      woodSpecies: {
+        type: String,
+        default: 'pt_pine',
       },
       coatingStatus: {
         type: String,
-        enum: ['none', 'painted', 'stained', 'sealed', 'unknown'],
         default: 'none',
       },
       previousTreatment: {
@@ -137,16 +202,6 @@ const deckSchema = new mongoose.Schema(
     // Visible Conditions (multi-select)
     visibleConditions: {
       type: [String],
-      enum: [
-        'peeling_coating',
-        'discoloration',
-        'surface_wear',
-        'wood_damage',
-        'cracks',
-        'mold_mildew',
-        'other',
-        'not_sure',
-      ],
       default: [],
     },
     additionalNotes: {
