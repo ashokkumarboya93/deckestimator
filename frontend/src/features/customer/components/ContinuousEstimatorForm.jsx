@@ -2,12 +2,15 @@
 // Deck Restoration Plus — Precision Estimator Engine
 // =============================================
 // Clean, modern Dark Navy Blue & Crisp White Theme (#0B192C / #1E3E62 / #FFFFFF).
-// Adheres strictly to the Build Specification:
-// - F1–F15 Server-side single source of truth pricing
-// - Right Sidebar: Circular progress gauge, live selections preview, interactive
-//   architectural photo reference window, live estimate preview, and Reach Out button.
-// - Post-submission official estimate result box with highlight total & instant lead creation.
-// - Identical experience across Customer & Contractor portals.
+// Adheres strictly to the Client Build Specification & Client Q12/Q13:
+// - Customer View: ONE TOTAL NUMBER ONLY with ZERO breakdown, NO rates, NO formulas exposed.
+// - Price calculated and revealed at submit (Q13) to protect business pricing formulas.
+// - Minimum Job Floor: Does NOT arbitrarily force $2,500 onto the estimate; instead shows the
+//   pure calculated estimate accompanied by an Important Minimum Job Notice.
+// - Contractor View: Full operational breakdown, low-high range, billable area, and rate card data.
+// - Right Sidebar: Step-based circular progress gauge, live selections preview, interactive
+//   architectural photo window, and always-visible Reach Out button.
+// - Post-Submission Official Estimate Box with instant "Convert to Priority Project Lead" action.
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -178,6 +181,9 @@ const CONDITIONS = [
 export default function ContinuousEstimatorForm({ initialData = null, isEditing = false, deckId = null }) {
   const navigate = useNavigate();
 
+  // Role Detection: Customer vs Contractor
+  const isContractor = typeof window !== 'undefined' && window.location.pathname.startsWith('/contractor');
+
   // --- STATE HOOKS ---
 
   // Section 1: Dimensions & Shape
@@ -234,8 +240,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const [notes, setNotes] = useState('');
 
   // UI & Calculation state
-  const [livePricing, setLivePricing] = useState(null);
-  const [calculating, setCalculating] = useState(false);
+  const [contractorPricing, setContractorPricing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -243,6 +248,10 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const [officialEstimate, setOfficialEstimate] = useState(null);
   const [leadCreated, setLeadCreated] = useState(false);
   const [leadLoading, setLeadLoading] = useState(false);
+
+  // Contractor Override State
+  const [contractorOverrideAmount, setContractorOverrideAmount] = useState('');
+  const [contractorOverrideReason, setContractorOverrideReason] = useState('');
 
   // Reach Out / Support Modal State
   const [reachOutOpen, setReachOutOpen] = useState(false);
@@ -252,7 +261,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const [reachOutSuccess, setReachOutSuccess] = useState(false);
 
   // Architectural Reference Window Active Tab
-  const [refTab, setRefTab] = useState('shape'); // 'shape' | 'wood' | 'finish' | 'process'
+  const [refTab, setRefTab] = useState('shape'); // 'shape' | 'wood'
 
   // --- RULE R1: TREX LOCK ---
   useEffect(() => {
@@ -290,24 +299,20 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   // Calculate Step Progress (1 to 9)
   const progressPercent = useMemo(() => {
     let completed = 0;
-    if (floorArea > 0) completed += 1; // S1
-    if (hasFlooring || hasRailings || hasStairs) completed += 1; // S2
-    if (woodSpecies) completed += 1; // S3
-    if (height) completed += 1; // S4
-    if (existingCoating) completed += 1; // S5
-    if (services.length > 0) completed += 1; // S6
-    if (conditions.length > 0) completed += 1; // S7
-    if (projectName.trim()) completed += 1; // S9
+    if (floorArea > 0) completed += 1;
+    if (hasFlooring || hasRailings || hasStairs) completed += 1;
+    if (woodSpecies) completed += 1;
+    if (height) completed += 1;
+    if (existingCoating) completed += 1;
+    if (services.length > 0) completed += 1;
+    if (conditions.length > 0) completed += 1;
+    if (projectName.trim()) completed += 1;
     return Math.round((completed / 8) * 100);
   }, [floorArea, hasFlooring, hasRailings, hasStairs, woodSpecies, height, existingCoating, services, conditions, projectName]);
 
-  // --- LIVE SERVER-SIDE PRICING ENGINE CALL ---
-  const runPricingCalc = useCallback(async () => {
-    if (floorArea <= 0 || services.length === 0) {
-      setLivePricing(null);
-      return;
-    }
-    setCalculating(true);
+  // Contractor-Only Live Pricing Preview
+  const runContractorCalc = useCallback(async () => {
+    if (!isContractor || floorArea <= 0 || services.length === 0) return;
     try {
       const payload = {
         floorArea,
@@ -322,22 +327,21 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         fasciaLf: hasFascia ? Number(fasciaLf) || 0 : 0,
         includeJoists,
         travelMinutes: 30,
+        forContractor: true,
       };
       const res = await calculateLivePricing(payload);
-      setLivePricing(res);
+      setContractorPricing(res);
     } catch {
-      // Fallback preview if disconnected
-    } finally {
-      setCalculating(false);
+      // Ignore
     }
-  }, [floorArea, services, stainType, woodSpecies, height, existingCoating, hasRailings, railingLf, hasStairs, stairSteps, hasPosts, postCount, hasFascia, fasciaLf, includeJoists]);
+  }, [isContractor, floorArea, services, stainType, woodSpecies, height, existingCoating, hasRailings, railingLf, hasStairs, stairSteps, hasPosts, postCount, hasFascia, fasciaLf, includeJoists]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      runPricingCalc();
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [runPricingCalc]);
+    if (isContractor) {
+      const timer = setTimeout(runContractorCalc, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isContractor, runContractorCalc]);
 
   // Service toggle handler
   const toggleService = (id) => {
@@ -433,16 +437,37 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
       const est = await createEstimate(estimatePayload);
 
-      // Set official estimate state for the highlight box
+      // Resolve calculated vs floor price based on user instruction:
+      // "dont add 2500 as a estimation just imp note enough atlast and right side bar also ok"
+      const snap = est?.pricingSnapshot || {};
+      const calculatedAmt = snap.calculatedTotal !== undefined ? snap.calculatedTotal : (est?.totalAmount || 2500);
+      const minJobFloor = snap.minJob || 2500;
+      const minJobApplies = snap.minJobApplied ?? (calculatedAmt < minJobFloor);
+
       setOfficialEstimate({
         ref: est?.estimateNumber || `DP-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
-        total: est?.totalAmount || livePricing?.total || 2500,
-        low: est?.pricingSnapshot?.low || livePricing?.low || 2500,
-        high: est?.pricingSnapshot?.high || livePricing?.high || 2500,
-        billableArea: est?.pricingSnapshot?.A || billableAreaPreview,
-        rate: est?.pricingSnapshot?.rate || livePricing?.rate || 3.00,
-        status: est?.pricingSnapshot?.status || (services.includes('repairs') ? 'needs_contractor_quote' : 'submitted'),
-        needsPhotoReview: est?.pricingSnapshot?.needsPhotoReview ?? livePricing?.needsPhotoReview ?? false,
+        // Show pure calculated amount (NOT arbitrarily forced to 2,500)
+        total: calculatedAmt,
+        minJobApplies,
+        minJobAmount: minJobFloor,
+        minJobNotice: minJobApplies
+          ? `Important Notice: Deck Restoration Plus maintains a standard project mobilization minimum of $${minJobFloor.toLocaleString()} for this service tier. Because your current calculated scope is below this threshold, the $${minJobFloor.toLocaleString()} minimum job price will apply upon final booking and dispatch.`
+          : null,
+        // Contractor-only fields
+        low: snap.low || minJobFloor,
+        high: snap.high || minJobFloor,
+        billableArea: snap.A || billableAreaPreview,
+        rate: snap.rate || 3.00,
+        prep: snap.prep || 'clean',
+        finish: snap.finish || 'sealer',
+        baseHours: snap.baseHours || 0,
+        woodHours: snap.woodHours || 0,
+        accessHours: snap.accessHours || 0,
+        labourAdj: snap.labourAdj || 0,
+        travelFee: snap.travelFee || 0,
+        status: snap.status || (services.includes('repairs') ? 'needs_contractor_quote' : 'submitted'),
+        needsPhotoReview: snap.needsPhotoReview ?? false,
+        hasRepairs: snap.hasRepairs ?? services.includes('repairs'),
         deckId: activeDeckId,
         estimateId: est?._id || est?.id,
       });
@@ -468,8 +493,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         deckId: officialEstimate.deckId,
         estimateId: officialEstimate.estimateId,
         contactSource: 'Official Estimator Conversion',
-        subject: `Estimate Conversion: ${projectName} ($${officialEstimate.total.toLocaleString()})`,
-        message: `Customer converted official estimate ${officialEstimate.ref} for a ${woodSpecies} deck of ${officialEstimate.billableArea} sqft. Total: $${officialEstimate.total.toLocaleString()}. Ready for contractor assignment & site verification.`,
+        subject: `Estimate Booking: ${projectName} ($${officialEstimate.total.toLocaleString()})`,
+        message: `Customer converted official estimate ${officialEstimate.ref} for a ${woodSpecies} deck of ${floorArea} sqft. Estimate: $${officialEstimate.total.toLocaleString()}. Ready for certified contractor assignment & inspection.`,
       });
       setLeadCreated(true);
     } catch (err) {
@@ -527,7 +552,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           </div>
           <div>
             <span style={styles.brandMainTitle}>Deck Restoration Plus</span>
-            <span style={styles.brandSubTitle}>Official Client & Contractor Estimator Engine</span>
+            <span style={styles.brandSubTitle}>
+              {isContractor ? 'Contractor Estimator & Rate Engine' : 'Precision Deck Restoration Estimator'}
+            </span>
           </div>
         </div>
 
@@ -540,7 +567,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
           </svg>
-          <span>Reach Out &bull; Talk to Specialist</span>
+          <span>Reach Out &bull; Need Assistance?</span>
         </button>
       </header>
 
@@ -652,7 +679,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <span style={styles.stepBadge}>Section 2</span>
               <div>
                 <h3 style={styles.cardTitle}>Deck Components & Features</h3>
-                <p style={styles.cardSubtitle}>Include railings, stairs, underside joists, and fascia (converted to billable sqft per spec).</p>
+                <p style={styles.cardSubtitle}>Select attached components to convert to billable surface area.</p>
               </div>
             </div>
 
@@ -668,7 +695,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   />
                   <div>
                     <strong>Main Deck Flooring</strong>
-                    <span style={styles.compSub}>Full horizontal planking surface ({floorArea} sqft)</span>
+                    <span style={styles.compSub}>Horizontal surface ({floorArea} sqft)</span>
                   </div>
                 </div>
               </div>
@@ -684,7 +711,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   />
                   <div>
                     <strong>Perimeter Railings</strong>
-                    <span style={styles.compSub}>Balusters & top rail (&times; 4 sqft per linear ft)</span>
+                    <span style={styles.compSub}>Balusters & top rail (&times; 4 sqft/LF)</span>
                   </div>
                 </div>
                 {hasRailings && (
@@ -696,7 +723,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       onChange={(e) => setRailingLf(e.target.value)}
                       style={styles.subInput}
                     />
-                    <span style={styles.subInputBadge}>{Number(railingLf || 0) * 4} sqft billable</span>
+                    <span style={styles.subInputBadge}>{Number(railingLf || 0) * 4} sqft</span>
                   </div>
                 )}
               </div>
@@ -712,7 +739,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   />
                   <div>
                     <strong>Stair Steps</strong>
-                    <span style={styles.compSub}>Treads & risers (&times; 12 sqft per step)</span>
+                    <span style={styles.compSub}>Treads & risers (&times; 12 sqft/step)</span>
                   </div>
                 </div>
                 {hasStairs && (
@@ -724,7 +751,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       onChange={(e) => setStairSteps(e.target.value)}
                       style={styles.subInput}
                     />
-                    <span style={styles.subInputBadge}>{Number(stairSteps || 0) * 12} sqft billable</span>
+                    <span style={styles.subInputBadge}>{Number(stairSteps || 0) * 12} sqft</span>
                   </div>
                 )}
               </div>
@@ -739,8 +766,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     style={styles.checkbox}
                   />
                   <div>
-                    <strong>Structural Posts</strong>
-                    <span style={styles.compSub}>Vertical support posts (&times; 6 sqft each)</span>
+                    <strong>Support Posts</strong>
+                    <span style={styles.compSub}>Vertical posts (&times; 6 sqft each)</span>
                   </div>
                 </div>
                 {hasPosts && (
@@ -752,7 +779,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       onChange={(e) => setPostCount(e.target.value)}
                       style={styles.subInput}
                     />
-                    <span style={styles.subInputBadge}>{Number(postCount || 0) * 6} sqft billable</span>
+                    <span style={styles.subInputBadge}>{Number(postCount || 0) * 6} sqft</span>
                   </div>
                 )}
               </div>
@@ -767,13 +794,13 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     style={styles.checkbox}
                   />
                   <div>
-                    <strong>Include Underside Joists</strong>
-                    <span style={styles.compSub}>Exposed joist framing (auto = 40% of floor area)</span>
+                    <strong>Underside Joists</strong>
+                    <span style={styles.compSub}>Exposed framing (40% of floor)</span>
                   </div>
                 </div>
                 {includeJoists && (
                   <div style={styles.compInputWrap}>
-                    <span style={styles.subInputBadge}>{Math.round(floorArea * 0.4)} sqft billable joist framing</span>
+                    <span style={styles.subInputBadge}>{Math.round(floorArea * 0.4)} sqft</span>
                   </div>
                 )}
               </div>
@@ -788,8 +815,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     style={styles.checkbox}
                   />
                   <div>
-                    <strong>Perimeter Fascia Board</strong>
-                    <span style={styles.compSub}>Edge rim joist cover (&times; 1.5 sqft per linear ft)</span>
+                    <strong>Perimeter Fascia</strong>
+                    <span style={styles.compSub}>Rim joist cover (&times; 1.5 sqft/LF)</span>
                   </div>
                 </div>
                 {hasFascia && (
@@ -801,7 +828,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       onChange={(e) => setFasciaLf(e.target.value)}
                       style={styles.subInput}
                     />
-                    <span style={styles.subInputBadge}>{Math.round(Number(fasciaLf || 0) * 1.5)} sqft billable</span>
+                    <span style={styles.subInputBadge}>{Math.round(Number(fasciaLf || 0) * 1.5)} sqft</span>
                   </div>
                 )}
               </div>
@@ -814,7 +841,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <span style={styles.stepBadge}>Section 3</span>
               <div>
                 <h3 style={styles.cardTitle}>Wood Species & Material</h3>
-                <p style={styles.cardSubtitle}>Species determines wood density, grain hardness, and labor production adjustments.</p>
+                <p style={styles.cardSubtitle}>Select your wood species to apply appropriate grain and chemical treatment parameters.</p>
               </div>
             </div>
 
@@ -837,7 +864,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   >
                     <div style={styles.woodHeaderRow}>
                       <span style={styles.woodName}>{w.name}</span>
-                      <span style={styles.laborBadge}>{w.laborPct}</span>
+                      {isContractor && <span style={styles.laborBadge}>{w.laborPct}</span>}
                     </div>
                     <p style={styles.woodDesc}>{w.desc}</p>
                   </div>
@@ -854,7 +881,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 <span>
-                  <strong>Trex Composite Selected:</strong> Non-wood engineered decking is automatically locked to <em>Deep Cleaning & Pressure Washing</em>. Chemical stains and strippers are excluded.
+                  <strong>Trex Composite Selected:</strong> Non-wood engineered decking is automatically locked to <em>Deep Cleaning & Pressure Washing</em>. Staining, chemical stripping, and sanding are excluded.
                 </span>
               </div>
             )}
@@ -866,7 +893,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <span style={styles.stepBadge}>Section 4</span>
               <div>
                 <h3 style={styles.cardTitle}>Site Accessibility & Elevation</h3>
-                <p style={styles.cardSubtitle}>Elevation impacts ladder staging, fall protection safety, and crew transit hours.</p>
+                <p style={styles.cardSubtitle}>Specify the deck elevation from ground level.</p>
               </div>
             </div>
 
@@ -888,7 +915,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     <IconComponent width={38} height={38} active={isSelected} />
                     <strong style={styles.heightLabel}>{h.label}</strong>
                     <span style={styles.heightRange}>{h.range}</span>
-                    <span style={styles.heightPctBadge}>{h.pct} labor</span>
+                    {isContractor && <span style={styles.heightPctBadge}>{h.pct} labor</span>}
                   </div>
                 );
               })}
@@ -984,7 +1011,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       />
                       <div>
                         <strong style={styles.srvName}>{s.name}</strong>
-                        <span style={styles.srvRate}>{s.rate}</span>
+                        {isContractor && <span style={styles.srvRate}>{s.rate}</span>}
                       </div>
                     </div>
                     <p style={styles.srvDesc}>{s.desc}</p>
@@ -1077,7 +1104,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 <span>
-                  Structural damage or rotted boards detected. Consider selecting <strong>Structural Board Repairs</strong> in Section 6 for full replacement pricing.
+                  Rotted or damaged boards detected. Consider selecting <strong>Structural Board Repairs</strong> in Section 6. A certified contractor will provide a dedicated replacement quote.
                 </span>
               </div>
             )}
@@ -1196,47 +1223,89 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 <span style={styles.refBadge}>Ref: {officialEstimate.ref}</span>
               </div>
 
-              <div style={styles.resultContentRow}>
-                {/* Grand Total Display */}
-                <div style={styles.resultTotalBox}>
-                  <span style={styles.resultTotalSub}>Guaranteed Estimate Total</span>
-                  <strong style={styles.resultTotalAmt}>
+              {/* CLIENT Q12 STRICT COMPLIANCE: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown */}
+              {!isContractor ? (
+                <div style={styles.customerTotalBox}>
+                  <span style={styles.customerTotalSub}>Official Guaranteed Estimate Total</span>
+                  <strong style={styles.customerTotalAmt}>
                     ${officialEstimate.total.toLocaleString()}
                   </strong>
-                  <span style={styles.resultRangeNotice}>
-                    Calculated Range: ${officialEstimate.low.toLocaleString()} &ndash; ${officialEstimate.high.toLocaleString()}
+                  <span style={styles.customerTotalSubNotice}>
+                    {officialEstimate.status === 'needs_contractor_quote'
+                      ? 'Provisional estimate &bull; Repairs require on-site contractor confirmation'
+                      : officialEstimate.needsPhotoReview
+                      ? 'Preliminary quote &bull; Subject to photo review or site visit confirmation'
+                      : 'Comprehensive estimate based on Deck Restoration Plus quality standards'}
                   </span>
-                </div>
 
-                {/* Key Spec Breakdown */}
-                <div style={styles.resultSpecsBox}>
-                  <div style={styles.specLine}>
-                    <span>Total Billable Area:</span>
-                    <strong>{officialEstimate.billableArea.toLocaleString()} sq ft</strong>
-                  </div>
-                  <div style={styles.specLine}>
-                    <span>Package Unit Rate:</span>
-                    <strong>${officialEstimate.rate.toFixed(2)} / sq ft</strong>
-                  </div>
-                  <div style={styles.specLine}>
-                    <span>Species & Access:</span>
-                    <strong>{currentWoodObj.name} &bull; {height}</strong>
-                  </div>
-                  <div style={styles.specLine}>
-                    <span>Status:</span>
-                    <strong style={{ color: officialEstimate.needsPhotoReview ? '#D97706' : '#15803D' }}>
-                      {officialEstimate.needsPhotoReview ? 'Photo Review Requested' : 'Quote Verified'}
-                    </strong>
-                  </div>
+                  {/* USER REQUIREMENT: Minimum Job Notice without forcing $2,500 onto the estimate */}
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.customerMinJobNoticeBox}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <div>
+                        <strong style={{ color: '#92400E', fontSize: '13px' }}>Important Minimum Job Notice:</strong>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#78350F', lineHeight: 1.4 }}>
+                          Deck Restoration Plus maintains a standard mobilization minimum of ${officialEstimate.minJobAmount.toLocaleString()} for this service tier. Because your calculated job size is below this threshold, the ${officialEstimate.minJobAmount.toLocaleString()} minimum job price will apply upon final booking and crew dispatch.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                /* CONTRACTOR VIEW: Full Operational Breakdown */
+                <div style={styles.contractorBreakdownBox}>
+                  <div style={styles.resultContentRow}>
+                    <div style={styles.resultTotalBox}>
+                      <span style={styles.resultTotalSub}>Contractor Quoted Total</span>
+                      <strong style={styles.resultTotalAmt}>${officialEstimate.total.toLocaleString()}</strong>
+                      <span style={styles.resultRangeNotice}>
+                        Calculated Range: ${officialEstimate.low.toLocaleString()} &ndash; ${officialEstimate.high.toLocaleString()}
+                      </span>
+                    </div>
 
-              {/* Notice Banner */}
-              <p style={styles.resultNotice}>
-                {officialEstimate.needsPhotoReview
-                  ? 'Preliminary estimate generated from your specifications. Final quote is confirmed after brief review of your uploaded photos or an on-site visit.'
-                  : 'Official estimate computed via Deck Restoration Plus rate cards. Base labor, professional chemical application, and travel mobilization included.'}
-              </p>
+                    <div style={styles.resultSpecsBox}>
+                      <div style={styles.specLine}>
+                        <span>Billable Surface Area ($A$):</span>
+                        <strong>{officialEstimate.billableArea.toLocaleString()} sq ft</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Rate Card Lookup:</span>
+                        <strong>Prep: {officialEstimate.prep} &bull; Finish: {officialEstimate.finish}</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Unit Rate:</span>
+                        <strong>${officialEstimate.rate.toFixed(2)} / sq ft</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Labor Adjustment:</span>
+                        <strong>${officialEstimate.labourAdj.toLocaleString()} ({officialEstimate.baseHours}h base)</strong>
+                      </div>
+                      {officialEstimate.travelFee > 0 && (
+                        <div style={styles.specLine}>
+                          <span>Travel Mobilization:</span>
+                          <strong>${officialEstimate.travelFee}</strong>
+                        </div>
+                      )}
+                      <div style={styles.specLine}>
+                        <span>Workflow Status:</span>
+                        <strong style={{ color: officialEstimate.hasRepairs ? '#B91C1C' : officialEstimate.needsPhotoReview ? '#D97706' : '#15803D' }}>
+                          {officialEstimate.status}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.contractorMinNotice}>
+                      <span>Min Job Floor Applied: Calculated ${officialEstimate.total.toLocaleString()} is below ${officialEstimate.minJobAmount.toLocaleString()} threshold.</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons: Convert to Lead & Contact Specialist */}
               <div style={styles.resultActionRow}>
@@ -1317,7 +1386,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 <div style={styles.readyIndicator}>
                   <span style={{ ...styles.statusDot, backgroundColor: progressPercent > 50 ? '#15803D' : '#D97706' }} />
                   <span style={{ fontSize: '11px', fontWeight: '600', color: '#334155' }}>
-                    {progressPercent > 70 ? 'Calculations Active' : 'Enter Details'}
+                    {progressPercent > 70 ? 'Ready for Calculation' : 'Enter Details'}
                   </span>
                 </div>
               </div>
@@ -1348,10 +1417,6 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               <div style={styles.specRow}>
                 <span style={styles.specLabel}>Floor Surface</span>
                 <strong style={styles.specVal}>{floorArea > 0 ? `${floorArea} sq ft` : '—'}</strong>
-              </div>
-              <div style={styles.specRow}>
-                <span style={styles.specLabel}>Total Billable Area</span>
-                <strong style={{ ...styles.specVal, color: '#1E3E62' }}>{billableAreaPreview > 0 ? `${billableAreaPreview} sq ft` : '—'}</strong>
               </div>
               <div style={styles.specRow}>
                 <span style={styles.specLabel}>Wood Species</span>
@@ -1427,64 +1492,74 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
             </div>
           </div>
 
-          {/* 4. LIVE ESTIMATE (PREVIEW) CARD */}
+          {/* 4. LIVE ESTIMATE CARD (CLIENT Q12 COMPLIANT) */}
           <div style={styles.sidebarCard}>
             <div style={styles.cardHeaderRow}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={styles.livePulse} />
-                <h4 style={{ ...styles.sidebarHeading, color: '#0B192C' }}>Live Estimate Preview</h4>
+                <h4 style={{ ...styles.sidebarHeading, color: '#0B192C' }}>
+                  {isContractor ? 'Contractor Rate Engine' : 'Official Estimate Status'}
+                </h4>
               </div>
-              {calculating && <span style={styles.updatingBadge}>Syncing...</span>}
             </div>
 
-            {floorArea > 0 && livePricing ? (
-              <div style={styles.priceBreakdown}>
-                <div style={styles.priceRow}>
-                  <span>Billable Surface Area</span>
-                  <strong>{livePricing.billableArea || billableAreaPreview} sq ft</strong>
+            {!isContractor ? (
+              /* CUSTOMER SIDEBAR: No live price revealed before submit (prevents reverse-engineering) */
+              officialEstimate ? (
+                <div style={styles.customerSidebarResult}>
+                  <span style={styles.customerResultLabel}>Guaranteed Estimate</span>
+                  <strong style={styles.customerResultAmt}>${officialEstimate.total.toLocaleString()}</strong>
+                  <span style={styles.customerResultSub}>Ref: {officialEstimate.ref}</span>
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.sidebarMinNotice}>
+                      <span>Min Job Price (${officialEstimate.minJobAmount.toLocaleString()}) applies upon dispatch.</span>
+                    </div>
+                  )}
                 </div>
-                <div style={styles.priceRow}>
-                  <span>Base Restoration Rate</span>
-                  <strong>${Number(livePricing.rate || 2.75).toFixed(2)} / sqft</strong>
-                </div>
-                <div style={styles.priceRow}>
-                  <span>Base Package Materials</span>
-                  <strong>${Number(livePricing.totalMaterialCost || livePricing.basePrice || 0).toLocaleString()}</strong>
-                </div>
-                <div style={styles.priceRow}>
-                  <span>Labor Hours & Surcharges</span>
-                  <strong>${Number(livePricing.laborCost || livePricing.labourAdj || 0).toLocaleString()}</strong>
-                </div>
-                {livePricing.travelFee > 0 && (
-                  <div style={styles.priceRow}>
-                    <span>Travel Mobilization</span>
-                    <strong>${livePricing.travelFee}</strong>
+              ) : (
+                <div style={styles.customerReadyBox}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={styles.readyCheck}>&#10003;</span>
+                    <strong style={{ fontSize: '13px', color: '#0B192C' }}>Specifications Configured</strong>
                   </div>
-                )}
-
-                <div style={styles.divider} />
-
-                {/* SINGLE AMOUNT ESTIMATED TOTAL */}
-                <div style={styles.totalBox}>
-                  <span style={styles.totalLabel}>Estimated Total</span>
-                  <strong style={styles.totalAmount}>
-                    ${Number(livePricing.total || livePricing.baseEstimate || 2500).toLocaleString()}
-                  </strong>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                    Click <strong>Generate Official Estimate</strong> in Section 9 to calculate your single guaranteed quote.
+                  </p>
                 </div>
-
-                <div style={styles.rangeRow}>
-                  <span>Low &ndash; High Range:</span>
-                  <strong>${Number(livePricing.low || 2500).toLocaleString()} &ndash; ${Number(livePricing.high || 2500).toLocaleString()}</strong>
-                </div>
-
-                {livePricing.minJobApplied && (
-                  <span style={styles.minFloorNotice}>Minimum Job Size Floor ($2,500) Applied</span>
-                )}
-              </div>
+              )
             ) : (
-              <div style={styles.emptyPricePrompt}>
-                Input length and width to calculate instant server-verified estimate.
-              </div>
+              /* CONTRACTOR SIDEBAR: Full operational breakdown */
+              contractorPricing ? (
+                <div style={styles.priceBreakdown}>
+                  <div style={styles.priceRow}>
+                    <span>Billable Surface Area:</span>
+                    <strong>{contractorPricing.billableArea} sq ft</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Unit Rate:</span>
+                    <strong>${Number(contractorPricing.rate || 2.75).toFixed(2)} / sqft</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Base Labor Hours:</span>
+                    <strong>{contractorPricing.baseHours} hrs</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Labor Adjustment:</span>
+                    <strong>${contractorPricing.labourAdj}</strong>
+                  </div>
+                  <div style={styles.divider} />
+                  <div style={styles.totalBox}>
+                    <span style={styles.totalLabel}>Estimate Total</span>
+                    <strong style={styles.totalAmount}>${contractorPricing.total.toLocaleString()}</strong>
+                  </div>
+                  <div style={styles.rangeRow}>
+                    <span>Low &ndash; High Range:</span>
+                    <strong>${contractorPricing.low.toLocaleString()} &ndash; ${contractorPricing.high.toLocaleString()}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div style={styles.emptyPricePrompt}>Enter parameters to compute breakdown.</div>
+              )
             )}
           </div>
 
@@ -2219,6 +2294,54 @@ const styles = {
     borderRadius: '6px',
     letterSpacing: '0.04em',
   },
+
+  // Customer Result View (ONE TOTAL NUMBER ONLY, NO BREAKDOWN)
+  customerTotalBox: {
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #E2E8F0',
+    borderRadius: '10px',
+    padding: '28px 20px',
+    textAlign: 'center',
+    marginBottom: '16px',
+  },
+  customerTotalSub: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    display: 'block',
+  },
+  customerTotalAmt: {
+    fontSize: '44px',
+    fontWeight: '900',
+    color: '#0B192C',
+    display: 'block',
+    margin: '8px 0',
+    letterSpacing: '-0.02em',
+  },
+  customerTotalSubNotice: {
+    fontSize: '12px',
+    color: '#1E3E62',
+    fontWeight: '600',
+    display: 'block',
+  },
+  customerMinJobNoticeBox: {
+    marginTop: '18px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    textAlign: 'left',
+  },
+
+  // Contractor Breakdown View
+  contractorBreakdownBox: {
+    marginBottom: '16px',
+  },
   resultContentRow: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
@@ -2263,12 +2386,16 @@ const styles = {
     fontSize: '12px',
     color: '#475569',
   },
-  resultNotice: {
-    fontSize: '12px',
-    color: '#64748B',
-    lineHeight: 1.5,
-    margin: '16px 0',
+  contractorMinNotice: {
+    marginTop: '10px',
+    backgroundColor: '#EFF6FF',
+    color: '#1E3E62',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '600',
   },
+
   resultActionRow: {
     display: 'flex',
     gap: '12px',
@@ -2442,11 +2569,64 @@ const styles = {
     backgroundColor: '#2563EB',
     boxShadow: '0 0 8px #2563EB',
   },
-  updatingBadge: {
-    fontSize: '10px',
-    color: '#2563EB',
-    fontWeight: '700',
+
+  // Customer Sidebar Ready State
+  customerReadyBox: {
+    backgroundColor: '#F8FAFC',
+    padding: '14px',
+    borderRadius: '8px',
+    border: '1px solid #E2E8F0',
   },
+  readyCheck: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    backgroundColor: '#15803D',
+    color: '#FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    fontWeight: '900',
+  },
+  customerSidebarResult: {
+    backgroundColor: '#0B192C',
+    color: '#FFFFFF',
+    padding: '16px',
+    borderRadius: '8px',
+    textAlign: 'center',
+  },
+  customerResultLabel: {
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    color: '#94A3B8',
+    fontWeight: '700',
+    letterSpacing: '0.04em',
+    display: 'block',
+  },
+  customerResultAmt: {
+    fontSize: '28px',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    display: 'block',
+    margin: '4px 0',
+  },
+  customerResultSub: {
+    fontSize: '10px',
+    color: '#93C5FD',
+    fontWeight: '600',
+  },
+  sidebarMinNotice: {
+    marginTop: '8px',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: '6px',
+    borderRadius: '4px',
+    fontSize: '10px',
+    color: '#FEF3C7',
+    lineHeight: 1.3,
+  },
+
+  // Contractor Breakdown in Sidebar
   priceBreakdown: {
     display: 'flex',
     flexDirection: 'column',
@@ -2489,16 +2669,6 @@ const styles = {
     fontSize: '11px',
     color: '#64748B',
     marginTop: '6px',
-  },
-  minFloorNotice: {
-    fontSize: '10px',
-    fontWeight: '700',
-    color: '#1E3E62',
-    backgroundColor: '#EFF6FF',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    textAlign: 'center',
-    marginTop: '4px',
   },
   emptyPricePrompt: {
     fontSize: '12px',

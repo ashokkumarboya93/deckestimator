@@ -178,3 +178,4 @@ erDiagram
 - [x] Official estimate result box displays highlighted total and converts to a hot lead.
 - [x] Both Customer and Contractor portals utilize the same unified engine.
 - [x] Frontend builds cleanly with zero errors (`npm run build`).
+

@@ -131,3 +131,4 @@ console.log('Case F (Target: Total $3138, Low-High 2853-3423):', {
   high: caseF.high,
   basePrice: caseF.basePrice,
 });
+
