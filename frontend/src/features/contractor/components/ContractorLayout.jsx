@@ -83,7 +83,7 @@ export default function ContractorLayout() {
         minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Identical UX to Customer Dashboard) */}
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
       <aside
         onMouseEnter={() =>setIsSidebarHovered(true)}
         onMouseLeave={() =>setIsSidebarHovered(false)}
@@ -91,7 +91,7 @@ export default function ContractorLayout() {
           ...styles.sidebar,
           width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.12)' : 'none',
+          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
         }}
       >
         {/* Brand Header */}
@@ -357,7 +357,7 @@ export default function ContractorLayout() {
         </nav>
       </aside>
 
-      {/* 2. MAIN CONTENT WRAPPER (Fixed marginLeft so sidebar floats over without shifting page) */}
+      {/* 2. MAIN CONTENT WRAPPER (Fixed at 68px: Zero adjustment effect, page stays stable) */}
       <div
         style={{
           ...styles.mainWrapper,
@@ -365,7 +365,7 @@ export default function ContractorLayout() {
           ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
         }}
       >
-        {/* Top Header Bar */}
+        {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
         <header style={styles.topHeader}>
           {/* Left: Dynamic Page Title / Breadcrumbs */}
           <div style={styles.headerLeft}>
@@ -622,7 +622,7 @@ const styles = {
     borderRight: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
-    zIndex: 90,
+    zIndex: 120,
     overflowX: 'hidden',
     overflowY: 'auto',
     whiteSpace: 'nowrap',
@@ -736,9 +736,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 24px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
+    position: 'relative',
+    zIndex: 10,
   },
   headerLeft: {
     display: 'flex',

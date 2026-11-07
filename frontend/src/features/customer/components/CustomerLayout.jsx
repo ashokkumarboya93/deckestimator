@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import mainLogoDeck from '../../../assets/images/MainLodo.png';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
@@ -105,7 +106,7 @@ export default function CustomerLayout() {
         minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR */}
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
       <aside
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
@@ -113,48 +114,69 @@ export default function CustomerLayout() {
           ...styles.sidebar,
           width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.08)' : 'none',
+          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
         }}
       >
         {/* Brand Header */}
         <div style={styles.brandBox}>
-          <Link to="/customer/dashboard" style={styles.brandLink}>
-            <div style={styles.brandLogoIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                opacity: isSidebarHovered ? 1 : 0,
-                transition: 'opacity 0.18s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={styles.brandTitle}>
-                DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
-              </span>
-              <span style={styles.brandSubtitle}>Customer Portal</span>
-            </div>
-          </Link>
+          {isSidebarHovered ? (
+            <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+              <img
+                src={mainLogoDeck}
+                alt="Deck Restoration Plus"
+                style={{
+                  height: '36px',
+                  maxWidth: '185px',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
+                }}
+              />
+            </Link>
+          ) : (
+            <Link to="/customer/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
+              <div style={styles.brandLogoIcon}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3C649F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </div>
+            </Link>
+          )}
         </div>
 
         {/* Navigation Menu */}
         <nav style={styles.navMenu}>
-          {/* 1. Dashboard */}
+          {/* 1. Home / Dashboard */}
           <Link
             to="/customer/dashboard"
             style={{
               ...styles.navItem,
               ...(isActive('/customer/dashboard') ? styles.navItemActive : {}),
             }}
-            title="Dashboard Overview"
+            title="Home"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={isActive('/customer/dashboard') ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Home
+            </span>
+          </Link>
+
+          {/* 2. Projects */}
+          <Link
+            to="/customer/estimates"
+            style={{
+              ...styles.navItem,
+              ...(currentPath === '/customer/projects' ? styles.navItemActive : {}),
+            }}
+            title="Projects"
+          >
+            <span style={styles.navIcon}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={currentPath === '/customer/projects' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" />
                 <rect x="14" y="3" width="7" height="7" />
                 <rect x="14" y="14" width="7" height="7" />
@@ -162,42 +184,42 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Dashboard
+              Projects
             </span>
           </Link>
 
-          {/* 2. New Deck Estimate (Action Link) */}
+          {/* 3. Create Estimate */}
           <Link
             to="/customer/decks/new"
             style={{
               ...styles.navItem,
               ...(currentPath === '/customer/decks/new' ? styles.navItemActive : {}),
             }}
-            title="Create New Estimate"
+            title="Create Estimate"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={currentPath === '/customer/decks/new' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="16" />
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              New Deck Project
+              Create Estimate
             </span>
           </Link>
 
-          {/* 3. My Estimates */}
+          {/* 4. Estimates */}
           <Link
             to="/customer/estimates"
             style={{
               ...styles.navItem,
-              ...(isActive('/customer/estimates') ? styles.navItemActive : {}),
+              ...(isActive('/customer/estimates') && currentPath !== '/customer/projects' ? styles.navItemActive : {}),
             }}
-            title="My Estimates"
+            title="Estimates"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={isActive('/customer/estimates') && currentPath !== '/customer/projects' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="16" y1="13" x2="8" y2="13" />
@@ -206,18 +228,18 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              My Estimates
+              Estimates
             </span>
           </Link>
 
           <div style={styles.navDivider} />
 
-          {/* Guide / Help Trigger */}
+          {/* 5. Help & Support */}
           <button
             type="button"
             onClick={() => setIsHelpOpen(true)}
             style={styles.navItemButton}
-            title="Restoration Calculator Guide & How It Works"
+            title="Help & Support"
           >
             <span style={styles.navIcon}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -227,7 +249,7 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Restoration Calculator Guide
+              Help &amp; Support
             </span>
           </button>
         </nav>
@@ -254,18 +276,35 @@ export default function CustomerLayout() {
         </div>
       </aside>
 
-      {/* 2. MAIN VIEW AREA (Fixed marginLeft so sidebar floats over without shifting page) */}
+      {/* 2. MAIN VIEW AREA (Fixed at 68px: Zero adjustment effect, page stays stable) */}
       <div
         style={{
           ...styles.mainWrapper,
           marginLeft: '68px',
         }}
       >
-        {/* TOP NAVIGATION BAR */}
+        {/* TOP NAVIGATION BAR (Normal Natural Flow — Not Sticky) */}
         <header style={styles.topHeader}>
-          {/* Left: Dynamic Back Button / Project Name */}
+          {/* Left: Dynamic Back Button / Project Name / Brand Logo */}
           <div style={styles.headerLeft}>
-            {currentPath === '/customer/dashboard' ? null : isEstimatorPage ? (
+            {currentPath === '/customer/dashboard' ? (
+              !isSidebarHovered ? (
+                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                  <img
+                    src={mainLogoDeck}
+                    alt="Deck Restoration Plus"
+                    style={{
+                      height: '36px',
+                      maxWidth: '190px',
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
+                    }}
+                  />
+                </Link>
+              ) : (
+                <div style={{ height: '36px', width: '190px', visibility: 'hidden' }} />
+              )
+            ) : isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   type="button"
@@ -314,14 +353,14 @@ export default function CustomerLayout() {
                 title="← Back to Dashboard / Previous Page"
               >
                 <div style={styles.backIconCircle}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C649F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={styles.breadcrumbText}>
-                    <span style={{ color: '#034EA2', fontWeight: '700' }}>← </span>
+                    <span style={{ color: '#3C649F', fontWeight: '700' }}>← </span>
                     {pageInfo.breadcrumb}
                   </div>
                   <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
@@ -338,12 +377,10 @@ export default function CustomerLayout() {
               style={styles.primaryActionBtn}
               title="Start New Estimation"
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F0F7FF';
-                e.currentTarget.style.borderColor = '#003B7A';
+                e.currentTarget.style.backgroundColor = '#305386';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#034EA2';
+                e.currentTarget.style.backgroundColor = '#3C649F';
               }}
             >
               <span>+ New Estimation</span>
@@ -616,7 +653,7 @@ const styles = {
     bottom: 0,
     backgroundColor: '#ffffff',
     borderRight: '1px solid #e2e8f0',
-    zIndex: 90,
+    zIndex: 120,
     display: 'flex',
     flexDirection: 'column',
     overflowX: 'hidden',
@@ -638,7 +675,7 @@ const styles = {
   brandLogoIcon: {
     minWidth: '32px',
     height: '32px',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#EFF4FA',
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
@@ -652,7 +689,7 @@ const styles = {
   },
   brandSubtitle: {
     fontSize: '0.70rem',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -678,9 +715,10 @@ const styles = {
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: '#3C649F',
+    color: '#ffffff',
     fontWeight: '600',
+    boxShadow: '0 2px 6px rgba(60, 100, 159, 0.25)',
   },
   navItemButton: {
     display: 'flex',
@@ -749,9 +787,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 28px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
+    position: 'relative',
+    zIndex: 10,
   },
   headerLeft: {
     display: 'flex',
@@ -849,15 +886,15 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#FFFFFF',
-    color: '#034EA2',
+    backgroundColor: '#3C649F',
+    color: '#FFFFFF',
     padding: '8px 18px',
-    borderRadius: '9px',
+    borderRadius: '8px',
     fontSize: '13.5px',
-    fontWeight: '700',
+    fontWeight: '600',
     textDecoration: 'none',
-    border: '1.5px solid #034EA2',
-    boxShadow: '0 1px 4px rgba(3, 78, 162, 0.08)',
+    border: 'none',
+    boxShadow: '0 2px 6px rgba(60, 100, 159, 0.25)',
     transition: 'all 0.18s ease',
     letterSpacing: '-0.1px',
     cursor: 'pointer',
@@ -915,7 +952,7 @@ const styles = {
     background: 'none',
     border: 'none',
     fontSize: '11px',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '600',
     cursor: 'pointer',
   },
@@ -934,7 +971,7 @@ const styles = {
   notifDot: {
     width: '8px',
     height: '8px',
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#3C649F',
     borderRadius: '50%',
     marginTop: '5px',
     flexShrink: 0,
@@ -964,7 +1001,7 @@ const styles = {
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#3C649F',
     color: '#ffffff',
     fontSize: '12px',
     fontWeight: '700',
@@ -985,7 +1022,7 @@ const styles = {
   },
   profileRole: {
     fontSize: '10px',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.4px',
@@ -1101,8 +1138,8 @@ const styles = {
     width: '28px',
     height: '28px',
     borderRadius: '50%',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: '#EFF4FA',
+    color: '#3C649F',
     fontSize: '13px',
     fontWeight: '700',
     display: 'flex',
