@@ -1710,16 +1710,6 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         {/* RIGHT SIDEBAR: CIRCLE PROGRESS, PREVIEW, IMAGES & ESTIMATE */}
         {/* ======================================================== */}
         <aside style={styles.fixedRightSidebar}>
-          {/* Top Reach Out Button in Sidebar */}
-          <button
-            type="button"
-            onClick={() => setReachOutOpen(true)}
-            style={styles.sidebarReachOutBtn}
-            title="Need Assistance? Click to contact customer support or senior estimator"
-          >
-            <span>📞 Reach Out</span>
-          </button>
-
           {/* 1. CIRCLE STEP PROGRESS CARD */}
           <div style={styles.sidebarCard}>
             <div style={styles.progressCircleRow}>
@@ -2078,18 +2068,18 @@ const styles = {
   topReachOutBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '7px 14px',
+    gap: '7px',
+    padding: '8px 16px',
     backgroundColor: '#FFFFFF',
     color: '#034EA2',
     border: '1.5px solid #034EA2',
-    borderRadius: '8px',
+    borderRadius: '9px',
     fontWeight: '700',
-    fontSize: '12px',
+    fontSize: '12.5px',
     cursor: 'pointer',
     transition: 'all 0.18s ease',
     whiteSpace: 'nowrap',
-    boxShadow: '0 1px 4px rgba(3, 78, 162, 0.08)',
+    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.1)',
   },
   reachOutTooltip: {
     position: 'absolute',

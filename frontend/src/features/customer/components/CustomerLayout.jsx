@@ -255,11 +255,11 @@ export default function CustomerLayout() {
           <div style={styles.headerRight}>
             {/* Quick Action Button */}
             <Link to="/customer/decks/new" style={styles.primaryActionBtn} title="Start New Estimate">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>New Estimate</span>
+              <span>+ New Estimate</span>
             </Link>
 
             {/* Notification Bell */}
@@ -666,18 +666,20 @@ const styles = {
   primaryActionBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '7px',
+    gap: '8px',
     backgroundColor: '#034EA2',
+    backgroundImage: 'linear-gradient(135deg, #034EA2 0%, #0057B8 100%)',
     color: '#ffffff',
-    padding: '9px 18px',
-    borderRadius: '8px',
-    fontSize: '13px',
+    padding: '10px 22px',
+    borderRadius: '10px',
+    fontSize: '14px',
     fontWeight: '700',
     textDecoration: 'none',
-    boxShadow: '0 2px 8px rgba(3, 78, 162, 0.28)',
-    transition: 'all 0.18s ease',
+    boxShadow: '0 4px 14px rgba(3, 78, 162, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
     border: 'none',
-    letterSpacing: '-0.1px',
+    letterSpacing: '-0.2px',
+    cursor: 'pointer',
   },
   iconButton: {
     position: 'relative',
