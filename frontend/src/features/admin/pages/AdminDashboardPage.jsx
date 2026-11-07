@@ -417,7 +417,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Total Estimates */}
-        <div style={styles.card} onClick={() => navigate('/admin/estimator-config')}>
+        <div style={styles.card} onClick={() => navigate('/admin/pricing')}>
           <div style={styles.cardTop}>
             <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

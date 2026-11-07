@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — CORS Configuration
 // =============================================
 // Defines allowed origins for cross-origin requests.
@@ -12,7 +12,9 @@ const corsOptions = {
 
     const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
 
-    if (allowedOrigins.includes(origin)) {
+    // In development, automatically allow all localhost & 127.0.0.1 ports
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (isLocalhost || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`Origin ${origin} not allowed by CORS`));

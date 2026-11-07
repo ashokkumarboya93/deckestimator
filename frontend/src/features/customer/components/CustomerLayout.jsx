@@ -8,9 +8,10 @@
 // - Zero emojis; clean SVG line icons throughout
 // - Dynamic top navigation with breadcrumbs, notifications dropdown, user avatar, and logout
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import mainLogoDeck from '../../../assets/images/MainLodo.png';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
@@ -22,6 +23,39 @@ export default function CustomerLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [projectName, setProjectName] = useState('');
+
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Sync project name updates from active estimator
+  useEffect(() => {
+    const handleProjectName = (e) => {
+      if (e?.detail !== undefined) {
+        setProjectName(e.detail);
+      }
+    };
+    window.addEventListener('deck_project_name_updated', handleProjectName);
+    return () => {
+      window.removeEventListener('deck_project_name_updated', handleProjectName);
+    };
+  }, []);
+
+  // Click-outside listener for notifications & profile dropdowns
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -48,6 +82,9 @@ export default function CustomerLayout() {
 
   // Compute page title and breadcrumbs
   const getPageInfo = () => {
+    if (currentPath.includes('/customer/profile')) {
+      return { title: 'Profile Settings', breadcrumb: 'Customer / Account' };
+    }
     if (currentPath.includes('/customer/decks/new')) {
       return { title: 'Deck Estimator Builder', breadcrumb: 'Customer / New Deck Project' };
     }
@@ -66,10 +103,10 @@ export default function CustomerLayout() {
     <div
       style={{
         ...styles.container,
-        ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+        minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR */}
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
       <aside
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
@@ -77,48 +114,69 @@ export default function CustomerLayout() {
           ...styles.sidebar,
           width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.08)' : 'none',
+          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
         }}
       >
         {/* Brand Header */}
         <div style={styles.brandBox}>
-          <Link to="/customer/dashboard" style={styles.brandLink}>
-            <div style={styles.brandLogoIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                opacity: isSidebarHovered ? 1 : 0,
-                transition: 'opacity 0.18s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={styles.brandTitle}>
-                DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
-              </span>
-              <span style={styles.brandSubtitle}>Customer Portal</span>
-            </div>
-          </Link>
+          {isSidebarHovered ? (
+            <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+              <img
+                src={mainLogoDeck}
+                alt="Deck Restoration Plus"
+                style={{
+                  height: '36px',
+                  maxWidth: '185px',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
+                }}
+              />
+            </Link>
+          ) : (
+            <Link to="/customer/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
+              <div style={styles.brandLogoIcon}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3C649F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </div>
+            </Link>
+          )}
         </div>
 
         {/* Navigation Menu */}
         <nav style={styles.navMenu}>
-          {/* 1. Dashboard */}
+          {/* 1. Home / Dashboard */}
           <Link
             to="/customer/dashboard"
             style={{
               ...styles.navItem,
               ...(isActive('/customer/dashboard') ? styles.navItemActive : {}),
             }}
-            title="Dashboard Overview"
+            title="Home"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={isActive('/customer/dashboard') ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </span>
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Home
+            </span>
+          </Link>
+
+          {/* 2. Projects */}
+          <Link
+            to="/customer/estimates"
+            style={{
+              ...styles.navItem,
+              ...(currentPath === '/customer/projects' ? styles.navItemActive : {}),
+            }}
+            title="Projects"
+          >
+            <span style={styles.navIcon}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={currentPath === '/customer/projects' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" />
                 <rect x="14" y="3" width="7" height="7" />
                 <rect x="14" y="14" width="7" height="7" />
@@ -126,42 +184,42 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Dashboard
+              Projects
             </span>
           </Link>
 
-          {/* 2. New Deck Estimate (Action Link) */}
+          {/* 3. Create Estimate */}
           <Link
             to="/customer/decks/new"
             style={{
               ...styles.navItem,
               ...(currentPath === '/customer/decks/new' ? styles.navItemActive : {}),
             }}
-            title="Create New Estimate"
+            title="Create Estimate"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={currentPath === '/customer/decks/new' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="16" />
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              New Deck Project
+              Create Estimate
             </span>
           </Link>
 
-          {/* 3. My Estimates */}
+          {/* 4. Estimates */}
           <Link
             to="/customer/estimates"
             style={{
               ...styles.navItem,
-              ...(isActive('/customer/estimates') ? styles.navItemActive : {}),
+              ...(isActive('/customer/estimates') && currentPath !== '/customer/projects' ? styles.navItemActive : {}),
             }}
-            title="My Estimates"
+            title="Estimates"
           >
             <span style={styles.navIcon}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={isActive('/customer/estimates') && currentPath !== '/customer/projects' ? '#ffffff' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="16" y1="13" x2="8" y2="13" />
@@ -170,18 +228,18 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              My Estimates
+              Estimates
             </span>
           </Link>
 
           <div style={styles.navDivider} />
 
-          {/* Guide / Help Trigger */}
+          {/* 5. Help & Support */}
           <button
             type="button"
             onClick={() => setIsHelpOpen(true)}
             style={styles.navItemButton}
-            title="How It Works Guide"
+            title="Help & Support"
           >
             <span style={styles.navIcon}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -191,7 +249,7 @@ export default function CustomerLayout() {
               </svg>
             </span>
             <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
-              Restoration Guide
+              Help &amp; Support
             </span>
           </button>
         </nav>
@@ -218,55 +276,121 @@ export default function CustomerLayout() {
         </div>
       </aside>
 
-      {/* 2. MAIN VIEW AREA (Smoothly shifts so content is NEVER overlapped by sidebar) */}
+      {/* 2. MAIN VIEW AREA (Fixed at 68px: Zero adjustment effect, page stays stable) */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarHovered ? '240px' : '68px',
-          transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          marginLeft: '68px',
         }}
       >
-        {/* TOP NAVIGATION BAR */}
+        {/* TOP NAVIGATION BAR (Normal Natural Flow — Not Sticky) */}
         <header style={styles.topHeader}>
-          {/* Left: Breadcrumbs & Page Title */}
+          {/* Left: Dynamic Back Button / Project Name / Brand Logo */}
           <div style={styles.headerLeft}>
-            <div>
-              <div style={styles.breadcrumbText}>{pageInfo.breadcrumb}</div>
-              <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
-            </div>
-          </div>
-
-          {/* Center: Search */}
-          <div style={styles.headerCenter}>
-            <div style={styles.searchBox}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search your deck projects, estimates, or restoration records..."
-                style={styles.searchInput}
-              />
-            </div>
+            {currentPath === '/customer/dashboard' ? (
+              !isSidebarHovered ? (
+                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                  <img
+                    src={mainLogoDeck}
+                    alt="Deck Restoration Plus"
+                    style={{
+                      height: '36px',
+                      maxWidth: '190px',
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
+                    }}
+                  />
+                </Link>
+              ) : (
+                <div style={{ height: '36px', width: '190px', visibility: 'hidden' }} />
+              )
+            ) : isEstimatorPage ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.history.length > 1) {
+                      navigate(-1);
+                    } else {
+                      navigate('/customer/dashboard');
+                    }
+                  }}
+                  style={styles.outlinedBackBtn}
+                  title="← Back to Dashboard / Previous Page"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Back</span>
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
+                  <span style={styles.headerProjectName}>
+                    {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                  } else {
+                    navigate('/customer/dashboard');
+                  }
+                }}
+                style={styles.headerBackBtn}
+                title="← Back to Dashboard / Previous Page"
+              >
+                <div style={styles.backIconCircle}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3C649F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={styles.breadcrumbText}>
+                    <span style={{ color: '#3C649F', fontWeight: '700' }}>← </span>
+                    {pageInfo.breadcrumb}
+                  </div>
+                  <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Right: Notifications, Profile, Logout */}
           <div style={styles.headerRight}>
             {/* Quick Action Button */}
-            <Link to="/customer/decks/new" style={styles.primaryActionBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>New Estimate</span>
+            <Link
+              to="/customer/decks/new"
+              style={styles.primaryActionBtn}
+              title="Start New Estimation"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#305386';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#3C649F';
+              }}
+            >
+              <span>+ New Estimation</span>
             </Link>
 
             {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
+            <div ref={notifRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => setShowNotifications((prev) => !prev)}
                 style={styles.iconButton}
                 title="Notifications"
               >
@@ -314,16 +438,29 @@ export default function CustomerLayout() {
             </div>
 
             {/* Profile Dropdown */}
-            <div style={{ position: 'relative' }}>
+            <div ref={profileRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onClick={() => setShowProfileMenu((prev) => !prev)}
                 style={styles.profileBtn}
               >
-                <div style={styles.avatar}>{initials}</div>
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.fullName || 'User'}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '1.5px solid #E2E8F0',
+                    }}
+                  />
+                ) : (
+                  <div style={styles.avatar}>{initials}</div>
+                )}
                 <div style={styles.profileText}>
                   <span style={styles.profileName}>{user?.fullName || 'Jane Homeowner'}</span>
-                  <span style={styles.profileRole}>Customer</span>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
@@ -333,7 +470,7 @@ export default function CustomerLayout() {
               {showProfileMenu && (
                 <div style={styles.profileMenu}>
                   <div style={styles.profileMenuHeader}>
-                    <p style={{ fontWeight: '700', fontSize: '14px', margin: 0, color: '#0f172a' }}>
+                    <p style={{ fontWeight: '700', fontSize: '13.5px', margin: 0, color: '#0f172a' }}>
                       {user?.fullName || 'Jane Homeowner'}
                     </p>
                     <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
@@ -342,26 +479,42 @@ export default function CustomerLayout() {
                   </div>
                   <div style={styles.menuDivider} />
                   <Link
-                    to="/customer/dashboard"
+                    to="/customer/profile"
                     onClick={() => setShowProfileMenu(false)}
-                    style={styles.menuItem}
+                    style={{ ...styles.menuItem, display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    Dashboard Home
-                  </Link>
-                  <Link
-                    to="/customer/estimates"
-                    onClick={() => setShowProfileMenu(false)}
-                    style={styles.menuItem}
-                  >
-                    Saved Estimates
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span>Profile Settings</span>
                   </Link>
                   <div style={styles.menuDivider} />
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    style={{ ...styles.menuItem, color: '#b91c1c', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleLogout();
+                    }}
+                    style={{
+                      ...styles.menuItem,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#b91c1c',
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
-                    Sign Out
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Logout</span>
                   </button>
                 </div>
               )}
@@ -382,7 +535,7 @@ export default function CustomerLayout() {
         <main
           style={{
             ...styles.pageContent,
-            ...(isEstimatorPage ? { padding: 0, overflowY: 'hidden' } : { padding: '24px 32px' }),
+            ...(isEstimatorPage ? { padding: 0 } : { padding: '24px 32px' }),
           }}
         >
           <Outlet />
@@ -402,7 +555,7 @@ export default function CustomerLayout() {
                     <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
                 </div>
-                <h3 style={styles.modalTitle}>How Deck Estimator Works</h3>
+                <h3 style={styles.modalTitle}>Restoration Calculator Guide &amp; How It Works</h3>
               </div>
               <button
                 type="button"
@@ -420,29 +573,50 @@ export default function CustomerLayout() {
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>1</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Enter Deck Dimensions &amp; Shape</h4>
-                  <p style={styles.stepDesc}>Provide the length and width of your deck. The interactive blueprint visualizer immediately calculates square footage.</p>
+                  <h4 style={styles.stepTitle}>Dimensions &amp; Shape Calculation</h4>
+                  <p style={styles.stepDesc}>Choose your deck perimeter shape (Rectangle, Square, L-Shape, Multi-Level, or Custom). Total billable surface area is calculated automatically in real time.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>2</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Assess Surface Condition &amp; Services</h4>
-                  <p style={styles.stepDesc}>Select existing wood conditions (peeling, discoloration, weathering) and choose power washing, sanding, or staining treatments.</p>
+                  <h4 style={styles.stepTitle}>Components &amp; Stairs (Count-Based)</h4>
+                  <p style={styles.stepDesc}>Stairs are calculated precisely by total number of stair steps (not by square footage), along with linear railings, benches, and perimeter fascia boards.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>3</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Select Finishes &amp; Materials</h4>
-                  <p style={styles.stepDesc}>Choose premium wood stains, transparent sealers, and protective coatings with live coverage and pricing calculation.</p>
+                  <h4 style={styles.stepTitle}>Wood Species &amp; Substrate Rules</h4>
+                  <p style={styles.stepDesc}>Select Pressure-Treated Pine, Cedar, Redwood, Mahogany, or Composite/Trex. Trex substrates automatically enforce cleaning-only scope per manufacturer standards.</p>
                 </div>
               </div>
               <div style={styles.guideStep}>
                 <div style={styles.stepNum}>4</div>
                 <div>
-                  <h4 style={styles.stepTitle}>Instant Accurate Estimate &amp; Contractor Match</h4>
-                  <p style={styles.stepDesc}>Receive a transparent breakdown of materials, labor, and taxes, and connect directly with verified licensed contractors.</p>
+                  <h4 style={styles.stepTitle}>Elevation &amp; Existing Coating</h4>
+                  <p style={styles.stepDesc}>Configure height and whether your deck has bare wood, transparent toner, semi-transparent stain, or solid paint requiring stripping.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>5</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Scope of Work &amp; Chemical Treatments</h4>
+                  <p style={styles.stepDesc}>Combine deep pressure washing, sodium metasilicate stripping, brightening pH neutralizer, and precision mechanical sanding.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>6</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Condition Assessment &amp; Photo Upload</h4>
+                  <p style={styles.stepDesc}>Note specific rotted or cracked boards. Upload optional daylight photos to help certified technicians verify your quote without home disruption.</p>
+                </div>
+              </div>
+              <div style={styles.guideStep}>
+                <div style={styles.stepNum}>7</div>
+                <div>
+                  <h4 style={styles.stepTitle}>Guaranteed Official Price &amp; Dispatch</h4>
+                  <p style={styles.stepDesc}>Receive a transparent, guaranteed estimate adhering to commercial standards ($2,500 local min job price / $3,000 extended travel) and book your inspection instantly.</p>
                 </div>
               </div>
             </div>
@@ -455,7 +629,7 @@ export default function CustomerLayout() {
                 }}
                 style={styles.modalPrimaryBtn}
               >
-                Start New Estimate
+                Launch Restoration Calculator &rarr;
               </button>
             </div>
           </div>
@@ -479,7 +653,7 @@ const styles = {
     bottom: 0,
     backgroundColor: '#ffffff',
     borderRight: '1px solid #e2e8f0',
-    zIndex: 50,
+    zIndex: 120,
     display: 'flex',
     flexDirection: 'column',
     overflowX: 'hidden',
@@ -501,7 +675,7 @@ const styles = {
   brandLogoIcon: {
     minWidth: '32px',
     height: '32px',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#EFF4FA',
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
@@ -515,7 +689,7 @@ const styles = {
   },
   brandSubtitle: {
     fontSize: '0.70rem',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -541,9 +715,10 @@ const styles = {
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: '#3C649F',
+    color: '#ffffff',
     fontWeight: '600',
+    boxShadow: '0 2px 6px rgba(60, 100, 159, 0.25)',
   },
   navItemButton: {
     display: 'flex',
@@ -612,14 +787,58 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 28px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
+    position: 'relative',
+    zIndex: 10,
   },
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+  },
+  outlinedBackBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    color: '#334155',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '7px 14px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+  },
+  headerProjectName: {
+    fontSize: '1.05rem',
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: '-0.2px',
+  },
+  headerBackBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    background: 'none',
+    border: 'none',
+    padding: '4px 8px',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'all 0.18s ease',
+  },
+  backIconCircle: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '10px',
+    backgroundColor: '#F1F5F9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #E2E8F0',
+    flexShrink: 0,
+    transition: 'all 0.18s ease',
   },
   breadcrumbText: {
     fontSize: '11px',
@@ -664,17 +883,21 @@ const styles = {
     gap: '14px',
   },
   primaryActionBtn: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    padding: '7px 14px',
+    backgroundColor: '#3C649F',
+    color: '#FFFFFF',
+    padding: '8px 18px',
     borderRadius: '8px',
-    fontSize: '0.86rem',
+    fontSize: '13.5px',
     fontWeight: '600',
     textDecoration: 'none',
-    transition: 'background-color 0.15s ease',
+    border: 'none',
+    boxShadow: '0 2px 6px rgba(60, 100, 159, 0.25)',
+    transition: 'all 0.18s ease',
+    letterSpacing: '-0.1px',
+    cursor: 'pointer',
   },
   iconButton: {
     position: 'relative',
@@ -729,7 +952,7 @@ const styles = {
     background: 'none',
     border: 'none',
     fontSize: '11px',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '600',
     cursor: 'pointer',
   },
@@ -748,7 +971,7 @@ const styles = {
   notifDot: {
     width: '8px',
     height: '8px',
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#3C649F',
     borderRadius: '50%',
     marginTop: '5px',
     flexShrink: 0,
@@ -778,7 +1001,7 @@ const styles = {
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#3C649F',
     color: '#ffffff',
     fontSize: '12px',
     fontWeight: '700',
@@ -799,7 +1022,7 @@ const styles = {
   },
   profileRole: {
     fontSize: '10px',
-    color: '#1d4ed8',
+    color: '#3C649F',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.4px',
@@ -915,8 +1138,8 @@ const styles = {
     width: '28px',
     height: '28px',
     borderRadius: '50%',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: '#EFF4FA',
+    color: '#3C649F',
     fontSize: '13px',
     fontWeight: '700',
     display: 'flex',

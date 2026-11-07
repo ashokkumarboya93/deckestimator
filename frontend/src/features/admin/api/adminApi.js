@@ -220,6 +220,18 @@ export const adminApi = {
     const res = await client.put('/admin/settings', settingsPayload);
     return res.data;
   },
+  dispatchNotification: async (payload) => {
+    const res = await client.post('/admin/notifications/dispatch', payload);
+    return res.data;
+  },
+  getNotificationHistory: async (limit = 30) => {
+    const res = await client.get('/admin/notifications/history', { params: { limit } });
+    return res.data;
+  },
+  searchRecipients: async (q = '') => {
+    const res = await client.get('/admin/users/search-recipients', { params: { q } });
+    return res.data;
+  },
 
   // 11. Permissions Matrix
   getPermissions: async () => {

@@ -102,6 +102,11 @@ router.put('/discounts/contractors/:contractorId', adminController.setContractor
 router.get('/settings', adminController.getSystemSettings);
 router.put('/settings', adminController.updateSystemSettings);
 
+// Targeted Notifications Dispatcher
+router.post('/notifications/dispatch', adminController.dispatchNotification);
+router.get('/notifications/history', adminController.getNotificationHistory);
+router.get('/users/search-recipients', adminController.searchRecipients);
+
 // 11. Permissions Matrix
 router.get('/permissions', adminController.getPermissionsMatrix);
 router.put('/permissions', adminController.savePermissionsMatrix);

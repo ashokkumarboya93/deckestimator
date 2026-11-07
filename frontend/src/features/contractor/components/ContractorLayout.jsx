@@ -24,6 +24,20 @@ export default function ContractorLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(6);
+  const [projectName, setProjectName] = useState('');
+
+  // Sync project name updates from active estimator
+  useEffect(() => {
+    const handleProjectName = (e) => {
+      if (e?.detail !== undefined) {
+        setProjectName(e.detail);
+      }
+    };
+    window.addEventListener('deck_project_name_updated', handleProjectName);
+    return () => {
+      window.removeEventListener('deck_project_name_updated', handleProjectName);
+    };
+  }, []);
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
@@ -66,10 +80,10 @@ export default function ContractorLayout() {
     <div
       style={{
         ...styles.container,
-        ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+        minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Identical UX to Customer Dashboard) */}
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
       <aside
         onMouseEnter={() =>setIsSidebarHovered(true)}
         onMouseLeave={() =>setIsSidebarHovered(false)}
@@ -77,7 +91,7 @@ export default function ContractorLayout() {
           ...styles.sidebar,
           width: isSidebarHovered ? '240px' : '68px',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '4px 0 24px rgba(15, 23, 42, 0.12)' : 'none',
+          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
         }}
       >
         {/* Brand Header */}
@@ -98,7 +112,7 @@ export default function ContractorLayout() {
                 whiteSpace: 'nowrap',
               }}
             >
-              <span style={styles.brandTitle}>DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+              <span style={styles.brandTitle}>DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
               </span>
               <span style={styles.brandSubtitle}>Contractor Portal</span>
             </div>
@@ -343,27 +357,45 @@ export default function ContractorLayout() {
         </nav>
       </aside>
 
-      {/* 2. MAIN CONTENT WRAPPER */}
+      {/* 2. MAIN CONTENT WRAPPER (Fixed at 68px: Zero adjustment effect, page stays stable) */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarHovered ? '240px' : '68px',
-          transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+          marginLeft: '68px',
+          ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
         }}
       >
-        {/* Top Header Bar */}
+        {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
         <header style={styles.topHeader}>
           {/* Left: Dynamic Page Title / Breadcrumbs */}
           <div style={styles.headerLeft}>
             {isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Link to="/contractor/projects" style={styles.backLink}>
-                  ← Back to Projects
+                <Link
+                  to="/contractor/projects"
+                  style={styles.outlinedBackBtn}
+                  title="← Back to Projects"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Back</span>
                 </Link>
-                <span style={styles.estimateForTitle}>Estimate for: <strong>{currentPath.includes('/edit') ? 'Edit Project' : 'New Project'}</strong>
-                </span>
-                <span style={styles.draftBadge}>Draft</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>
+                    {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
+                  </span>
+                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -412,6 +444,23 @@ export default function ContractorLayout() {
 
           {/* Right: Notifications, Profile, Logout */}
           <div style={styles.headerRight}>
+            {/* Quick Action Button for Contractor */}
+            <Link
+              to="/contractor/decks/new"
+              style={styles.primaryActionBtn}
+              title="Start New Estimation"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F0F7FF';
+                e.currentTarget.style.borderColor = '#003B7A';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#034EA2';
+              }}
+            >
+              <span>+ New Estimation</span>
+            </Link>
+
             {/* Notification Bell */}
             <div style={{ position: 'relative' }}>
               <button
@@ -514,7 +563,7 @@ export default function ContractorLayout() {
         <main
           style={{
             ...styles.mainContent,
-            ...(isEstimatorPage ? { height: 'calc(100vh - 65px)', overflow: 'hidden', padding: 0 } : {}),
+            ...(isEstimatorPage ? { padding: 0 } : {}),
           }}
         >
           <Outlet />
@@ -573,7 +622,7 @@ const styles = {
     borderRight: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
-    zIndex: 50,
+    zIndex: 120,
     overflowX: 'hidden',
     overflowY: 'auto',
     whiteSpace: 'nowrap',
@@ -687,9 +736,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 24px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
+    position: 'relative',
+    zIndex: 10,
   },
   headerLeft: {
     display: 'flex',
@@ -701,6 +749,22 @@ const styles = {
     fontWeight: '700',
     color: '#0f172a',
     margin: 0,
+  },
+  outlinedBackBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    color: '#334155',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '7px 14px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   backLink: {
     color: '#1d4ed8',
@@ -745,6 +809,23 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
+  },
+  primaryActionBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#034EA2',
+    padding: '8px 18px',
+    borderRadius: '9px',
+    fontSize: '13.5px',
+    fontWeight: '700',
+    textDecoration: 'none',
+    border: '1.5px solid #034EA2',
+    boxShadow: '0 1px 4px rgba(3, 78, 162, 0.08)',
+    transition: 'all 0.18s ease',
+    letterSpacing: '-0.1px',
+    cursor: 'pointer',
   },
   iconBtn: {
     position: 'relative',

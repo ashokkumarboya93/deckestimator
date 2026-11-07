@@ -97,7 +97,13 @@ async function togglePricingConfigurationStatus(req, res, next) {
 
 async function calculateClientPricingPreview(req, res, next) {
   try {
-    const result = pricingEngine.calculateClientPricing(req.body);
+    const isContractor = Boolean(
+      (req.user && ['contractor', 'admin', 'super_admin'].includes(req.user.role)) ||
+      req.body.forContractor
+    );
+    const result = isContractor
+      ? pricingEngine.calculateRestorationEstimate(req.body)
+      : pricingEngine.calculateClientPricing(req.body);
     res.status(200).json({
       success: true,
       data: result,

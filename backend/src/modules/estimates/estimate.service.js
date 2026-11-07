@@ -136,17 +136,34 @@ async function createEstimate(data, user, ipAddress) {
     const clientParams = {
       floorArea,
       railingLength: data.railingLength !== undefined ? data.railingLength : (deck.railingDetails?.totalLength || 0),
+      railingSqft: data.railingSqft || 0,
       railingStyle: data.railingStyle || deck.railingDetails?.style || 'plain_2x2',
       stairCount: data.stairCount !== undefined ? data.stairCount : (deck.structureDetails?.stairCount || 0),
+      stairSqft: data.stairSqft || 0,
       fasciaLength: data.fasciaLength || 0,
+      fasciaSqft: data.fasciaSqft || 0,
       pergolaLength: data.pergolaLength || 0,
+      pergolaSqft: data.pergolaSqft || 0,
+      privacyWallSqft: data.privacyWallSqft || 0,
       sidingArea: data.sidingArea || 0,
+      sidingSqft: data.sidingSqft || 0,
       includeJoists: Boolean(data.includeJoists),
+      joistsSqft: data.joistsSqft || 0,
       woodSpecies: data.woodSpecies || deck.surfaceDetails?.material || 'pressure_treated_pine',
       accessType: data.accessType || (deck.structureDetails?.elevation > 4 ? 'elevated_one_story' : 'ground_level'),
       coatingType: data.coatingType || 'oil_penetrating_one_coat',
       coatingConfidence: data.coatingConfidence || 'medium',
-      conditionFlags: data.conditionFlags || deck.visibleConditions || [],
+      conditionFlags: data.conditionFlags || data.conditions || deck.visibleConditions || [],
+      damageConditions: data.damageConditions || data.conditions || data.conditionFlags || deck.visibleConditions || [],
+      crackBoardCount: data.crackBoardCount || 0,
+      rottedBoardCount: data.rottedBoardCount || 0,
+      warpedBoardCount: data.warpedBoardCount || 0,
+      looseBoardCount: data.looseBoardCount || 0,
+      waterDamagedBoardCount: data.waterDamagedBoardCount || 0,
+      crackLooseOverlapCount: data.crackLooseOverlapCount || 0,
+      exactHeightFt: data.exactHeightFt,
+      stainType: data.stainType || data.finishType,
+      services: data.services || data.restorationScope || ['cleaning'],
       billingRate: data.billingRate || 75,
       floorProductionRate: data.floorProductionRate || 50,
       customPrices: data.customPrices || data.productPrices || {},
@@ -154,61 +171,73 @@ async function createEstimate(data, user, ipAddress) {
       ...(data.restorationDetails || {}),
     };
 
-    const clientCalc = pricingEngine.calculateClientPricing(clientParams);
+    const clientCalc = pricingEngine.calculateRestorationEstimate(clientParams);
 
-    selectedMaterialsItems = Object.entries(clientCalc.productRequirements)
-      .filter(([_, prod]) => prod.active)
-      .map(([key, prod]) => ({
+    selectedMaterialsItems = [
+      {
         materialId: new mongoose.Types.ObjectId(),
-        materialName: prod.name,
-        materialCode: key.toUpperCase(),
-        brandName: 'Standard Professional',
-        unit: prod.unit,
-        quantity: prod.displayQuantity,
-        unitPrice: prod.unitPrice,
-        coveragePerUnit: prod.coverageRate,
-        baseQuantity: prod.rawQuantity,
+        materialName: `Restoration Materials & Preps (${clientCalc.prep || 'clean'})`,
+        materialCode: `MAT-${(clientCalc.finish || 'standard').toUpperCase()}`,
+        brandName: 'Deck Restoration Plus Pro Line',
+        unit: 'package',
+        quantity: 1,
+        unitPrice: clientCalc.basePrice,
+        coveragePerUnit: clientCalc.billableArea,
+        baseQuantity: clientCalc.billableArea,
         wastePercentage: 0,
         wasteQuantity: 0,
-        subtotal: pricingEngine.round2(prod.cost),
-        formula: `${prod.rawQuantity.toFixed(3)} gal × $${prod.unitPrice} = $${prod.cost.toFixed(2)}`,
-      }));
-
-    selectedServicesItems = [
-      {
-        serviceId: new mongoose.Types.ObjectId(),
-        serviceName: 'Deck Surface Restoration Service',
-        serviceCode: 'SRV-RESTORE',
-        serviceType: 'restoration',
-        unit: 'square_foot',
-        quantity: clientCalc.billableArea,
-        price: clientCalc.laborCost,
-        subtotal: clientCalc.laborCost,
-        formula: `${clientCalc.laborBreakdown.totalHours.toFixed(2)} hrs @ $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+        subtotal: clientCalc.basePrice,
+        formula: `${clientCalc.billableArea} sqft @ $${clientCalc.rate}/sqft = $${clientCalc.basePrice.toFixed(2)}`,
       },
     ];
 
+    selectedServicesItems = (data.services || data.restorationScope || ['cleaning']).map((srv) => ({
+      serviceId: new mongoose.Types.ObjectId(),
+      serviceName: String(srv).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      serviceCode: `SRV-${String(srv).toUpperCase().slice(0, 8)}`,
+      serviceType: 'restoration',
+      unit: 'service',
+      quantity: 1,
+      price: 0,
+      subtotal: 0,
+      formula: 'Included in package sqft rate card',
+    }));
+
     laborBreakdownData = {
       enabled: true,
-      laborRate: clientCalc.laborBreakdown.billingRate,
-      totalHours: clientCalc.laborBreakdown.totalHours,
-      subtotal: clientCalc.laborCost,
-      notes: `5-Part Labor: Base(${clientCalc.laborBreakdown.H1_base.toFixed(2)}h) + Coating(${clientCalc.laborBreakdown.H2_coating.toFixed(2)}h) + Species(${clientCalc.laborBreakdown.H3_species.toFixed(2)}h) + Access(${clientCalc.laborBreakdown.H4_access.toFixed(2)}h) + Condition(${clientCalc.laborBreakdown.H5_condition.toFixed(2)}h)`,
-      formula: `${clientCalc.laborBreakdown.totalHours.toFixed(3)} hrs × $${clientCalc.laborBreakdown.billingRate}/hr = $${clientCalc.laborCost.toFixed(2)}`,
+      laborRate: clientCalc.labourRate || 250,
+      totalHours: clientCalc.addHours || 0,
+      subtotal: clientCalc.labourAdj || 0,
+      notes: `Additive labor adjustment: Wood hours (${clientCalc.woodHours || 0}h) + Access hours (${clientCalc.accessHours || 0}h) = ${clientCalc.addHours || 0} additional hours @ $${clientCalc.labourRate || 250}/hr`,
+      formula: `${clientCalc.addHours || 0} add. hrs × $${clientCalc.labourRate || 250}/hr = $${(clientCalc.labourAdj || 0).toFixed(2)}`,
     };
 
-    subtotalAmount = clientCalc.baseEstimate;
-    minAdjustmentAmount = 0;
-    minJobPriceVal = 0;
-    preTaxAmount = clientCalc.baseEstimate;
+    if (clientCalc.travelFee > 0) {
+      additionalChargesData = {
+        items: [
+          {
+            type: 'travel',
+            name: 'Travel Fee (>45 min distance)',
+            amount: clientCalc.travelFee,
+            notes: 'Flat distance mobilization surcharge',
+          },
+        ],
+        subtotal: clientCalc.travelFee,
+      };
+    }
+
+    subtotalAmount = clientCalc.rawSubtotal || clientCalc.total;
+    minAdjustmentAmount = clientCalc.minJobApplied ? (clientCalc.minJob - (clientCalc.rawSubtotal || 0)) : 0;
+    minJobPriceVal = clientCalc.minJob || 2500;
+    preTaxAmount = clientCalc.total;
     taxPercentageVal = 0;
     taxAmountVal = 0;
-    totalAmountVal = clientCalc.baseEstimate;
+    totalAmountVal = clientCalc.total;
     pricingSnapshotData = clientCalc;
     warningsList = (clientCalc.warnings || []).map((w) => ({
       materialName: 'Restoration Scope',
       serviceName: 'Deck Restoration',
-      type: w.type || 'warning',
+      type: w.type || 'info',
       notes: w.message || '',
     }));
   } else {

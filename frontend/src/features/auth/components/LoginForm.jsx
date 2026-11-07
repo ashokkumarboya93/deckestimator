@@ -109,7 +109,7 @@ export function LoginForm() {
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
           <span style={styles.brandTitle}>
-            DECK <span style={{ color: '#1d4ed8' }}>PRO</span>
+            DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
           </span>
         </div>
         <h1 style={styles.title}>Sign in to your account</h1>

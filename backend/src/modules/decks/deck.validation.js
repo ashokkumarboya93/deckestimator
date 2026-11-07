@@ -26,45 +26,48 @@ const createDeckSchema = {
       isManualArea: Joi.boolean().default(false),
     }).optional(),
     deckShape: Joi.string()
-      .valid('rectangle', 'square', 'l_shaped', 'custom', 'other')
+      .valid('rectangle', 'square', 'l_shaped', 'multi_level', 'custom', 'other')
       .default('rectangle'),
     structureDetails: Joi.object({
       levels: Joi.number().integer().min(1).max(5).default(1),
+      height: Joi.string().allow('').optional(),
+      exactHeightFt: Joi.number().min(0).allow(null).optional(),
       isAttached: Joi.boolean().default(true),
       hasRailings: Joi.boolean().default(false),
       railingLength: Joi.number().min(0).default(0),
+      railingSqft: Joi.number().min(0).default(0),
       hasStairs: Joi.boolean().default(false),
       stairStepCount: Joi.number().integer().min(0).default(0),
+      stairSqft: Joi.number().min(0).default(0),
+      hasPergola: Joi.boolean().default(false),
+      pergolaSqft: Joi.number().min(0).default(0),
+      hasPrivacyWall: Joi.boolean().default(false),
+      privacyWallSqft: Joi.number().min(0).default(0),
+      hasSiding: Joi.boolean().default(false),
+      sidingSqft: Joi.number().min(0).default(0),
+      hasFascia: Joi.boolean().default(false),
+      fasciaSqft: Joi.number().min(0).default(0),
+      includeJoists: Joi.boolean().default(false),
+      joistsSqft: Joi.number().min(0).default(0),
       builtInFeatures: Joi.array().items(Joi.string().trim()).default([]),
       structureNotes: Joi.string().trim().max(500).allow('').optional(),
-    }).optional(),
+    }).unknown(true).optional(),
     surfaceDetails: Joi.object({
-      material: Joi.string().valid('wood', 'composite', 'other', 'unknown').default('wood'),
-      coatingStatus: Joi.string().valid('none', 'painted', 'stained', 'sealed', 'unknown').default('none'),
+      material: Joi.string().default('wood'),
+      woodSpecies: Joi.string().allow('').optional(),
+      coatingStatus: Joi.string().default('none'),
       previousTreatment: Joi.string().trim().allow('').max(200).optional(),
       surfaceDescription: Joi.string().trim().max(500).allow('').optional(),
-    }).optional(),
-    visibleConditions: Joi.array()
-      .items(
-        Joi.string().valid(
-          'peeling_coating',
-          'discoloration',
-          'surface_wear',
-          'wood_damage',
-          'cracks',
-          'mold_mildew',
-          'other',
-          'not_sure'
-        )
-      )
-      .default([]),
+    }).unknown(true).optional(),
+    visibleConditions: Joi.array().items(Joi.string().trim()).default([]),
     additionalNotes: Joi.string().trim().max(1000).allow('').optional(),
     completionStatus: Joi.string().valid('draft', 'complete', 'archived').default('draft'),
     images: Joi.array().optional(),
+    photos: Joi.array().optional(),
     ownerId: Joi.forbidden().messages({
       'any.unknown': 'Setting or modifying ownerId is forbidden.',
     }),
-  }).unknown(false),
+  }).unknown(true),
 };
 
 const updateDeckSchema = {
@@ -90,44 +93,18 @@ const updateDeckSchema = {
       area: Joi.number().positive().max(1000000).allow(null).optional(),
       isManualArea: Joi.boolean().optional(),
     }).optional(),
-    deckShape: Joi.string().valid('rectangle', 'square', 'l_shaped', 'custom', 'other').optional(),
-    structureDetails: Joi.object({
-      levels: Joi.number().integer().min(1).max(5).optional(),
-      isAttached: Joi.boolean().optional(),
-      hasRailings: Joi.boolean().optional(),
-      railingLength: Joi.number().min(0).optional(),
-      hasStairs: Joi.boolean().optional(),
-      stairStepCount: Joi.number().integer().min(0).optional(),
-      builtInFeatures: Joi.array().items(Joi.string().trim()).optional(),
-      structureNotes: Joi.string().trim().max(500).allow('').optional(),
-    }).optional(),
-    surfaceDetails: Joi.object({
-      material: Joi.string().valid('wood', 'composite', 'other', 'unknown').optional(),
-      coatingStatus: Joi.string().valid('none', 'painted', 'stained', 'sealed', 'unknown').optional(),
-      previousTreatment: Joi.string().trim().allow('').max(200).optional(),
-      surfaceDescription: Joi.string().trim().max(500).allow('').optional(),
-    }).optional(),
-    visibleConditions: Joi.array()
-      .items(
-        Joi.string().valid(
-          'peeling_coating',
-          'discoloration',
-          'surface_wear',
-          'wood_damage',
-          'cracks',
-          'mold_mildew',
-          'other',
-          'not_sure'
-        )
-      )
-      .optional(),
+    deckShape: Joi.string().valid('rectangle', 'square', 'l_shaped', 'multi_level', 'custom', 'other').optional(),
+    structureDetails: Joi.object().unknown(true).optional(),
+    surfaceDetails: Joi.object().unknown(true).optional(),
+    visibleConditions: Joi.array().items(Joi.string().trim()).optional(),
     additionalNotes: Joi.string().trim().max(1000).allow('').optional(),
     completionStatus: Joi.string().valid('draft', 'complete', 'archived').optional(),
     images: Joi.array().optional(),
+    photos: Joi.array().optional(),
     ownerId: Joi.forbidden().messages({
       'any.unknown': 'Setting or modifying ownerId is forbidden.',
     }),
-  }).min(1).unknown(false),
+  }).min(1).unknown(true),
 };
 
 const deckIdParamSchema = {

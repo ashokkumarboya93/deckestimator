@@ -1,1134 +1,2331 @@
 // =============================================
-// Deck Estimator — Continuous Scroll Estimator Form
+// Deck Restoration Plus — Precision Estimator Engine
 // =============================================
-// Clean, modern UI: icon-based selection cards, NO default pre-selected values,
-// single exact estimate amount (no minimum job price applied), and real inspirational photos.
+// Theme: Samsung Blue (#034EA2 / #0057B8) & Crisp White with Green accents
+// - Initially EMPTY state: 0% progress until user configures parameters
+// - All Sections feature Image + Caption title card styling (no description clutter)
+// - Section 1: Dimensions with green Usable Floor Area highlight & chosen shape display
+// - Section 2: Components (Railings, Stairs, Pergola, Privacy Wall, Siding, Fascia, Joists)
+//   asking for sqft input upon selection (Main Deck Flooring removed as it is in Section 1)
+// - Section 3: 8 Wood Species with image and caption title
+// - Section 4: Site Accessibility & Elevation with real images & clearly shown foot ranges
+// - Section 5: Existing Deck Finish & Coating (no price impact) with images and captions
+// - Section 6: Restoration Scope of Work with 8 services + No Coating option
+//   ($2.50 base rate + $1/sqft per coating)
+// - Section 7: Deck Physical Condition with all 9 conditions (Good Condition exclusive)
+//   plus optional board counts
+// - Section 8: Project Information (Full Name & Phone removed; only Project Name required,
+//   all other fields marked Optional)
+// - 100% reliable submission creating Deck & Estimate and rendering Official Estimate Box
+// - Client Q12 Strict Compliance: Customer sees ONE TOTAL NUMBER ONLY with zero breakdown
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createDeck, updateDeck } from '../api/decksApi';
 import { createEstimate, calculateLivePricing } from '../api/estimatesApi';
-import {
-  RectangleDeckIcon,
-  LShapeDeckIcon,
-  MultiLevelDeckIcon,
-  CustomDeckIcon,
-  HeightGroundIcon,
-  HeightLowIcon,
-  HeightMediumIcon,
-  HeightHighIcon,
-  LevelSingleIcon,
-  LevelTwoIcon,
-  LevelMultiIcon,
-  TopDownDeckPlanSvg,
-} from './DeckDiagrams';
+import { leadApi } from '../api/leadApi';
+
+// --- DATA DEFINITIONS WITH CURATED IMAGES & CAPTIONS ---
 
 const SHAPES = [
   {
     id: 'rectangle',
     label: 'Rectangle',
-    desc: 'Most common shape',
-    Icon: RectangleDeckIcon,
-    refTitle: 'Rectangle Deck',
-    refDesc: 'A classic flat rectangular deck platform, ideal for dining sets and open lounge spaces.',
-    realImg: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    desc: 'Classic uniform platform, max square footage efficiency.',
+  },
+  {
+    id: 'square',
+    label: 'Square',
+    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    desc: 'Equal perimeter length and width, courtyard living.',
   },
   {
     id: 'l_shaped',
     label: 'L-Shape',
-    desc: 'Two connected sections',
-    Icon: LShapeDeckIcon,
-    refTitle: 'L-Shaped Deck',
-    refDesc: 'Wraps around the corner of a house with two connected sections for flexible zones.',
-    realImg: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    desc: 'Wraps exterior corners, dual dining and lounge zones.',
   },
   {
     id: 'multi_level',
     label: 'Multi-Level',
-    desc: 'More than one level',
-    Icon: MultiLevelDeckIcon,
-    refTitle: 'Multi-Level Deck',
-    refDesc: 'Stepped architectural deck platforms with connecting transition stairs between tiers.',
-    realImg: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    desc: 'Stepped transition tiers accommodating slope grades.',
   },
   {
     id: 'custom',
-    label: 'Custom',
-    desc: 'Unique shape (e.g., circular)',
-    Icon: CustomDeckIcon,
-    refTitle: 'Custom Deck',
-    refDesc: 'Curved, octagonal, or multi-faceted custom deck layout with built-in seating.',
-    realImg: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    label: 'Custom Shape',
+    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    desc: 'Curved, angled or faceted bespoke architectural perimeter.',
   },
 ];
 
-const HEIGHTS = [
-  { id: 'ground_level', label: 'Ground Level', range: '(0 – 2 ft)', Icon: HeightGroundIcon },
-  { id: 'low', label: 'Low', range: '(2 – 4 ft)', Icon: HeightLowIcon },
-  { id: 'medium', label: 'Medium', range: '(4 – 8 ft)', Icon: HeightMediumIcon },
-  { id: 'high', label: 'High', range: '(8+ ft)', Icon: HeightHighIcon },
+const COMPONENTS = [
+  {
+    id: 'railings',
+    label: 'Perimeter Railings',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    field: 'railingSqft',
+    prompt: 'Railing Surface (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 120,
+  },
+  {
+    id: 'stairs',
+    label: 'Stair Steps',
+    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    field: 'stairSteps',
+    prompt: 'Number of Steps (Count)',
+    unit: 'steps',
+    defaultVal: 4,
+    multiplier: 12,
+  },
+  {
+    id: 'pergola',
+    label: 'Pergola',
+    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    field: 'pergolaSqft',
+    prompt: 'Pergola Framing (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 150,
+  },
+  {
+    id: 'privacy_wall',
+    label: 'Privacy Wall / Fencing',
+    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    field: 'privacyWallSqft',
+    prompt: 'Privacy Wall Surface (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 80,
+  },
+  {
+    id: 'siding',
+    label: 'Exterior Siding',
+    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    field: 'sidingSqft',
+    prompt: 'Siding Area (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 100,
+  },
+  {
+    id: 'fascia',
+    label: 'Perimeter Fascia',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    field: 'fasciaSqft',
+    prompt: 'Fascia Board Surface (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 45,
+  },
+  {
+    id: 'joists',
+    label: 'Underside Joists',
+    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    field: 'joistsSqft',
+    prompt: 'Exposed Framing Joists (sq ft)',
+    unit: 'sq ft',
+    defaultVal: 120,
+  },
 ];
 
-const LEVELS = [
-  { id: 1, label: 'Single Level', desc: 'Single flat tier', Icon: LevelSingleIcon },
-  { id: 2, label: 'Two Levels', desc: 'Two tiered platforms', Icon: LevelTwoIcon },
-  { id: 3, label: 'Three or More Levels', desc: 'Multi-level staircase deck', Icon: LevelMultiIcon },
+const WOOD_SPECIES = [
+  {
+    id: 'pt_pine',
+    name: 'Pressure-Treated Pine',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    laborPct: '0% labor adj.',
+    desc: 'Standard commercial softwood, treated for exterior ground contact.',
+  },
+  {
+    id: 'cedar',
+    name: 'Western Red Cedar',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+10% labor adj.',
+    desc: 'Naturally rot-resistant aromatic softwood with rich natural grain.',
+  },
+  {
+    id: 'redwood',
+    name: 'California Redwood',
+    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+15% labor adj.',
+    desc: 'Dense, durable heartwood with natural tannin resistance.',
+  },
+  {
+    id: 'mahogany',
+    name: 'Honduran Mahogany',
+    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+20% labor adj.',
+    desc: 'High-density architectural hardwood with tight ribbon grain.',
+  },
+  {
+    id: 'meranti',
+    name: 'Meranti Hardwood',
+    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+20% labor adj.',
+    desc: 'Durable exotic dark red hardwood, requires thin penetrating oils.',
+  },
+  {
+    id: 'tigerwood',
+    name: 'Tigerwood',
+    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+30% labor adj.',
+    desc: 'Striking exotic Brazilian hardwood with dark striped grain.',
+  },
+  {
+    id: 'teak',
+    name: 'Burmese Teak',
+    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+    laborPct: '+35% labor adj.',
+    desc: 'Extremely durable golden hardwood packed with natural silica.',
+  },
+  {
+    id: 'trex',
+    name: 'Composite Trex',
+    img: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=400&q=80',
+    laborPct: '−55% credit (clean only)',
+    desc: 'Engineered synthetic polymer core. No chemical strippers or stains.',
+  },
+];
+
+const ELEVATIONS = [
+  {
+    id: 'ground',
+    label: 'Ground Level',
+    range: '0–2 ft elevation',
+    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'low',
+    label: 'Low Elevation',
+    range: '2–4 ft elevation',
+    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'first',
+    label: 'First Story',
+    range: '4–8 ft elevation',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'second',
+    label: 'Second Story',
+    range: '8–12 ft elevation',
+    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'roof',
+    label: 'Roof / Staging',
+    range: 'Over 12 ft elevation',
+    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+  },
+];
+
+const EXISTING_COATINGS = [
+  {
+    id: 'none',
+    label: 'Bare Wood / No Coating',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'sealer',
+    label: 'Clear Sealer',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'transparent_stain',
+    label: 'Transparent Stain',
+    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'semi_transparent',
+    label: 'Semi-Transparent Stain',
+    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'solid_stain',
+    label: 'Solid Color Stain',
+    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'paint',
+    label: 'Exterior Paint',
+    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+  },
+];
+
+const SERVICES_LIST = [
+  {
+    id: 'cleaning',
+    name: 'Deck Cleaning (Deep Cleaning)',
+    img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
+    rate: '100 sqft/hr',
+  },
+  {
+    id: 'stripping',
+    name: 'Deck Stripping (Stain Stripping)',
+    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    rate: '50 sqft/hr',
+  },
+  {
+    id: 'sanding',
+    name: 'Deck Sanding (Floor & Railing)',
+    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80',
+    rate: '60 sqft/hr',
+  },
+  {
+    id: 'staining',
+    name: 'Deck Staining (Conditioning)',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    rate: '100 sqft/hr',
+  },
+  {
+    id: 'sealing',
+    name: 'Deck Sealing (Clear Sealing)',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    rate: '100 sqft/hr',
+  },
+  {
+    id: 'repairs',
+    name: 'Deck Board Repair / Replacement',
+    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    rate: 'Contractor Quoted',
+  },
+  {
+    id: 'wood_brightening',
+    name: 'Wood Brightening',
+    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    rate: '100 sqft/hr',
+  },
+  {
+    id: 'waterproofing',
+    name: 'Waterproofing Barrier',
+    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    rate: '100 sqft/hr',
+  },
+  {
+    id: 'no_coating',
+    name: 'No Coating / Natural Bare Finish',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    rate: 'Starts @ $2.50/sqft',
+  },
 ];
 
 const CONDITIONS = [
-  { id: 'good', label: 'Good', img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=300&q=80', desc: 'Sound wood, clean, light wash required' },
-  { id: 'weathered', label: 'Weathered', img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80', desc: 'Grayed, sun-worn; needs brightening' },
-  { id: 'peeling_stained', label: 'Peeling / Stained', img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=80', desc: 'Old coating failing; requires chemical strip' },
-  { id: 'damaged', label: 'Damaged / Rough', img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=300&q=80', desc: 'Splintered or deep cracks; needs sanding' },
-];
-
-const RESTORATIONS = [
-  { id: 'cleaning', label: 'Deep Cleaning', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=300&q=80', desc: 'Eco scrub & pressure wash' },
-  { id: 'stripping', label: 'Stain Stripping', img: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=300&q=80', desc: 'Chemical stripping of old stains' },
-  { id: 'sanding', label: 'Deck Sanding', img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=300&q=80', desc: 'Smooth rough grain & splinters' },
-  { id: 'full_restoration', label: 'Full Restoration', img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80', desc: 'Complete turnkey strip, sand & stain' },
-];
-
-const FINISHES = [
-  { id: 'natural', label: 'Natural / Clear', img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80', desc: 'Highlights natural grain; water repellent' },
-  { id: 'semi_transparent_stain', label: 'Semi-Transparent Stain', img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=300&q=80', desc: 'Adds rich pigment with visible wood grain' },
-  { id: 'solid_stain', label: 'Solid Stain', img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=80', desc: 'Opaque protective color coat' },
-  { id: 'clear_sealer', label: 'Clear Sealer', img: 'https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=300&q=80', desc: 'Hydrophobic moisture lock protection' },
-];
-
-const INSPIRATION_PHOTOS = [
-  { title: 'Restored Cedar Deck', url: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80' },
-  { title: 'Lakefront Stained Deck', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80' },
-  { title: 'Multi-Tier Outdoor Living', url: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80' },
-  { title: 'Modern Clean Finish', url: 'https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=400&q=80' },
+  {
+    id: 'good_condition',
+    label: '1. Good Condition (Baseline)',
+    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    exclusive: true,
+  },
+  {
+    id: 'weathered',
+    label: '2. Weathered Wood',
+    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'crack',
+    label: '3. Cracks & Checks',
+    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80',
+    hasCount: true,
+  },
+  {
+    id: 'rotted',
+    label: '4. Rotted Boards',
+    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    hasCount: true,
+  },
+  {
+    id: 'mold',
+    label: '5. Heavy Mold & Mildew',
+    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'peeling',
+    label: '6. Peeling Coating',
+    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'water_damaged',
+    label: '7. Water Damaged Wood',
+    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    hasCount: true,
+  },
+  {
+    id: 'warped',
+    label: '8. Warped Boards',
+    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    hasCount: true,
+  },
+  {
+    id: 'loose_board',
+    label: '9. Loose Deck Boards',
+    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    hasCount: true,
+  },
 ];
 
 export default function ContinuousEstimatorForm({ initialData = null, isEditing = false, deckId = null }) {
   const navigate = useNavigate();
+  const isContractor = typeof window !== 'undefined' && window.location.pathname.startsWith('/contractor');
 
-  // 1. Deck Details — NO DEFAULT SELECTIONS FOR NEW ESTIMATION
-  const [shape, setShape] = useState(initialData?.deckShape || null);
+  // --- STATE HOOKS (INITIALLY EMPTY AS REQUESTED) ---
+
+  // Section 1: Dimensions & Shape
+  const [shape, setShape] = useState(initialData?.deckShape || '');
   const [length, setLength] = useState(initialData?.dimensions?.length ? String(initialData.dimensions.length) : '');
   const [width, setWidth] = useState(initialData?.dimensions?.width ? String(initialData.dimensions.width) : '');
-  const [unit, setUnit] = useState(initialData?.measurementUnit || 'ft');
-  const [height, setHeight] = useState(initialData?.structureDetails?.height || null);
-  const [levels, setLevels] = useState(initialData?.structureDetails?.levels || null);
 
-  // Components — Unselected by default
-  const [hasRailings, setHasRailings] = useState(Boolean(initialData?.structureDetails?.hasRailings));
-  const [railingLength, setRailingLength] = useState(initialData?.structureDetails?.railingLength ? String(initialData.structureDetails.railingLength) : '');
-  const [railingStyle, setRailingStyle] = useState(initialData?.structureDetails?.railingStyle || 'plain_2x2');
-  const [hasStairs, setHasStairs] = useState(Boolean(initialData?.structureDetails?.hasStairs));
-  const [stairCount, setStairCount] = useState(initialData?.structureDetails?.stairStepCount ? String(initialData.structureDetails.stairStepCount) : '');
-  const [hasFascia, setHasFascia] = useState(false);
-  const [fasciaLength, setFasciaLength] = useState('');
-  const [hasPergola, setHasPergola] = useState(false);
-  const [pergolaLength, setPergolaLength] = useState('');
-  const [includeJoists, setIncludeJoists] = useState(false);
-  const [hasSiding, setHasSiding] = useState(false);
-  const [sidingArea, setSidingArea] = useState('');
+  // Section 2: Components (Selected set & specific sqft)
+  const [selectedComponents, setSelectedComponents] = useState([]);
+  const [componentSqft, setComponentSqft] = useState({});
 
-  // 2. Condition & Restoration — NO DEFAULT SELECTIONS
-  const [condition, setCondition] = useState(initialData?.surfaceDetails?.coatingStatus || null);
-  const [conditionFlags, setConditionFlags] = useState([]);
-  const [damageNotes, setDamageNotes] = useState('');
-  const [restorationScope, setRestorationScope] = useState([]);
+  // Section 3: Wood Species
+  const [woodSpecies, setWoodSpecies] = useState(initialData?.surfaceDetails?.woodSpecies || initialData?.surfaceDetails?.material || '');
 
-  // 3. Finish & Species — NO DEFAULT SELECTIONS
-  const [woodSpecies, setWoodSpecies] = useState(initialData?.surfaceDetails?.material || null);
-  const [coatingType, setCoatingType] = useState(null);
-  const [coatingConfidence, setCoatingConfidence] = useState('medium');
+  // Section 4: Site & Elevation
+  const [height, setHeight] = useState(initialData?.structureDetails?.height || '');
+  const [exactHeightFt, setExactHeightFt] = useState('');
 
-  // 4. Photos & Project Info
-  const [photos, setPhotos] = useState([]);
+  // Section 5: Existing Finish
+  const [existingCoating, setExistingCoating] = useState(initialData?.surfaceDetails?.coatingStatus || '');
+
+  // Section 6: Restoration Scope
+  const [services, setServices] = useState([]);
+  const [stainType, setStainType] = useState('semi');
+  const [sandingType, setSandingType] = useState('mechanical_sanding');
+
+  // Section 7: Deck Physical Condition
+  const [conditions, setConditions] = useState([]);
+  const [crackBoardCount, setCrackBoardCount] = useState('');
+  const [rottedBoardCount, setRottedBoardCount] = useState('');
+  const [warpedBoardCount, setWarpedBoardCount] = useState('');
+  const [looseBoardCount, setLooseBoardCount] = useState('');
+  const [waterDamagedBoardCount, setWaterDamagedBoardCount] = useState('');
+  const [crackLooseOverlapCount, setCrackLooseOverlapCount] = useState('');
+
+  // Section 8: Project Information
   const [projectName, setProjectName] = useState(initialData?.projectName || '');
-  const [projectDescription, setProjectDescription] = useState(initialData?.projectDescription || '');
-  const [propertyAddress, setPropertyAddress] = useState({
-    street: initialData?.propertyAddress?.street || '',
-    city: initialData?.propertyAddress?.city || '',
-    state: initialData?.propertyAddress?.state || '',
-    zipCode: initialData?.propertyAddress?.zipCode || '',
-  });
+  const [address, setAddress] = useState(initialData?.propertyAddress?.street || '');
+  const [city, setCity] = useState(initialData?.propertyAddress?.city || '');
+  const [state, setState] = useState(initialData?.propertyAddress?.state || '');
+  const [zipCode, setZipCode] = useState(initialData?.propertyAddress?.zipCode || '');
+  const [notes, setNotes] = useState('');
 
-  // Live Pricing State
-  const [livePricing, setLivePricing] = useState(null);
-  const [calculating, setCalculating] = useState(false);
+  // UI & Calculation state
+  const [contractorPricing, setContractorPricing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // Modals
-  const [showMeasureGuide, setShowMeasureGuide] = useState(false);
+  // Post-Estimate Box State
+  const [officialEstimate, setOfficialEstimate] = useState(null);
+  const [leadCreated, setLeadCreated] = useState(false);
+  const [leadLoading, setLeadLoading] = useState(false);
 
-  // Calculated Floor Area
-  const floorArea = useMemo(() => {
-    const l = parseFloat(length);
-    const w = parseFloat(width);
-    if (!isNaN(l) && !isNaN(w) && l > 0 && w > 0) {
-      return Math.round(l * w);
+  // Reach Out / Support Modal State
+  const [reachOutOpen, setReachOutOpen] = useState(false);
+  const [reachOutHover, setReachOutHover] = useState(false);
+  const [reachOutSubject, setReachOutSubject] = useState('Estimator Assistance & Deck Scope');
+  const [reachOutMsg, setReachOutMsg] = useState('');
+  const [reachOutSending, setReachOutSending] = useState(false);
+  const [reachOutSuccess, setReachOutSuccess] = useState(false);
+
+  // Upload Photos (Section 8 Optional)
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
+
+  // Architectural / More References Window Active Tab
+  const [refTab, setRefTab] = useState('shape'); // 'shape' | 'wood' | 'services' | 'condition'
+
+  // --- RULE R1: TREX LOCK ---
+  useEffect(() => {
+    if (woodSpecies === 'trex' || woodSpecies === 'composite') {
+      setServices((prev) => prev.filter((s) => s === 'cleaning' || s === 'no_coating'));
     }
-    return 0;
+  }, [woodSpecies]);
+
+  // --- SQUARE DIMENSION COPY ---
+  useEffect(() => {
+    if (shape === 'square' && length) {
+      setWidth(length);
+    }
+  }, [shape, length]);
+
+  // --- SYNC PROJECT NAME TO TOP NAVBAR ---
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('deck_project_name_updated', { detail: projectName }));
+  }, [projectName]);
+
+  // Usable Floor Area (L × W)
+  const floorArea = useMemo(() => {
+    const l = Number(length) || 0;
+    const w = Number(width) || 0;
+    return Math.round(l * w);
   }, [length, width]);
 
-  // Selected Reference Objects
-  const selectedShapeObj = useMemo(() => {
-    return SHAPES.find((s) =>s.id === shape) || null;
-  }, [shape]);
+  // Total Billable Surface Area
+  const totalBillableArea = useMemo(() => {
+    let extra = 0;
+    selectedComponents.forEach((cid) => {
+      const val = Number(componentSqft[cid] || 0);
+      if (cid === 'stairs') {
+        extra += val * 12; // 12 sq ft per step (tread + riser)
+      } else {
+        extra += val;
+      }
+    });
+    return floorArea + extra;
+  }, [floorArea, selectedComponents, componentSqft]);
 
-  const selectedHeightObj = useMemo(() => {
-    return HEIGHTS.find((h) =>h.id === height) || null;
-  }, [height]);
+  // Dynamic 9-Section Progress Tracking (Section 8 is Photos, Section 9 is Project Details)
+  const sectionSteps = useMemo(() => [
+    { num: 1, name: 'Dimensions', done: Boolean(shape && floorArea > 0), id: 'section-1' },
+    { num: 2, name: 'Components', done: Boolean(selectedComponents.length > 0), id: 'section-2' },
+    { num: 3, name: 'Wood', done: Boolean(woodSpecies), id: 'section-3' },
+    { num: 4, name: 'Elevation', done: Boolean(height), id: 'section-4' },
+    { num: 5, name: 'Coating', done: Boolean(existingCoating), id: 'section-5' },
+    { num: 6, name: 'Services', done: Boolean(services.length > 0), id: 'section-6' },
+    { num: 7, name: 'Condition', done: Boolean(conditions.length > 0), id: 'section-7' },
+    { num: 8, name: 'Photos', done: Boolean(uploadedPhotos.length > 0), id: 'section-8' },
+    { num: 9, name: 'Details', done: Boolean(projectName.trim()), id: 'section-9' },
+  ], [shape, floorArea, selectedComponents, woodSpecies, height, existingCoating, services, conditions, uploadedPhotos, projectName]);
 
-  const selectedLevelsObj = useMemo(() => {
-    return LEVELS.find((l) =>l.id === levels) || null;
-  }, [levels]);
+  const completedSectionsCount = useMemo(() => sectionSteps.filter((s) => s.done).length, [sectionSteps]);
+  const progressPercent = useMemo(
+    () => Math.round((completedSectionsCount / sectionSteps.length) * 100),
+    [completedSectionsCount, sectionSteps.length]
+  );
 
-  // DYNAMIC STEP COMPLETION PROGRESS (Starts 0/7 if unselected)
-  const stepStatus = useMemo(() => {
-    const step1 = floorArea > 0 && Boolean(shape) && Boolean(height) && Boolean(levels);
-    const step2 = Boolean(condition);
-    const step3 = restorationScope.length > 0;
-    const step4 = Boolean(coatingType) && Boolean(woodSpecies);
-    const step5 = photos.length > 0;
-    const step6 = Boolean(projectName.trim());
-    const step7 = step1 && step2 && step3 && step4;
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-    const steps = [
-      { num: 1, name: 'Deck Details', done: step1 },
-      { num: 2, name: 'Deck Condition', done: step2 },
-      { num: 3, name: 'Restoration Services', done: step3 },
-      { num: 4, name: 'Materials & Finish', done: step4 },
-      { num: 5, name: 'Photographs', done: step5 },
-      { num: 6, name: 'Additional Details', done: step6 },
-      { num: 7, name: 'Review & Estimate', done: step7 },
-    ];
+  // Toggle Component Selection
+  const toggleComponent = (id, defaultVal) => {
+    setSelectedComponents((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((c) => c !== id);
+        setComponentSqft((s) => {
+          const cp = { ...s };
+          delete cp[id];
+          return cp;
+        });
+        return next;
+      } else {
+        const def = id === 'stairs' ? 4 : (defaultVal || 50);
+        setComponentSqft((s) => ({
+          ...s,
+          [id]: s[id] !== undefined ? s[id] : def,
+        }));
+        return [...prev, id];
+      }
+    });
+  };
 
-    const completedCount = steps.filter((s) =>s.done).length;
-    return { steps, completedCount };
-  }, [floorArea, shape, height, levels, condition, restorationScope, coatingType, woodSpecies, photos, projectName]);
-
-  // Real-Time Pricing Calculation
-  const runPricingCalc = useCallback(async () => {
-    if (floorArea <= 0) {
-      setLivePricing(null);
+  // Toggle Service
+  const toggleService = (id) => {
+    if ((woodSpecies === 'trex' || woodSpecies === 'composite') && id !== 'cleaning' && id !== 'no_coating') {
       return;
     }
-    setCalculating(true);
+    if (id === 'no_coating') {
+      setServices((prev) => (prev.includes('no_coating') ? [] : ['no_coating', 'cleaning']));
+      return;
+    }
+    setServices((prev) => {
+      const withoutNoCoating = prev.filter((s) => s !== 'no_coating');
+      if (withoutNoCoating.includes(id)) {
+        return withoutNoCoating.filter((s) => s !== id);
+      } else {
+        return [...withoutNoCoating, id];
+      }
+    });
+  };
+
+  // Toggle Condition (Good Condition is 100% exclusive)
+  const toggleCondition = (id) => {
+    if (id === 'good_condition') {
+      setConditions(['good_condition']);
+      setCrackBoardCount('');
+      setRottedBoardCount('');
+      setWarpedBoardCount('');
+      setLooseBoardCount('');
+      setWaterDamagedBoardCount('');
+      setCrackLooseOverlapCount('');
+      return;
+    }
+    setConditions((prev) => {
+      const withoutGood = prev.filter((c) => c !== 'good_condition');
+      if (withoutGood.includes(id)) {
+        return withoutGood.filter((c) => c !== id);
+      } else {
+        return [...withoutGood, id];
+      }
+    });
+  };
+
+  // Reset entire form for a fresh new calculation
+  const handleResetForNewEstimate = () => {
+    setShape('');
+    setLength('');
+    setWidth('');
+    setSelectedComponents([]);
+    setComponentSqft({});
+    setWoodSpecies('');
+    setHeight('');
+    setExactHeightFt('');
+    setExistingCoating('');
+    setServices([]);
+    setStainType('semi');
+    setSandingType('mechanical_sanding');
+    setConditions(['good_condition']);
+    setCrackBoardCount('');
+    setRottedBoardCount('');
+    setWarpedBoardCount('');
+    setLooseBoardCount('');
+    setWaterDamagedBoardCount('');
+    setCrackLooseOverlapCount('');
+    setUploadedPhotos([]);
+    setProjectName('');
+    setAddress('');
+    setCity('');
+    setState('');
+    setZipCode('');
+    setNotes('');
+    setOfficialEstimate(null);
+    setSubmitError(null);
+    setLeadCreated(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle Photo File Upload (Section 8)
+  const handlePhotoFiles = (files) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File "${file.name}" exceeds the 10 MB limit.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedPhotos((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            category: 'full_view',
+            dataUrl: e.target.result,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (id) => {
+    setUploadedPhotos((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handlePhotoCategoryChange = (id, category) => {
+    setUploadedPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, category } : p))
+    );
+  };
+
+  // Contractor-Only Live Pricing Preview
+  const runContractorCalc = useCallback(async () => {
+    if (!isContractor || floorArea <= 0 || services.length === 0) return;
     try {
       const payload = {
-        floorArea: unit === 'm' ? Math.round(floorArea * 10.7639) : floorArea,
-        floorProductionRate: 200,
-        woodSpecies: woodSpecies || 'cedar',
-        accessType: height === 'high' ? 'elevated_second_story' : 'standard_ground',
-        coatingType: coatingType || 'semi_transparent_stain',
-        coatingConfidence,
-        conditionFlags: conditionFlags.length > 0 ? conditionFlags : ['weathered_wood'],
-        railingLength: hasRailings ? Number(railingLength) || 0 : 0,
-        railingStyle,
-        stairCount: hasStairs ? Number(stairCount) || 0 : 0,
-        fasciaLength: hasFascia ? Number(fasciaLength) || 0 : 0,
-        pergolaLength: hasPergola ? Number(pergolaLength) || 0 : 0,
-        sidingArea: hasSiding ? Number(sidingArea) || 0 : 0,
-        includeJoists,
-        billingRate: 65,
+        floorArea,
+        services,
+        stainType,
+        woodSpecies,
+        accessType: height,
+        exactHeightFt: exactHeightFt ? Number(exactHeightFt) : undefined,
+        existingCoating,
+        railingSqft: Number(componentSqft.railings || 0),
+        stairSteps: Number(componentSqft.stairs || 0),
+        stairStepCount: Number(componentSqft.stairs || 0),
+        stairSqft: Number(componentSqft.stairs || 0) * 12,
+        pergolaSqft: Number(componentSqft.pergola || 0),
+        privacyWallSqft: Number(componentSqft.privacy_wall || 0),
+        sidingSqft: Number(componentSqft.siding || 0),
+        fasciaSqft: Number(componentSqft.fascia || 0),
+        joistsSqft: Number(componentSqft.joists || 0),
+        damageConditions: conditions,
+        crackBoardCount: Number(crackBoardCount) || 0,
+        rottedBoardCount: Number(rottedBoardCount) || 0,
+        warpedBoardCount: Number(warpedBoardCount) || 0,
+        looseBoardCount: Number(looseBoardCount) || 0,
+        waterDamagedBoardCount: Number(waterDamagedBoardCount) || 0,
+        crackLooseOverlapCount: Number(crackLooseOverlapCount) || 0,
+        forContractor: true,
       };
       const res = await calculateLivePricing(payload);
-      setLivePricing(res);
+      setContractorPricing(res);
     } catch {
-      // Keep previous or fallback
-    } finally {
-      setCalculating(false);
+      // Ignore
     }
-  }, [
-    floorArea,
-    unit,
-    woodSpecies,
-    height,
-    coatingType,
-    coatingConfidence,
-    conditionFlags,
-    hasRailings,
-    railingLength,
-    railingStyle,
-    hasStairs,
-    stairCount,
-    hasFascia,
-    fasciaLength,
-    hasPergola,
-    pergolaLength,
-    hasSiding,
-    sidingArea,
-    includeJoists,
-  ]);
+  }, [isContractor, floorArea, services, stainType, woodSpecies, height, exactHeightFt, existingCoating, componentSqft, conditions, crackBoardCount, rottedBoardCount, warpedBoardCount, looseBoardCount, waterDamagedBoardCount, crackLooseOverlapCount]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      runPricingCalc();
-    }, 250);
-    return () =>clearTimeout(timer);
-  }, [runPricingCalc]);
-
-  // SINGLE AMOUNT PRICING CALCULATIONS (NO MINIMUM JOB PRICE APPLIED)
-  const { materialsEst, servicesEst, laborEst, travelEst, subTotalEst, taxEst, finalSingleTotal } = useMemo(() => {
-    if (floorArea <= 0) {
-      return {
-        materialsEst: 0,
-        servicesEst: 0,
-        laborEst: 0,
-        travelEst: 0,
-        subTotalEst: 0,
-        taxEst: 0,
-        finalSingleTotal: 0,
-      };
+    if (isContractor) {
+      const timer = setTimeout(runContractorCalc, 250);
+      return () => clearTimeout(timer);
     }
+  }, [isContractor, runContractorCalc]);
 
-    const mat = livePricing?.totalMaterialCost ?? (floorArea * 3.0);
-    const srv = 960.0;
-    const lab = livePricing?.laborCost ?? (floorArea * 2.0);
-    const trv = 200.0;
-    const sub = mat + srv + lab + trv;
-    const tax = sub * 0.0825;
-    // Exactly single total without applying minimum job price
-    const total = sub + tax;
-
-    return {
-      materialsEst: mat,
-      servicesEst: srv,
-      laborEst: lab,
-      travelEst: trv,
-      subTotalEst: sub,
-      taxEst: tax,
-      finalSingleTotal: total,
-    };
-  }, [floorArea, livePricing]);
-
-  // Save Deck & Estimate
+  // --- SUBMIT ESTIMATE ---
   const handleSave = async (status = 'SUBMITTED') => {
-    if (floorArea <= 0) {
-      setSubmitError('Please enter valid deck length and width to proceed.');
+    if (!shape) {
+      setSubmitError('Please select a Deck Footprint & Shape in Section 1.');
       return;
     }
+    if (floorArea <= 0) {
+      setSubmitError('Please enter valid deck length and width in Section 1.');
+      return;
+    }
+    if (!woodSpecies) {
+      setSubmitError('Please select a Wood Species & Material in Section 3.');
+      return;
+    }
+    if (!height) {
+      setSubmitError('Please select Site Accessibility & Elevation in Section 4.');
+      return;
+    }
+    if (!existingCoating) {
+      setSubmitError('Please select Existing Deck Finish in Section 5.');
+      return;
+    }
+    if (services.length === 0) {
+      setSubmitError('Please select at least one Restoration Service in Section 6.');
+      return;
+    }
+    if (conditions.length === 0) {
+      setSubmitError('Please select Deck Physical Condition in Section 7.');
+      return;
+    }
+    if (!projectName.trim()) {
+      setSubmitError('Please enter a Project / Deck Name in Section 9.');
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      const activeProjName = projectName.trim() || 'Custom Deck Project';
+      const activeProjName = projectName.trim() || 'Custom Deck Restoration';
 
-      // Map values to strict backend Joi schemas
-      const materialEnum = woodSpecies?.toLowerCase().includes('composite') ? 'composite' : 'wood';
-      const coatingStatusEnum =
-        condition === 'painted'
-          ? 'painted'
-          : condition === 'stained'
-          ? 'stained'
-          : condition === 'sealed'
-          ? 'sealed'
-          : condition === 'bare' || condition === 'weathered'
-          ? 'none'
-          : 'unknown';
-
-      const validConditionsMap = {
-        weathered_wood: 'surface_wear',
-        peeling_coating: 'peeling_coating',
-        cracks_warping: 'cracks',
-        mildew_algae: 'mold_mildew',
-        structural_damage: 'wood_damage',
-        discoloration: 'discoloration',
-        other: 'other',
-      };
-      const visibleConditions = conditionFlags.map((f) =>validConditionsMap[f] || 'surface_wear');
-
-      // 1. Create/Update Deck
+      // 1. Create or Update Deck
       const deckPayload = {
         projectName: activeProjName,
-        projectDescription: projectDescription.trim() || 'Deck project created via Estimator',
-        measurementUnit: unit,
-        deckShape: shape || 'rectangle',
+        projectDescription: `Restoration for ${woodSpecies} deck (${floorArea} sqft)`,
+        deckShape: shape,
         dimensions: {
           length: Number(length) || 20,
           width: Number(width) || 15,
-          area: floorArea || 300,
+          area: floorArea,
         },
         structureDetails: {
-          levels: levels || 1,
-          isAttached: true,
-          hasRailings,
-          railingLength: hasRailings ? Number(railingLength) || 0 : 0,
-          hasStairs,
-          stairStepCount: hasStairs ? Number(stairCount) || 0 : 0,
-          builtInFeatures: [
-            hasFascia && 'Fascia',
-            hasPergola && 'Pergola',
-            hasSiding && 'Siding',
-            includeJoists && 'Underside Joists',
-          ].filter(Boolean),
+          height,
+          exactHeightFt: exactHeightFt ? Number(exactHeightFt) : null,
+          hasRailings: selectedComponents.includes('railings'),
+          railingSqft: Number(componentSqft.railings || 0),
+          hasStairs: selectedComponents.includes('stairs'),
+          stairStepCount: Number(componentSqft.stairs || 0),
+          stairSteps: Number(componentSqft.stairs || 0),
+          stairSqft: Number(componentSqft.stairs || 0) * 12,
+          hasPergola: selectedComponents.includes('pergola'),
+          pergolaSqft: Number(componentSqft.pergola || 0),
+          hasPrivacyWall: selectedComponents.includes('privacy_wall'),
+          privacyWallSqft: Number(componentSqft.privacy_wall || 0),
+          hasSiding: selectedComponents.includes('siding'),
+          sidingSqft: Number(componentSqft.siding || 0),
+          hasFascia: selectedComponents.includes('fascia'),
+          fasciaSqft: Number(componentSqft.fascia || 0),
+          includeJoists: selectedComponents.includes('joists'),
+          joistsSqft: Number(componentSqft.joists || 0),
         },
         surfaceDetails: {
-          material: materialEnum,
-          coatingStatus: coatingStatusEnum,
-          previousTreatment: woodSpecies || 'pressure_treated_pine',
+          material: woodSpecies.includes('trex') ? 'composite' : 'wood',
+          woodSpecies,
+          coatingStatus: existingCoating === 'paint' ? 'painted' : existingCoating === 'solid_stain' ? 'stained' : 'none',
         },
-        visibleConditions: visibleConditions.length > 0 ? visibleConditions : ['surface_wear'],
-        propertyAddress: {
-          street: propertyAddress?.street || '123 Main St',
-          city: propertyAddress?.city || 'Austin',
-          state: propertyAddress?.state || 'TX',
-          zipCode: propertyAddress?.zipCode || '78701',
-          country: 'USA',
-        },
+        visibleConditions: conditions,
+        photos: uploadedPhotos.map((p) => ({
+          name: p.name,
+          size: p.size,
+          type: p.type,
+          category: p.category,
+          url: p.dataUrl,
+        })),
+        propertyAddress: { street: address, city, state, zipCode, country: 'USA' },
       };
 
-      let activeDeckId = deckId;
+      let savedDeck;
       if (isEditing && deckId) {
-        await updateDeck(deckId, deckPayload);
+        savedDeck = await updateDeck(deckId, deckPayload);
       } else {
-        const created = await createDeck(deckPayload);
-        activeDeckId = created.id || created._id;
+        savedDeck = await createDeck(deckPayload);
       }
 
-      // 2. Generate Official Estimate Snapshot (strictly aligned to createEstimateSchema)
+      const activeDeckId = savedDeck?._id || savedDeck?.id || deckId;
+
+      // 2. Create Estimate with build spec snapshot
       const estimatePayload = {
         deckId: activeDeckId,
-        estimateName: `${activeProjName} Quote`,
-        floorArea: unit === 'm' ? Math.round(floorArea * 10.7639) : floorArea || 300,
-        floorProductionRate: 200,
-        woodSpecies: woodSpecies || 'pressure_treated_pine',
-        accessType: height === 'high' ? 'elevated_second_story' : 'standard_ground',
-        coatingType: coatingType || 'semi_transparent_stain',
-        coatingConfidence: String(coatingConfidence || 'medium'),
-        conditionFlags: visibleConditions.length > 0 ? visibleConditions : ['surface_wear'],
-        railingLength: hasRailings ? Number(railingLength) || 0 : 0,
-        railingStyle: railingStyle || 'standard',
-        stairCount: hasStairs ? Number(stairCount) || 0 : 0,
-        fasciaLength: hasFascia ? Number(fasciaLength) || 0 : 0,
-        pergolaLength: hasPergola ? Number(pergolaLength) || 0 : 0,
-        sidingArea: hasSiding ? Number(sidingArea) || 0 : 0,
-        includeJoists: Boolean(includeJoists),
-        billingRate: 65,
+        estimateName: `${activeProjName} Official Estimate`,
+        floorArea,
+        woodSpecies,
+        accessType: height,
+        exactHeightFt: exactHeightFt ? Number(exactHeightFt) : undefined,
+        coatingType: stainType,
+        stainType,
+        sandingType,
+        conditionFlags: conditions,
+        damageConditions: conditions,
+        crackBoardCount: Number(crackBoardCount) || 0,
+        rottedBoardCount: Number(rottedBoardCount) || 0,
+        warpedBoardCount: Number(warpedBoardCount) || 0,
+        looseBoardCount: Number(looseBoardCount) || 0,
+        waterDamagedBoardCount: Number(waterDamagedBoardCount) || 0,
+        crackLooseOverlapCount: Number(crackLooseOverlapCount) || 0,
+        services,
+        railingSqft: Number(componentSqft.railings || 0),
+        stairSteps: Number(componentSqft.stairs || 0),
+        stairStepCount: Number(componentSqft.stairs || 0),
+        stairSqft: Number(componentSqft.stairs || 0) * 12,
+        pergolaSqft: Number(componentSqft.pergola || 0),
+        privacyWallSqft: Number(componentSqft.privacy_wall || 0),
+        sidingSqft: Number(componentSqft.siding || 0),
+        fasciaSqft: Number(componentSqft.fascia || 0),
+        joistsSqft: Number(componentSqft.joists || 0),
+        notes: notes.trim(),
       };
 
       const est = await createEstimate(estimatePayload);
 
-      const isContractor = window.location.pathname.startsWith('/contractor');
-      if (status === 'DRAFT') {
-        navigate(isContractor ? '/contractor/projects' : '/customer/dashboard');
-      } else {
-        navigate(isContractor ? '/contractor/estimates' : '/customer/estimates');
-      }
+      const snap = est?.pricingSnapshot || {};
+      const calculatedAmt = snap.calculatedTotal !== undefined ? snap.calculatedTotal : (est?.totalAmount || 2500);
+      const minJobFloor = snap.minJob || 2500;
+      const minJobApplies = snap.minJobApplied ?? (calculatedAmt < minJobFloor);
+
+      setOfficialEstimate({
+        ref: est?.estimateNumber || `DP-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
+        total: calculatedAmt,
+        minJobApplies,
+        minJobAmount: minJobFloor,
+        minJobNotice: minJobApplies
+          ? `Important Notice: Deck Restoration Plus maintains a standard project mobilization minimum of $${minJobFloor.toLocaleString()} for this service tier. Because your current calculated scope is below this threshold, the $${minJobFloor.toLocaleString()} minimum job price will apply upon final booking and dispatch.`
+          : null,
+        low: snap.low || minJobFloor,
+        high: snap.high || minJobFloor,
+        billableArea: snap.A || totalBillableArea,
+        rate: snap.rate || 3.00,
+        prep: snap.prep || 'clean',
+        finish: snap.finish || 'sealer',
+        baseHours: snap.baseHours || 0,
+        woodHours: snap.woodHours || 0,
+        accessHours: snap.accessHours || 0,
+        labourAdj: snap.labourAdj || 0,
+        travelFee: snap.travelFee || 0,
+        repairEstimate: snap.repairEstimate || null,
+        status: snap.status || (services.includes('repairs') ? 'needs_contractor_quote' : 'submitted'),
+        needsPhotoReview: snap.needsPhotoReview ?? false,
+        hasRepairs: snap.hasRepairs ?? services.includes('repairs'),
+        deckId: activeDeckId,
+        estimateId: est?._id || est?.id,
+      });
+
+      // Smooth scroll down to the official estimate result box
+      setTimeout(() => {
+        const el = document.getElementById('official-estimate-result-box');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
     } catch (err) {
-      setSubmitError(err.message || 'Failed to save estimate.');
+      setSubmitError(err.message || 'Failed to generate official estimate.');
+    } finally {
       setSubmitting(false);
     }
   };
 
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Convert Estimate to Hot Project Lead (Lead Generation)
+  const handleConvertToLead = async () => {
+    if (!officialEstimate) return;
+    setLeadLoading(true);
+    try {
+      await leadApi.submitReachOut({
+        deckId: officialEstimate.deckId,
+        estimateId: officialEstimate.estimateId,
+        contactSource: 'Official Estimator Conversion',
+        subject: `Estimate Booking: ${projectName} ($${officialEstimate.total.toLocaleString()})`,
+        message: `Customer converted official estimate ${officialEstimate.ref} for a ${woodSpecies} deck of ${floorArea} sqft. Estimate: $${officialEstimate.total.toLocaleString()}. Ready for certified contractor assignment & inspection.`,
+      });
+      setLeadCreated(true);
+    } catch (err) {
+      alert(`Could not convert to lead: ${err.message}`);
+    } finally {
+      setLeadLoading(false);
+    }
   };
 
-  // SVG Progress Ring Calculation (Radius 40)
-  const radius = 40;
+  // Submit General Reach Out Enquiry
+  const handleSubmitReachOut = async (e) => {
+    e.preventDefault();
+    if (!reachOutMsg.trim()) return;
+    setReachOutSending(true);
+    try {
+      await leadApi.submitReachOut({
+        contactSource: 'Estimator Top Bar / Sidebar Reach Out',
+        subject: reachOutSubject.trim() || 'Estimator Support Enquiry',
+        message: reachOutMsg.trim(),
+        additionalNotes: `Customer deck: ${shape}, ${floorArea} sqft, ${woodSpecies}.`,
+      });
+      setReachOutSuccess(true);
+      setTimeout(() => {
+        setReachOutOpen(false);
+        setReachOutSuccess(false);
+        setReachOutMsg('');
+      }, 1800);
+    } catch (err) {
+      alert(`Enquiry failed: ${err.message}`);
+    } finally {
+      setReachOutSending(false);
+    }
+  };
+
+  // SVG Gauge calculations
+  const radius = 38;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (stepStatus.completedCount / 7) * circumference;
+  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+
+  const currentShapeObj = SHAPES.find((s) => s.id === shape) || null;
+  const currentWoodObj = WOOD_SPECIES.find((w) => w.id === woodSpecies) || null;
 
   return (
     <div style={styles.estimatorPageContainer}>
-      {/* 7-STEP HORIZONTAL STEPPER HEADER BAR */}
-      <div style={styles.stepperBar}>
-        <div style={styles.stepperInner}>
-          {stepStatus.steps.map((st, i) => (
-            <React.Fragment key={st.num}>
-              <div
+      {/* Top Application Section Status & Reach Out Bar (Single Unified Line) */}
+      <div style={styles.topBrandingBar}>
+        {/* Left: Section Boxes (Filled upon selection) */}
+        <div style={styles.topSectionBoxesRow}>
+          {sectionSteps.map((step) => {
+            const isFilled = step.done;
+            return (
+              <button
+                key={step.num}
+                type="button"
+                onClick={() => scrollToSection(step.id)}
+                title={`Section ${step.num}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
                 style={{
-                  ...styles.stepPill,
-                  backgroundColor: st.done ? '#dcfce7' : '#ffffff',
-                  color: st.done ? '#15803d' : '#475569',
-                  borderColor: st.done ? '#86efac' : '#cbd5e1',
+                  ...styles.topSectionBox,
+                  backgroundColor: isFilled ? '#15803D' : '#FFFFFF',
+                  borderColor: isFilled ? '#15803D' : '#CBD5E1',
+                  color: isFilled ? '#FFFFFF' : '#334155',
+                  boxShadow: isFilled ? '0 2px 8px rgba(21, 128, 61, 0.28)' : 'none',
                 }}
-                onClick={() =>scrollToSection(`step-${st.num}`)}
               >
+                <span style={{ fontWeight: '800', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  {isFilled && <span style={{ fontSize: '12px' }}>✓</span>}
+                  S{step.num}
+                </span>
                 <span
                   style={{
-                    ...styles.stepPillNum,
-                    backgroundColor: st.done ? '#16a34a' : '#e2e8f0',
-                    color: st.done ? '#ffffff' : '#64748b',
+                    ...styles.topSectionBoxName,
+                    color: isFilled ? '#FFFFFF' : '#64748B',
                   }}
                 >
-                  {st.done ? '' : st.num}
+                  {step.name}
                 </span>
-                <span>{st.name}</span>
-              </div>
-              {i < stepStatus.steps.length - 1 && <span style={styles.stepperChevron}>&gt;</span>}
-            </React.Fragment>
-          ))}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: Reach Out button in exact same line with Hover Tooltip */}
+        <div style={styles.topReachOutWrapper}>
+          <button
+            type="button"
+            onClick={() => setReachOutOpen(true)}
+            onMouseEnter={() => setReachOutHover(true)}
+            onMouseLeave={() => setReachOutHover(false)}
+            style={styles.topReachOutBtn}
+            title="Need Assistance? Click to speak with a specialist"
+          >
+            <div style={styles.reachOutIconPill}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </div>
+            <span>Reach Out</span>
+          </button>
+          {reachOutHover && (
+            <div style={styles.reachOutTooltip}>
+              Need Assistance?
+            </div>
+          )}
         </div>
       </div>
 
-      {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + STATIC RIGHT SIDEBAR */}
+      {/* ======================================================== */}
+      {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + RIGHT SIDEBAR */}
+      {/* ======================================================== */}
       <div style={styles.contentLayoutRow}>
-        {/* ======================================================== */}
-        {/* MIDDLE FORM: CONTINUOUS SCROLLABLE IMAGE & ICON INPUTS */}
-        {/* ======================================================== */}
+        {/* MIDDLE SCROLLABLE FORM */}
         <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
           {submitError && (
             <div style={styles.errorBox}>
-               <strong>Error:</strong> {submitError}
+              <strong style={{ color: '#B91C1C' }}>Attention:</strong> {submitError}
             </div>
           )}
 
-          {/* 1.1 SELECT DECK SHAPE */}
-          <section id="step-1" style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 1: DECK DIMENSIONS & BLUEPRINT */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-1">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>1.1 Select Deck Shape</h3>
-              <p style={styles.cardSubtitle}>Choose the shape that best matches your deck (no default selected).</p>
+              <span style={styles.stepBadge}>Section 1</span>
+              <div>
+                <h3 style={styles.cardTitle}>Deck Footprint & Dimensions</h3>
+                <p style={styles.cardSubtitle}>Select your deck perimeter shape and enter length and width.</p>
+              </div>
             </div>
 
-            <div style={styles.shapeCardsGrid}>
+            {/* Shape Image Cards Grid */}
+            <div style={styles.imageCardsGrid5}>
               {SHAPES.map((s) => {
                 const isSelected = shape === s.id;
-                const IconComponent = s.Icon;
                 return (
                   <div
                     key={s.id}
-                    onClick={() =>setShape(s.id)}
+                    onClick={() => setShape(s.id)}
                     style={{
-                      ...styles.shapeCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
-                    <div style={styles.shapeIconWrap}>
-                      <IconComponent width={52} height={52} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
-                    </div>
-                    <div style={styles.shapeTextWrap}>
-                      <span style={styles.shapeName}>{s.label}</span>
-                      <span style={styles.shapeDesc}>{s.desc}</span>
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={s.img} alt={s.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                        {s.label}
+                      </strong>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </section>
 
-          {/* 1.2 ENTER DECK DIMENSIONS */}
-          <section style={styles.cardSection}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>1.2 Enter Deck Dimensions</h3>
-              <p style={styles.cardSubtitle}>Measure the main deck area. Top-down blueprint plan updates live.</p>
-            </div>
-
-            <div style={styles.dimTwoCol}>
-              {/* Left: Top Down Floor Plan */}
-              <div style={styles.dimSvgBox}>
-                <TopDownDeckPlanSvg length={length} width={width} />
+            {/* Dimensions Inputs & Green Usable Area Highlight Box */}
+            <div style={styles.dimensionsFormRow}>
+              <div style={styles.dimInputWrap}>
+                <label style={styles.inputLabel}>Length (ft) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                  placeholder="e.g. 20"
+                  style={styles.textInput}
+                />
               </div>
 
-              {/* Right: Inputs */}
-              <div style={styles.dimInputsCol}>
-                <div style={styles.dimInputRow}>
-                  <div style={{ flex: 1 }}>
-                    <label style={styles.inputLabel}>Length ({unit}) *</label>
-                    <div style={styles.inputWithUnit}>
-                      <input
-                        type="number"
-                        placeholder="e.g. 20"
-                        value={length}
-                        onChange={(e) =>setLength(e.target.value)}
-                        style={styles.inputInner}
-                        min="1"
-                      />
-                      <span style={styles.unitSuffix}>{unit}</span>
-                    </div>
-                  </div>
+              <div style={styles.dimInputWrap}>
+                <label style={styles.inputLabel}>Width (ft) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  placeholder="e.g. 15"
+                  disabled={shape === 'square'}
+                  style={styles.textInput}
+                />
+              </div>
 
-                  <div style={{ flex: 1 }}>
-                    <label style={styles.inputLabel}>Width ({unit}) *</label>
-                    <div style={styles.inputWithUnit}>
-                      <input
-                        type="number"
-                        placeholder="e.g. 12"
-                        value={width}
-                        onChange={(e) =>setWidth(e.target.value)}
-                        style={styles.inputInner}
-                        min="1"
-                      />
-                      <span style={styles.unitSuffix}>{unit}</span>
-                    </div>
-                  </div>
+              {/* Polished Green Text Highlight Box */}
+              <div style={styles.greenFloorAreaBox}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={styles.greenDot} />
+                  <span style={styles.greenAreaLabel}>
+                    {currentShapeObj ? `${currentShapeObj.label} Shape Selected` : 'Select Shape & Dimensions'}
+                  </span>
                 </div>
-
-                <div style={styles.calcAreaBadge}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', textTransform: 'uppercase' }}>Calculated Deck Area
-                    </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#166534' }}>
-                      {floorArea > 0 ? `${floorArea} sq ft` : '—'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={styles.tipBox}>
-                  <strong style={{ fontSize: '12px', color: '#92400e' }}>How to measure?</strong>
-                  <ul style={styles.tipList}>
-                    <li>Measure the usable deck surface length and width.</li>
-                    <li>Do not include separate stairs or railings in main surface area.</li>
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() =>setShowMeasureGuide(true)}
-                    style={styles.linkBtn}
-                  >View Measurement Guide &rarr;
-                  </button>
-                </div>
+                <strong style={styles.greenAreaValue}>
+                  {floorArea > 0 ? `${floorArea.toLocaleString()} sq ft` : '0 sq ft'}
+                </strong>
+                <span style={styles.greenAreaSub}>
+                  {floorArea > 0 ? `${length || 0} ft × ${width || 0} ft Usable Floor Area` : 'Enter dimensions above'}
+                </span>
               </div>
             </div>
           </section>
 
-          {/* 1.3 DECK HEIGHT FROM GROUND */}
-          <section style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 2: DECK COMPONENTS & FEATURES (SQFT INPUTS) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-2">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>1.3 Deck Height from Ground</h3>
-              <p style={styles.cardSubtitle}>Select how high the deck surface is from the ground level.</p>
+              <span style={styles.stepBadge}>Section 2</span>
+              <div>
+                <h3 style={styles.cardTitle}>Deck Components & Features</h3>
+                <p style={styles.cardSubtitle}>Select attached architectural structures to include square footage in the estimate.</p>
+              </div>
             </div>
 
-            <div style={styles.heightCardsGrid}>
-              {HEIGHTS.map((h) => {
-                const isSelected = height === h.id;
-                const IconComponent = h.Icon;
+            <div style={styles.componentsGrid}>
+              {COMPONENTS.map((comp) => {
+                const isSelected = selectedComponents.includes(comp.id);
                 return (
                   <div
-                    key={h.id}
-                    onClick={() =>setHeight(h.id)}
+                    key={comp.id}
                     style={{
-                      ...styles.heightCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                      ...styles.componentCardItem,
+                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
+                      backgroundColor: isSelected ? '#F0F6FF' : '#FFFFFF',
+                      boxShadow: isSelected ? '0 0 0 2px #034EA2' : 'none',
                     }}
                   >
-                    <div style={styles.heightIconWrap}>
-                      <IconComponent width={46} height={46} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
+                    <div
+                      onClick={() => toggleComponent(comp.id, comp.defaultVal || comp.defaultSqft)}
+                      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
+                    >
+                      <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
+                      <div style={styles.componentMetaRow}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          readOnly
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                        />
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                          {comp.label}
+                        </strong>
+                      </div>
                     </div>
-                    <span style={styles.heightName}>{h.label}</span>
-                    <span style={styles.heightRange}>{h.range}</span>
+
+                    {/* Pop-out Input asking for Steps (for stairs) or Sqft (for others) when selected */}
+                    {isSelected && (
+                      <div style={styles.componentSqftInputBox}>
+                        <label style={styles.sqftInputLabel}>
+                          {comp.id === 'stairs' ? 'Number of Steps (Count):' : `${comp.prompt}:`}
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="number"
+                            min="1"
+                            value={componentSqft[comp.id] !== undefined ? componentSqft[comp.id] : ''}
+                            onChange={(e) => setComponentSqft({ ...componentSqft, [comp.id]: e.target.value })}
+                            placeholder={String(comp.defaultVal || 4)}
+                            style={styles.sqftNumberInput}
+                          />
+                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>
+                            {comp.id === 'stairs' ? 'steps' : 'sq ft'}
+                          </span>
+                        </div>
+                        {comp.id === 'stairs' && (
+                          <span style={{ fontSize: '11px', color: '#034EA2', fontWeight: '600', marginTop: '4px', display: 'block' }}>
+                            Calculated Area: {Number(componentSqft.stairs || 0)} steps × 12 sqft/step = {(Number(componentSqft.stairs || 0) * 12).toLocaleString()} sq ft
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </section>
 
-          {/* 1.4 NUMBER OF LEVELS */}
-          <section style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 3: WOOD SPECIES & MATERIAL (8 INPUTS) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-3">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>1.4 Number of Levels</h3>
-              <p style={styles.cardSubtitle}>A level is a flat deck surface at a distinct elevated tier.</p>
+              <span style={styles.stepBadge}>Section 3</span>
+              <div>
+                <h3 style={styles.cardTitle}>Wood Species & Material</h3>
+                <p style={styles.cardSubtitle}>Select one species. Density parameters apply to labor adjustments.</p>
+              </div>
             </div>
 
-            <div style={styles.levelsCardsGrid}>
-              {LEVELS.map((l) => {
-                const isSelected = levels === l.id;
-                const IconComponent = l.Icon;
+            <div style={styles.imageCardsGrid4}>
+              {WOOD_SPECIES.map((w) => {
+                const isSelected = woodSpecies === w.id;
                 return (
                   <div
-                    key={l.id}
-                    onClick={() =>setLevels(l.id)}
+                    key={w.id}
+                    onClick={() => setWoodSpecies(w.id)}
                     style={{
-                      ...styles.levelCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
-                    <div style={styles.levelIconWrap}>
-                      <IconComponent width={46} height={46} active={isSelected} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                        {w.name}
+                      </strong>
                     </div>
-                    <span style={styles.levelName}>{l.label}</span>
-                    <span style={styles.levelDesc}>{l.desc}</span>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          {/* SECTION 2: DECK CONDITION */}
-          <section id="step-2" style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 4: SITE ACCESSIBILITY & ELEVATION */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-4">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>2. Deck Condition</h3>
-              <p style={styles.cardSubtitle}>Select the current condition of your exterior wood surface.</p>
+              <span style={styles.stepBadge}>Section 4</span>
+              <div>
+                <h3 style={styles.cardTitle}>Site Accessibility & Elevation</h3>
+                <p style={styles.cardSubtitle}>Select one elevation tier. Feet ranges shown clearly.</p>
+              </div>
             </div>
 
-            <div style={styles.conditionGrid}>
+            <div style={styles.imageCardsGrid5}>
+              {ELEVATIONS.map((el) => {
+                const isSelected = height === el.id;
+                return (
+                  <div
+                    key={el.id}
+                    onClick={() => setHeight(el.id)}
+                    style={{
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
+                    }}
+                  >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                        {el.label}
+                      </strong>
+                      <span style={styles.rangeCaptionBadge}>{el.range}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Optional Exact Height in Feet */}
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#1E293B' }}>
+                Exact Elevation Height (Optional, ft):
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                placeholder="e.g. 5.5 ft"
+                value={exactHeightFt}
+                onChange={(e) => setExactHeightFt(e.target.value)}
+                style={{ ...styles.textInput, maxWidth: '140px', padding: '6px 10px', fontSize: '13px' }}
+              />
+              <span style={{ fontSize: '12px', color: '#64748B' }}>
+                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 2 ? 'Ground (0–2 ft)' : Number(exactHeightFt) <= 4 ? 'Low (2–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / High (Over 12 ft)'}` : 'Defaults to selected card tier above'}
+              </span>
+            </div>
+          </section>
+
+          {/* ======================================================== */}
+          {/* SECTION 5: EXISTING DECK FINISH & COATING (NO PRICE IMPACT) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-5">
+            <div style={styles.cardHeader}>
+              <span style={styles.stepBadge}>Section 5</span>
+              <div>
+                <h3 style={styles.cardTitle}>Existing Deck Finish & Coating</h3>
+                <p style={styles.cardSubtitle}>Select current finish layer on deck wood (No price impact, informs preparation).</p>
+              </div>
+            </div>
+
+            <div style={styles.imageCardsGrid3}>
+              {EXISTING_COATINGS.map((ec) => {
+                const isSelected = existingCoating === ec.id;
+                return (
+                  <div
+                    key={ec.id}
+                    onClick={() => setExistingCoating(ec.id)}
+                    style={{
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
+                    }}
+                  >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                        {ec.label}
+                      </strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ======================================================== */}
+          {/* SECTION 6: RESTORATION SCOPE OF WORK */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-6">
+            <div style={styles.cardHeader}>
+              <span style={styles.stepBadge}>Section 6</span>
+              <div>
+                <h3 style={styles.cardTitle}>Restoration Scope of Work</h3>
+                <p style={styles.cardSubtitle}>Select operations. No coating starts at $2.50/sq.ft; each coating adds $1/sq.ft.</p>
+              </div>
+            </div>
+
+            <div style={styles.imageCardsGrid3}>
+              {SERVICES_LIST.map((srv) => {
+                const isSelected = services.includes(srv.id);
+                const isLocked = (woodSpecies === 'trex' || woodSpecies === 'composite') && srv.id !== 'cleaning' && srv.id !== 'no_coating';
+                return (
+                  <div
+                    key={srv.id}
+                    onClick={() => !isLocked && toggleService(srv.id)}
+                    style={{
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : isLocked ? '#F8FAFC' : '#FFFFFF',
+                      opacity: isLocked ? 0.45 : 1,
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      position: 'relative',
+                    }}
+                  >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          readOnly
+                          disabled={isLocked}
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                        />
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
+                          {srv.name}
+                        </strong>
+                      </div>
+                      {isContractor && <span style={styles.rangeCaptionBadge}>{srv.rate}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Stain type selection if staining is ticked */}
+            {services.includes('staining') && (
+              <div style={styles.stainTypeBox}>
+                <label style={styles.inputLabel}>Desired Stain Finish Type *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="stainType"
+                      checked={stainType === 'semi'}
+                      onChange={() => setStainType('semi')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Semi-Transparent Stain</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Shows wood grain with UV color pigment</span>
+                    </div>
+                  </label>
+
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="stainType"
+                      checked={stainType === 'semi_solid'}
+                      onChange={() => setStainType('semi_solid')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Semi-Solid Protective Stain</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Rich pigment shielding with subtle grain visibility</span>
+                    </div>
+                  </label>
+
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="stainType"
+                      checked={stainType === 'solid'}
+                      onChange={() => setStainType('solid')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Solid Color Protective Stain</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Opaque, maximum weather barrier for older wood</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* ======================================================== */}
+          {/* SECTION 7: DECK PHYSICAL CONDITION */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-7">
+            <div style={styles.cardHeader}>
+              <span style={styles.stepBadge}>Section 7</span>
+              <div>
+                <h3 style={styles.cardTitle}>Deck Physical Condition</h3>
+                <p style={styles.cardSubtitle}>Multi-select. <strong>Good Condition</strong> is an exclusive option.</p>
+              </div>
+            </div>
+
+            <div style={styles.imageCardsGrid3}>
               {CONDITIONS.map((c) => {
-                const isSelected = condition === c.id;
+                const isSelected = conditions.includes(c.id);
+                const isGood = c.id === 'good_condition';
                 return (
                   <div
                     key={c.id}
-                    onClick={() =>setCondition(c.id)}
+                    onClick={() => toggleCondition(c.id)}
                     style={{
-                      ...styles.condCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                      ...styles.imageSelectCard,
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
-                    <div style={styles.cardImgWrap}>
-                      <img src={c.img} alt={c.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardCaptionBox}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          readOnly
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                        />
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
+                          {c.label}
+                        </strong>
+                      </div>
                     </div>
-                    <strong style={styles.condName}>{c.label}</strong>
-                    <span style={styles.condDesc}>{c.desc}</span>
                   </div>
                 );
               })}
             </div>
-          </section>
 
-          {/* SECTION 3: RESTORATION SERVICES */}
-          <section id="step-3" style={styles.cardSection}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>3. Restoration Services</h3>
-              <p style={styles.cardSubtitle}>Select all treatment procedures needed for your project.</p>
-            </div>
-
-            <div style={styles.servicesGrid}>
-              {RESTORATIONS.map((r) => {
-                const isSelected = restorationScope.includes(r.id);
-                return (
-                  <div
-                    key={r.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setRestorationScope(restorationScope.filter((s) =>s !== r.id));
-                      } else {
-                        setRestorationScope([...restorationScope, r.id]);
-                      }
-                    }}
-                    style={{
-                      ...styles.serviceCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
-                    }}
-                  >
-                    <div style={styles.cardImgWrap}>
-                      <img src={r.img} alt={r.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
+            {/* Optional Board Counts */}
+            {!conditions.includes('good_condition') && (conditions.includes('crack') || conditions.includes('rotted') || conditions.includes('warped') || conditions.includes('loose_board') || conditions.includes('water_damaged')) && (
+              <div style={styles.boardCountsContainer}>
+                <strong style={{ fontSize: '13px', color: '#034EA2', display: 'block', marginBottom: '8px' }}>
+                  Optional: Specify Affected Board Quantities (For precise repair estimate):
+                </strong>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  {conditions.includes('crack') && (
+                    <div>
+                      <label style={styles.inputLabel}>Cracked Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={crackBoardCount}
+                        onChange={(e) => setCrackBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
                     </div>
-                    <strong style={styles.serviceName}>{r.label}</strong>
-                    <span style={styles.serviceDesc}>{r.desc}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* SECTION 4: MATERIALS & FINISH */}
-          <section id="step-4" style={styles.cardSection}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>4. Materials &amp; Finish</h3>
-              <p style={styles.cardSubtitle}>Specify the wood type and protective finish coat.</p>
-            </div>
-
-            <div style={{ marginBottom: '18px' }}>
-              <label style={styles.inputLabel}>Wood Species / Substrate</label>
-              <select
-                value={woodSpecies || ''}
-                onChange={(e) =>setWoodSpecies(e.target.value)}
-                style={styles.dropdownInput}
-              >
-                <option value="">Select wood species...</option>
-                <option value="cedar">Western Red Cedar</option>
-                <option value="redwood">California Redwood</option>
-                <option value="pressure_treated_pine">Pressure-Treated Pine</option>
-                <option value="composite">Trex / Composite</option>
-                <option value="ipe_hardwood">Ipe / Brazilian Hardwood</option>
-              </select>
-            </div>
-
-            <label style={styles.inputLabel}>Protective Coating / Finish</label>
-            <div style={styles.finishesGrid}>
-              {FINISHES.map((f) => {
-                const isSelected = coatingType === f.id;
-                return (
-                  <div
-                    key={f.id}
-                    onClick={() =>setCoatingType(f.id)}
-                    style={{
-                      ...styles.finishCard,
-                      borderColor: isSelected ? '#16a34a' : '#e2e8f0',
-                      boxShadow: isSelected ? '0 0 0 2px #bbf7d0' : 'none',
-                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
-                    }}
-                  >
-                    <div style={styles.cardImgWrap}>
-                      <img src={f.img} alt={f.label} style={styles.inputCardImg} />
-                      {isSelected && <span style={styles.greenCheckmark}></span>}
+                  )}
+                  {conditions.includes('rotted') && (
+                    <div>
+                      <label style={styles.inputLabel}>Rotted Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={rottedBoardCount}
+                        onChange={(e) => setRottedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
                     </div>
-                    <strong style={styles.finishName}>{f.label}</strong>
-                    <span style={styles.finishDesc}>{f.desc}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  )}
+                  {conditions.includes('warped') && (
+                    <div>
+                      <label style={styles.inputLabel}>Warped Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={warpedBoardCount}
+                        onChange={(e) => setWarpedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('loose_board') && (
+                    <div>
+                      <label style={styles.inputLabel}>Loose Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={looseBoardCount}
+                        onChange={(e) => setLooseBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('water_damaged') && (
+                    <div>
+                      <label style={styles.inputLabel}>Water Damaged (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={waterDamagedBoardCount}
+                        onChange={(e) => setWaterDamagedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {(conditions.includes('crack') && conditions.includes('loose_board')) && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={styles.inputLabel}>Both Cracked & Loose on Same Board (overlap qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={crackLooseOverlapCount}
+                        onChange={(e) => setCrackLooseOverlapCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0 (charged replacement only)"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
-          {/* SECTION 5: PHOTOGRAPHS & REAL INSPIRATION */}
-          <section id="step-5" style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 8: UPLOAD PHOTOS (OPTIONAL) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-8">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>5. Photographs &amp; Inspiration</h3>
-              <p style={styles.cardSubtitle}>Upload photos of your deck or review real deck finish examples.</p>
+              <span style={{ ...styles.stepBadge, backgroundColor: '#D97706' }}>Section 8</span>
+              <div>
+                <h3 style={styles.cardTitle}>Upload photos (optional)</h3>
+                <p style={styles.cardSubtitle}>Add photos of your deck to help us provide a more accurate estimate.</p>
+              </div>
             </div>
 
-            {/* Photo Upload Zone */}
-            <div style={styles.uploadDropzone}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg></div>
-              <strong style={{ fontSize: '14px', color: '#0f172a' }}>Upload Deck Photos (Optional)</strong>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 10px 0' }}>Drag and drop your photos here, or browse from your computer.
-              </p>
+            {/* Note banner */}
+            <div style={styles.photoNoticeBanner}>
+              <span style={{ fontSize: '13px' }}>ℹ️</span>
+              <span style={{ fontSize: '12px', color: '#92400E', lineHeight: 1.4 }}>
+                Uploading photos is completely optional. Adding images helps our senior estimators inspect deck grain, weathering depth, and substrate condition for high-accuracy quotes.
+              </span>
+            </div>
+
+            {/* Drag & Drop Upload Dropzone (Matching User Image 2) */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(false);
+                handlePhotoFiles(e.dataTransfer.files);
+              }}
+              onClick={() => {
+                const el = document.getElementById('deck-photo-input');
+                if (el) el.click();
+              }}
+              style={{
+                ...styles.photoDropzone,
+                borderColor: isDraggingPhoto ? '#D97706' : '#F59E0B',
+                backgroundColor: isDraggingPhoto ? '#FEF3C7' : '#FFFBEB',
+              }}
+            >
               <input
                 type="file"
+                id="deck-photo-input"
                 multiple
-                accept="image/*"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  setPhotos(files);
-                }}
-                style={{ fontSize: '12px' }}
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: 'none' }}
+                onChange={(e) => handlePhotoFiles(e.target.files)}
               />
-              {photos.length > 0 && (
-                <div style={{ marginTop: '10px', fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>
-                   {photos.length} photo(s) selected
-                </div>
-              )}
+              <div style={styles.photoCloudIconBox}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                  <polyline points="12 13 12 7 9 10" />
+                  <line x1="12" y1="7" x2="15" y2="10" />
+                </svg>
+              </div>
+              <strong style={{ fontSize: '15px', color: '#78350F', display: 'block', marginBottom: '4px' }}>
+                Drag & drop your photos here, or click to upload
+              </strong>
+              <span style={{ fontSize: '12px', color: '#92400E' }}>
+                JPG, JPEG, PNG · max 10 MB each · previews stay in your browser
+              </span>
             </div>
 
-            {/* Real Deck Photos Gallery from the Internet */}
-            <div style={{ marginTop: '20px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Real Deck Restoration Examples:
-              </span>
-              <div style={styles.inspirationGrid}>
-                {INSPIRATION_PHOTOS.map((pic, idx) => (
-                  <div key={idx} style={styles.inspireCard}>
-                    <img src={pic.url} alt={pic.title} style={styles.inspireImg} />
-                    <span style={styles.inspireTitle}>{pic.title}</span>
+            {/* 4 Quick-Tip Category Guidance Cards (Matching User Image 2) */}
+            <div style={styles.photoCategoriesGrid}>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🏠</span>
+                <strong style={styles.photoCategoryTitle}>Full deck view</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🔍</span>
+                <strong style={styles.photoCategoryTitle}>Close-up of surface</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🪜</span>
+                <strong style={styles.photoCategoryTitle}>Stairs and railings</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>⚠️</span>
+                <strong style={styles.photoCategoryTitle}>Any problem areas</strong>
+              </div>
+            </div>
+
+            {/* Photo Tips Banner */}
+            <div style={styles.photoTipsBanner}>
+              <span style={{ fontSize: '16px' }}>💡</span>
+              <div style={{ fontSize: '12px', color: '#78350F', lineHeight: 1.5 }}>
+                <strong>Photo tips:</strong> take photos in daylight, stand back for the full deck and get close to any peeling, cracks or gray patches.
+              </div>
+            </div>
+
+            {/* Uploaded Photos Thumbnails Preview */}
+            {uploadedPhotos.length > 0 && (
+              <div style={styles.uploadedPhotosGrid}>
+                {uploadedPhotos.map((photo) => (
+                  <div key={photo.id} style={styles.photoPreviewCard}>
+                    <img src={photo.dataUrl} alt={photo.name} style={styles.photoPreviewImg} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhoto(photo.id);
+                      }}
+                      style={styles.photoRemoveBtn}
+                      title="Remove photo"
+                    >
+                      ✕
+                    </button>
+                    <div style={styles.photoPreviewMeta}>
+                      <span style={styles.photoPreviewName} title={photo.name}>{photo.name}</span>
+                      <span style={styles.photoPreviewSize}>{(photo.size / (1024 * 1024)).toFixed(1)} MB</span>
+                      <select
+                        value={photo.category}
+                        onChange={(e) => handlePhotoCategoryChange(photo.id, e.target.value)}
+                        style={styles.photoCategorySelect}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="full_view">Full deck view</option>
+                        <option value="surface">Close-up surface</option>
+                        <option value="stairs_railings">Stairs & railings</option>
+                        <option value="problem_areas">Problem area</option>
+                      </select>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </section>
 
-          {/* SECTION 6: ADDITIONAL DETAILS */}
-          <section id="step-6" style={styles.cardSection}>
+          {/* ======================================================== */}
+          {/* SECTION 9: PROJECT INFORMATION & PROPERTY LOCATION */}
+          {/* (Full Name & Phone removed; only Project Name required) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-9">
             <div style={styles.cardHeader}>
-              <h3 style={styles.cardTitle}>6. Additional Details &amp; Location</h3>
-              <p style={styles.cardSubtitle}>Provide a name and property address for this estimate.</p>
+              <span style={styles.stepBadge}>Section 9</span>
+              <div>
+                <h3 style={styles.cardTitle}>Project Information & Location</h3>
+                <p style={styles.cardSubtitle}>Provide project reference name. Address fields are optional.</p>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={styles.inputLabel}>Project Name *</label>
+            <div style={styles.projFormGrid}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={styles.inputLabel}>Project / Deck Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Backyard Cedar Deck"
                   value={projectName}
-                  onChange={(e) =>setProjectName(e.target.value)}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g. Backyard Cedar Deck Refinishing"
+                  style={styles.textInput}
+                />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={styles.inputLabel}>Project Property Address (Optional)</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="123 Oakwood Terrace"
                   style={styles.textInput}
                 />
               </div>
 
               <div>
-                <label style={styles.inputLabel}>Property Address</label>
+                <label style={styles.inputLabel}>City (Optional)</label>
                 <input
                   type="text"
-                  placeholder="Street address (e.g. 742 Evergreen Terrace)"
-                  value={propertyAddress.street}
-                  onChange={(e) =>setPropertyAddress({ ...propertyAddress, street: e.target.value })}
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Springfield"
                   style={styles.textInput}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                <div>
-                  <label style={styles.inputLabel}>City</label>
-                  <input
-                    type="text"
-                    placeholder="Springfield"
-                    value={propertyAddress.city}
-                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, city: e.target.value })}
-                    style={styles.textInput}
-                  />
-                </div>
-                <div>
-                  <label style={styles.inputLabel}>State</label>
-                  <input
-                    type="text"
-                    placeholder="IL"
-                    value={propertyAddress.state}
-                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, state: e.target.value })}
-                    style={styles.textInput}
-                  />
-                </div>
-                <div>
-                  <label style={styles.inputLabel}>Zip Code</label>
-                  <input
-                    type="text"
-                    placeholder="62704"
-                    value={propertyAddress.zipCode}
-                    onChange={(e) =>setPropertyAddress({ ...propertyAddress, zipCode: e.target.value })}
-                    style={styles.textInput}
-                  />
-                </div>
+              <div>
+                <label style={styles.inputLabel}>ZIP / Postal Code (Optional)</label>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  placeholder="62704"
+                  style={styles.textInput}
+                />
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={styles.inputLabel}>Scope Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any special instructions or property details..."
+                  style={{ ...styles.textInput, resize: 'vertical' }}
+                />
               </div>
             </div>
-          </section>
 
-          {/* SECTION 7: SUBMISSION ACTION BAR */}
-          <section id="step-7" style={styles.cardSection}>
-            <div style={styles.bottomBtnBar}>
+            {/* SUBMIT BUTTON BAR */}
+            <div style={styles.bottomActionBar}>
               <button
                 type="button"
-                onClick={() =>handleSave('DRAFT')}
+                onClick={() => handleSave('SUBMITTED')}
                 disabled={submitting}
-                style={styles.saveDraftBtn}
-              >Save as Draft
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>handleSave('SUBMITTED')}
-                disabled={submitting || floorArea <= 0}
-                style={styles.submitEstimateBtn}
+                style={styles.submitBtn}
               >
-                {submitting ? 'Generating Estimate...' : 'Generate Official Estimate &rarr;'}
+                {submitting ? 'Calculating Official Quote...' : 'Generate Official Estimate →'}
               </button>
             </div>
           </section>
+
+          {/* ======================================================== */}
+          {/* POST-ESTIMATE OFFICIAL ESTIMATE RESULT BOX (HIGHLIGHTED) */}
+          {/* ======================================================== */}
+          {officialEstimate && (
+            <div style={styles.officialResultCard} id="official-estimate-result-box">
+              <div style={styles.resultHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={styles.verifiedCheck}>✓</span>
+                  <span style={styles.resultTitle}>Deck Restoration Plus • Official Estimate</span>
+                </div>
+                <span style={styles.refBadge}>Ref: {officialEstimate.ref}</span>
+              </div>
+
+              {/* CLIENT Q12 STRICT COMPLIANCE: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown */}
+              {!isContractor ? (
+                <div style={styles.customerTotalBox}>
+                  <span style={styles.customerTotalSub}>Official Guaranteed Estimate Total</span>
+                  <strong style={styles.customerTotalAmt}>
+                    ${officialEstimate.total.toLocaleString()}
+                  </strong>
+                  <span style={styles.customerTotalSubNotice}>
+                    {officialEstimate.status === 'needs_contractor_quote'
+                      ? 'Provisional estimate • Repairs require on-site contractor confirmation'
+                      : officialEstimate.needsPhotoReview
+                      ? 'Preliminary quote • Subject to photo review or site visit confirmation'
+                      : 'Comprehensive estimate based on Deck Restoration Plus quality standards'}
+                  </span>
+
+                  {/* USER REQUIREMENT: Minimum Job Notice without forcing $2,500 onto the estimate */}
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.customerMinJobNoticeBox}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <div>
+                        <strong style={{ color: '#92400E', fontSize: '13px' }}>Important Minimum Job Notice:</strong>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#78350F', lineHeight: 1.4 }}>
+                          Deck Restoration Plus maintains a standard mobilization minimum of ${officialEstimate.minJobAmount.toLocaleString()} for this service tier. Because your calculated job size is below this threshold, the ${officialEstimate.minJobAmount.toLocaleString()} minimum job price will apply upon final booking and crew dispatch.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* CONTRACTOR VIEW: Full Operational Breakdown */
+                <div style={styles.contractorBreakdownBox}>
+                  <div style={styles.resultContentRow}>
+                    <div style={styles.resultTotalBox}>
+                      <span style={styles.resultTotalSub}>Contractor Quoted Total</span>
+                      <strong style={styles.resultTotalAmt}>${officialEstimate.total.toLocaleString()}</strong>
+                      <span style={styles.resultRangeNotice}>
+                        Calculated Range: ${officialEstimate.low.toLocaleString()} – ${officialEstimate.high.toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div style={styles.resultSpecsBox}>
+                      <div style={styles.specLine}>
+                        <span>Billable Surface Area ($A$):</span>
+                        <strong>{officialEstimate.billableArea.toLocaleString()} sq ft</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Rate Card Lookup:</span>
+                        <strong>Prep: {officialEstimate.prep} • Finish: {officialEstimate.finish}</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Unit Rate:</span>
+                        <strong>${officialEstimate.rate.toFixed(2)} / sq ft</strong>
+                      </div>
+                      <div style={styles.specLine}>
+                        <span>Labor Adjustment:</span>
+                        <strong>${officialEstimate.labourAdj.toLocaleString()} ({officialEstimate.baseHours}h base)</strong>
+                      </div>
+                      {officialEstimate.travelFee > 0 && (
+                        <div style={styles.specLine}>
+                          <span>Travel Mobilization:</span>
+                          <strong>${officialEstimate.travelFee}</strong>
+                        </div>
+                      )}
+                      <div style={styles.specLine}>
+                        <span>Workflow Status:</span>
+                        <strong style={{ color: officialEstimate.hasRepairs ? '#B91C1C' : officialEstimate.needsPhotoReview ? '#D97706' : '#15803D' }}>
+                          {officialEstimate.status}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.contractorMinNotice}>
+                      <span>Min Job Floor Applied: Calculated ${officialEstimate.total.toLocaleString()} is below ${officialEstimate.minJobAmount.toLocaleString()} threshold.</span>
+                    </div>
+                  )}
+
+                  {/* Dedicated Repair Estimate Line Item with Overlap Preventions */}
+                  {officialEstimate.repairEstimate && officialEstimate.repairEstimate.repairTotal > 0 && (
+                    <div style={styles.repairEstimateBox}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div>
+                          <strong style={{ color: '#034EA2', fontSize: '13px' }}>Structural Repair Estimate (Separate Line)</strong>
+                          <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>Deduplicated using client overlap-prevention rules</span>
+                        </div>
+                        <strong style={{ color: '#034EA2', fontSize: '15px' }}>
+                          +${officialEstimate.repairEstimate.repairTotal.toLocaleString()}
+                        </strong>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {officialEstimate.repairEstimate.lineItems.map((li, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
+                            <span>• {li.item} {li.count ? `(${li.count})` : ''}</span>
+                            <strong>${li.totalCost.toLocaleString()}</strong>
+                          </div>
+                        ))}
+                      </div>
+
+                      {officialEstimate.repairEstimate.overlapDeductions.length > 0 && (
+                        <div style={styles.overlapBanner}>
+                          <strong>Overlap Deduplications Applied:</strong>
+                          {officialEstimate.repairEstimate.overlapDeductions.map((od, idx) => (
+                            <div key={idx} style={{ marginTop: '2px' }}>
+                              • {od.note || od.rule} {od.saving ? `(Avoided double charge: $${od.saving})` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons: Convert to Lead & Contact Specialist */}
+              <div style={styles.resultActionRow}>
+                {!leadCreated ? (
+                  <button
+                    type="button"
+                    onClick={handleConvertToLead}
+                    disabled={leadLoading}
+                    style={styles.convertLeadBtn}
+                  >
+                    <span>{leadLoading ? 'Assigning Project Lead...' : 'Book Site Inspection & Convert to Lead'}</span>
+                  </button>
+                ) : (
+                  <div style={styles.leadSuccessBadge}>
+                    <span>✓ Project Lead Created! A Deck Restoration Plus senior estimator has been assigned and will contact you within 24 hours.</span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleResetForNewEstimate}
+                  style={styles.startNewEstimateActionBtn}
+                >
+                  + Calculate Another Deck / Start New Estimate
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setReachOutOpen(true)}
+                  style={styles.talkSpecialistBtn}
+                >
+                  Need Custom Scope? Reach Out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ======================================================== */}
-        {/* RIGHT SIDEBAR: STATIC STICKY SUMMARY & SINGLE ESTIMATE */}
+        {/* RIGHT SIDEBAR: CIRCLE PROGRESS, PREVIEW, IMAGES & ESTIMATE */}
         {/* ======================================================== */}
         <aside style={styles.fixedRightSidebar}>
-          {/* 1. ESTIMATION PROGRESS CARD */}
+          {/* 1. CIRCLE STEP PROGRESS CARD */}
           <div style={styles.sidebarCard}>
-            <div style={styles.progressRow}>
-              {/* Circular Gauge */}
+            <div style={styles.progressCircleRow}>
               <div style={styles.circleWrap}>
-                <svg width="90" height="90" viewBox="0 0 90 90">
+                <svg width="86" height="86" viewBox="0 0 86 86">
                   <circle
-                    cx="45"
-                    cy="45"
+                    cx="43"
+                    cy="43"
                     r={radius}
-                    stroke="#e2e8f0"
-                    strokeWidth="8"
+                    stroke="#E2E8F0"
+                    strokeWidth="7"
                     fill="none"
                   />
                   <circle
-                    cx="45"
-                    cy="45"
+                    cx="43"
+                    cy="43"
                     r={radius}
-                    stroke="#16a34a"
-                    strokeWidth="8"
+                    stroke="#16A34A"
+                    strokeWidth="7"
                     fill="none"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
-                    transform="rotate(-90 45 45)"
-                    style={{ transition: 'stroke-dashoffset 0.35s ease' }}
+                    transform="rotate(-90 43 43)"
+                    style={{ transition: 'stroke-dashoffset 0.4s ease' }}
                   />
                 </svg>
                 <div style={styles.circleCenterText}>
-                  <strong style={{ fontSize: '18px', color: '#0f172a' }}>
-                    {stepStatus.completedCount}/7
-                  </strong>
-                  <span style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase' }}>Completed
-                  </span>
+                  <strong style={{ fontSize: '16px', color: '#15803D' }}>{progressPercent}%</strong>
+                  <span style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ready</span>
                 </div>
               </div>
 
-              {/* Progress Text */}
               <div>
-                <h4 style={styles.sidebarCardHeading}>Estimation Progress</h4>
-                <p style={styles.sidebarCardSub}>
-                  {stepStatus.completedCount} of 7 Steps Completed
+                <h4 style={styles.sidebarHeading}>Estimation Progress</h4>
+                <p style={styles.sidebarSub}>
+                  {progressPercent === 100 ? 'All parameters complete' : 'Configure parameters to complete estimate'}
                 </p>
-              </div>
-            </div>
-
-            {/* Dynamic Checklist */}
-            <div style={styles.checklist}>
-              {stepStatus.steps.map((st) => (
-                <div key={st.num} style={styles.checkItem}>
-                  <div style={styles.checkItemLeft}>
-                    <span style={{ color: st.done ? '#16a34a' : '#94a3b8', fontSize: '13px' }}>
-                      {st.done ? '' : '○'}
-                    </span>
-                    <span style={{ ...styles.checkItemText, color: st.done ? '#0f172a' : '#64748b' }}>
-                      {st.num}. {st.name}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      ...styles.checkBadge,
-                      backgroundColor: st.done ? '#dcfce7' : '#f1f5f9',
-                      color: st.done ? '#15803d' : '#94a3b8',
-                    }}
-                  >
-                    {st.done ? 'Completed' : 'Pending'}
+                <div style={styles.readyIndicator}>
+                  <span style={{ ...styles.statusDot, backgroundColor: progressPercent > 50 ? '#15803D' : '#D97706' }} />
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: '#334155' }}>
+                    {progressPercent > 70 ? 'Ready for Calculation' : 'Enter Details'}
                   </span>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
 
-          {/* 2. YOUR SELECTIONS SUMMARY CARD */}
+          {/* 2. YOUR SELECTED SPECIFICATIONS SUMMARY */}
           <div style={styles.sidebarCard}>
             <div style={styles.cardHeaderRow}>
-              <h4 style={styles.sidebarCardHeading}>Your Selections</h4>
+              <h4 style={styles.sidebarHeading}>Selected Specifications</h4>
               <button
                 type="button"
-                onClick={() =>scrollToSection('step-1')}
-                style={styles.editBtn}
-              >Edit
+                onClick={() => {
+                  const el = document.getElementById('section-1');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={styles.editLinkBtn}
+              >
+                Edit
               </button>
             </div>
 
-            <div style={styles.selList}>
-              <div style={styles.selRow}>
-                <span style={styles.selLabel}>Deck Shape</span>
-                <strong style={styles.selVal}>
-                  {selectedShapeObj ? selectedShapeObj.label : '—'}
-                </strong>
+            <div style={styles.specsList}>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Footprint & Shape</span>
+                <strong style={styles.specVal}>{currentShapeObj ? `${currentShapeObj.label} (${length || 0}×${width || 0} ft)` : '—'}</strong>
               </div>
-              <div style={styles.selRow}>
-                <span style={styles.selLabel}>Dimensions</span>
-                <strong style={styles.selVal}>
-                  {length && width ? `${length} ft × ${width} ft` : '—'}
-                </strong>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Floor Surface</span>
+                <strong style={styles.specVal}>{floorArea > 0 ? `${floorArea} sq ft` : '—'}</strong>
               </div>
-              <div style={styles.selRow}>
-                <span style={styles.selLabel}>Deck Area</span>
-                <strong style={styles.selVal}>
-                  {floorArea > 0 ? `${floorArea} sq ft` : '—'}
-                </strong>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Total Billable Area</span>
+                <strong style={{ ...styles.specVal, color: '#15803D' }}>{totalBillableArea > 0 ? `${totalBillableArea} sq ft` : '—'}</strong>
               </div>
-              <div style={styles.selRow}>
-                <span style={styles.selLabel}>Deck Height</span>
-                <strong style={styles.selVal}>
-                  {selectedHeightObj ? `${selectedHeightObj.label} ${selectedHeightObj.range}` : '—'}
-                </strong>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Wood Species</span>
+                <strong style={styles.specVal}>{currentWoodObj ? currentWoodObj.name : '—'}</strong>
               </div>
-              <div style={styles.selRow}>
-                <span style={styles.selLabel}>Number of Levels</span>
-                <strong style={styles.selVal}>
-                  {selectedLevelsObj ? selectedLevelsObj.label : '—'}
-                </strong>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Elevation</span>
+                <strong style={styles.specVal}>{height || '—'}</strong>
               </div>
+              <div style={styles.specRow}>
+                <span style={styles.specLabel}>Services</span>
+                <strong style={styles.specVal}>{services.length} selected</strong>
+              </div>
+              {selectedComponents.includes('stairs') && (
+                <div style={styles.specRow}>
+                  <span style={styles.specLabel}>Stair Steps</span>
+                  <strong style={styles.specVal}>
+                    {Number(componentSqft.stairs || 0)} steps ({Number(componentSqft.stairs || 0) * 12} sq ft)
+                  </strong>
+                </div>
+              )}
+              {uploadedPhotos.length > 0 && (
+                <div style={styles.specRow}>
+                  <span style={styles.specLabel}>Uploaded Photos</span>
+                  <strong style={{ ...styles.specVal, color: '#D97706' }}>{uploadedPhotos.length} attached</strong>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 3. REFERENCE - SELECTED SHAPE CARD WITH REAL INTERNET IMAGE */}
+          {/* 3. MORE REFERENCES MINI-WINDOW / FRAME */}
           <div style={styles.sidebarCard}>
-            <h4 style={styles.sidebarCardHeading}>Reference &ndash; Selected Shape</h4>
-            {selectedShapeObj ? (
-              <div style={styles.refCardInner}>
-                <img
-                  src={selectedShapeObj.realImg}
-                  alt={selectedShapeObj.refTitle}
-                  style={styles.refRealImage}
-                />
-                <div>
-                  <strong style={{ fontSize: '13px', color: '#15803d' }}>
-                    {selectedShapeObj.refTitle}
-                  </strong>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
-                    {selectedShapeObj.refDesc}
-                  </p>
+            <div style={styles.refWindowHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px' }}>🖼️</span>
+                <h4 style={styles.sidebarHeading}>More References</h4>
+              </div>
+              <div style={styles.refTabs}>
+                <button
+                  type="button"
+                  onClick={() => setRefTab('shape')}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'shape' ? '#15803D' : 'transparent', color: refTab === 'shape' ? '#15803D' : '#64748B' }}
+                >
+                  Shape
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRefTab('wood')}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'wood' ? '#15803D' : 'transparent', color: refTab === 'wood' ? '#15803D' : '#64748B' }}
+                >
+                  Wood Grain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRefTab('services')}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'services' ? '#15803D' : 'transparent', color: refTab === 'services' ? '#15803D' : '#64748B' }}
+                >
+                  Scope
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.refBody}>
+              {refTab === 'shape' && (
+                currentShapeObj ? (
+                  <>
+                    <img src={currentShapeObj.img} alt={currentShapeObj.label} style={styles.refImage} />
+                    <div style={styles.refCaption}>
+                      <strong style={{ fontSize: '12px', color: '#15803D' }}>{currentShapeObj.label} Footprint Blueprint</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                        {currentShapeObj.desc}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div style={styles.emptyRefBox}>Select a shape in Section 1 to view architectural footprint specifications.</div>
+                )
+              )}
+
+              {refTab === 'wood' && (
+                currentWoodObj ? (
+                  <>
+                    <img src={currentWoodObj.img} alt={currentWoodObj.name} style={styles.refImage} />
+                    <div style={styles.refCaption}>
+                      <strong style={{ fontSize: '12px', color: '#15803D' }}>{currentWoodObj.name}</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                        {currentWoodObj.desc}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div style={styles.emptyRefBox}>Select a wood species in Section 3 to view grain, density, and chemical details.</div>
+                )
+              )}
+
+              {refTab === 'services' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80"
+                    alt="Restoration Standards"
+                    style={styles.refImage}
+                  />
+                  <div style={styles.refCaption}>
+                    <strong style={{ fontSize: '12px', color: '#15803D' }}>Deep Restoration Quality Standards</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                      Mechanical orbital leveling, commercial stripping, and deep-penetrating conditioning tailored to your wood substrate.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div style={styles.refEmptyPrompt}>Select a deck shape above to view architectural photo reference.
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* 4. LIVE ESTIMATE (PREVIEW) CARD — SINGLE AMOUNT, NO MINIMUM JOB PRICE */}
+          {/* 4. LIVE ESTIMATE CARD (CLIENT Q12 COMPLIANT WITH GUIDANCES & ACTION BUTTONS) */}
           <div style={styles.sidebarCard}>
             <div style={styles.cardHeaderRow}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span></span>
-                <h4 style={{ ...styles.sidebarCardHeading, color: '#15803d' }}>Live Estimate (Preview)
+                <span style={styles.livePulse} />
+                <h4 style={{ ...styles.sidebarHeading, color: '#15803D' }}>
+                  {isContractor ? 'Contractor Rate Engine' : 'Official Estimate Status'}
                 </h4>
               </div>
-              {calculating && <span style={{ fontSize: '10px', color: '#16a34a' }}>Updating...</span>}
             </div>
 
-            {floorArea > 0 ? (
-              <div style={styles.pricingTable}>
-                <div style={styles.priceLine}>
-                  <span>Materials (Est.)</span>
-                  <strong>${materialsEst.toFixed(2)}</strong>
+            {!isContractor ? (
+              officialEstimate ? (
+                <div style={styles.customerSidebarResult}>
+                  <span style={styles.customerResultLabel}>Guaranteed Estimate</span>
+                  <strong style={styles.customerResultAmt}>${officialEstimate.total.toLocaleString()}</strong>
+                  <span style={styles.customerResultSub}>Ref: {officialEstimate.ref}</span>
+                  {officialEstimate.minJobApplies && (
+                    <div style={styles.sidebarMinNotice}>
+                      <span>Min Job Price (${officialEstimate.minJobAmount.toLocaleString()}) applies upon dispatch.</span>
+                    </div>
+                  )}
                 </div>
-                <div style={styles.priceLine}>
-                  <span>Services (Est.)</span>
-                  <strong>${servicesEst.toFixed(2)}</strong>
+              ) : (
+                <div style={styles.customerReadyBox}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ ...styles.readyCheck, backgroundColor: '#15803D' }}>✓</span>
+                    <strong style={{ fontSize: '13px', color: '#15803D' }}>Specifications Configured</strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                    Click <strong>Generate Official Estimate</strong> in Section 9 to compute your guaranteed quote.
+                  </p>
                 </div>
-                <div style={styles.priceLine}>
-                  <span>Labor (Est.)</span>
-                  <strong>${laborEst.toFixed(2)}</strong>
-                </div>
-                <div style={styles.priceLine}>
-                  <span>Travel / Mobilization</span>
-                  <strong>${travelEst.toFixed(2)}</strong>
-                </div>
-
-                <div style={styles.priceDivider} />
-
-                <div style={styles.priceLine}>
-                  <span>Sub Total</span>
-                  <strong>${subTotalEst.toFixed(2)}</strong>
-                </div>
-                <div style={styles.priceLine}>
-                  <span>Tax (8.25%)</span>
-                  <strong>${taxEst.toFixed(2)}</strong>
-                </div>
-
-                {/* SINGLE AMOUNT ESTIMATED TOTAL BLOCK — NO MINIMUM JOB PRICE */}
-                <div style={styles.estimatedTotalBlock}>
-                  <span>Estimated Total</span>
-                  <strong style={{ fontSize: '20px', fontWeight: '900' }}>
-                    ${finalSingleTotal.toFixed(2)}
-                  </strong>
-                </div>
-              </div>
+              )
             ) : (
-              <div style={styles.pricingEmptyPrompt}>Enter deck length and width to calculate instant single-amount total.
-              </div>
+              contractorPricing ? (
+                <div style={styles.priceBreakdown}>
+                  <div style={styles.priceRow}>
+                    <span>Billable Surface Area:</span>
+                    <strong>{contractorPricing.billableArea} sq ft</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Unit Rate:</span>
+                    <strong>${Number(contractorPricing.rate || 2.75).toFixed(2)} / sqft</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Base Labor Hours:</span>
+                    <strong>{contractorPricing.baseHours} hrs</strong>
+                  </div>
+                  <div style={styles.priceRow}>
+                    <span>Labor Adjustment:</span>
+                    <strong>${contractorPricing.labourAdj}</strong>
+                  </div>
+                  <div style={styles.divider} />
+                  <div style={styles.totalBox}>
+                    <span style={styles.totalLabel}>Estimate Total</span>
+                    <strong style={styles.totalAmount}>${contractorPricing.total.toLocaleString()}</strong>
+                  </div>
+                  <div style={styles.rangeRow}>
+                    <span>Low – High Range:</span>
+                    <strong>${contractorPricing.low.toLocaleString()} – ${contractorPricing.high.toLocaleString()}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div style={styles.emptyPricePrompt}>Enter parameters to compute breakdown.</div>
+              )
             )}
+
+            {/* Guidances & Important Notes Box */}
+            <div style={styles.guidanceNotesBox}>
+              <div style={styles.guidanceHeader}>
+                <span style={{ fontSize: '13px' }}>📋</span>
+                <strong style={{ fontSize: '12px', color: '#1E293B' }}>Guidances & Important Notes</strong>
+              </div>
+              <ul style={styles.guidanceList}>
+                <li>
+                  <strong>Standard Mobilization Minimum:</strong> $2,500 base project minimum.
+                </li>
+                <li>
+                  <strong>Travel Over 45 Mins:</strong> Minimum mobilization shifts to $3,000 to cover travel & crew transit.
+                </li>
+                <li>
+                  <strong>Elevated Decks (8ft+):</strong> Multi-story ladder rigging and safety protocols included.
+                </li>
+                <li>
+                  <strong>1-Year Warranty:</strong> Comprehensive workmanship warranty on all multi-coat restoration.
+                </li>
+              </ul>
+
+              {/* Support and Contact Us Buttons at Last of Box */}
+              <div style={styles.guidanceActionsRow}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReachOutSubject('Customer Support & Estimate Guidance');
+                    setReachOutOpen(true);
+                  }}
+                  style={styles.guidanceSupportBtn}
+                >
+                  <span>📞 Support</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReachOutSubject('Contact Senior Estimator Consultation');
+                    setReachOutOpen(true);
+                  }}
+                  style={styles.guidanceContactBtn}
+                >
+                  <span>💬 Contact Us</span>
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
 
-      {/* MEASUREMENT GUIDE MODAL */}
-      {showMeasureGuide && (
-        <div style={styles.modalOverlay} onClick={() =>setShowMeasureGuide(false)}>
-          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
+      {/* ======================================================== */}
+      {/* REACH OUT / SPECIALIST SUPPORT MODAL */}
+      {/* ======================================================== */}
+      {reachOutOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
             <div style={styles.modalHeader}>
-              <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Deck Measurement &amp; Level Guide</h3>
-              <button type="button" onClick={() =>setShowMeasureGuide(false)} style={styles.closeBtn}></button>
+              <h3 style={styles.modalTitle}>Specialist Support & Project Inquiries</h3>
+              <button
+                type="button"
+                onClick={() => setReachOutOpen(false)}
+                style={styles.modalCloseBtn}
+              >
+                ✕
+              </button>
             </div>
-            <div style={styles.modalBody}>
-              <p>Follow these standard tips to measure your deck accurately:</p>
-              <ul>
-                <li><strong>Length:</strong>Outer edge from side to side across the main facade.</li>
-                <li><strong>Width:</strong>Outer edge extending out from the house wall.</li>
-                <li><strong>Levels:</strong>Multiple distinct deck tiers count as separate levels.</li>
-              </ul>
-            </div>
+            {reachOutSuccess ? (
+              <div style={styles.modalSuccessBody}>
+                <div style={styles.successIcon}>✓</div>
+                <h4 style={{ margin: '8px 0', color: '#15803D' }}>Inquiry Submitted!</h4>
+                <p style={{ fontSize: '13px', color: '#475569' }}>
+                  A certified Deck Restoration Plus project specialist has received your request and will contact you directly within 24 hours.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReachOut} style={styles.modalForm}>
+                <p style={styles.modalSub}>
+                  Have questions regarding your deck restoration scope or need custom inspection assistance? Send our certified team a direct inquiry.
+                </p>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={styles.inputLabel}>Inquiry Subject</label>
+                  <input
+                    type="text"
+                    value={reachOutSubject}
+                    onChange={(e) => setReachOutSubject(e.target.value)}
+                    style={styles.textInput}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={styles.inputLabel}>Your Message / Question *</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={reachOutMsg}
+                    onChange={(e) => setReachOutMsg(e.target.value)}
+                    placeholder="Describe your deck conditions, photos, or custom requirements..."
+                    style={{ ...styles.textInput, resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setReachOutOpen(false)}
+                    style={styles.draftBtn}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={reachOutSending || !reachOutMsg.trim()}
+                    style={styles.submitBtn}
+                  >
+                    {reachOutSending ? 'Sending Inquiry...' : 'Submit to Specialist'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -1136,554 +2333,829 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   );
 }
 
+// --- SAMSUNG BLUE THEME STYLES ---
+
 const styles = {
   estimatorPageContainer: {
-    backgroundColor: '#f8fafc',
-    height: '100%',
+    minHeight: '100vh',
+    backgroundColor: '#F8FAFC',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+    padding: '20px',
+  },
+  topBrandingBar: {
+    maxWidth: '1440px',
+    margin: '0 auto 20px auto',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '14px',
+    border: '1px solid #E2E8F0',
+    padding: '10px 18px',
     display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+    position: 'relative',
+    zIndex: 5,
   },
-  stepperBar: {
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
-    padding: '10px 24px',
-    position: 'sticky',
-    top: 0,
-    zIndex: 25,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-  },
-  stepperInner: {
-    maxWidth: '1380px',
-    margin: '0 auto',
+  topSectionBoxesRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
+    flexWrap: 'wrap',
+    flex: '1 1 auto',
   },
-  stepPill: {
-    display: 'flex',
+  topSectionBox: {
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '5px 12px',
-    borderRadius: '20px',
-    border: '1px solid #e2e8f0',
+    padding: '7px 12px',
+    borderRadius: '8px',
+    border: '1.5px solid',
     fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer',
+    transition: 'all 0.18s ease',
+    textDecoration: 'none',
+  },
+  topSectionBoxName: {
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  topReachOutWrapper: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
     flexShrink: 0,
   },
-  stepPillNum: {
-    width: '18px',
-    height: '18px',
+  topReachOutBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 18px',
+    backgroundColor: '#034EA2',
+    backgroundImage: 'linear-gradient(135deg, #034EA2 0%, #0057B8 100%)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '999px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.18s ease',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 3px 10px rgba(3, 78, 162, 0.35)',
+  },
+  reachOutIconPill: {
+    width: '20px',
+    height: '20px',
     borderRadius: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '10px',
-    fontWeight: '800',
   },
-  stepperChevron: {
-    color: '#94a3b8',
-    fontSize: '12px',
-  },
-  contentLayoutRow: {
-    flex: 1,
-    maxWidth: '1440px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '16px 24px 0 24px',
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) 340px',
-    gap: '24px',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    alignItems: 'stretch',
-  },
-  middleScrollableColumn: {
-    height: '100%',
-    overflowY: 'auto',
-    paddingRight: '12px',
-    paddingBottom: '80px',
+  cardSelectedCheckBadge: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    backgroundColor: '#10B981',
     display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    scrollbarWidth: 'thin',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.45)',
+    zIndex: 10,
   },
-  fixedRightSidebar: {
-    height: '100%',
-    overflowY: 'auto',
-    paddingBottom: '80px',
+  photoNoticeBanner: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    flexShrink: 0,
-    scrollbarWidth: 'thin',
-  },
-  sidebarCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-  },
-  cardSection: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '22px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-  },
-  cardHeader: {
+    alignItems: 'center',
+    gap: '10px',
+    padding: '10px 14px',
+    backgroundColor: '#FFFBEB',
+    borderRadius: '8px',
+    border: '1px solid #FDE68A',
     marginBottom: '16px',
+  },
+  photoDropzone: {
+    border: '2px dashed #F59E0B',
+    borderRadius: '12px',
+    padding: '28px 20px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px',
+  },
+  photoCloudIconBox: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    backgroundColor: '#FEF3C7',
     display: 'flex',
-    alignItems: 'baseline',
-    gap: '12px',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 10px auto',
   },
-  cardTitle: {
-    fontSize: '16px',
-    fontWeight: '800',
-    color: '#0f172a',
-    margin: 0,
-  },
-  cardSubtitle: {
-    fontSize: '12px',
-    color: '#64748b',
-    margin: 0,
-  },
-  shapeCardsGrid: {
+  photoCategoriesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '10px',
+    marginBottom: '16px',
   },
-  shapeCard: {
-    border: '1.5px solid #e2e8f0',
+  photoCategoryCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 14px',
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+  },
+  photoCategoryTitle: {
+    fontSize: '12px',
+    color: '#78350F',
+    fontWeight: '700',
+  },
+  photoTipsBanner: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    padding: '10px 14px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+    marginBottom: '16px',
+  },
+  uploadedPhotosGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  photoPreviewCard: {
+    position: 'relative',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
     borderRadius: '10px',
     overflow: 'hidden',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    transition: 'all 0.15s ease',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
   },
-  shapeIconWrap: {
-    height: '76px',
-    position: 'relative',
-    backgroundColor: '#f8fafc',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  photoPreviewImg: {
+    width: '100%',
+    height: '110px',
+    objectFit: 'cover',
   },
-  greenCheckmark: {
+  photoRemoveBtn: {
     position: 'absolute',
     top: '6px',
     right: '6px',
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
+    width: '22px',
+    height: '22px',
     borderRadius: '50%',
-    width: '18px',
-    height: '18px',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    color: '#FFFFFF',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '11px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '10px',
-    fontWeight: '900',
+    fontWeight: '700',
   },
-  shapeTextWrap: {
+  photoPreviewMeta: {
+    padding: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  photoPreviewName: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#1E293B',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  photoPreviewSize: {
+    fontSize: '10px',
+    color: '#64748B',
+  },
+  photoCategorySelect: {
+    fontSize: '11px',
+    padding: '3px 6px',
+    borderRadius: '6px',
+    border: '1px solid #CBD5E1',
+    backgroundColor: '#F8FAFC',
+    color: '#334155',
+  },
+  guidanceNotesBox: {
+    marginTop: '16px',
+    padding: '14px',
+    backgroundColor: '#F8FAFC',
+    borderRadius: '10px',
+    border: '1px solid #E2E8F0',
+  },
+  guidanceHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginBottom: '8px',
+  },
+  guidanceList: {
+    margin: '0 0 12px 0',
+    paddingLeft: '18px',
+    fontSize: '11px',
+    color: '#475569',
+    lineHeight: 1.5,
+  },
+  guidanceActionsRow: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '10px',
+  },
+  guidanceSupportBtn: {
+    flex: 1,
     padding: '8px 10px',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    borderRadius: '7px',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#034EA2',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  guidanceContactBtn: {
+    flex: 1,
+    padding: '8px 10px',
+    backgroundColor: '#034EA2',
+    border: 'none',
+    borderRadius: '7px',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  reachOutTooltip: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: '0',
+    backgroundColor: '#0F172A',
+    color: '#FFFFFF',
+    padding: '5px 11px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.18)',
+    zIndex: 100,
+    pointerEvents: 'none',
+  },
+  startNewEstimateActionBtn: {
+    padding: '12px 18px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.18s ease',
+    boxShadow: '0 4px 12px rgba(3, 78, 162, 0.2)',
+  },
+  contentLayoutRow: {
+    display: 'flex',
+    gap: '24px',
+    maxWidth: '1440px',
+    margin: '0 auto',
+    alignItems: 'flex-start',
+  },
+  middleScrollableColumn: {
+    flex: '1 1 0%',
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  fixedRightSidebar: {
+    width: '360px',
+    flexShrink: 0,
+    position: 'sticky',
+    top: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    maxHeight: 'calc(100vh - 40px)',
+    overflowY: 'auto',
+  },
+  sidebarReachOutBtn: {
+    width: '100%',
+    padding: '12px 16px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '10px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(3, 78, 162, 0.25)',
+    transition: 'all 0.2s',
+  },
+  cardSection: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    marginBottom: '20px',
+    borderBottom: '1px solid #F1F5F9',
+    paddingBottom: '14px',
+  },
+  stepBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    fontSize: '11px',
+    fontWeight: '800',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  cardTitle: {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  cardSubtitle: {
+    margin: '4px 0 0 0',
+    fontSize: '13px',
+    color: '#64748B',
+  },
+
+  // Image Cards Grids
+  imageCardsGrid5: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  imageCardsGrid4: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '12px',
+  },
+  imageCardsGrid3: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gap: '12px',
+  },
+  imageSelectCard: {
+    border: '1.5px solid #E2E8F0',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    cursor: 'pointer',
+    backgroundColor: '#FFFFFF',
+    transition: 'all 0.18s ease-in-out',
     display: 'flex',
     flexDirection: 'column',
   },
-  shapeName: {
+  cardCoverImage: {
+    width: '100%',
+    height: '90px',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  cardCaptionBox: {
+    padding: '10px 8px',
+    textAlign: 'center',
+    backgroundColor: '#FFFFFF',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  cardCaptionTitle: {
     fontSize: '13px',
     fontWeight: '700',
-    color: '#0f172a',
+    lineHeight: 1.25,
   },
-  shapeDesc: {
-    fontSize: '10px',
-    color: '#64748b',
-    marginTop: '2px',
-    lineHeight: 1.3,
+  rangeCaptionBadge: {
+    fontSize: '11px',
+    color: '#034EA2',
+    fontWeight: '600',
   },
-  dimTwoCol: {
+
+  // Dimensions & Green Highlight
+  dimensionsFormRow: {
     display: 'grid',
-    gridTemplateColumns: '1.1fr 1fr',
-    gap: '20px',
-    alignItems: 'stretch',
+    gridTemplateColumns: '1fr 1fr 1.4fr',
+    gap: '16px',
+    alignItems: 'flex-end',
+    marginTop: '16px',
+    paddingTop: '16px',
+    borderTop: '1px solid #F1F5F9',
   },
-  dimSvgBox: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dimInputsCol: {
+  dimInputWrap: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
   },
-  dimInputRow: {
+  greenFloorAreaBox: {
+    backgroundColor: '#F0FDF4',
+    border: '1.5px solid #86EFAC',
+    borderRadius: '10px',
+    padding: '12px 16px',
     display: 'flex',
-    gap: '12px',
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
+  greenDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#16A34A',
+  },
+  greenAreaLabel: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#166534',
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+  },
+  greenAreaValue: {
+    fontSize: '24px',
+    fontWeight: '900',
+    color: '#15803D',
+    marginTop: '2px',
+    lineHeight: 1.2,
+  },
+  greenAreaSub: {
+    fontSize: '11px',
+    color: '#166534',
+    marginTop: '2px',
+  },
+
+  // Components Section
+  componentsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '14px',
+  },
+  componentCardItem: {
+    border: '1.5px solid #E2E8F0',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    transition: 'all 0.18s ease-in-out',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  componentThumbImage: {
+    width: '100%',
+    height: '80px',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  componentMetaRow: {
+    padding: '10px 10px 8px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  componentSqftInputBox: {
+    padding: '8px 10px 10px 10px',
+    backgroundColor: '#FFFFFF',
+    borderTop: '1px solid #E2E8F0',
+  },
+  sqftInputLabel: {
+    display: 'block',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: '4px',
+  },
+  sqftNumberInput: {
+    width: '90px',
+    padding: '6px 8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#034EA2',
+    border: '1.5px solid #034EA2',
+    borderRadius: '6px',
+    backgroundColor: '#F8FAFC',
+    outline: 'none',
+  },
+
+  // Stain & Sanding Boxes
+  stainTypeBox: {
+    marginTop: '16px',
+    padding: '16px',
+    backgroundColor: '#F8FAFC',
+    borderRadius: '8px',
+    border: '1px solid #E2E8F0',
+  },
+  stainOption: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    padding: '10px 12px',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    borderRadius: '6px',
+    cursor: 'pointer',
+  },
+  radio: {
+    marginTop: '3px',
+    accentColor: '#034EA2',
+  },
+  checkbox: {
+    width: '16px',
+    height: '16px',
+    accentColor: '#034EA2',
+    cursor: 'pointer',
+  },
+  boardCountsContainer: {
+    marginTop: '16px',
+    padding: '16px',
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
+  },
+
+  // Form Inputs
   inputLabel: {
     display: 'block',
     fontSize: '12px',
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: '4px',
-  },
-  inputWithUnit: {
-    display: 'flex',
-    alignItems: 'center',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    overflow: 'hidden',
-    backgroundColor: '#ffffff',
-  },
-  inputInner: {
-    flex: 1,
-    border: 'none',
-    outline: 'none',
-    padding: '8px 10px',
-    fontSize: '13px',
-  },
-  unitSuffix: {
-    padding: '0 10px',
-    fontSize: '12px',
-    color: '#64748b',
-    backgroundColor: '#f1f5f9',
-    height: '34px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  calcAreaBadge: {
-    backgroundColor: '#f0fdf4',
-    border: '1px solid #bbf7d0',
-    borderRadius: '8px',
-    padding: '10px 14px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  tipBox: {
-    backgroundColor: '#fffbeb',
-    border: '1px solid #fef3c7',
-    borderRadius: '8px',
-    padding: '10px 14px',
-  },
-  tipList: {
-    margin: '4px 0',
-    paddingLeft: '18px',
-    fontSize: '11px',
-    color: '#78350f',
-    lineHeight: 1.4,
-  },
-  linkBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#2563eb',
-    cursor: 'pointer',
-    padding: 0,
-    marginTop: '4px',
-  },
-  heightCardsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-  },
-  heightCard: {
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '12px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  },
-  heightIconWrap: {
-    height: '52px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-    position: 'relative',
-    width: '100%',
-  },
-  heightName: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  heightRange: {
-    fontSize: '10px',
-    color: '#64748b',
-    marginTop: '2px',
-  },
-  levelsCardsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-  },
-  levelCard: {
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '14px 12px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  },
-  levelIconWrap: {
-    height: '52px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-    position: 'relative',
-    width: '100%',
-  },
-  levelName: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  levelDesc: {
-    fontSize: '10px',
-    color: '#64748b',
-    marginTop: '2px',
-  },
-  conditionGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-  },
-  cardImgWrap: {
-    width: '100%',
-    height: '78px',
-    borderRadius: '6px',
-    overflow: 'hidden',
-    marginBottom: '8px',
-    position: 'relative',
-    backgroundColor: '#f1f5f9',
-  },
-  inputCardImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  condCard: {
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '14px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  },
-  condIconBox: {
-    height: '48px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-    position: 'relative',
-    width: '100%',
-  },
-  condName: {
-    fontSize: '12px',
-    color: '#0f172a',
-    marginBottom: '3px',
-  },
-  condDesc: {
-    fontSize: '10px',
-    color: '#64748b',
-    lineHeight: 1.3,
-  },
-  servicesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-  },
-  serviceCard: {
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '14px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  },
-  serviceIconBox: {
-    height: '46px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-    position: 'relative',
-    width: '100%',
-  },
-  serviceName: {
-    fontSize: '12px',
-    color: '#0f172a',
-    marginBottom: '3px',
-  },
-  serviceDesc: {
-    fontSize: '10px',
-    color: '#64748b',
-    lineHeight: 1.3,
-  },
-  dropdownInput: {
-    width: '100%',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '13px',
-    backgroundColor: '#ffffff',
-    color: '#0f172a',
-    outline: 'none',
-  },
-  finishesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-  },
-  finishCard: {
-    border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '14px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#ffffff',
-    position: 'relative',
-    transition: 'all 0.15s ease',
-  },
-  finishIconBox: {
-    height: '46px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
-    position: 'relative',
-    width: '100%',
-  },
-  finishName: {
-    fontSize: '12px',
-    color: '#0f172a',
-    marginBottom: '3px',
-  },
-  finishDesc: {
-    fontSize: '10px',
-    color: '#64748b',
-    lineHeight: 1.3,
-  },
-  uploadDropzone: {
-    border: '2px dashed #cbd5e1',
-    borderRadius: '10px',
-    padding: '28px 20px',
-    textAlign: 'center',
-    backgroundColor: '#f8fafc',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inspirationGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-  },
-  inspireCard: {
-    borderRadius: '8px',
-    overflow: 'hidden',
-    border: '1px solid #e2e8f0',
-    backgroundColor: '#ffffff',
-  },
-  inspireImg: {
-    width: '100%',
-    height: '90px',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  inspireTitle: {
-    display: 'block',
-    padding: '6px 8px',
-    fontSize: '11px',
-    fontWeight: '700',
     color: '#334155',
+    marginBottom: '6px',
   },
   textInput: {
     width: '100%',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '13px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
     outline: 'none',
     boxSizing: 'border-box',
+    color: '#0F172A',
   },
-  bottomBtnBar: {
+  projFormGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '14px',
+  },
+  bottomActionBar: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    marginTop: '20px',
+  },
+  submitBtn: {
+    padding: '14px 28px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '15px',
+    fontWeight: '800',
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(3, 78, 162, 0.3)',
+    transition: 'all 0.2s',
+  },
+  draftBtn: {
+    padding: '10px 18px',
+    backgroundColor: '#FFFFFF',
+    color: '#475569',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  errorBox: {
+    padding: '12px 16px',
+    backgroundColor: '#FEF2F2',
+    border: '1px solid #FCA5A5',
+    borderRadius: '8px',
+    fontSize: '13px',
+    color: '#991B1B',
+  },
+
+  // Official Estimate Result Card
+  officialResultCard: {
+    backgroundColor: '#FFFFFF',
+    border: '2px solid #034EA2',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 10px 25px -5px rgba(3, 78, 162, 0.15)',
+  },
+  resultHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: '16px',
+    borderBottom: '1px solid #E2E8F0',
+    paddingBottom: '12px',
   },
-  saveDraftBtn: {
-    backgroundColor: '#f1f5f9',
-    color: '#334155',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '10px 18px',
+  verifiedCheck: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    backgroundColor: '#15803D',
+    color: '#FFFFFF',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '900',
+    fontSize: '14px',
+  },
+  resultTitle: {
+    fontSize: '16px',
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  refBadge: {
+    padding: '4px 10px',
+    backgroundColor: '#F1F5F9',
+    color: '#475569',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '700',
+  },
+  customerTotalBox: {
+    textAlign: 'center',
+    padding: '24px 16px',
+    backgroundColor: '#F0F6FF',
+    borderRadius: '10px',
+    border: '1.5px solid #BFDBFE',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  customerTotalSub: {
     fontSize: '13px',
     fontWeight: '700',
-    cursor: 'pointer',
+    color: '#034EA2',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
   },
-  submitEstimateBtn: {
-    backgroundColor: '#16a34a',
-    color: '#ffffff',
+  customerTotalAmt: {
+    fontSize: '44px',
+    fontWeight: '900',
+    color: '#034EA2',
+    margin: '8px 0',
+    letterSpacing: '-0.02em',
+  },
+  customerTotalSubNotice: {
+    fontSize: '12px',
+    color: '#475569',
+    maxWidth: '500px',
+    lineHeight: 1.4,
+  },
+  customerMinJobNoticeBox: {
+    marginTop: '16px',
+    padding: '12px 16px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    textAlign: 'left',
+  },
+  contractorBreakdownBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  resultContentRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px',
+  },
+  resultTotalBox: {
+    backgroundColor: '#F0F6FF',
+    border: '1px solid #BFDBFE',
+    borderRadius: '8px',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  resultTotalSub: {
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#034EA2',
+  },
+  resultTotalAmt: {
+    fontSize: '32px',
+    fontWeight: '900',
+    color: '#034EA2',
+    margin: '4px 0',
+  },
+  resultRangeNotice: {
+    fontSize: '12px',
+    color: '#64748B',
+  },
+  resultSpecsBox: {
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #E2E8F0',
+    borderRadius: '8px',
+    padding: '14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  specLine: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '12px',
+    color: '#334155',
+  },
+  repairEstimateBox: {
+    padding: '14px',
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
+  },
+  overlapBanner: {
+    marginTop: '8px',
+    padding: '8px',
+    backgroundColor: '#ECFDF5',
+    borderRadius: '6px',
+    fontSize: '11px',
+    color: '#065F46',
+  },
+  contractorMinNotice: {
+    padding: '8px 12px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    borderRadius: '6px',
+    fontSize: '12px',
+    color: '#92400E',
+  },
+  resultActionRow: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '20px',
+  },
+  convertLeadBtn: {
+    flex: 1,
+    padding: '12px 20px',
+    backgroundColor: '#15803D',
+    color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
-    padding: '11px 24px',
-    fontSize: '14px',
     fontWeight: '800',
+    fontSize: '14px',
     cursor: 'pointer',
-    boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)',
+    boxShadow: '0 4px 12px rgba(21, 128, 61, 0.25)',
   },
-  progressRow: {
+  talkSpecialistBtn: {
+    padding: '12px 18px',
+    backgroundColor: '#FFFFFF',
+    color: '#034EA2',
+    border: '1.5px solid #034EA2',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  leadSuccessBadge: {
+    flex: 1,
+    padding: '12px 16px',
+    backgroundColor: '#ECFDF5',
+    border: '1.5px solid #6EE7B7',
+    borderRadius: '8px',
+    fontSize: '13px',
+    color: '#065F46',
+    fontWeight: '600',
+  },
+
+  // Sidebar Styles
+  sidebarCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '12px',
+    padding: '16px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  },
+  progressCircleRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
-    marginBottom: '14px',
   },
   circleWrap: {
-    width: '90px',
-    height: '90px',
     position: 'relative',
+    width: '86px',
+    height: '86px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1694,182 +3166,257 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  sidebarCardHeading: {
-    fontSize: '14px',
-    fontWeight: '800',
-    color: '#0f172a',
+  sidebarHeading: {
     margin: 0,
-  },
-  sidebarCardSub: {
-    fontSize: '11px',
-    color: '#64748b',
-    margin: '2px 0 0 0',
-  },
-  checklist: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    borderTop: '1px solid #f1f5f9',
-    paddingTop: '10px',
-  },
-  checkItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '11px',
-  },
-  checkItemLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  checkItemText: {
-    fontWeight: '600',
-  },
-  checkBadge: {
-    fontSize: '9px',
+    fontSize: '13px',
     fontWeight: '800',
-    padding: '2px 6px',
-    borderRadius: '10px',
-    textTransform: 'uppercase',
+    color: '#0F172A',
+  },
+  sidebarSub: {
+    margin: '3px 0 6px 0',
+    fontSize: '11px',
+    color: '#64748B',
+    lineHeight: 1.3,
+  },
+  readyIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  statusDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
   },
   cardHeaderRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '10px',
+    borderBottom: '1px solid #F1F5F9',
+    paddingBottom: '8px',
   },
-  editBtn: {
+  editLinkBtn: {
     background: 'none',
     border: 'none',
+    color: '#034EA2',
     fontSize: '11px',
     fontWeight: '700',
-    color: '#2563eb',
     cursor: 'pointer',
     padding: 0,
   },
-  selList: {
+  specsList: {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
   },
-  selRow: {
+  specRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '11px',
+  },
+  specLabel: {
+    color: '#64748B',
+  },
+  specVal: {
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  refWindowHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: '10px',
+    borderBottom: '1px solid #F1F5F9',
+    paddingBottom: '8px',
+  },
+  refTabs: {
+    display: 'flex',
+    gap: '8px',
+  },
+  refTabBtn: {
+    background: 'none',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    padding: '2px 4px',
     fontSize: '11px',
-    borderBottom: '1px solid #f8fafc',
-    paddingBottom: '4px',
-  },
-  selLabel: {
-    color: '#64748b',
-  },
-  selVal: {
-    color: '#0f172a',
     fontWeight: '700',
+    cursor: 'pointer',
   },
-  refCardInner: {
-    marginTop: '10px',
+  refBody: {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
   },
-  refRealImage: {
+  refImage: {
     width: '100%',
     height: '110px',
     objectFit: 'cover',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
   },
-  refEmptyPrompt: {
-    padding: '14px 8px',
-    textAlign: 'center',
-    color: '#94a3b8',
+  refCaption: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  emptyRefBox: {
     fontSize: '11px',
-    lineHeight: 1.4,
+    color: '#94A3B8',
+    padding: '16px 8px',
+    textAlign: 'center',
   },
-  pricingTable: {
-    marginTop: '10px',
+  livePulse: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#16A34A',
+  },
+  customerSidebarResult: {
+    textAlign: 'center',
+    padding: '14px 10px',
+    backgroundColor: '#F0F6FF',
+    borderRadius: '8px',
+    border: '1px solid #BFDBFE',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  customerResultLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#034EA2',
+    textTransform: 'uppercase',
+  },
+  customerResultAmt: {
+    fontSize: '28px',
+    fontWeight: '900',
+    color: '#034EA2',
+    margin: '4px 0',
+  },
+  customerResultSub: {
+    fontSize: '10px',
+    color: '#64748B',
+  },
+  sidebarMinNotice: {
+    marginTop: '6px',
+    fontSize: '10px',
+    color: '#B45309',
+    lineHeight: 1.3,
+  },
+  customerReadyBox: {
+    padding: '12px',
+    backgroundColor: '#F8FAFC',
+    borderRadius: '8px',
+  },
+  readyCheck: {
+    color: '#15803D',
+    fontWeight: '900',
+  },
+  priceBreakdown: {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    fontSize: '12px',
   },
-  priceLine: {
+  priceRow: {
     display: 'flex',
     justifyContent: 'space-between',
+    fontSize: '11px',
     color: '#475569',
   },
-  priceDivider: {
+  divider: {
     height: '1px',
-    backgroundColor: '#e2e8f0',
-    margin: '4px 0',
+    backgroundColor: '#E2E8F0',
+    margin: '6px 0',
   },
-  estimatedTotalBlock: {
-    backgroundColor: '#15803d',
-    color: '#ffffff',
-    borderRadius: '8px',
-    padding: '12px 14px',
+  totalBox: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: '8px',
   },
-  pricingEmptyPrompt: {
-    padding: '14px 8px',
-    textAlign: 'center',
-    color: '#94a3b8',
+  totalLabel: {
+    fontSize: '12px',
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  totalAmount: {
+    fontSize: '18px',
+    fontWeight: '900',
+    color: '#034EA2',
+  },
+  rangeRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '10px',
+    color: '#64748B',
+  },
+  emptyPricePrompt: {
     fontSize: '11px',
-    lineHeight: 1.4,
+    color: '#94A3B8',
+    textAlign: 'center',
+    padding: '12px 0',
   },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    padding: '12px',
-    color: '#b91c1c',
-    fontSize: '13px',
-  },
+
+  // Modal
   modalOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15,23,42,0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 9999,
+    padding: '16px',
   },
-  modalCard: {
-    backgroundColor: '#ffffff',
+  modalContent: {
+    backgroundColor: '#FFFFFF',
     borderRadius: '12px',
+    width: '100%',
+    maxWidth: '520px',
     padding: '24px',
-    maxWidth: '500px',
-    width: '90%',
-    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
   },
   modalHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '14px',
-    borderBottom: '1px solid #e2e8f0',
-    paddingBottom: '10px',
   },
-  closeBtn: {
+  modalTitle: {
+    margin: 0,
+    fontSize: '16px',
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  modalCloseBtn: {
     background: 'none',
     border: 'none',
-    fontSize: '16px',
+    fontSize: '18px',
+    color: '#64748B',
     cursor: 'pointer',
-    color: '#94a3b8',
   },
-  modalBody: {
-    fontSize: '13px',
-    color: '#334155',
-    lineHeight: 1.6,
+  modalSub: {
+    fontSize: '12px',
+    color: '#64748B',
+    margin: '0 0 14px 0',
+    lineHeight: 1.4,
+  },
+  modalSuccessBody: {
+    textAlign: 'center',
+    padding: '24px 0',
+  },
+  successIcon: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    backgroundColor: '#DCFCE7',
+    color: '#15803D',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '22px',
+    fontWeight: '900',
+    marginBottom: '8px',
   },
 };
