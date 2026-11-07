@@ -59,10 +59,9 @@ export default function DeckEstimatorPage() {
 const styles = {
   page: {
     backgroundColor: '#f8fafc',
-    height: '100%',
+    minHeight: '100%',
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
   },
   topBar: {
     maxWidth: '1280px',

@@ -66,7 +66,7 @@ export default function CustomerLayout() {
     <div
       style={{
         ...styles.container,
-        ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+        minHeight: '100vh',
       }}
     >
       {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR */}
@@ -382,7 +382,7 @@ export default function CustomerLayout() {
         <main
           style={{
             ...styles.pageContent,
-            ...(isEstimatorPage ? { padding: 0, overflowY: 'hidden' } : { padding: '24px 32px' }),
+            ...(isEstimatorPage ? { padding: 0 } : { padding: '24px 32px' }),
           }}
         >
           <Outlet />

@@ -1898,10 +1898,12 @@ const styles = {
     width: '360px',
     flexShrink: 0,
     position: 'sticky',
-    top: '20px',
+    top: '85px',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    maxHeight: 'calc(100vh - 105px)',
+    overflowY: 'auto',
   },
   sidebarReachOutBtn: {
     width: '100%',

@@ -66,7 +66,7 @@ export default function ContractorLayout() {
     <div
       style={{
         ...styles.container,
-        ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+        minHeight: '100vh',
       }}
     >
       {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Identical UX to Customer Dashboard) */}
@@ -349,7 +349,7 @@ export default function ContractorLayout() {
           ...styles.mainWrapper,
           marginLeft: isSidebarHovered ? '240px' : '68px',
           transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          ...(isEstimatorPage ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {}),
+          ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
         }}
       >
         {/* Top Header Bar */}
@@ -514,7 +514,7 @@ export default function ContractorLayout() {
         <main
           style={{
             ...styles.mainContent,
-            ...(isEstimatorPage ? { height: 'calc(100vh - 65px)', overflow: 'hidden', padding: 0 } : {}),
+            ...(isEstimatorPage ? { padding: 0 } : {}),
           }}
         >
           <Outlet />
