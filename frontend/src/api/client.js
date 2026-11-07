@@ -42,18 +42,51 @@ async function apiClient(endpoint, options = {}) {
     delete config.headers['Content-Type'];
   }
 
-  const response = await fetch(url, config);
-  const data = await response.json();
+  // Resilient execution with auto-retry on brief network blips / backend reload
+  let lastError = null;
+  const maxAttempts = 3;
 
-  if (!response.ok) {
-    const error = new Error(data?.error?.message || 'An error occurred');
-    error.code = data?.error?.code || 'UNKNOWN_ERROR';
-    error.status = response.status;
-    error.details = data?.error?.details || [];
-    throw error;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, config);
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Non-JSON response
+        data = {};
+      }
+
+      if (!response.ok) {
+        const error = new Error(data?.error?.message || `Server error (${response.status})`);
+        error.code = data?.error?.code || 'UNKNOWN_ERROR';
+        error.status = response.status;
+        error.details = data?.error?.details || [];
+        throw error;
+      }
+
+      return data;
+    } catch (err) {
+      lastError = err;
+      const isNetworkError = err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch');
+
+      // Retry up to 2 times for transient network/connection drops
+      if (isNetworkError && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, attempt * 350));
+        continue;
+      }
+
+      if (isNetworkError) {
+        const connError = new Error('Connection to Deck Estimator backend server failed. Please ensure the backend server is running on port 5000.');
+        connError.code = 'NETWORK_ERROR';
+        throw connError;
+      }
+
+      throw err;
+    }
   }
 
-  return data;
+  throw lastError;
 }
 
 apiClient.get = (endpoint, options = {}) => apiClient(endpoint, { method: 'GET', ...options });
