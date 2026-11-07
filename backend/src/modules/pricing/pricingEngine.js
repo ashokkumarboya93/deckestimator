@@ -439,7 +439,7 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     : n(inp.railingLf || inp.railingLength) * (a.railingSqftPerLf || 4);
   const stairsSqftVal = inp.stairSqft != null && inp.stairSqft !== ''
     ? n(inp.stairSqft)
-    : n(inp.stairSteps || inp.stairCount) * (a.stairSqftPerStep || 12);
+    : n(inp.stairSteps || inp.stairCount || inp.stairStepCount) * (a.stairSqftPerStep || 12);
   const pergolaSqftVal = inp.pergolaSqft != null && inp.pergolaSqft !== ''
     ? n(inp.pergolaSqft)
     : n(inp.pergolaLength || inp.pergolaLf) * (a.pergolaSqftPerLf || 1.5);

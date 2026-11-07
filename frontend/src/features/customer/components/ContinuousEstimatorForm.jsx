@@ -67,15 +67,18 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
     field: 'railingSqft',
     prompt: 'Railing Surface (sq ft)',
-    defaultSqft: 120,
+    unit: 'sq ft',
+    defaultVal: 120,
   },
   {
     id: 'stairs',
     label: 'Stair Steps',
     img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
-    field: 'stairSqft',
-    prompt: 'Stair Surface (sq ft)',
-    defaultSqft: 72,
+    field: 'stairSteps',
+    prompt: 'Number of Steps (Count)',
+    unit: 'steps',
+    defaultVal: 4,
+    multiplier: 12,
   },
   {
     id: 'pergola',
@@ -83,7 +86,8 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
     field: 'pergolaSqft',
     prompt: 'Pergola Framing (sq ft)',
-    defaultSqft: 150,
+    unit: 'sq ft',
+    defaultVal: 150,
   },
   {
     id: 'privacy_wall',
@@ -91,7 +95,8 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
     field: 'privacyWallSqft',
     prompt: 'Privacy Wall Surface (sq ft)',
-    defaultSqft: 80,
+    unit: 'sq ft',
+    defaultVal: 80,
   },
   {
     id: 'siding',
@@ -99,7 +104,8 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
     field: 'sidingSqft',
     prompt: 'Siding Area (sq ft)',
-    defaultSqft: 100,
+    unit: 'sq ft',
+    defaultVal: 100,
   },
   {
     id: 'fascia',
@@ -107,7 +113,8 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
     field: 'fasciaSqft',
     prompt: 'Fascia Board Surface (sq ft)',
-    defaultSqft: 45,
+    unit: 'sq ft',
+    defaultVal: 45,
   },
   {
     id: 'joists',
@@ -115,7 +122,8 @@ const COMPONENTS = [
     img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
     field: 'joistsSqft',
     prompt: 'Exposed Framing Joists (sq ft)',
-    defaultSqft: 120,
+    unit: 'sq ft',
+    defaultVal: 120,
   },
 ];
 
@@ -447,7 +455,12 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const totalBillableArea = useMemo(() => {
     let extra = 0;
     selectedComponents.forEach((cid) => {
-      extra += Number(componentSqft[cid] || 0);
+      const val = Number(componentSqft[cid] || 0);
+      if (cid === 'stairs') {
+        extra += val * 12; // 12 sq ft per step (tread + riser)
+      } else {
+        extra += val;
+      }
     });
     return floorArea + extra;
   }, [floorArea, selectedComponents, componentSqft]);
@@ -466,7 +479,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   }, [shape, floorArea, woodSpecies, height, existingCoating, services, conditions, projectName]);
 
   // Toggle Component Selection
-  const toggleComponent = (id, defaultSqft) => {
+  const toggleComponent = (id, defaultVal) => {
     setSelectedComponents((prev) => {
       if (prev.includes(id)) {
         const next = prev.filter((c) => c !== id);
@@ -477,9 +490,10 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         });
         return next;
       } else {
+        const def = id === 'stairs' ? 4 : (defaultVal || 50);
         setComponentSqft((s) => ({
           ...s,
-          [id]: s[id] || defaultSqft || 50,
+          [id]: s[id] !== undefined ? s[id] : def,
         }));
         return [...prev, id];
       }
@@ -527,6 +541,39 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     });
   };
 
+  // Reset entire form for a fresh new calculation
+  const handleResetForNewEstimate = () => {
+    setShape('');
+    setLength('');
+    setWidth('');
+    setSelectedComponents([]);
+    setComponentSqft({});
+    setWoodSpecies('');
+    setHeight('');
+    setExactHeightFt('');
+    setExistingCoating('');
+    setServices([]);
+    setStainType('semi');
+    setSandingType('mechanical_sanding');
+    setConditions(['good_condition']);
+    setCrackBoardCount('');
+    setRottedBoardCount('');
+    setWarpedBoardCount('');
+    setLooseBoardCount('');
+    setWaterDamagedBoardCount('');
+    setCrackLooseOverlapCount('');
+    setProjectName('');
+    setAddress('');
+    setCity('');
+    setState('');
+    setZipCode('');
+    setNotes('');
+    setOfficialEstimate(null);
+    setSubmitError(null);
+    setLeadCreated(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Contractor-Only Live Pricing Preview
   const runContractorCalc = useCallback(async () => {
     if (!isContractor || floorArea <= 0 || services.length === 0) return;
@@ -540,7 +587,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         exactHeightFt: exactHeightFt ? Number(exactHeightFt) : undefined,
         existingCoating,
         railingSqft: Number(componentSqft.railings || 0),
-        stairSqft: Number(componentSqft.stairs || 0),
+        stairSteps: Number(componentSqft.stairs || 0),
+        stairStepCount: Number(componentSqft.stairs || 0),
+        stairSqft: Number(componentSqft.stairs || 0) * 12,
         pergolaSqft: Number(componentSqft.pergola || 0),
         privacyWallSqft: Number(componentSqft.privacy_wall || 0),
         sidingSqft: Number(componentSqft.siding || 0),
@@ -626,7 +675,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           hasRailings: selectedComponents.includes('railings'),
           railingSqft: Number(componentSqft.railings || 0),
           hasStairs: selectedComponents.includes('stairs'),
-          stairSqft: Number(componentSqft.stairs || 0),
+          stairStepCount: Number(componentSqft.stairs || 0),
+          stairSteps: Number(componentSqft.stairs || 0),
+          stairSqft: Number(componentSqft.stairs || 0) * 12,
           hasPergola: selectedComponents.includes('pergola'),
           pergolaSqft: Number(componentSqft.pergola || 0),
           hasPrivacyWall: selectedComponents.includes('privacy_wall'),
@@ -677,7 +728,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         crackLooseOverlapCount: Number(crackLooseOverlapCount) || 0,
         services,
         railingSqft: Number(componentSqft.railings || 0),
-        stairSqft: Number(componentSqft.stairs || 0),
+        stairSteps: Number(componentSqft.stairs || 0),
+        stairStepCount: Number(componentSqft.stairs || 0),
+        stairSqft: Number(componentSqft.stairs || 0) * 12,
         pergolaSqft: Number(componentSqft.pergola || 0),
         privacyWallSqft: Number(componentSqft.privacy_wall || 0),
         sidingSqft: Number(componentSqft.siding || 0),
@@ -787,6 +840,40 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   return (
     <div style={styles.estimatorPageContainer}>
+      {/* Top Application Branding & Actions Bar */}
+      <div style={styles.topBrandingBar}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={styles.brandIconBox}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+          <div>
+            <h2 style={styles.brandAppTitle}>Deck Restoration Plus</h2>
+            <span style={styles.brandAppSub}>Precision Deck Restoration Estimator</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleResetForNewEstimate}
+            style={styles.topNewEstimateBtn}
+            title="Clear all fields and calculate a new deck"
+          >
+            + Start New Estimate
+          </button>
+          <button
+            type="button"
+            onClick={() => setReachOutOpen(true)}
+            style={styles.topReachOutBtn}
+          >
+            <span>📞 Reach Out • Need Assistance?</span>
+          </button>
+        </div>
+      </div>
+
       {/* ======================================================== */}
       {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + RIGHT SIDEBAR */}
       {/* ======================================================== */}
@@ -908,7 +995,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     }}
                   >
                     <div
-                      onClick={() => toggleComponent(comp.id, comp.defaultSqft)}
+                      onClick={() => toggleComponent(comp.id, comp.defaultVal || comp.defaultSqft)}
                       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                     >
                       <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
@@ -916,8 +1003,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleComponent(comp.id, comp.defaultSqft)}
-                          style={styles.checkbox}
+                          readOnly
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
                         />
                         <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
                           {comp.label}
@@ -925,21 +1012,30 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                       </div>
                     </div>
 
-                    {/* Pop-out Input asking for Sqft when selected */}
+                    {/* Pop-out Input asking for Steps (for stairs) or Sqft (for others) when selected */}
                     {isSelected && (
                       <div style={styles.componentSqftInputBox}>
-                        <label style={styles.sqftInputLabel}>{comp.prompt}:</label>
+                        <label style={styles.sqftInputLabel}>
+                          {comp.id === 'stairs' ? 'Number of Steps (Count):' : `${comp.prompt}:`}
+                        </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input
                             type="number"
                             min="1"
-                            value={componentSqft[comp.id] || ''}
+                            value={componentSqft[comp.id] !== undefined ? componentSqft[comp.id] : ''}
                             onChange={(e) => setComponentSqft({ ...componentSqft, [comp.id]: e.target.value })}
-                            placeholder={String(comp.defaultSqft)}
+                            placeholder={String(comp.defaultVal || 4)}
                             style={styles.sqftNumberInput}
                           />
-                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>sq ft</span>
+                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>
+                            {comp.id === 'stairs' ? 'steps' : 'sq ft'}
+                          </span>
                         </div>
+                        {comp.id === 'stairs' && (
+                          <span style={{ fontSize: '11px', color: '#034EA2', fontWeight: '600', marginTop: '4px', display: 'block' }}>
+                            Calculated Area: {Number(componentSqft.stairs || 0)} steps × 12 sqft/step = {(Number(componentSqft.stairs || 0) * 12).toLocaleString()} sq ft
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1117,9 +1213,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => !isLocked && toggleService(srv.id)}
+                          readOnly
                           disabled={isLocked}
-                          style={styles.checkbox}
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
                         />
                         <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B', fontSize: '12px' }}>
                           {srv.name}
@@ -1216,8 +1312,8 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleCondition(c.id)}
-                          style={styles.checkbox}
+                          readOnly
+                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
                         />
                         <strong style={{ ...styles.cardCaptionTitle, color: isSelected && isGood ? '#15803D' : '#1E293B', fontSize: '12px' }}>
                           {c.label}
@@ -1553,6 +1649,14 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
                 <button
                   type="button"
+                  onClick={handleResetForNewEstimate}
+                  style={styles.startNewEstimateActionBtn}
+                >
+                  + Calculate Another Deck / Start New Estimate
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setReachOutOpen(true)}
                   style={styles.talkSpecialistBtn}
                 >
@@ -1665,6 +1769,14 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 <span style={styles.specLabel}>Services</span>
                 <strong style={styles.specVal}>{services.length} selected</strong>
               </div>
+              {selectedComponents.includes('stairs') && (
+                <div style={styles.specRow}>
+                  <span style={styles.specLabel}>Stair Steps</span>
+                  <strong style={styles.specVal}>
+                    {Number(componentSqft.stairs || 0)} steps ({Number(componentSqft.stairs || 0) * 12} sq ft)
+                  </strong>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1878,7 +1990,76 @@ const styles = {
     minHeight: '100vh',
     backgroundColor: '#F8FAFC',
     fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
-    padding: '24px 20px',
+    padding: '20px',
+  },
+  topBrandingBar: {
+    maxWidth: '1440px',
+    margin: '0 auto 20px auto',
+    backgroundColor: '#0A192F',
+    borderRadius: '12px',
+    padding: '16px 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '16px',
+    boxShadow: '0 4px 16px rgba(10, 25, 47, 0.12)',
+  },
+  brandIconBox: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '8px',
+    backgroundColor: '#034EA2',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandAppTitle: {
+    margin: 0,
+    fontSize: '17px',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: '-0.2px',
+  },
+  brandAppSub: {
+    fontSize: '12px',
+    color: '#94A3B8',
+    fontWeight: '500',
+    display: 'block',
+  },
+  topNewEstimateBtn: {
+    padding: '9px 16px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: '1px solid #1E40AF',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.18s ease',
+  },
+  topReachOutBtn: {
+    padding: '9px 18px',
+    backgroundColor: '#1E293B',
+    color: '#F8FAFC',
+    border: '1px solid #334155',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.18s ease',
+  },
+  startNewEstimateActionBtn: {
+    padding: '12px 18px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.18s ease',
+    boxShadow: '0 4px 12px rgba(3, 78, 162, 0.2)',
   },
   contentLayoutRow: {
     display: 'flex',
