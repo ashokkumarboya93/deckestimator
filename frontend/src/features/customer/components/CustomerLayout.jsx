@@ -228,27 +228,34 @@ export default function CustomerLayout() {
       >
         {/* TOP NAVIGATION BAR */}
         <header style={styles.topHeader}>
-          {/* Left: Breadcrumbs & Page Title */}
+          {/* Left: Interactive Back Button with Breadcrumbs & Title */}
           <div style={styles.headerLeft}>
-            <div>
-              <div style={styles.breadcrumbText}>{pageInfo.breadcrumb}</div>
-              <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
-            </div>
-          </div>
-
-          {/* Center: Search */}
-          <div style={styles.headerCenter}>
-            <div style={styles.searchBox}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search your deck projects, estimates, or restoration records..."
-                style={styles.searchInput}
-              />
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate('/customer/dashboard');
+                }
+              }}
+              style={styles.headerBackBtn}
+              title="← Back to Dashboard / Previous Page"
+            >
+              <div style={styles.backIconCircle}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={styles.breadcrumbText}>
+                  <span style={{ color: '#034EA2', fontWeight: '700' }}>← </span>
+                  {pageInfo.breadcrumb}
+                </div>
+                <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
+              </div>
+            </button>
           </div>
 
           {/* Right: Notifications, Profile, Logout */}
@@ -620,6 +627,30 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+  },
+  headerBackBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    background: 'none',
+    border: 'none',
+    padding: '4px 8px',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'all 0.18s ease',
+  },
+  backIconCircle: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '10px',
+    backgroundColor: '#F1F5F9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid #E2E8F0',
+    flexShrink: 0,
+    transition: 'all 0.18s ease',
   },
   breadcrumbText: {
     fontSize: '11px',

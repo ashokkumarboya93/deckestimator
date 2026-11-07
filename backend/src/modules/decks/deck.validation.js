@@ -63,6 +63,7 @@ const createDeckSchema = {
     additionalNotes: Joi.string().trim().max(1000).allow('').optional(),
     completionStatus: Joi.string().valid('draft', 'complete', 'archived').default('draft'),
     images: Joi.array().optional(),
+    photos: Joi.array().optional(),
     ownerId: Joi.forbidden().messages({
       'any.unknown': 'Setting or modifying ownerId is forbidden.',
     }),
@@ -99,6 +100,7 @@ const updateDeckSchema = {
     additionalNotes: Joi.string().trim().max(1000).allow('').optional(),
     completionStatus: Joi.string().valid('draft', 'complete', 'archived').optional(),
     images: Joi.array().optional(),
+    photos: Joi.array().optional(),
     ownerId: Joi.forbidden().messages({
       'any.unknown': 'Setting or modifying ownerId is forbidden.',
     }),

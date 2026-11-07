@@ -204,6 +204,17 @@ const deckSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // Uploaded Deck Photos (Optional Section 8)
+    photos: [
+      {
+        name: { type: String, trim: true },
+        url: { type: String, trim: true },
+        size: { type: Number, default: 0 },
+        type: { type: String, default: 'image/jpeg' },
+        category: { type: String, default: 'general' },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
     additionalNotes: {
       type: String,
       trim: true,

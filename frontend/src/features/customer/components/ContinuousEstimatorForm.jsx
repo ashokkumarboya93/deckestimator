@@ -428,8 +428,12 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const [reachOutSending, setReachOutSending] = useState(false);
   const [reachOutSuccess, setReachOutSuccess] = useState(false);
 
-  // Architectural Reference Window Active Tab
-  const [refTab, setRefTab] = useState('shape'); // 'shape' | 'wood'
+  // Upload Photos (Section 8 Optional)
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
+
+  // Architectural / More References Window Active Tab
+  const [refTab, setRefTab] = useState('shape'); // 'shape' | 'wood' | 'services' | 'condition'
 
   // --- RULE R1: TREX LOCK ---
   useEffect(() => {
@@ -466,7 +470,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     return floorArea + extra;
   }, [floorArea, selectedComponents, componentSqft]);
 
-  // Dynamic 8-Section Progress Tracking (Starts at 0% when empty)
+  // Dynamic 9-Section Progress Tracking (Section 8 is Photos, Section 9 is Project Details)
   const sectionSteps = useMemo(() => [
     { num: 1, name: 'Dimensions', done: Boolean(shape && floorArea > 0), id: 'section-1' },
     { num: 2, name: 'Components', done: Boolean(selectedComponents.length > 0), id: 'section-2' },
@@ -475,8 +479,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     { num: 5, name: 'Coating', done: Boolean(existingCoating), id: 'section-5' },
     { num: 6, name: 'Services', done: Boolean(services.length > 0), id: 'section-6' },
     { num: 7, name: 'Condition', done: Boolean(conditions.length > 0), id: 'section-7' },
-    { num: 8, name: 'Details', done: Boolean(projectName.trim()), id: 'section-8' },
-  ], [shape, floorArea, selectedComponents, woodSpecies, height, existingCoating, services, conditions, projectName]);
+    { num: 8, name: 'Photos', done: Boolean(uploadedPhotos.length > 0), id: 'section-8' },
+    { num: 9, name: 'Details', done: Boolean(projectName.trim()), id: 'section-9' },
+  ], [shape, floorArea, selectedComponents, woodSpecies, height, existingCoating, services, conditions, uploadedPhotos, projectName]);
 
   const completedSectionsCount = useMemo(() => sectionSteps.filter((s) => s.done).length, [sectionSteps]);
   const progressPercent = useMemo(
@@ -575,6 +580,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     setLooseBoardCount('');
     setWaterDamagedBoardCount('');
     setCrackLooseOverlapCount('');
+    setUploadedPhotos([]);
     setProjectName('');
     setAddress('');
     setCity('');
@@ -585,6 +591,44 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     setSubmitError(null);
     setLeadCreated(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle Photo File Upload (Section 8)
+  const handlePhotoFiles = (files) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File "${file.name}" exceeds the 10 MB limit.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedPhotos((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            category: 'full_view',
+            dataUrl: e.target.result,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (id) => {
+    setUploadedPhotos((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handlePhotoCategoryChange = (id, category) => {
+    setUploadedPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, category } : p))
+    );
   };
 
   // Contractor-Only Live Pricing Preview
@@ -662,7 +706,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
       return;
     }
     if (!projectName.trim()) {
-      setSubmitError('Please enter a Project / Deck Name in Section 8.');
+      setSubmitError('Please enter a Project / Deck Name in Section 9.');
       return;
     }
 
@@ -708,6 +752,13 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           coatingStatus: existingCoating === 'paint' ? 'painted' : existingCoating === 'solid_stain' ? 'stained' : 'none',
         },
         visibleConditions: conditions,
+        photos: uploadedPhotos.map((p) => ({
+          name: p.name,
+          size: p.size,
+          type: p.type,
+          category: p.category,
+          url: p.dataUrl,
+        })),
         propertyAddress: { street: address, city, state, zipCode, country: 'USA' },
       };
 
@@ -867,10 +918,10 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 title={`Section ${step.num}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
                 style={{
                   ...styles.topSectionBox,
-                  backgroundColor: isFilled ? '#034EA2' : '#FFFFFF',
-                  borderColor: isFilled ? '#034EA2' : '#CBD5E1',
+                  backgroundColor: isFilled ? '#15803D' : '#FFFFFF',
+                  borderColor: isFilled ? '#15803D' : '#CBD5E1',
                   color: isFilled ? '#FFFFFF' : '#334155',
-                  boxShadow: isFilled ? '0 2px 6px rgba(3, 78, 162, 0.22)' : 'none',
+                  boxShadow: isFilled ? '0 2px 8px rgba(21, 128, 61, 0.28)' : 'none',
                 }}
               >
                 <span style={{ fontWeight: '800', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
@@ -898,11 +949,13 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
             onMouseEnter={() => setReachOutHover(true)}
             onMouseLeave={() => setReachOutHover(false)}
             style={styles.topReachOutBtn}
-            title="Need Assistance?"
+            title="Need Assistance? Click to speak with a specialist"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
+            <div style={styles.reachOutIconPill}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </div>
             <span>Reach Out</span>
           </button>
           {reachOutHover && (
@@ -947,14 +1000,22 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => setShape(s.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
-                      boxShadow: isSelected ? '0 0 0 2.5px #034EA2' : 'none',
-                      backgroundColor: isSelected ? '#F0F6FF' : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={s.img} alt={s.label} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {s.label}
                       </strong>
                     </div>
@@ -1104,14 +1165,22 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => setWoodSpecies(w.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
-                      boxShadow: isSelected ? '0 0 0 2.5px #034EA2' : 'none',
-                      backgroundColor: isSelected ? '#F0F6FF' : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {w.name}
                       </strong>
                     </div>
@@ -1142,14 +1211,22 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => setHeight(el.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
-                      boxShadow: isSelected ? '0 0 0 2.5px #034EA2' : 'none',
-                      backgroundColor: isSelected ? '#F0F6FF' : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {el.label}
                       </strong>
                       <span style={styles.rangeCaptionBadge}>{el.range}</span>
@@ -1200,14 +1277,22 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => setExistingCoating(ec.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
-                      boxShadow: isSelected ? '0 0 0 2.5px #034EA2' : 'none',
-                      backgroundColor: isSelected ? '#F0F6FF' : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {ec.label}
                       </strong>
                     </div>
@@ -1239,13 +1324,21 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => !isLocked && toggleService(srv.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? '#034EA2' : '#E2E8F0',
-                      boxShadow: isSelected ? '0 0 0 2.5px #034EA2' : 'none',
-                      backgroundColor: isSelected ? '#F0F6FF' : isLocked ? '#F8FAFC' : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : isLocked ? '#F8FAFC' : '#FFFFFF',
                       opacity: isLocked ? 0.45 : 1,
                       cursor: isLocked ? 'not-allowed' : 'pointer',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1256,7 +1349,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                           disabled={isLocked}
                           style={{ ...styles.checkbox, pointerEvents: 'none' }}
                         />
-                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B', fontSize: '12px' }}>
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
                           {srv.name}
                         </strong>
                       </div>
@@ -1340,11 +1433,19 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     onClick={() => toggleCondition(c.id)}
                     style={{
                       ...styles.imageSelectCard,
-                      borderColor: isSelected ? (isGood ? '#15803D' : '#034EA2') : '#E2E8F0',
-                      boxShadow: isSelected ? `0 0 0 2.5px ${isGood ? '#15803D' : '#034EA2'}` : 'none',
-                      backgroundColor: isSelected ? (isGood ? '#F0FDF4' : '#F0F6FF') : '#FFFFFF',
+                      borderColor: isSelected ? '#10B981' : '#E2E8F0',
+                      boxShadow: isSelected ? '0 0 0 2px #10B981, 0 4px 12px rgba(16, 185, 129, 0.18)' : 'none',
+                      backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                      position: 'relative',
                     }}
                   >
+                    {isSelected && (
+                      <div style={styles.cardSelectedCheckBadge}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
                     <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1354,7 +1455,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                           readOnly
                           style={{ ...styles.checkbox, pointerEvents: 'none' }}
                         />
-                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected && isGood ? '#15803D' : '#1E293B', fontSize: '12px' }}>
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
                           {c.label}
                         </strong>
                       </div>
@@ -1455,12 +1556,146 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
           </section>
 
           {/* ======================================================== */}
-          {/* SECTION 8: PROJECT INFORMATION & PROPERTY LOCATION */}
-          {/* (Full Name & Phone removed; only Project Name required) */}
+          {/* SECTION 8: UPLOAD PHOTOS (OPTIONAL) */}
           {/* ======================================================== */}
           <section style={styles.cardSection} id="section-8">
             <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 8</span>
+              <span style={{ ...styles.stepBadge, backgroundColor: '#D97706' }}>Section 8</span>
+              <div>
+                <h3 style={styles.cardTitle}>Upload photos (optional)</h3>
+                <p style={styles.cardSubtitle}>Add photos of your deck to help us provide a more accurate estimate.</p>
+              </div>
+            </div>
+
+            {/* Note banner */}
+            <div style={styles.photoNoticeBanner}>
+              <span style={{ fontSize: '13px' }}>ℹ️</span>
+              <span style={{ fontSize: '12px', color: '#92400E', lineHeight: 1.4 }}>
+                Uploading photos is completely optional. Adding images helps our senior estimators inspect deck grain, weathering depth, and substrate condition for high-accuracy quotes.
+              </span>
+            </div>
+
+            {/* Drag & Drop Upload Dropzone (Matching User Image 2) */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingPhoto(false);
+                handlePhotoFiles(e.dataTransfer.files);
+              }}
+              onClick={() => {
+                const el = document.getElementById('deck-photo-input');
+                if (el) el.click();
+              }}
+              style={{
+                ...styles.photoDropzone,
+                borderColor: isDraggingPhoto ? '#D97706' : '#F59E0B',
+                backgroundColor: isDraggingPhoto ? '#FEF3C7' : '#FFFBEB',
+              }}
+            >
+              <input
+                type="file"
+                id="deck-photo-input"
+                multiple
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: 'none' }}
+                onChange={(e) => handlePhotoFiles(e.target.files)}
+              />
+              <div style={styles.photoCloudIconBox}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                  <polyline points="12 13 12 7 9 10" />
+                  <line x1="12" y1="7" x2="15" y2="10" />
+                </svg>
+              </div>
+              <strong style={{ fontSize: '15px', color: '#78350F', display: 'block', marginBottom: '4px' }}>
+                Drag & drop your photos here, or click to upload
+              </strong>
+              <span style={{ fontSize: '12px', color: '#92400E' }}>
+                JPG, JPEG, PNG · max 10 MB each · previews stay in your browser
+              </span>
+            </div>
+
+            {/* 4 Quick-Tip Category Guidance Cards (Matching User Image 2) */}
+            <div style={styles.photoCategoriesGrid}>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🏠</span>
+                <strong style={styles.photoCategoryTitle}>Full deck view</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🔍</span>
+                <strong style={styles.photoCategoryTitle}>Close-up of surface</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>🪜</span>
+                <strong style={styles.photoCategoryTitle}>Stairs and railings</strong>
+              </div>
+              <div style={styles.photoCategoryCard}>
+                <span style={{ fontSize: '18px' }}>⚠️</span>
+                <strong style={styles.photoCategoryTitle}>Any problem areas</strong>
+              </div>
+            </div>
+
+            {/* Photo Tips Banner */}
+            <div style={styles.photoTipsBanner}>
+              <span style={{ fontSize: '16px' }}>💡</span>
+              <div style={{ fontSize: '12px', color: '#78350F', lineHeight: 1.5 }}>
+                <strong>Photo tips:</strong> take photos in daylight, stand back for the full deck and get close to any peeling, cracks or gray patches.
+              </div>
+            </div>
+
+            {/* Uploaded Photos Thumbnails Preview */}
+            {uploadedPhotos.length > 0 && (
+              <div style={styles.uploadedPhotosGrid}>
+                {uploadedPhotos.map((photo) => (
+                  <div key={photo.id} style={styles.photoPreviewCard}>
+                    <img src={photo.dataUrl} alt={photo.name} style={styles.photoPreviewImg} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhoto(photo.id);
+                      }}
+                      style={styles.photoRemoveBtn}
+                      title="Remove photo"
+                    >
+                      ✕
+                    </button>
+                    <div style={styles.photoPreviewMeta}>
+                      <span style={styles.photoPreviewName} title={photo.name}>{photo.name}</span>
+                      <span style={styles.photoPreviewSize}>{(photo.size / (1024 * 1024)).toFixed(1)} MB</span>
+                      <select
+                        value={photo.category}
+                        onChange={(e) => handlePhotoCategoryChange(photo.id, e.target.value)}
+                        style={styles.photoCategorySelect}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="full_view">Full deck view</option>
+                        <option value="surface">Close-up surface</option>
+                        <option value="stairs_railings">Stairs & railings</option>
+                        <option value="problem_areas">Problem area</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ======================================================== */}
+          {/* SECTION 9: PROJECT INFORMATION & PROPERTY LOCATION */}
+          {/* (Full Name & Phone removed; only Project Name required) */}
+          {/* ======================================================== */}
+          <section style={styles.cardSection} id="section-9">
+            <div style={styles.cardHeader}>
+              <span style={styles.stepBadge}>Section 9</span>
               <div>
                 <h3 style={styles.cardTitle}>Project Information & Location</h3>
                 <p style={styles.cardSubtitle}>Provide project reference name. Address fields are optional.</p>
@@ -1727,7 +1962,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     cx="43"
                     cy="43"
                     r={radius}
-                    stroke="#034EA2"
+                    stroke="#16A34A"
                     strokeWidth="7"
                     fill="none"
                     strokeDasharray={circumference}
@@ -1738,7 +1973,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   />
                 </svg>
                 <div style={styles.circleCenterText}>
-                  <strong style={{ fontSize: '16px', color: '#034EA2' }}>{progressPercent}%</strong>
+                  <strong style={{ fontSize: '16px', color: '#15803D' }}>{progressPercent}%</strong>
                   <span style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ready</span>
                 </div>
               </div>
@@ -1785,7 +2020,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               </div>
               <div style={styles.specRow}>
                 <span style={styles.specLabel}>Total Billable Area</span>
-                <strong style={{ ...styles.specVal, color: '#034EA2' }}>{totalBillableArea > 0 ? `${totalBillableArea} sq ft` : '—'}</strong>
+                <strong style={{ ...styles.specVal, color: '#15803D' }}>{totalBillableArea > 0 ? `${totalBillableArea} sq ft` : '—'}</strong>
               </div>
               <div style={styles.specRow}>
                 <span style={styles.specLabel}>Wood Species</span>
@@ -1807,70 +2042,104 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   </strong>
                 </div>
               )}
+              {uploadedPhotos.length > 0 && (
+                <div style={styles.specRow}>
+                  <span style={styles.specLabel}>Uploaded Photos</span>
+                  <strong style={{ ...styles.specVal, color: '#D97706' }}>{uploadedPhotos.length} attached</strong>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 3. ARCHITECTURAL REFERENCE & DESCRIPTIONS */}
+          {/* 3. MORE REFERENCES MINI-WINDOW / FRAME */}
           <div style={styles.sidebarCard}>
             <div style={styles.refWindowHeader}>
-              <h4 style={styles.sidebarHeading}>Architectural Reference</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px' }}>🖼️</span>
+                <h4 style={styles.sidebarHeading}>More References</h4>
+              </div>
               <div style={styles.refTabs}>
                 <button
                   type="button"
                   onClick={() => setRefTab('shape')}
-                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'shape' ? '#034EA2' : 'transparent', color: refTab === 'shape' ? '#034EA2' : '#64748B' }}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'shape' ? '#15803D' : 'transparent', color: refTab === 'shape' ? '#15803D' : '#64748B' }}
                 >
                   Shape
                 </button>
                 <button
                   type="button"
                   onClick={() => setRefTab('wood')}
-                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'wood' ? '#034EA2' : 'transparent', color: refTab === 'wood' ? '#034EA2' : '#64748B' }}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'wood' ? '#15803D' : 'transparent', color: refTab === 'wood' ? '#15803D' : '#64748B' }}
                 >
                   Wood Grain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRefTab('services')}
+                  style={{ ...styles.refTabBtn, borderBottomColor: refTab === 'services' ? '#15803D' : 'transparent', color: refTab === 'services' ? '#15803D' : '#64748B' }}
+                >
+                  Scope
                 </button>
               </div>
             </div>
 
             <div style={styles.refBody}>
-              {refTab === 'shape' ? (
+              {refTab === 'shape' && (
                 currentShapeObj ? (
                   <>
                     <img src={currentShapeObj.img} alt={currentShapeObj.label} style={styles.refImage} />
                     <div style={styles.refCaption}>
-                      <strong style={{ fontSize: '12px', color: '#034EA2' }}>{currentShapeObj.label} Footprint</strong>
+                      <strong style={{ fontSize: '12px', color: '#15803D' }}>{currentShapeObj.label} Footprint Blueprint</strong>
                       <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
                         {currentShapeObj.desc}
                       </p>
                     </div>
                   </>
                 ) : (
-                  <div style={styles.emptyRefBox}>Select a shape in Section 1 to view architectural specifications.</div>
+                  <div style={styles.emptyRefBox}>Select a shape in Section 1 to view architectural footprint specifications.</div>
                 )
-              ) : (
+              )}
+
+              {refTab === 'wood' && (
                 currentWoodObj ? (
                   <>
                     <img src={currentWoodObj.img} alt={currentWoodObj.name} style={styles.refImage} />
                     <div style={styles.refCaption}>
-                      <strong style={{ fontSize: '12px', color: '#034EA2' }}>{currentWoodObj.name}</strong>
+                      <strong style={{ fontSize: '12px', color: '#15803D' }}>{currentWoodObj.name}</strong>
                       <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
                         {currentWoodObj.desc}
                       </p>
                     </div>
                   </>
                 ) : (
-                  <div style={styles.emptyRefBox}>Select a wood species in Section 3 to view grain details.</div>
+                  <div style={styles.emptyRefBox}>Select a wood species in Section 3 to view grain, density, and chemical details.</div>
                 )
+              )}
+
+              {refTab === 'services' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80"
+                    alt="Restoration Standards"
+                    style={styles.refImage}
+                  />
+                  <div style={styles.refCaption}>
+                    <strong style={{ fontSize: '12px', color: '#15803D' }}>Deep Restoration Quality Standards</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
+                      Mechanical orbital leveling, commercial stripping, and deep-penetrating conditioning tailored to your wood substrate.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
 
-          {/* 4. LIVE ESTIMATE CARD (CLIENT Q12 COMPLIANT) */}
+          {/* 4. LIVE ESTIMATE CARD (CLIENT Q12 COMPLIANT WITH GUIDANCES & ACTION BUTTONS) */}
           <div style={styles.sidebarCard}>
             <div style={styles.cardHeaderRow}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={styles.livePulse} />
-                <h4 style={{ ...styles.sidebarHeading, color: '#034EA2' }}>
+                <h4 style={{ ...styles.sidebarHeading, color: '#15803D' }}>
                   {isContractor ? 'Contractor Rate Engine' : 'Official Estimate Status'}
                 </h4>
               </div>
@@ -1891,11 +2160,11 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               ) : (
                 <div style={styles.customerReadyBox}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={styles.readyCheck}>✓</span>
-                    <strong style={{ fontSize: '13px', color: '#034EA2' }}>Specifications Configured</strong>
+                    <span style={{ ...styles.readyCheck, backgroundColor: '#15803D' }}>✓</span>
+                    <strong style={{ fontSize: '13px', color: '#15803D' }}>Specifications Configured</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>
-                    Click <strong>Generate Official Estimate</strong> in Section 8 to compute your guaranteed quote.
+                    Click <strong>Generate Official Estimate</strong> in Section 9 to compute your guaranteed quote.
                   </p>
                 </div>
               )
@@ -1932,6 +2201,52 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 <div style={styles.emptyPricePrompt}>Enter parameters to compute breakdown.</div>
               )
             )}
+
+            {/* Guidances & Important Notes Box */}
+            <div style={styles.guidanceNotesBox}>
+              <div style={styles.guidanceHeader}>
+                <span style={{ fontSize: '13px' }}>📋</span>
+                <strong style={{ fontSize: '12px', color: '#1E293B' }}>Guidances & Important Notes</strong>
+              </div>
+              <ul style={styles.guidanceList}>
+                <li>
+                  <strong>Standard Mobilization Minimum:</strong> $2,500 base project minimum.
+                </li>
+                <li>
+                  <strong>Travel Over 45 Mins:</strong> Minimum mobilization shifts to $3,000 to cover travel & crew transit.
+                </li>
+                <li>
+                  <strong>Elevated Decks (8ft+):</strong> Multi-story ladder rigging and safety protocols included.
+                </li>
+                <li>
+                  <strong>1-Year Warranty:</strong> Comprehensive workmanship warranty on all multi-coat restoration.
+                </li>
+              </ul>
+
+              {/* Support and Contact Us Buttons at Last of Box */}
+              <div style={styles.guidanceActionsRow}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReachOutSubject('Customer Support & Estimate Guidance');
+                    setReachOutOpen(true);
+                  }}
+                  style={styles.guidanceSupportBtn}
+                >
+                  <span>📞 Support</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReachOutSubject('Contact Senior Estimator Consultation');
+                    setReachOutOpen(true);
+                  }}
+                  style={styles.guidanceContactBtn}
+                >
+                  <span>💬 Contact Us</span>
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -2024,16 +2339,19 @@ const styles = {
   },
   topBrandingBar: {
     maxWidth: '1440px',
-    margin: '0 auto 20px auto',
+    margin: '0 auto 16px auto',
     backgroundColor: '#FFFFFF',
     borderRadius: '14px',
     border: '1px solid #E2E8F0',
-    padding: '12px 20px',
+    padding: '10px 18px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '12px',
-    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+    boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+    position: 'sticky',
+    top: '10px',
+    zIndex: 90,
   },
   topSectionBoxesRow: {
     display: 'flex',
@@ -2068,18 +2386,212 @@ const styles = {
   topReachOutBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '7px',
-    padding: '8px 16px',
-    backgroundColor: '#FFFFFF',
-    color: '#034EA2',
-    border: '1.5px solid #034EA2',
-    borderRadius: '9px',
+    gap: '8px',
+    padding: '8px 18px',
+    backgroundColor: '#034EA2',
+    backgroundImage: 'linear-gradient(135deg, #034EA2 0%, #0057B8 100%)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '999px',
     fontWeight: '700',
-    fontSize: '12.5px',
+    fontSize: '13px',
     cursor: 'pointer',
     transition: 'all 0.18s ease',
     whiteSpace: 'nowrap',
-    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.1)',
+    boxShadow: '0 3px 10px rgba(3, 78, 162, 0.35)',
+  },
+  reachOutIconPill: {
+    width: '20px',
+    height: '20px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardSelectedCheckBadge: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    backgroundColor: '#10B981',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.45)',
+    zIndex: 10,
+  },
+  photoNoticeBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '10px 14px',
+    backgroundColor: '#FFFBEB',
+    borderRadius: '8px',
+    border: '1px solid #FDE68A',
+    marginBottom: '16px',
+  },
+  photoDropzone: {
+    border: '2px dashed #F59E0B',
+    borderRadius: '12px',
+    padding: '28px 20px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    marginBottom: '16px',
+  },
+  photoCloudIconBox: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    backgroundColor: '#FEF3C7',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 10px auto',
+  },
+  photoCategoriesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '10px',
+    marginBottom: '16px',
+  },
+  photoCategoryCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 14px',
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+  },
+  photoCategoryTitle: {
+    fontSize: '12px',
+    color: '#78350F',
+    fontWeight: '700',
+  },
+  photoTipsBanner: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    padding: '10px 14px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    borderRadius: '8px',
+    marginBottom: '16px',
+  },
+  uploadedPhotosGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  photoPreviewCard: {
+    position: 'relative',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+  },
+  photoPreviewImg: {
+    width: '100%',
+    height: '110px',
+    objectFit: 'cover',
+  },
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: '6px',
+    right: '6px',
+    width: '22px',
+    height: '22px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    color: '#FFFFFF',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '11px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '700',
+  },
+  photoPreviewMeta: {
+    padding: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  photoPreviewName: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#1E293B',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  photoPreviewSize: {
+    fontSize: '10px',
+    color: '#64748B',
+  },
+  photoCategorySelect: {
+    fontSize: '11px',
+    padding: '3px 6px',
+    borderRadius: '6px',
+    border: '1px solid #CBD5E1',
+    backgroundColor: '#F8FAFC',
+    color: '#334155',
+  },
+  guidanceNotesBox: {
+    marginTop: '16px',
+    padding: '14px',
+    backgroundColor: '#F8FAFC',
+    borderRadius: '10px',
+    border: '1px solid #E2E8F0',
+  },
+  guidanceHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginBottom: '8px',
+  },
+  guidanceList: {
+    margin: '0 0 12px 0',
+    paddingLeft: '18px',
+    fontSize: '11px',
+    color: '#475569',
+    lineHeight: 1.5,
+  },
+  guidanceActionsRow: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '10px',
+  },
+  guidanceSupportBtn: {
+    flex: 1,
+    padding: '8px 10px',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    borderRadius: '7px',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#034EA2',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  guidanceContactBtn: {
+    flex: 1,
+    padding: '8px 10px',
+    backgroundColor: '#034EA2',
+    border: 'none',
+    borderRadius: '7px',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   reachOutTooltip: {
     position: 'absolute',
