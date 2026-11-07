@@ -465,18 +465,30 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     return floorArea + extra;
   }, [floorArea, selectedComponents, componentSqft]);
 
-  // Dynamic Progress Percentage (Starts at 0%)
-  const progressPercent = useMemo(() => {
-    let completed = 0;
-    if (shape && floorArea > 0) completed += 1;
-    if (woodSpecies) completed += 1;
-    if (height) completed += 1;
-    if (existingCoating) completed += 1;
-    if (services.length > 0) completed += 1;
-    if (conditions.length > 0) completed += 1;
-    if (projectName.trim()) completed += 1;
-    return Math.round((completed / 7) * 100);
-  }, [shape, floorArea, woodSpecies, height, existingCoating, services, conditions, projectName]);
+  // Dynamic 8-Section Progress Tracking (Starts at 0% when empty)
+  const sectionSteps = useMemo(() => [
+    { num: 1, name: 'Dimensions', done: Boolean(shape && floorArea > 0), id: 'section-1' },
+    { num: 2, name: 'Components', done: Boolean(selectedComponents.length > 0), id: 'section-2' },
+    { num: 3, name: 'Wood', done: Boolean(woodSpecies), id: 'section-3' },
+    { num: 4, name: 'Elevation', done: Boolean(height), id: 'section-4' },
+    { num: 5, name: 'Coating', done: Boolean(existingCoating), id: 'section-5' },
+    { num: 6, name: 'Services', done: Boolean(services.length > 0), id: 'section-6' },
+    { num: 7, name: 'Condition', done: Boolean(conditions.length > 0), id: 'section-7' },
+    { num: 8, name: 'Details', done: Boolean(projectName.trim()), id: 'section-8' },
+  ], [shape, floorArea, selectedComponents, woodSpecies, height, existingCoating, services, conditions, projectName]);
+
+  const completedSectionsCount = useMemo(() => sectionSteps.filter((s) => s.done).length, [sectionSteps]);
+  const progressPercent = useMemo(
+    () => Math.round((completedSectionsCount / sectionSteps.length) * 100),
+    [completedSectionsCount, sectionSteps.length]
+  );
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Toggle Component Selection
   const toggleComponent = (id, defaultVal) => {
@@ -840,29 +852,76 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   return (
     <div style={styles.estimatorPageContainer}>
-      {/* Top Application Branding & Actions Bar */}
+      {/* Top Application Progress & Actions Bar (Bright Modern Theme) */}
       <div style={styles.topBrandingBar}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={styles.brandIconBox}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
+        {/* Left: Sections Completing Progress Indicator */}
+        <div style={styles.topProgressArea}>
+          <div style={styles.topProgressMetaRow}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={styles.topProgressLabel}>Sections Completed:</span>
+              <strong style={styles.topProgressCount}>{completedSectionsCount} of 8</strong>
+              <span
+                style={{
+                  ...styles.topProgressPercentBadge,
+                  backgroundColor: progressPercent === 100 ? '#DCFCE7' : '#EBF3FA',
+                  color: progressPercent === 100 ? '#15803D' : '#034EA2',
+                  borderColor: progressPercent === 100 ? '#86EFAC' : '#BFDBFE',
+                }}
+              >
+                {progressPercent}% Complete
+              </span>
+            </div>
+            <span style={styles.topProgressStatusHint}>
+              {progressPercent === 100
+                ? 'All sections configured • Ready to calculate'
+                : `${8 - completedSectionsCount} section${8 - completedSectionsCount === 1 ? '' : 's'} remaining`}
+            </span>
           </div>
-          <div>
-            <h2 style={styles.brandAppTitle}>Deck Restoration Plus</h2>
-            <span style={styles.brandAppSub}>Precision Deck Restoration Estimator</span>
+
+          {/* Smooth Progress Track */}
+          <div style={styles.topProgressBarTrack}>
+            <div
+              style={{
+                ...styles.topProgressBarFill,
+                width: `${progressPercent}%`,
+                backgroundColor: progressPercent === 100 ? '#15803D' : '#034EA2',
+              }}
+            />
+          </div>
+
+          {/* Interactive Section Step Pills */}
+          <div style={styles.topSectionPillsRow}>
+            {sectionSteps.map((step) => (
+              <button
+                key={step.num}
+                type="button"
+                onClick={() => scrollToSection(step.id)}
+                title={`Jump to Section ${step.num}: ${step.name} (${step.done ? 'Completed' : 'Pending'})`}
+                style={{
+                  ...styles.topSectionPill,
+                  backgroundColor: step.done ? '#EBF3FA' : '#F8FAFC',
+                  borderColor: step.done ? '#034EA2' : '#CBD5E1',
+                  color: step.done ? '#034EA2' : '#64748B',
+                }}
+              >
+                <span style={{ fontWeight: step.done ? '800' : '600' }}>
+                  {step.done ? '✓ ' : ''}S{step.num}
+                </span>
+                <span style={styles.topSectionPillName}>{step.name}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Right: Actions */}
+        <div style={styles.topActionsGroup}>
           <button
             type="button"
             onClick={handleResetForNewEstimate}
             style={styles.topNewEstimateBtn}
-            title="Clear all fields and calculate a new deck"
+            title="Clear all fields and calculate a fresh estimate"
           >
-            + Start New Estimate
+            + New Estimation
           </button>
           <button
             type="button"
@@ -1995,57 +2054,115 @@ const styles = {
   topBrandingBar: {
     maxWidth: '1440px',
     margin: '0 auto 20px auto',
-    backgroundColor: '#0A192F',
-    borderRadius: '12px',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '14px',
+    border: '1px solid #E2E8F0',
     padding: '16px 24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: '16px',
-    boxShadow: '0 4px 16px rgba(10, 25, 47, 0.12)',
+    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
   },
-  brandIconBox: {
-    width: '38px',
-    height: '38px',
-    borderRadius: '8px',
-    backgroundColor: '#034EA2',
+  topProgressArea: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    flex: '1 1 540px',
+    minWidth: '280px',
+  },
+  topProgressMetaRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '8px',
   },
-  brandAppTitle: {
-    margin: 0,
-    fontSize: '17px',
+  topProgressLabel: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#475569',
+  },
+  topProgressCount: {
+    fontSize: '13px',
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: '-0.2px',
+    color: '#034EA2',
   },
-  brandAppSub: {
-    fontSize: '12px',
-    color: '#94A3B8',
+  topProgressPercentBadge: {
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    border: '1px solid',
+  },
+  topProgressStatusHint: {
+    fontSize: '11px',
     fontWeight: '500',
-    display: 'block',
+    color: '#64748B',
+  },
+  topProgressBarTrack: {
+    width: '100%',
+    height: '7px',
+    backgroundColor: '#F1F5F9',
+    borderRadius: '999px',
+    overflow: 'hidden',
+    border: '1px solid #E2E8F0',
+  },
+  topProgressBarFill: {
+    height: '100%',
+    borderRadius: '999px',
+    transition: 'width 0.35s ease, background-color 0.35s ease',
+  },
+  topSectionPillsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
+    marginTop: '2px',
+  },
+  topSectionPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    border: '1px solid',
+    fontSize: '11px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    background: 'none',
+  },
+  topSectionPillName: {
+    fontSize: '11px',
+    fontWeight: '500',
+  },
+  topActionsGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
   },
   topNewEstimateBtn: {
-    padding: '9px 16px',
+    padding: '10px 18px',
     backgroundColor: '#034EA2',
     color: '#FFFFFF',
-    border: '1px solid #1E40AF',
+    border: 'none',
     borderRadius: '8px',
     fontWeight: '700',
-    fontSize: '12px',
+    fontSize: '13px',
     cursor: 'pointer',
+    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.25)',
     transition: 'all 0.18s ease',
   },
   topReachOutBtn: {
-    padding: '9px 18px',
-    backgroundColor: '#1E293B',
-    color: '#F8FAFC',
-    border: '1px solid #334155',
+    padding: '10px 18px',
+    backgroundColor: '#FFFFFF',
+    color: '#034EA2',
+    border: '1.5px solid #034EA2',
     borderRadius: '8px',
     fontWeight: '700',
-    fontSize: '12px',
+    fontSize: '13px',
     cursor: 'pointer',
     transition: 'all 0.18s ease',
   },

@@ -195,3 +195,4 @@ The dedicated repair engine replaces legacy rule R3 with an itemized, deduplicat
   - `totalAmount`: Final authoritative job amount.
 - **`leads` Collection:**
   - Automatic lead generation upon clicking *"Book Site Inspection & Convert to Lead"*, linking the user ID, deck ID, and calculated estimate.
+

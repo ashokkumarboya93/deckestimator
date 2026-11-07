@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — CORS Configuration
 // =============================================
 // Defines allowed origins for cross-origin requests.
