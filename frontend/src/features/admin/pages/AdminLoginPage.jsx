@@ -22,6 +22,12 @@ export default function AdminLoginPage() {
 
   const from = location.state?.from?.pathname || '/admin/dashboard';
 
+  const fillDemoAdmin = () => {
+    setEmail('admin@deckestimator.com');
+    setPassword('AdminPass123!');
+    setErrorMessage('');
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMessage('');
@@ -70,6 +76,26 @@ export default function AdminLoginPage() {
             <span style={{ fontSize: '13px', color: '#991b1b', lineHeight: '1.4' }}>{errorMessage}</span>
           </div>
         )}
+
+        {/* Demo Credentials Quick-Fill Banner */}
+        <div style={styles.demoBox}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#93c5fd', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Standard Admin Access
+            </span>
+            <button
+              type="button"
+              onClick={fillDemoAdmin}
+              style={styles.demoFillBtn}
+            >
+              Autofill Credentials
+            </button>
+          </div>
+          <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '6px', fontFamily: 'monospace' }}>
+            <div>Email: <strong style={{ color: '#ffffff' }}>admin@deckestimator.com</strong></div>
+            <div>Password: <strong style={{ color: '#ffffff' }}>AdminPass123!</strong></div>
+          </div>
+        </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -246,6 +272,24 @@ const styles = {
     borderRadius: '8px',
     padding: '10px 14px',
     marginBottom: '20px',
+  },
+  demoBox: {
+    backgroundColor: '#132847',
+    border: '1px solid #1e40af',
+    borderRadius: '10px',
+    padding: '12px 14px',
+    marginBottom: '20px',
+  },
+  demoFillBtn: {
+    backgroundColor: '#1d4ed8',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
   },
   form: {
     display: 'flex',
