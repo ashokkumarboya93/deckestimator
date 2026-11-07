@@ -422,6 +422,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   // Reach Out / Support Modal State
   const [reachOutOpen, setReachOutOpen] = useState(false);
+  const [reachOutHover, setReachOutHover] = useState(false);
   const [reachOutSubject, setReachOutSubject] = useState('Estimator Assistance & Deck Scope');
   const [reachOutMsg, setReachOutMsg] = useState('');
   const [reachOutSending, setReachOutSending] = useState(false);
@@ -852,62 +853,63 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   return (
     <div style={styles.estimatorPageContainer}>
-      {/* Top Application Section Status & Actions Bar (Bright Modern Theme) */}
+      {/* Top Application Section Status & Reach Out Bar (Single Unified Line) */}
       <div style={styles.topBrandingBar}>
         {/* Left: Section Boxes (Filled upon selection) */}
-        <div style={styles.topSectionBoxesContainer}>
-          <div style={styles.topSectionBoxesRow}>
-            {sectionSteps.map((step) => {
-              const isFilled = step.done;
-              return (
-                <button
-                  key={step.num}
-                  type="button"
-                  onClick={() => scrollToSection(step.id)}
-                  title={`Section ${step.num}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
+        <div style={styles.topSectionBoxesRow}>
+          {sectionSteps.map((step) => {
+            const isFilled = step.done;
+            return (
+              <button
+                key={step.num}
+                type="button"
+                onClick={() => scrollToSection(step.id)}
+                title={`Section ${step.num}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
+                style={{
+                  ...styles.topSectionBox,
+                  backgroundColor: isFilled ? '#034EA2' : '#FFFFFF',
+                  borderColor: isFilled ? '#034EA2' : '#CBD5E1',
+                  color: isFilled ? '#FFFFFF' : '#334155',
+                  boxShadow: isFilled ? '0 2px 6px rgba(3, 78, 162, 0.22)' : 'none',
+                }}
+              >
+                <span style={{ fontWeight: '800', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  {isFilled && <span style={{ fontSize: '12px' }}>✓</span>}
+                  S{step.num}
+                </span>
+                <span
                   style={{
-                    ...styles.topSectionBox,
-                    backgroundColor: isFilled ? '#034EA2' : '#FFFFFF',
-                    borderColor: isFilled ? '#034EA2' : '#CBD5E1',
-                    color: isFilled ? '#FFFFFF' : '#334155',
-                    boxShadow: isFilled ? '0 2px 6px rgba(3, 78, 162, 0.22)' : 'none',
+                    ...styles.topSectionBoxName,
+                    color: isFilled ? '#FFFFFF' : '#64748B',
                   }}
                 >
-                  <span style={{ fontWeight: '800', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    {isFilled && <span style={{ fontSize: '12px' }}>✓</span>}
-                    S{step.num}
-                  </span>
-                  <span
-                    style={{
-                      ...styles.topSectionBoxName,
-                      color: isFilled ? '#FFFFFF' : '#64748B',
-                    }}
-                  >
-                    {step.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                  {step.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: Actions */}
-        <div style={styles.topActionsGroup}>
-          <button
-            type="button"
-            onClick={handleResetForNewEstimate}
-            style={styles.topNewEstimateBtn}
-            title="Clear all fields and calculate a fresh estimate"
-          >
-            + New Estimation
-          </button>
+        {/* Right: Reach Out button in exact same line with Hover Tooltip */}
+        <div style={styles.topReachOutWrapper}>
           <button
             type="button"
             onClick={() => setReachOutOpen(true)}
+            onMouseEnter={() => setReachOutHover(true)}
+            onMouseLeave={() => setReachOutHover(false)}
             style={styles.topReachOutBtn}
+            title="Need Assistance?"
           >
-            <span>📞 Reach Out • Need Assistance?</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            <span>Reach Out</span>
           </button>
+          {reachOutHover && (
+            <div style={styles.reachOutTooltip}>
+              Need Assistance?
+            </div>
+          )}
         </div>
       </div>
 
@@ -1713,8 +1715,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
             type="button"
             onClick={() => setReachOutOpen(true)}
             style={styles.sidebarReachOutBtn}
+            title="Need Assistance? Click to contact customer support or senior estimator"
           >
-            <span>Reach Out • Need Assistance?</span>
+            <span>📞 Reach Out</span>
           </button>
 
           {/* 1. CIRCLE STEP PROGRESS CARD */}
@@ -2035,25 +2038,19 @@ const styles = {
     backgroundColor: '#FFFFFF',
     borderRadius: '14px',
     border: '1px solid #E2E8F0',
-    padding: '16px 24px',
+    padding: '12px 20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: '16px',
+    gap: '12px',
     boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
-  },
-  topSectionBoxesContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    flex: '1 1 auto',
-    minWidth: '280px',
   },
   topSectionBoxesRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     flexWrap: 'wrap',
+    flex: '1 1 auto',
   },
   topSectionBox: {
     display: 'inline-flex',
@@ -2072,34 +2069,42 @@ const styles = {
     fontSize: '12px',
     fontWeight: '500',
   },
-  topActionsGroup: {
-    display: 'flex',
+  topReachOutWrapper: {
+    position: 'relative',
+    display: 'inline-flex',
     alignItems: 'center',
-    gap: '10px',
-    flexWrap: 'wrap',
-  },
-  topNewEstimateBtn: {
-    padding: '10px 18px',
-    backgroundColor: '#034EA2',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '13px',
-    cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.25)',
-    transition: 'all 0.18s ease',
+    flexShrink: 0,
   },
   topReachOutBtn: {
-    padding: '10px 18px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
     backgroundColor: '#FFFFFF',
     color: '#034EA2',
     border: '1.5px solid #034EA2',
     borderRadius: '8px',
     fontWeight: '700',
-    fontSize: '13px',
+    fontSize: '12px',
     cursor: 'pointer',
     transition: 'all 0.18s ease',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 1px 4px rgba(3, 78, 162, 0.08)',
+  },
+  reachOutTooltip: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: '0',
+    backgroundColor: '#0F172A',
+    color: '#FFFFFF',
+    padding: '5px 11px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.18)',
+    zIndex: 100,
+    pointerEvents: 'none',
   },
   startNewEstimateActionBtn: {
     padding: '12px 18px',
