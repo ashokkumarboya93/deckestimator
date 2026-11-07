@@ -852,64 +852,42 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
 
   return (
     <div style={styles.estimatorPageContainer}>
-      {/* Top Application Progress & Actions Bar (Bright Modern Theme) */}
+      {/* Top Application Section Status & Actions Bar (Bright Modern Theme) */}
       <div style={styles.topBrandingBar}>
-        {/* Left: Sections Completing Progress Indicator */}
-        <div style={styles.topProgressArea}>
-          <div style={styles.topProgressMetaRow}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={styles.topProgressLabel}>Sections Completed:</span>
-              <strong style={styles.topProgressCount}>{completedSectionsCount} of 8</strong>
-              <span
-                style={{
-                  ...styles.topProgressPercentBadge,
-                  backgroundColor: progressPercent === 100 ? '#DCFCE7' : '#EBF3FA',
-                  color: progressPercent === 100 ? '#15803D' : '#034EA2',
-                  borderColor: progressPercent === 100 ? '#86EFAC' : '#BFDBFE',
-                }}
-              >
-                {progressPercent}% Complete
-              </span>
-            </div>
-            <span style={styles.topProgressStatusHint}>
-              {progressPercent === 100
-                ? 'All sections configured • Ready to calculate'
-                : `${8 - completedSectionsCount} section${8 - completedSectionsCount === 1 ? '' : 's'} remaining`}
-            </span>
-          </div>
-
-          {/* Smooth Progress Track */}
-          <div style={styles.topProgressBarTrack}>
-            <div
-              style={{
-                ...styles.topProgressBarFill,
-                width: `${progressPercent}%`,
-                backgroundColor: progressPercent === 100 ? '#15803D' : '#034EA2',
-              }}
-            />
-          </div>
-
-          {/* Interactive Section Step Pills */}
-          <div style={styles.topSectionPillsRow}>
-            {sectionSteps.map((step) => (
-              <button
-                key={step.num}
-                type="button"
-                onClick={() => scrollToSection(step.id)}
-                title={`Jump to Section ${step.num}: ${step.name} (${step.done ? 'Completed' : 'Pending'})`}
-                style={{
-                  ...styles.topSectionPill,
-                  backgroundColor: step.done ? '#EBF3FA' : '#F8FAFC',
-                  borderColor: step.done ? '#034EA2' : '#CBD5E1',
-                  color: step.done ? '#034EA2' : '#64748B',
-                }}
-              >
-                <span style={{ fontWeight: step.done ? '800' : '600' }}>
-                  {step.done ? '✓ ' : ''}S{step.num}
-                </span>
-                <span style={styles.topSectionPillName}>{step.name}</span>
-              </button>
-            ))}
+        {/* Left: Section Boxes (Filled upon selection) */}
+        <div style={styles.topSectionBoxesContainer}>
+          <div style={styles.topSectionBoxesRow}>
+            {sectionSteps.map((step) => {
+              const isFilled = step.done;
+              return (
+                <button
+                  key={step.num}
+                  type="button"
+                  onClick={() => scrollToSection(step.id)}
+                  title={`Section ${step.num}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
+                  style={{
+                    ...styles.topSectionBox,
+                    backgroundColor: isFilled ? '#034EA2' : '#FFFFFF',
+                    borderColor: isFilled ? '#034EA2' : '#CBD5E1',
+                    color: isFilled ? '#FFFFFF' : '#334155',
+                    boxShadow: isFilled ? '0 2px 6px rgba(3, 78, 162, 0.22)' : 'none',
+                  }}
+                >
+                  <span style={{ fontWeight: '800', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    {isFilled && <span style={{ fontSize: '12px' }}>✓</span>}
+                    S{step.num}
+                  </span>
+                  <span
+                    style={{
+                      ...styles.topSectionBoxName,
+                      color: isFilled ? '#FFFFFF' : '#64748B',
+                    }}
+                  >
+                    {step.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2065,76 +2043,33 @@ const styles = {
     gap: '16px',
     boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
   },
-  topProgressArea: {
+  topSectionBoxesContainer: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    flex: '1 1 540px',
+    alignItems: 'center',
+    flex: '1 1 auto',
     minWidth: '280px',
   },
-  topProgressMetaRow: {
+  topSectionBoxesRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
     gap: '8px',
-  },
-  topProgressLabel: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#475569',
-  },
-  topProgressCount: {
-    fontSize: '13px',
-    fontWeight: '800',
-    color: '#034EA2',
-  },
-  topProgressPercentBadge: {
-    fontSize: '11px',
-    fontWeight: '700',
-    padding: '2px 8px',
-    borderRadius: '12px',
-    border: '1px solid',
-  },
-  topProgressStatusHint: {
-    fontSize: '11px',
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  topProgressBarTrack: {
-    width: '100%',
-    height: '7px',
-    backgroundColor: '#F1F5F9',
-    borderRadius: '999px',
-    overflow: 'hidden',
-    border: '1px solid #E2E8F0',
-  },
-  topProgressBarFill: {
-    height: '100%',
-    borderRadius: '999px',
-    transition: 'width 0.35s ease, background-color 0.35s ease',
-  },
-  topSectionPillsRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
     flexWrap: 'wrap',
-    marginTop: '2px',
   },
-  topSectionPill: {
+  topSectionBox: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '4px',
-    padding: '3px 8px',
-    borderRadius: '6px',
-    border: '1px solid',
-    fontSize: '11px',
+    gap: '6px',
+    padding: '7px 12px',
+    borderRadius: '8px',
+    border: '1.5px solid',
+    fontSize: '12px',
+    fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    background: 'none',
+    transition: 'all 0.18s ease',
+    textDecoration: 'none',
   },
-  topSectionPillName: {
-    fontSize: '11px',
+  topSectionBoxName: {
+    fontSize: '12px',
     fontWeight: '500',
   },
   topActionsGroup: {
