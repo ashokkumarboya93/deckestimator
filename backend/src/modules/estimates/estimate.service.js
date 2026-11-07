@@ -146,7 +146,17 @@ async function createEstimate(data, user, ipAddress) {
       accessType: data.accessType || (deck.structureDetails?.elevation > 4 ? 'elevated_one_story' : 'ground_level'),
       coatingType: data.coatingType || 'oil_penetrating_one_coat',
       coatingConfidence: data.coatingConfidence || 'medium',
-      conditionFlags: data.conditionFlags || deck.visibleConditions || [],
+      conditionFlags: data.conditionFlags || data.conditions || deck.visibleConditions || [],
+      damageConditions: data.damageConditions || data.conditions || data.conditionFlags || deck.visibleConditions || [],
+      crackBoardCount: data.crackBoardCount || 0,
+      rottedBoardCount: data.rottedBoardCount || 0,
+      warpedBoardCount: data.warpedBoardCount || 0,
+      looseBoardCount: data.looseBoardCount || 0,
+      waterDamagedBoardCount: data.waterDamagedBoardCount || 0,
+      crackLooseOverlapCount: data.crackLooseOverlapCount || 0,
+      exactHeightFt: data.exactHeightFt,
+      stainType: data.stainType || data.finishType,
+      services: data.services || data.restorationScope || ['cleaning'],
       billingRate: data.billingRate || 75,
       floorProductionRate: data.floorProductionRate || 50,
       customPrices: data.customPrices || data.productPrices || {},
@@ -154,7 +164,7 @@ async function createEstimate(data, user, ipAddress) {
       ...(data.restorationDetails || {}),
     };
 
-    const clientCalc = pricingEngine.calculateClientPricing(clientParams);
+    const clientCalc = pricingEngine.calculateRestorationEstimate(clientParams);
 
     selectedMaterialsItems = [
       {

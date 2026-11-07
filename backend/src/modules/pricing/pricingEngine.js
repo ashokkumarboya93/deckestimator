@@ -2,15 +2,17 @@
 // Deck Restoration Plus — Pricing Calculation Engine
 // =============================================
 // Single Source of Truth implementing Build Specification F1–F15:
-// - Rate Card Lookup (prep level × finish column)
+// - Rate Card Lookup (prep level × finish column, including semi_solid)
 // - Rate position (midpoint default: 0.5)
 // - Stacked-finish add-on ($1.00/sqft per finish beyond the first)
 // - Pure production rates (base hours = Σ A / production[s])
 // - Additive labour adjustments (wood % + access % on base hours charged at $250/hr)
 // - Minimum Job Policy: calculates pure estimate, flags minJobNote without forcing $2,500 if under
 // - Client Q12 Strict Compliance: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown;
-//   Contractor & Admin see full breakdown, low-high range, and overrides.
-// - Clean separation of Rule R2 (Photo Review) and Rule R3 (Contractor Quote for Repairs)
+//   Contractor & Admin see full breakdown, low-high range, unit rates, and repair estimate line.
+// - Section 8: Damage Condition Implementation (9 conditions) with Overlap Prevention
+// - Admin switches for 5% Weathered and 15% Mold (off by default until client confirms)
+// - Rule R3 replaced by dedicated Repair Estimate in Contractor Dashboard
 
 const { BadRequestError } = require('../../shared/errors');
 
@@ -19,22 +21,44 @@ function round2(num) {
 }
 
 const DEFAULT_PRICING_CONFIG = {
-  version: 3,
+  version: 4,
   active: true,
   labourRate: 250,
   accessMode: 'percent', // 'percent' (default) or 'fixed_hours'
   ratePosition: 0.5,
   addonPerSqft: 1.0,
   startRate: 2.5,
+  // Admin switches proposed by specification (off by default until client confirmation)
+  switches: {
+    applyWeatheredLabor: false, // 5% additional labor for weathered condition
+    applyMoldLabor: false,      // 15% additional labor for heavy mildew/mold condition
+  },
   rateCard: {
-    clean: { sealer: [2.5, 3.0], semi: [3.0, 3.5], solid: [3.5, 4.0] },
-    strip: { sealer: [3.0, 3.5], semi: [3.5, 4.0], solid: [5.0, 6.0] },
-    strip_sand: { sealer: [3.5, 4.5], semi: [4.0, 4.5], solid: [5.5, 6.5] },
+    clean: {
+      sealer: [2.5, 3.0],
+      semi: [3.0, 3.5],
+      semi_solid: [3.25, 3.75],
+      solid: [3.5, 4.0],
+    },
+    strip: {
+      sealer: [3.0, 3.5],
+      semi: [3.5, 4.0],
+      semi_solid: [4.25, 5.0],
+      solid: [5.0, 6.0],
+    },
+    strip_sand: {
+      sealer: [3.5, 4.5],
+      semi: [4.0, 4.5],
+      semi_solid: [4.75, 5.5],
+      solid: [5.5, 6.5],
+    },
   },
   production: {
     cleaning: 100,
     pressure_washing: 100,
     sanding: 60,
+    mechanical_sanding: 60,
+    detail_sanding: 90,
     paint_removal: 40,
     stain_stripping: 50,
     stripping: 50,
@@ -45,28 +69,43 @@ const DEFAULT_PRICING_CONFIG = {
   wood: {
     pt_pine: { label: 'Pressure-treated pine', pct: 0 },
     pressure_treated_pine: { label: 'Pressure-treated pine', pct: 0 },
-    cedar: { label: 'Cedar', pct: 0.10 },
-    redwood: { label: 'Redwood', pct: 0.15 },
+    cedar: { label: 'Western Red Cedar', pct: 0.10 },
+    redwood: { label: 'California Redwood', pct: 0.15 },
     meranti: { label: 'Meranti', pct: 0.20 },
     mahogany: { label: 'Mahogany', pct: 0.20 },
     tigerwood: { label: 'Tigerwood', pct: 0.30 },
-    ipe: { label: 'Ipe', pct: 0.35 },
+    teak: { label: 'Teak', pct: 0.35 },
+    ipe: { label: 'Brazilian Ipe', pct: 0.35 },
     trex: { label: 'Composite Trex', pct: -0.55, servicesAllowed: ['cleaning', 'pressure_washing'] },
     composite: { label: 'Composite Trex', pct: -0.55, servicesAllowed: ['cleaning', 'pressure_washing'] },
   },
   access: {
-    ground: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
-    ground_level: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
-    standard_ground: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
+    ground: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
+    ground_level: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
+    standard_ground: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
+    low: { pct: 0.15, fixedHours: 4, hint: '2-4 ft' },
     first: { pct: 0.15, fixedHours: 4, hint: '4-8 ft' },
     first_story: { pct: 0.15, fixedHours: 4, hint: '4-8 ft' },
-    low: { pct: 0.15, fixedHours: 4, hint: '4-8 ft' },
     second: { pct: 0.35, fixedHours: 8, hint: '8-12 ft' },
     second_story: { pct: 0.35, fixedHours: 8, hint: '8-12 ft' },
     medium: { pct: 0.35, fixedHours: 8, hint: '8-12 ft' },
     roof: { pct: 0.60, fixedHours: 16, hint: 'over 12 ft' },
     roof_work: { pct: 0.60, fixedHours: 16, hint: 'over 12 ft' },
     high: { pct: 0.60, fixedHours: 16, hint: 'over 12 ft' },
+  },
+  coatingMultipliers: {
+    bare_weathered: 1.0,
+    maintained_penetrating: 0.7,
+    oil_one_coat: 1.3,
+    heavy_oil_buildup: 1.9,
+    film_former: 2.2,
+    solid_paint: 2.8,
+  },
+  damagePricing: {
+    inspectionFee: 150,           // Single project inspection charge for structural/water rot
+    boardReplacementCost: 45,     // $20 material + $25 replacement labor per board
+    crackRepairCost: 15,          // $5 epoxy/filler + $10 minor repair labor per board
+    looseRefastenCost: 12,        // $3 stainless fasteners + $9 refastening labor per board
   },
   areas: {
     railingSqftPerLf: 4,
@@ -84,6 +123,289 @@ const DEFAULT_PRICING_CONFIG = {
  */
 function normKey(str) {
   return String(str || '').toLowerCase().trim().replace(/[\s\/-]+/g, '_');
+}
+
+/**
+ * Maps numeric elevation in feet to access key (Client Q7)
+ */
+function mapHeightFeetToAccessKey(heightFt) {
+  const h = Number(heightFt);
+  if (isNaN(h) || h <= 2) return 'ground';
+  if (h <= 4) return 'low';
+  if (h <= 8) return 'first';
+  if (h <= 12) return 'second';
+  return 'roof';
+}
+
+/**
+ * Section 8: DAMAGE CONDITION & REPAIR ESTIMATE ENGINE
+ * Calculates repair estimate with strict overlap-prevention rules:
+ * 1. Good Condition: Exclusive option, zero repair charges.
+ * 2. Crack & Loose Board on same board: charge replacement only ($45), avoid double charge ($15 + $12).
+ * 3. Rotted & Water Damaged: single inspection fee ($150) and combined replacement list.
+ * 4. Peeling with a coating that needs stripping: already covered by the stripping service ($0).
+ * 5. Weathered (5%) and Mold (15%): Admin switches, off by default until client confirms.
+ */
+function calculateRepairEstimate(inp = {}, restorationContext = {}, customCfg = null) {
+  const cfg = customCfg || DEFAULT_PRICING_CONFIG;
+  const dmg = cfg.damagePricing || DEFAULT_PRICING_CONFIG.damagePricing;
+  const switches = cfg.switches || DEFAULT_PRICING_CONFIG.switches;
+
+  // Raw damage condition inputs
+  const rawConditions = Array.isArray(inp.damageConditions)
+    ? inp.damageConditions
+    : (inp.condition ? [inp.condition] : []);
+  const condSet = new Set(rawConditions.map((c) => normKey(c)));
+
+  // Board counts for contractor use
+  const crackCount = Math.max(0, parseInt(inp.crackBoardCount || inp.crackCount || 0, 10));
+  const rottedCount = Math.max(0, parseInt(inp.rottedBoardCount || inp.rottedCount || 0, 10));
+  const warpedCount = Math.max(0, parseInt(inp.warpedBoardCount || inp.warpedCount || 0, 10));
+  const looseCount = Math.max(0, parseInt(inp.looseBoardCount || inp.looseCount || 0, 10));
+  const waterDamagedCount = Math.max(0, parseInt(inp.waterDamagedBoardCount || inp.waterDamagedCount || 0, 10));
+  // Overlap input: boards that have both crack AND loose fasteners
+  const crackLooseOverlap = Math.min(
+    Math.max(0, parseInt(inp.crackLooseOverlapCount || 0, 10)),
+    Math.min(crackCount, looseCount)
+  );
+
+  const lineItems = [];
+  const overlapDeductions = [];
+  let repairTotal = 0;
+  let structuralInspectionRequired = false;
+
+  // RULE 1: Good Condition is an exclusive option
+  if (condSet.has('good') || condSet.has('good_condition')) {
+    return {
+      repairTotal: 0,
+      structuralInspectionRequired: false,
+      overlapDeductions: [{ rule: 'Good Condition Exclusive', note: 'All other damage conditions suppressed.' }],
+      lineItems: [{
+        item: 'Good Condition (Baseline)',
+        description: 'Deck surface structurally sound; standard restoration only.',
+        materialCost: 0,
+        labourCost: 0,
+        totalCost: 0,
+      }],
+      adminSwitches: {
+        weatheredApplied: false,
+        moldApplied: false,
+      },
+    };
+  }
+
+  // RULE 2: Rotted & Water Damaged single inspection fee
+  const hasRotted = condSet.has('rotted');
+  const hasWaterDamaged = condSet.has('water_damaged');
+  if (hasRotted || hasWaterDamaged) {
+    structuralInspectionRequired = true;
+    const fee = dmg.inspectionFee || 150;
+    repairTotal += fee;
+    lineItems.push({
+      item: 'Structural Moisture & Integrity Inspection',
+      description: 'On-site technical evaluation of framing, joists, and moisture infiltration.',
+      count: 1,
+      materialCost: 0,
+      labourCost: fee,
+      totalCost: fee,
+    });
+
+    if (hasRotted && hasWaterDamaged) {
+      overlapDeductions.push({
+        rule: 'Rotted + Water Damaged Shared Inspection',
+        saving: fee,
+        note: 'Charged single inspection fee instead of duplicate assessments.',
+      });
+    }
+  }
+
+  // Rotted board replacement
+  if (hasRotted && rottedCount > 0) {
+    const unitMat = 20;
+    const unitLab = 25;
+    const sub = rottedCount * (unitMat + unitLab);
+    repairTotal += sub;
+    lineItems.push({
+      item: 'Rotted Board Replacement',
+      description: 'Demolition of deteriorated deck boards and installation of structural grade replacements.',
+      count: rottedCount,
+      materialCost: rottedCount * unitMat,
+      labourCost: rottedCount * unitLab,
+      totalCost: sub,
+    });
+  }
+
+  // Water damaged repair / replacement
+  if (hasWaterDamaged && waterDamagedCount > 0) {
+    const unitMat = 20;
+    const unitLab = 25;
+    const sub = waterDamagedCount * (unitMat + unitLab);
+    repairTotal += sub;
+    lineItems.push({
+      item: 'Water Damaged Board Replacement',
+      description: 'Removal of soft/delaminated decking boards and framing reinforcement.',
+      count: waterDamagedCount,
+      materialCost: waterDamagedCount * unitMat,
+      labourCost: waterDamagedCount * unitLab,
+      totalCost: sub,
+    });
+  }
+
+  // Warped board replacement
+  if (condSet.has('warped') && warpedCount > 0) {
+    const unitMat = 20;
+    const unitLab = 25;
+    const sub = warpedCount * (unitMat + unitLab);
+    repairTotal += sub;
+    lineItems.push({
+      item: 'Warped Board Replacement',
+      description: 'Replacement of cupped, crowned, or twisted deck boards.',
+      count: warpedCount,
+      materialCost: warpedCount * unitMat,
+      labourCost: warpedCount * unitLab,
+      totalCost: sub,
+    });
+  }
+
+  // RULE 3: Crack & Loose Board Overlap Prevention
+  const hasCrack = condSet.has('crack');
+  const hasLoose = condSet.has('loose_board') || condSet.has('loose_deck_board');
+
+  if (hasCrack || hasLoose) {
+    if (crackLooseOverlap > 0) {
+      // Overlap: boards with both crack and loose fasteners are replaced, NOT refastened then repaired
+      const repCost = dmg.boardReplacementCost || 45;
+      const sub = crackLooseOverlap * repCost;
+      repairTotal += sub;
+      lineItems.push({
+        item: 'Cracked & Loose Planks (Replacement Only)',
+        description: 'Boards exhibiting both severe splits and loose fasteners replaced directly.',
+        count: crackLooseOverlap,
+        materialCost: crackLooseOverlap * 20,
+        labourCost: crackLooseOverlap * 25,
+        totalCost: sub,
+      });
+
+      const avoidedCost = crackLooseOverlap * ((dmg.crackRepairCost || 15) + (dmg.looseRefastenCost || 12));
+      overlapDeductions.push({
+        rule: 'Crack + Loose Board Overlap Prevention',
+        saving: avoidedCost,
+        note: `Charged replacement only for ${crackLooseOverlap} boards; avoided duplicate fastening and crack filler charges.`,
+      });
+    }
+
+    // Remaining crack-only boards
+    const remainingCrack = Math.max(0, crackCount - crackLooseOverlap);
+    if (hasCrack && remainingCrack > 0) {
+      const unitMat = 5;
+      const unitLab = 10;
+      const sub = remainingCrack * (unitMat + unitLab);
+      repairTotal += sub;
+      lineItems.push({
+        item: 'Crack & Split Resin Repair',
+        description: 'Structural wood epoxy / elastomeric filler repair for surface checks and splits.',
+        count: remainingCrack,
+        materialCost: remainingCrack * unitMat,
+        labourCost: remainingCrack * unitLab,
+        totalCost: sub,
+      });
+    }
+
+    // Remaining loose-only boards (refastening)
+    const remainingLoose = Math.max(0, looseCount - crackLooseOverlap);
+    if (hasLoose && remainingLoose > 0) {
+      const unitMat = 3;
+      const unitLab = 9;
+      const sub = remainingLoose * (unitMat + unitLab);
+      repairTotal += sub;
+      lineItems.push({
+        item: 'Deck Board Refastening & Counter-sinking',
+        description: 'Stainless exterior screw reinforcement and securing of popped deck boards.',
+        count: remainingLoose,
+        materialCost: remainingLoose * unitMat,
+        labourCost: remainingLoose * unitLab,
+        totalCost: sub,
+      });
+    }
+  }
+
+  // RULE 4: Peeling overlap with stripping
+  const hasPeeling = condSet.has('peeling');
+  if (hasPeeling) {
+    if (restorationContext.isStripping) {
+      overlapDeductions.push({
+        rule: 'Peeling Overlap Prevention',
+        saving: 0,
+        note: 'Peeling coating removal is fully covered by the Chemical Stripping scope. No duplicate surcharge applied.',
+      });
+    } else {
+      lineItems.push({
+        item: 'Peeling Coating Surface Prep',
+        description: 'Mechanical scrap and feather-sanding of loose coating edges.',
+        materialCost: 0,
+        labourCost: 100,
+        totalCost: 100,
+      });
+      repairTotal += 100;
+    }
+  }
+
+  // RULE 5: Weathered (5%) & Mold (15%) Admin Switches
+  const baseHours = restorationContext.baseHours || 0;
+  const labourRate = cfg.labourRate || 250;
+  let weatheredLabour = 0;
+  let moldLabour = 0;
+
+  if (condSet.has('weathered')) {
+    if (switches.applyWeatheredLabor) {
+      weatheredLabour = round2(baseHours * 0.05 * labourRate);
+      repairTotal += weatheredLabour;
+      lineItems.push({
+        item: 'Weathered Wood Condition Surcharge (5%)',
+        description: 'Additional surface conditioning labor for heavily weathered wood fibers.',
+        count: round2(baseHours * 0.05),
+        materialCost: 0,
+        labourCost: weatheredLabour,
+        totalCost: weatheredLabour,
+      });
+    } else {
+      overlapDeductions.push({
+        rule: 'Weathered Labor Switch (Pending Client Confirmation)',
+        note: '5% labor adjustment switch is currently OFF by default as per client direction.',
+      });
+    }
+  }
+
+  if (condSet.has('mold') || condSet.has('mildew')) {
+    if (switches.applyMoldLabor) {
+      moldLabour = round2(baseHours * 0.15 * labourRate);
+      repairTotal += moldLabour;
+      lineItems.push({
+        item: 'Heavy Mold & Mildew Eradication (15%)',
+        description: 'Deep antimicrobial fungicide treatment and dwell-time dwell extraction.',
+        count: round2(baseHours * 0.15),
+        materialCost: 0,
+        labourCost: moldLabour,
+        totalCost: moldLabour,
+      });
+    } else {
+      overlapDeductions.push({
+        rule: 'Mold Labor Switch (Pending Client Confirmation)',
+        note: '15% mold adjustment switch is currently OFF by default as per client direction.',
+      });
+    }
+  }
+
+  return {
+    repairTotal: round2(repairTotal),
+    structuralInspectionRequired,
+    lineItems,
+    overlapDeductions,
+    adminSwitches: {
+      weatheredApplied: Boolean(switches.applyWeatheredLabor && condSet.has('weathered')),
+      moldApplied: Boolean(switches.applyMoldLabor && (condSet.has('mold') || condSet.has('mildew'))),
+    },
+  };
 }
 
 /**
@@ -142,13 +464,24 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
 
   const S = new Set(rawServices.map((s) => normKey(s)));
   const stripping = S.has('paint_removal') || S.has('stain_stripping') || S.has('stripping');
-  const sanding = S.has('sanding');
+  const sanding = S.has('sanding') || S.has('mechanical_sanding') || S.has('detail_sanding');
   const finishes = ['staining', 'sealing', 'waterproofing'].filter((s) => S.has(s));
 
+  // Stain & Finish Column Lookup (including Semi-Solid Stain Q4)
   const rawStain = normKey(inp.stainType || inp.finishType || inp.coatingType || '');
-  const stainType = rawStain.includes('solid') ? 'solid' : 'semi';
+  let stainCol = 'semi';
+  if (rawStain.includes('semi_solid') || rawStain.includes('semisolid')) {
+    stainCol = 'semi_solid';
+  } else if (rawStain.includes('solid')) {
+    stainCol = 'solid';
+  } else if (rawStain.includes('sealer') || rawStain.includes('clear')) {
+    stainCol = 'sealer';
+  } else {
+    stainCol = 'semi';
+  }
+
   const finish = S.has('staining')
-    ? stainType
+    ? stainCol
     : (finishes.length > 0 ? 'sealer' : 'none');
 
   const prep = stripping ? (sanding ? 'strip_sand' : 'strip') : 'clean';
@@ -156,12 +489,15 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
 
   // F3 Rate Lookup
   const rateCard = cfg.rateCard || DEFAULT_PRICING_CONFIG.rateCard;
-  let [lo, hi] = (rateCard[prep] && rateCard[prep][col]) ? rateCard[prep][col] : [2.5, 3.0];
+  const cardRow = rateCard[prep] || rateCard.clean;
+  let [lo, hi] = cardRow[col] || cardRow.semi || [2.5, 3.0];
 
   // Sanding without stripping: clean rate plus the card's sanding step
   if (sanding && !stripping) {
-    const up = rateCard.strip_sand ? rateCard.strip_sand[col] : [3.5, 4.5];
-    const dn = rateCard.strip ? rateCard.strip[col] : [3.0, 3.5];
+    const upRow = rateCard.strip_sand || DEFAULT_PRICING_CONFIG.rateCard.strip_sand;
+    const dnRow = rateCard.strip || DEFAULT_PRICING_CONFIG.rateCard.strip;
+    const up = upRow[col] || upRow.semi || [3.5, 4.5];
+    const dn = dnRow[col] || dnRow.semi || [3.0, 3.5];
     lo += (up[0] - dn[0]);
     hi += (up[1] - dn[1]);
   }
@@ -177,19 +513,27 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   const baseHours = [...S]
     .filter((s) => s !== 'repairs')
     .reduce((h, s) => {
-      const pRate = prod[s] || (s === 'stripping' ? 50 : 100);
+      let pRate = prod[s];
+      if (!pRate) {
+        if (s.includes('sanding')) pRate = 60;
+        else if (s.includes('strip') || s.includes('paint')) pRate = 50;
+        else pRate = 100;
+      }
       return h + (pRate > 0 ? A / pRate : A / 100);
     }, 0);
 
-  // F9 Wood Labour Adjustment (additive on base hours)
+  // F9 Wood Labour Adjustment (additive on base hours) - Includes Mahogany & Teak (Q2)
   const woodKey = normKey(inp.wood || inp.woodSpecies || 'pt_pine');
   const woodMap = cfg.wood || DEFAULT_PRICING_CONFIG.wood;
   const woodData = woodMap[woodKey] || woodMap.pt_pine || { pct: 0, label: 'Pressure-treated pine' };
   const woodPct = Number(woodData.pct || 0);
   const woodHours = baseHours * woodPct;
 
-  // F10 Access Hours (additive on base hours)
-  const accessKey = normKey(inp.access || inp.accessType || inp.height || 'ground');
+  // F10 Access Hours (additive on base hours) - Exact height in feet support (Q7)
+  let accessKey = normKey(inp.access || inp.accessType || inp.height || 'ground');
+  if (inp.exactHeightFt !== undefined && inp.exactHeightFt !== '' && inp.exactHeightFt !== null) {
+    accessKey = mapHeightFeetToAccessKey(inp.exactHeightFt);
+  }
   const accessMap = cfg.access || DEFAULT_PRICING_CONFIG.access;
   const acc = accessMap[accessKey] || accessMap.ground || { pct: 0, fixedHours: 0 };
   const accessMode = cfg.accessMode || 'percent';
@@ -211,11 +555,11 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   // F14 & F15 Totals
   const posDefault = cfg.ratePosition !== undefined ? Number(cfg.ratePosition) : 0.5;
 
-  // Pure calculated total before minimum floor
+  // Pure calculated subtotal before minimum floor
   const calculatedSubtotal = Math.max(0, A * rateAt(posDefault) + labourAdj + travelFee);
   const calculatedTotal = Math.round(calculatedSubtotal);
 
-  // Standard minimum job floor total (as per spec test cases A & D)
+  // Standard minimum job floor total
   const floorTotal = Math.max(calculatedTotal, minJob);
   const minJobApplied = calculatedTotal < minJob;
 
@@ -223,6 +567,9 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   const highCalculated = Math.round(Math.max(0, A * rateAt(1) + labourAdj + travelFee));
   const low = Math.max(lowCalculated, minJob);
   const high = Math.max(highCalculated, minJob);
+
+  // Section 8: DAMAGE CONDITION & REPAIR ESTIMATE (Replaces R3 with dedicated contractor repair line)
+  const repairEstimate = calculateRepairEstimate(inp, { isStripping: stripping, baseHours }, cfg);
 
   // Rules & Flags Separation (R1 - R8)
   const flags = [];
@@ -240,8 +587,8 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   const needsPhotoReview = Boolean(sanding || S.has('paint_removal'));
   if (needsPhotoReview) flags.push('needs_photo_review');
 
-  // R3: Repairs Quote Trigger (Repairs is NOT auto-priced by algorithm; requires contractor inspection)
-  const hasRepairs = S.has('repairs');
+  // Structural Repairs Trigger (dedicated contractor line)
+  const hasRepairs = S.has('repairs') || repairEstimate.structuralInspectionRequired || repairEstimate.repairTotal > 0;
   if (hasRepairs) flags.push('needs_contractor_quote');
 
   if (minJobApplied) flags.push('min_job_applied');
@@ -258,7 +605,7 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     flags.push('coating_needs_stripping_hint');
   }
 
-  // Status definition per spec Section 8
+  // Workflow status
   const status = hasRepairs
     ? 'needs_contractor_quote'
     : (needsPhotoReview ? 'needs_photo_review' : 'submitted');
@@ -290,7 +637,7 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     minJobApplied,
     calculatedTotal,
     floorTotal,
-    total: floorTotal, // Default for spec test suite
+    total: floorTotal, // Benchmark for spec test cases
     low,
     high,
     lowCalculated,
@@ -302,7 +649,10 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
     rawSubtotal: round2(calculatedSubtotal),
     minJobNotice,
 
-    // Client Q12 Sanitized Customer Output (ONE TOTAL NUMBER ONLY, NO BREAKDOWN)
+    // REPLACED RULE R3: Dedicated Contractor Repair Estimate with Overlap Prevention
+    repairEstimate,
+
+    // Client Q12 Sanitized Customer Output (ONE TOTAL NUMBER ONLY, ZERO BREAKDOWN)
     customerOutput: {
       total: calculatedTotal,
       floorTotal,
@@ -321,145 +671,44 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
   };
 }
 
-/**
- * Universal Client Pricing Function
- * Adapts client/customer estimator inputs and respects role-based visibility.
- */
-function calculateClientPricing(params = {}, isContractor = false) {
-  const inp = {
-    deckArea: params.floorArea || params.deckArea || params.deckFloorArea || 0,
-    dimensions: {
-      length: params.length || params.dimensions?.length,
-      width: params.width || params.dimensions?.width,
-      area: params.floorArea || params.deckArea,
-    },
-    railingSqft: params.railingSqft,
-    railingLf: params.railingLength || params.railingLf || 0,
-    stairSteps: params.stairCount || params.stairs || 0,
-    postCount: params.postCount || params.posts || 0,
-    fasciaLf: params.fasciaLength || params.fasciaLf || 0,
-    fasciaSqft: params.fasciaSqft,
-    joists: Boolean(params.includeJoists || params.joists || params.undersideJoists),
-    other: params.other || [],
-    services: params.services || params.restorationScope || [],
-    wood: params.woodSpecies || params.wood || 'pt_pine',
-    access: params.accessType || params.access || params.height || 'ground',
-    stainType: params.stainType || params.coatingType || 'semi',
-    existingCoating: params.existingCoating || params.condition || '',
-    travelMinutes: params.travelMinutes || 30,
-  };
+function calculateClientPricing(deckData = {}, customConfig = null) {
+  const result = calculateRestorationEstimate(deckData, customConfig);
+  return result.customerOutput;
+}
 
-  const est = calculateRestorationEstimate(inp);
+function calculateEstimate(deckData = {}, customConfig = null) {
+  return calculateRestorationEstimate(deckData, customConfig);
+}
 
-  // If request is strictly for customer (Q12), return sanitized summary with ZERO breakdown
-  if (!isContractor && params.forContractor !== true) {
-    return {
-      total: est.customerOutput.total,
-      floorTotal: est.customerOutput.floorTotal,
-      minJobApplied: est.customerOutput.minJobApplied,
-      minJobAmount: est.customerOutput.minJobAmount,
-      minJobNotice: est.customerOutput.minJobNotice,
-      status: est.customerOutput.status,
-      needsPhotoReview: est.customerOutput.needsPhotoReview,
-      hasRepairs: est.customerOutput.hasRepairs,
-      notice: est.customerOutput.notice,
-      warnings: est.flags.map((f) => ({
-        code: f.toUpperCase(),
-        message: f === 'needs_photo_review'
-          ? 'Final price confirmed after photo review or site visit.'
-          : f === 'needs_contractor_quote'
-          ? 'Repairs required: an on-site evaluation is required.'
-          : f === 'coating_needs_stripping_hint'
-          ? 'This existing coating usually requires chemical stripping.'
-          : f,
-      })),
-    };
+function applyDiscountToCalculation(calculation, discountRule) {
+  if (!discountRule || !calculation) return calculation;
+  const currentTotal = calculation.total || calculation.calculatedTotal || 0;
+  let discountAmount = 0;
+  if (discountRule.type === 'percentage') {
+    discountAmount = round2(currentTotal * ((discountRule.value || 0) / 100));
+  } else if (discountRule.type === 'fixed') {
+    discountAmount = round2(discountRule.value || 0);
   }
-
-  // Otherwise return full contractor breakdown
+  const discountedTotal = Math.max(0, currentTotal - discountAmount);
   return {
-    ...est,
-    billableArea: est.A,
-    floorArea: est.areas.flooring,
-    baseLaborHours: est.baseHours,
-    laborCost: est.labourAdj,
-    totalMaterialCost: est.basePrice,
-    baseEstimate: est.total,
-    lowEstimate: est.low,
-    highEstimate: est.high,
-    confidence: 'high',
-    displayQuote: {
-      low: est.low,
-      high: est.high,
-      formatted: `$${est.low.toLocaleString()} – $${est.high.toLocaleString()}`,
-      singleAmount: `$${est.total.toLocaleString()}`,
+    ...calculation,
+    discount: {
+      name: discountRule.name,
+      amount: discountAmount,
+      type: discountRule.type,
+      value: discountRule.value,
     },
-    warnings: est.flags.map((f) => ({
-      code: f.toUpperCase(),
-      message: f === 'needs_photo_review'
-        ? 'Final price confirmed after photo review or site visit.'
-        : f === 'needs_contractor_quote'
-        ? 'Repairs required: an on-site evaluation is required.'
-        : f === 'coating_needs_stripping_hint'
-        ? 'This existing coating usually requires chemical stripping.'
-        : f,
-    })),
+    total: discountedTotal,
   };
-}
-
-/**
- * Catalog-based calculateEstimate (for Phase 6 custom parts/catalog items)
- */
-function calculateEstimate({
-  deck,
-  materials = [],
-  services = [],
-  pricingConfig = null,
-}) {
-  const floorArea = Number(deck?.dimensions?.area || deck?.deckArea || 400);
-  const specCalc = calculateRestorationEstimate({
-    deckArea: floorArea,
-    services: services.map((s) => s.serviceCode || s.serviceName || 'cleaning'),
-    wood: deck?.surfaceMaterial || 'pt_pine',
-    access: 'ground',
-  }, pricingConfig);
-
-  const totalAmount = specCalc.total;
-
-  return {
-    deckArea: floorArea,
-    materialsBreakdown: { items: [], totalCost: specCalc.basePrice },
-    servicesBreakdown: { items: [], totalCost: specCalc.labourAdj },
-    laborBreakdown: {
-      enabled: true,
-      laborRate: specCalc.labourRate,
-      totalHours: specCalc.addHours,
-      subtotal: specCalc.labourAdj,
-      formula: `${specCalc.addHours} hrs × $${specCalc.labourRate}/hr = $${specCalc.labourAdj}`,
-    },
-    additionalCharges: { items: [], subtotal: specCalc.travelFee },
-    subtotal: specCalc.rawSubtotal,
-    discountBreakdown: { applied: false, discountAmount: 0 },
-    minimumAdjustment: specCalc.minJobApplied ? specCalc.minJob - specCalc.rawSubtotal : 0,
-    minimumJobPrice: specCalc.minJob,
-    preTaxTotal: totalAmount,
-    taxPercentage: 0,
-    taxAmount: 0,
-    totalAmount,
-    pricingSnapshot: specCalc,
-    warnings: [],
-  };
-}
-
-function applyDiscountToCalculation(baseCalc) {
-  return baseCalc;
 }
 
 module.exports = {
   calculateRestorationEstimate,
+  calculateRepairEstimate,
   calculateClientPricing,
   calculateEstimate,
   applyDiscountToCalculation,
+  mapHeightFeetToAccessKey,
   DEFAULT_PRICING_CONFIG,
   round2,
 };

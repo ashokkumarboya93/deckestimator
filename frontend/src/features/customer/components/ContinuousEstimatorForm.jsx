@@ -106,11 +106,19 @@ const WOOD_SPECIES = [
   },
   {
     id: 'meranti',
-    name: 'Mahogany / Meranti',
+    name: 'Meranti Hardwood',
     laborPct: '+20% labor adj.',
     desc: 'High-density exotic hardwood with tight, straight ribbon grain.',
     grainImg: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
     maintenanceNote: 'Dense grain requires thin-viscosity penetrating oils; surface wipe required post-application.',
+  },
+  {
+    id: 'mahogany',
+    name: 'Honduran Mahogany',
+    laborPct: '+20% labor adj.',
+    desc: 'Dense architectural hardwood with rich reddish-brown tone and fine grain.',
+    grainImg: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
+    maintenanceNote: 'Requires periodic penetrating oil seal to retain its lustrous dark sheen.',
   },
   {
     id: 'tigerwood',
@@ -119,6 +127,14 @@ const WOOD_SPECIES = [
     desc: 'Exotic Brazilian hardwood with striking dark brown to black tiger stripes.',
     grainImg: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
     maintenanceNote: 'Extremely dense structure; requires specialized UV-blocking hardwood oils.',
+  },
+  {
+    id: 'teak',
+    name: 'Burmese Teak',
+    laborPct: '+35% labor adj.',
+    desc: 'Extremely durable golden hardwood packed with natural oils and silica.',
+    grainImg: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=600&q=80',
+    maintenanceNote: 'Natural oils require solvent wipe prior to specialized trans-oxide finish application.',
   },
   {
     id: 'ipe',
@@ -168,14 +184,15 @@ const SERVICES = [
 ];
 
 const CONDITIONS = [
-  { id: 'weathered', label: 'Weathered / Faded', desc: 'Grayed from sun UV exposure; fibers intact' },
-  { id: 'peeling', label: 'Peeling / Flaking', desc: 'Existing coating delaminating in patches' },
-  { id: 'cracks', label: 'Cracks & Splinters', desc: 'Surface fissures and sharp loose grain' },
-  { id: 'mold', label: 'Mold, Mildew & Algae', desc: 'Slippery organic buildup and black staining' },
-  { id: 'rot', label: 'Rotted Wood Boards', desc: 'Soft or punky wood requiring physical replacement' },
-  { id: 'water_damage', label: 'Water Damage', desc: 'Cupping, puddling, or moisture pooling marks' },
-  { id: 'warped', label: 'Warped or Loose Boards', desc: 'Board movement or protruding deck screws' },
-  { id: 'railing_damage', label: 'Railing / Baluster Damage', desc: 'Wobbly top rails or missing spindles' },
+  { id: 'good_condition', label: '1. Good Condition (Baseline)', desc: 'Deck is structurally sound; standard restoration only (Exclusive option)', exclusive: true },
+  { id: 'weathered', label: '2. Weathered Wood', desc: 'Graying from sun UV exposure (Configurable 5% labor switch)' },
+  { id: 'crack', label: '3. Cracks & Checks', desc: 'Surface splits; resin filling or board replacement' },
+  { id: 'rotted', label: '4. Rotted Boards', desc: 'Wood decay requiring material, replacement labor & inspection' },
+  { id: 'mold', label: '5. Heavy Mold & Mildew', desc: 'Deep fungal buildup (Configurable 15% labor switch)' },
+  { id: 'peeling', label: '6. Peeling Coating', desc: 'Delaminating old finish (Covered when stripping service is selected)' },
+  { id: 'water_damaged', label: '7. Water Damaged Wood', desc: 'Moisture infiltration & soft spots (Shared inspection with rot)' },
+  { id: 'warped', label: '8. Warped / Cupped Boards', desc: 'Twisted decking requiring quantity-based board replacement' },
+  { id: 'loose_board', label: '9. Loose Deck Boards', desc: 'Popped fasteners or loose planks (Refastening or replacement)' },
 ];
 
 export default function ContinuousEstimatorForm({ initialData = null, isEditing = false, deckId = null }) {
@@ -208,8 +225,9 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   // Section 3: Wood Species
   const [woodSpecies, setWoodSpecies] = useState(initialData?.surfaceDetails?.material || 'cedar');
 
-  // Section 4: Site & Accessibility
+  // Section 4: Site & Accessibility (Client Q7 exact height support)
   const [height, setHeight] = useState(initialData?.structureDetails?.height || 'ground');
+  const [exactHeightFt, setExactHeightFt] = useState('');
   const [siteConditions, setSiteConditions] = useState([]);
 
   // Section 5: Existing Coating
@@ -217,12 +235,19 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
   const [finishBase, setFinishBase] = useState('not_sure');
   const [manufacturer, setManufacturer] = useState('');
 
-  // Section 6: Restoration Services & Finish
+  // Section 6: Restoration Services & Finish (Client Q4 semi_solid & Q8 sanding types)
   const [services, setServices] = useState(['cleaning', 'staining']);
   const [stainType, setStainType] = useState('semi');
+  const [sandingType, setSandingType] = useState('mechanical_sanding');
 
-  // Section 7: Deck Condition
-  const [conditions, setConditions] = useState(['weathered']);
+  // Section 7: Deck Physical Condition & Damage Counts (Section 8 Spec)
+  const [conditions, setConditions] = useState(['good_condition']);
+  const [crackBoardCount, setCrackBoardCount] = useState('');
+  const [rottedBoardCount, setRottedBoardCount] = useState('');
+  const [warpedBoardCount, setWarpedBoardCount] = useState('');
+  const [looseBoardCount, setLooseBoardCount] = useState('');
+  const [waterDamagedBoardCount, setWaterDamagedBoardCount] = useState('');
+  const [crackLooseOverlapCount, setCrackLooseOverlapCount] = useState('');
 
   // Section 8: Photographs
   const [photos, setPhotos] = useState([]);
@@ -351,13 +376,32 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
     setServices((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
-  // Condition toggle handler
+  // Condition toggle handler (Good Condition is 100% exclusive per Section 8 spec)
   const toggleCondition = (id) => {
-    setConditions((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+    if (id === 'good_condition') {
+      // Exclusive option: selecting Good Condition clears all other damage conditions and resets counts
+      setConditions(['good_condition']);
+      setCrackBoardCount('');
+      setRottedBoardCount('');
+      setWarpedBoardCount('');
+      setLooseBoardCount('');
+      setWaterDamagedBoardCount('');
+      setCrackLooseOverlapCount('');
+      return;
+    }
+    setConditions((prev) => {
+      const withoutGood = prev.filter((c) => c !== 'good_condition');
+      if (withoutGood.includes(id)) {
+        const next = withoutGood.filter((c) => c !== id);
+        return next.length === 0 ? ['good_condition'] : next;
+      } else {
+        return [...withoutGood, id];
+      }
+    });
   };
 
-  // Rule R3: prompt to add repairs if damage selected
-  const hasDamageFlags = conditions.some((c) => ['rot', 'water_damage', 'warped', 'railing_damage'].includes(c));
+  // Rule R3 & Repair Evaluation: detect structural damage conditions
+  const hasDamageFlags = conditions.some((c) => ['rotted', 'water_damaged', 'warped', 'crack', 'loose_board'].includes(c));
   const repairsNotSelected = hasDamageFlags && !services.includes('repairs');
 
   // Rule R4: coating needs stripping hint
@@ -424,8 +468,18 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         floorArea,
         woodSpecies,
         accessType: height,
+        exactHeightFt: exactHeightFt ? Number(exactHeightFt) : undefined,
         coatingType: stainType,
+        stainType,
+        sandingType,
         conditionFlags: conditions,
+        damageConditions: conditions,
+        crackBoardCount: Number(crackBoardCount) || 0,
+        rottedBoardCount: Number(rottedBoardCount) || 0,
+        warpedBoardCount: Number(warpedBoardCount) || 0,
+        looseBoardCount: Number(looseBoardCount) || 0,
+        waterDamagedBoardCount: Number(waterDamagedBoardCount) || 0,
+        crackLooseOverlapCount: Number(crackLooseOverlapCount) || 0,
         services,
         railingLength: hasRailings ? Number(railingLf) || 0 : 0,
         stairCount: hasStairs ? Number(stairSteps) || 0 : 0,
@@ -465,6 +519,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
         accessHours: snap.accessHours || 0,
         labourAdj: snap.labourAdj || 0,
         travelFee: snap.travelFee || 0,
+        repairEstimate: snap.repairEstimate || null,
         status: snap.status || (services.includes('repairs') ? 'needs_contractor_quote' : 'submitted'),
         needsPhotoReview: snap.needsPhotoReview ?? false,
         hasRepairs: snap.hasRepairs ?? services.includes('repairs'),
@@ -920,6 +975,25 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 );
               })}
             </div>
+
+            {/* Client Q7: Exact Height in Feet */}
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#1E293B' }}>
+                Exact Elevation Height (Optional, ft):
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                placeholder="e.g. 5.5 ft"
+                value={exactHeightFt}
+                onChange={(e) => setExactHeightFt(e.target.value)}
+                style={{ ...styles.textInput, maxWidth: '140px', padding: '6px 10px', fontSize: '13px' }}
+              />
+              <span style={{ fontSize: '12px', color: '#64748B' }}>
+                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 2 ? 'Ground (0–2 ft)' : Number(exactHeightFt) <= 4 ? 'Low (2–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / High (Over 12 ft)'}` : 'Defaults to selected card tier above'}
+              </span>
+            </div>
           </section>
 
           {/* SECTION 5: EXISTING COATING */}
@@ -1020,11 +1094,11 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
               })}
             </div>
 
-            {/* Stain type selection if staining is ticked */}
+            {/* Stain type selection if staining is ticked (Includes Semi-Solid Q4) */}
             {services.includes('staining') && (
               <div style={styles.stainTypeBox}>
                 <label style={styles.inputLabel}>Desired Stain Finish Type *</label>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '6px' }}>
                   <label style={styles.stainOption}>
                     <input
                       type="radio"
@@ -1035,7 +1109,21 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                     />
                     <div>
                       <strong>Semi-Transparent Stain</strong>
-                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Shows natural wood grain with UV color pigment</span>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Highlights natural grain with UV pigment protection</span>
+                    </div>
+                  </label>
+
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="stainType"
+                      checked={stainType === 'semi_solid'}
+                      onChange={() => setStainType('semi_solid')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Semi-Solid Protective Stain</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Rich pigment shielding with subtle wood grain visibility</span>
                     </div>
                   </label>
 
@@ -1055,29 +1143,67 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                 </div>
               </div>
             )}
+
+            {/* Sanding type selection if sanding is ticked (Client Q8) */}
+            {services.includes('sanding') && (
+              <div style={{ ...styles.stainTypeBox, marginTop: '12px' }}>
+                <label style={styles.inputLabel}>Sanding Intensity (Client Q8) *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="sandingType"
+                      checked={sandingType === 'mechanical_sanding'}
+                      onChange={() => setSandingType('mechanical_sanding')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Full Mechanical Sanding</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Heavy orbital leveling of rough grain and heavy checks (60 sqft/hr)</span>
+                    </div>
+                  </label>
+
+                  <label style={styles.stainOption}>
+                    <input
+                      type="radio"
+                      name="sandingType"
+                      checked={sandingType === 'detail_sanding'}
+                      onChange={() => setSandingType('detail_sanding')}
+                      style={styles.radio}
+                    />
+                    <div>
+                      <strong>Detail & Defelting Sanding</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Light finish pass to knock down raised fibers and smooth touch (90 sqft/hr)</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
           </section>
 
-          {/* SECTION 7: DECK PHYSICAL CONDITION */}
+          {/* SECTION 7: DECK PHYSICAL CONDITION (9 SPECIFICATION CONDITIONS) */}
           <section style={styles.cardSection} id="section-7">
             <div style={styles.cardHeader}>
               <span style={styles.stepBadge}>Section 7</span>
               <div>
-                <h3 style={styles.cardTitle}>Deck Physical Condition</h3>
-                <p style={styles.cardSubtitle}>Check any physical wear, board deterioration, or rot observed on the structure.</p>
+                <h3 style={styles.cardTitle}>Deck Physical Condition (Section 8 Spec)</h3>
+                <p style={styles.cardSubtitle}>Select all observed wood conditions. <strong>Good Condition</strong> is exclusive baseline.</p>
               </div>
             </div>
 
             <div style={styles.conditionsGrid}>
               {CONDITIONS.map((c) => {
                 const isSelected = conditions.includes(c.id);
+                const isGood = c.id === 'good_condition';
                 return (
                   <div
                     key={c.id}
                     onClick={() => toggleCondition(c.id)}
                     style={{
                       ...styles.condCard,
-                      borderColor: isSelected ? '#1E3E62' : '#E2E8F0',
-                      backgroundColor: isSelected ? '#F0F7FF' : '#FFFFFF',
+                      borderColor: isSelected ? (isGood ? '#15803D' : '#1E3E62') : '#E2E8F0',
+                      backgroundColor: isSelected ? (isGood ? '#F0FDF4' : '#F0F7FF') : '#FFFFFF',
+                      boxShadow: isSelected ? `0 0 0 1.5px ${isGood ? '#15803D' : '#1E3E62'}` : 'none',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1087,13 +1213,117 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                         onChange={() => toggleCondition(c.id)}
                         style={styles.checkbox}
                       />
-                      <strong style={styles.condLabel}>{c.label}</strong>
+                      <strong style={{ ...styles.condLabel, color: isSelected && isGood ? '#15803D' : '#0B192C' }}>
+                        {c.label}
+                      </strong>
                     </div>
                     <p style={styles.condDesc}>{c.desc}</p>
                   </div>
                 );
               })}
             </div>
+
+            {/* Baseline Condition Confirmation Badge */}
+            {conditions.includes('good_condition') && (
+              <div style={{ marginTop: '12px', padding: '10px 14px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: '#15803D', fontWeight: 'bold' }}>&#10003;</span>
+                <span style={{ fontSize: '12px', color: '#166534' }}>
+                  <strong>Good Condition (Baseline) Active:</strong> Deck surface is structurally sound. Zero damage surcharges or repair inspection fees applied.
+                </span>
+              </div>
+            )}
+
+            {/* OPTIONAL BOARD COUNTS FOR CONTRACTOR & DETAILED ASSESSMENT */}
+            {!conditions.includes('good_condition') && (conditions.includes('crack') || conditions.includes('rotted') || conditions.includes('warped') || conditions.includes('loose_board') || conditions.includes('water_damaged')) && (
+              <div style={{ marginTop: '16px', padding: '14px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#0B192C', fontWeight: '700' }}>
+                  {isContractor ? 'Contractor Component Counts (Overlap Prevention Active)' : 'Optional: Specify Estimated Damaged Boards'}
+                </h4>
+                <p style={{ margin: '0 0 12px 0', fontSize: '11px', color: '#64748B' }}>
+                  Quantities allow the pricing engine to apply exact material & replacement labor using client overlap deduplication rules.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  {conditions.includes('crack') && (
+                    <div>
+                      <label style={styles.inputLabel}>Cracked Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={crackBoardCount}
+                        onChange={(e) => setCrackBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('rotted') && (
+                    <div>
+                      <label style={styles.inputLabel}>Rotted Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={rottedBoardCount}
+                        onChange={(e) => setRottedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('warped') && (
+                    <div>
+                      <label style={styles.inputLabel}>Warped Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={warpedBoardCount}
+                        onChange={(e) => setWarpedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('loose_board') && (
+                    <div>
+                      <label style={styles.inputLabel}>Loose Boards (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={looseBoardCount}
+                        onChange={(e) => setLooseBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {conditions.includes('water_damaged') && (
+                    <div>
+                      <label style={styles.inputLabel}>Water Damaged (qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={waterDamagedBoardCount}
+                        onChange={(e) => setWaterDamagedBoardCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
+                  {(conditions.includes('crack') && conditions.includes('loose_board')) && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={styles.inputLabel}>Both Cracked & Loose on Same Board (overlap qty):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={crackLooseOverlapCount}
+                        onChange={(e) => setCrackLooseOverlapCount(e.target.value)}
+                        style={styles.textInput}
+                        placeholder="0 (charged replacement only; avoided double fastening fee)"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Rule R3 Repairs Notice */}
             {repairsNotSelected && (
@@ -1104,7 +1334,7 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 <span>
-                  Rotted or damaged boards detected. Consider selecting <strong>Structural Board Repairs</strong> in Section 6. A certified contractor will provide a dedicated replacement quote.
+                  Damaged deck boards detected. A dedicated structural repair line item with overlap prevention will be computed for certified contractor confirmation.
                 </span>
               </div>
             )}
@@ -1302,6 +1532,41 @@ export default function ContinuousEstimatorForm({ initialData = null, isEditing 
                   {officialEstimate.minJobApplies && (
                     <div style={styles.contractorMinNotice}>
                       <span>Min Job Floor Applied: Calculated ${officialEstimate.total.toLocaleString()} is below ${officialEstimate.minJobAmount.toLocaleString()} threshold.</span>
+                    </div>
+                  )}
+
+                  {/* REPLACED RULE R3: DEDICATED REPAIR ESTIMATE LINE ITEM WITH OVERLAP PREVENTIONS */}
+                  {officialEstimate.repairEstimate && officialEstimate.repairEstimate.repairTotal > 0 && (
+                    <div style={{ marginTop: '16px', padding: '12px 14px', backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '6px' }}>
+                        <div>
+                          <strong style={{ color: '#0B192C', fontSize: '13px' }}>Structural Repair & Replacement Estimate (Separate Line)</strong>
+                          <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>Deduplicated using client overlap-prevention rules</span>
+                        </div>
+                        <strong style={{ color: '#1E3E62', fontSize: '15px' }}>
+                          +${officialEstimate.repairEstimate.repairTotal.toLocaleString()}
+                        </strong>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {officialEstimate.repairEstimate.lineItems.map((li, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
+                            <span>&bull; {li.item} {li.count ? `(${li.count})` : ''}</span>
+                            <strong>${li.totalCost.toLocaleString()}</strong>
+                          </div>
+                        ))}
+                      </div>
+
+                      {officialEstimate.repairEstimate.overlapDeductions.length > 0 && (
+                        <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#ECFDF5', borderRadius: '6px', fontSize: '11px', color: '#065F46' }}>
+                          <strong>Overlap Deduplications Applied:</strong>
+                          {officialEstimate.repairEstimate.overlapDeductions.map((od, idx) => (
+                            <div key={idx} style={{ marginTop: '2px' }}>
+                              &bull; {od.note || od.rule} {od.saving ? `(Avoided double charge: $${od.saving})` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
