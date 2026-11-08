@@ -28,6 +28,7 @@ export default function ContractorLayout() {
   const [leadsCount, setLeadsCount] = useState(6);
   const [projectName, setProjectName] = useState('');
   const [contractorProfile, setContractorProfile] = useState(null);
+  const [signoutHover, setSignoutHover] = useState(false);
 
   // Sync contractor profile data
   useEffect(() => {
@@ -283,25 +284,46 @@ export default function ContractorLayout() {
           <button
             type="button"
             onClick={handleLogout}
+            onMouseEnter={() => setSignoutHover(true)}
+            onMouseLeave={() => setSignoutHover(false)}
             style={{
               ...styles.navItem,
-              background: 'none',
-              border: 'none',
+              backgroundColor: signoutHover ? 'rgba(239, 68, 68, 0.20)' : 'rgba(239, 68, 68, 0.08)',
+              border: signoutHover ? '1.5px solid #ef4444' : '1.5px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: '8px',
               width: '100%',
               cursor: 'pointer',
-              color: '#dc2626',
+              color: '#ef4444',
               marginTop: 'auto',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSidebarHovered ? 'flex-start' : 'center',
+              padding: '9px 12px',
+              gap: '10px',
+              transition: 'all 0.18s ease',
+              boxShadow: signoutHover ? '0 2px 10px rgba(239, 68, 68, 0.25)' : 'none',
+              outline: 'none',
             }}
             title="Sign Out"
           >
-            <span style={{ ...styles.navIcon, color: '#dc2626' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.navIcon, color: '#ef4444', minWidth: '20px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel, color: '#dc2626', fontWeight: '700' }}>
+            <span style={{
+              opacity: isSidebarHovered ? 1 : 0,
+              width: isSidebarHovered ? 'auto' : 0,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              color: '#ef4444',
+              fontWeight: '700',
+              fontSize: '13px',
+              transition: 'opacity 0.15s ease',
+            }}>
               Sign Out
             </span>
           </button>
