@@ -550,8 +550,8 @@ export default function ContractorLayout() {
           <Outlet />
         </main>
 
-        {/* Dedicated Contractor Portal Footer (Shown on all pages except estimator) */}
-        {!isEstimatorPage && <ContractorFooter />}
+        {/* Dedicated Contractor Portal Footer (Shown on every page) */}
+        <ContractorFooter />
       </div>
 
       {/* 3. HELP & GUIDE MODAL */}
