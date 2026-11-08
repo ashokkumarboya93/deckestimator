@@ -1,11 +1,13 @@
 // =============================================
 // Deck Estimator — Login Form Component
+// Matches UI Reference: Floating White Card, Pill Inputs & Glossy Button
 // =============================================
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../../../api/apiErrors';
+import mainLogo from '../../../assets/images/MainLodo.png';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -16,16 +18,11 @@ export function LoginForm() {
     password: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [loginSuccess, setLoginSuccess] = useState(null);
-
-  const fillDemo = (email, password) => {
-    setFormData({ email, password });
-    setError(null);
-    setTouched({});
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,7 +41,7 @@ export function LoginForm() {
       if (!formData.email.trim()) {
         errs.email = 'Email address is required.';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-        errs.email = 'Please enter a valid email address (e.g. name@example.com).';
+        errs.email = 'Please enter a valid email address.';
       }
     }
     if (touched.password && !formData.password) {
@@ -58,7 +55,6 @@ export function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-
     setTouched({ email: true, password: true });
 
     if (!formData.email.trim() || !isValidEmail || !formData.password) {
@@ -74,7 +70,7 @@ export function LoginForm() {
       });
 
       setLoginSuccess(
-        `Welcome back, ${data.user?.fullName || 'User'}! Redirecting to your dashboard...`
+        `Welcome back, ${data.user?.fullName || 'User'}! Redirecting...`
       );
 
       setTimeout(() => {
@@ -101,16 +97,17 @@ export function LoginForm() {
 
   return (
     <div style={styles.card}>
+      {/* Decorative Wave Gradient at bottom inside card */}
+      <div style={styles.cardBottomWave} />
+
       {/* Brand Header */}
       <div style={styles.header}>
-        <div style={styles.brandBadge}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          <span style={styles.brandTitle}>
-            DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
-          </span>
+        <div style={styles.logoWrap}>
+          <img
+            src={mainLogo}
+            alt="Deck Restoration Plus"
+            style={styles.logoImg}
+          />
         </div>
         <h1 style={styles.title}>Sign in to your account</h1>
         <p style={styles.subtitle}>
@@ -118,49 +115,20 @@ export function LoginForm() {
         </p>
       </div>
 
-      {/* Quick Demo Role Selectors */}
-      <div style={styles.demoBox}>
-        <span style={styles.demoLabel}>Demo Quick-Fill:</span>
-        <div style={styles.demoChipsRow}>
-          <button
-            type="button"
-            onClick={() => fillDemo('customer@example.com', 'Password123!')}
-            style={styles.demoChip}
-            title="Login as Homeowner Customer"
-          >
-            Customer
-          </button>
-          <button
-            type="button"
-            onClick={() => fillDemo('alex.builder@example.com', 'Password123!')}
-            style={styles.demoChip}
-            title="Login as Approved Contractor"
-          >
-            Contractor
-          </button>
-          <button
-            type="button"
-            onClick={() => fillDemo('admin@deckestimator.com', 'AdminPass123!')}
-            style={styles.demoChip}
-            title="Login as Platform Administrator"
-          >
-            Admin
-          </button>
-        </div>
-      </div>
-
+      {/* Success Notification Banner */}
       {loginSuccess && (
         <div style={styles.successBanner}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span>{loginSuccess}</span>
         </div>
       )}
 
+      {/* Error Alert Banner */}
       {error && !loginSuccess && (
         <div style={styles.errorBanner}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -169,79 +137,121 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        {/* Email Address */}
-        <div style={{ marginBottom: '1.2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-            <label style={styles.inputLabel}>
-              Email Address *
-            </label>
-            {touched.email && isValidEmail && (
-              <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: '600' }}>Valid email format</span>
-            )}
-          </div>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="name@example.com"
+      {/* Real-time Login Form */}
+      <form onSubmit={handleSubmit} noValidate style={styles.form}>
+        {/* Email Field */}
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Email Address *</label>
+          <div
             style={{
-              ...styles.inputField,
-              border: fieldErrors.email ? '1px solid #ef4444' : touched.email && isValidEmail ? '1px solid #3b82f6' : '1px solid #cbd5e1',
-              backgroundColor: fieldErrors.email ? '#fef2f2' : '#ffffff',
+              ...styles.inputWrap,
+              borderColor: fieldErrors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#D0E1F9',
             }}
-          />
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="name@example.com"
+              style={styles.input}
+              disabled={submitting}
+            />
+          </div>
           {fieldErrors.email && (
-            <p style={styles.fieldError}>{fieldErrors.email}</p>
+            <p style={styles.fieldErrorText}>{fieldErrors.email}</p>
           )}
         </div>
 
-        {/* Password */}
-        <div style={{ marginBottom: '1.4rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-            <label style={styles.inputLabel}>
-              Password *
-            </label>
+        {/* Password Field */}
+        <div style={styles.fieldGroup}>
+          <div style={styles.labelRow}>
+            <label style={styles.label}>Password *</label>
           </div>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="••••••••"
+          <div
             style={{
-              ...styles.inputField,
-              border: fieldErrors.password ? '1px solid #ef4444' : touched.password && formData.password ? '1px solid #3b82f6' : '1px solid #cbd5e1',
-              backgroundColor: fieldErrors.password ? '#fef2f2' : '#ffffff',
+              ...styles.inputWrap,
+              borderColor: fieldErrors.password ? '#ef4444' : '#D0E1F9',
             }}
-          />
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              placeholder="••••••••••••"
+              style={styles.input}
+              disabled={submitting}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              style={styles.eyeBtn}
+              title={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
           {fieldErrors.password && (
-            <p style={styles.fieldError}>{fieldErrors.password}</p>
+            <p style={styles.fieldErrorText}>{fieldErrors.password}</p>
           )}
         </div>
 
-        {/* Submit Button */}
+        {/* Shiny Royal Navy Blue Submit Button */}
         <button
           type="submit"
           disabled={submitting || Boolean(loginSuccess)}
           style={{
             ...styles.submitBtn,
-            backgroundColor: submitting || loginSuccess ? '#94a3b8' : '#1d4ed8',
+            opacity: submitting || loginSuccess ? 0.75 : 1,
             cursor: submitting || loginSuccess ? 'not-allowed' : 'pointer',
           }}
         >
-          {submitting ? 'Authenticating...' : loginSuccess ? 'Redirecting...' : 'Sign In'}
+          {submitting ? (
+            <span style={styles.btnContent}>
+              <span style={styles.spinner} />
+              <span>Signing In...</span>
+            </span>
+          ) : (
+            <span style={styles.btnContent}>
+              <span>Sign In</span>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
+          )}
         </button>
       </form>
 
-      {/* Switch to Register */}
-      <div style={styles.footerRow}>
-        <span>Don't have an account?</span>{' '}
+      {/* Bottom Switch Link */}
+      <div style={styles.footerLinkWrap}>
+        <span style={styles.footerPrompt}>Don't have an account? </span>
         <Link to="/register" style={styles.footerLink}>
-          Create account
+          Create Account
         </Link>
       </div>
     </div>
@@ -250,138 +260,186 @@ export function LoginForm() {
 
 const styles = {
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    border: '1px solid #e2e8f0',
-    padding: '36px 32px',
-    boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '24px',
+    boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)',
+    padding: '40px 38px 36px 38px',
+    position: 'relative',
+    overflow: 'hidden',
+    width: '100%',
+    boxSizing: 'border-box',
+    border: '1px solid rgba(226, 232, 240, 0.8)',
+  },
+  cardBottomWave: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '42px',
+    background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.55) 100%)',
+    pointerEvents: 'none',
+    borderBottomLeftRadius: '24px',
+    borderBottomRightRadius: '24px',
   },
   header: {
-    textAlign: 'left',
+    marginBottom: '26px',
+  },
+  logoWrap: {
+    display: 'flex',
+    alignItems: 'center',
     marginBottom: '20px',
   },
-  brandBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
-  },
-  brandTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: '-0.3px',
+  logoImg: {
+    maxHeight: '48px',
+    width: 'auto',
+    objectFit: 'contain',
   },
   title: {
-    fontSize: '1.5rem',
+    fontSize: '24px',
     fontWeight: '800',
-    color: '#0f172a',
-    margin: 0,
+    color: '#0F172A',
+    margin: '0 0 8px 0',
     letterSpacing: '-0.3px',
+    lineHeight: 1.25,
   },
   subtitle: {
-    fontSize: '0.88rem',
-    color: '#64748b',
-    marginTop: '6px',
-  },
-  demoBox: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '10px 14px',
-    marginBottom: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    flexWrap: 'wrap',
-  },
-  demoLabel: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#475569',
-    textTransform: 'uppercase',
-    letterSpacing: '0.4px',
-  },
-  demoChipsRow: {
-    display: 'flex',
-    gap: '8px',
-  },
-  demoChip: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#1d4ed8',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    fontSize: '13.5px',
+    color: '#64748B',
+    margin: 0,
+    lineHeight: 1.5,
   },
   successBanner: {
-    backgroundColor: '#dcfce7',
-    border: '1px solid #bbf7d0',
-    color: '#15803d',
-    padding: '12px 14px',
-    borderRadius: '8px',
-    fontSize: '0.88rem',
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    marginBottom: '18px',
+    padding: '12px 14px',
+    backgroundColor: '#ECFDF5',
+    border: '1px solid #10B981',
+    borderRadius: '12px',
+    color: '#065F46',
+    fontSize: '13px',
+    fontWeight: '500',
+    marginBottom: '20px',
   },
   errorBanner: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#b91c1c',
-    padding: '12px 14px',
-    borderRadius: '8px',
-    fontSize: '0.88rem',
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    marginBottom: '18px',
+    padding: '12px 14px',
+    backgroundColor: '#FEF2F2',
+    border: '1px solid #F87171',
+    borderRadius: '12px',
+    color: '#991B1B',
+    fontSize: '13px',
+    fontWeight: '500',
+    marginBottom: '20px',
   },
-  inputLabel: {
-    fontSize: '0.86rem',
-    fontWeight: '600',
-    color: '#334155',
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '18px',
+    position: 'relative',
+    zIndex: 2,
   },
-  inputField: {
-    width: '100%',
-    padding: '10px 14px',
-    borderRadius: '8px',
-    fontSize: '0.92rem',
-    color: '#0f172a',
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  labelRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  label: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: '7px',
+  },
+  inputWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#F0F6FF',
+    border: '1px solid #D0E1F9',
+    borderRadius: '12px',
+    padding: '0 14px',
+    height: '48px',
+    transition: 'all 0.15s ease',
+  },
+  inputIcon: {
+    flexShrink: 0,
+    marginRight: '10px',
+  },
+  input: {
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
     outline: 'none',
-    boxSizing: 'border-box',
-    transition: 'border-color 0.15s ease',
+    fontSize: '14.5px',
+    color: '#0F172A',
+    fontWeight: '500',
+    fontFamily: 'inherit',
+    height: '100%',
   },
-  fieldError: {
-    margin: '4px 0 0',
-    fontSize: '0.80rem',
-    color: '#b91c1c',
+  eyeBtn: {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: '#64748B',
+    marginLeft: '8px',
+  },
+  fieldErrorText: {
+    fontSize: '12px',
+    color: '#DC2626',
+    margin: '5px 0 0 2px',
     fontWeight: '500',
   },
   submitBtn: {
-    width: '100%',
-    padding: '12px',
-    color: '#ffffff',
-    border: '2px solid #ef4444',
-    borderRadius: '8px',
-    fontSize: '0.95rem',
+    height: '48px',
+    borderRadius: '12px',
+    background: 'linear-gradient(180deg, #0A58CA 0%, #033B85 100%)',
+    border: 'none',
+    color: '#FFFFFF',
+    fontSize: '15px',
     fontWeight: '700',
-    transition: 'background-color 0.15s ease',
-    boxShadow: '0 4px 10px rgba(29, 78, 216, 0.2)',
+    marginTop: '6px',
+    boxShadow: '0 8px 22px rgba(3, 59, 133, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35)',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   },
-  footerRow: {
-    marginTop: '24px',
+  btnContent: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  spinner: {
+    width: '16px',
+    height: '16px',
+    border: '2px solid rgba(255, 255, 255, 0.35)',
+    borderTopColor: '#FFFFFF',
+    borderRadius: '50%',
+    display: 'inline-block',
+    animation: 'spin 0.7s linear infinite',
+  },
+  footerLinkWrap: {
     textAlign: 'center',
-    fontSize: '0.88rem',
-    color: '#64748b',
+    marginTop: '24px',
+    fontSize: '13.5px',
+    color: '#64748B',
+    position: 'relative',
+    zIndex: 2,
+  },
+  footerPrompt: {
+    color: '#64748B',
   },
   footerLink: {
-    color: '#1d4ed8',
+    color: '#033B85',
     fontWeight: '700',
     textDecoration: 'none',
+    marginLeft: '4px',
   },
 };
