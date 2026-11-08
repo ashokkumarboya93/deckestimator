@@ -15,7 +15,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate } from '../../customer/api/estimatesApi';
-import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
+import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
 
 export default function ContractorProjectsPage() {
   const navigate = useNavigate();
@@ -32,7 +32,6 @@ export default function ContractorProjectsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Modals & Action Menus
-  const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirmEst, setDeleteConfirmEst] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -436,14 +435,10 @@ export default function ContractorProjectsPage() {
       <section
         style={{
           ...styles.heroBanner,
-          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 50%, rgba(30, 58, 99, 0.4) 100%), url(${deckBannerWood})`,
+          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 55%, rgba(30, 58, 99, 0.45) 100%), url(${contractorBannerBg})`,
         }}
       >
         <div style={styles.heroContent}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={styles.heroBadge}>Contractor Portfolio</span>
-            <span style={styles.heroBadgeSecondary}>Commercial &amp; Residential</span>
-          </div>
           <h1 style={styles.heroTitle}>My Projects</h1>
           <p style={styles.heroSubtitle}>
             Manage all your deck projects, customer proposals, and technical pricing records in one synchronized workspace.
@@ -509,9 +504,9 @@ export default function ContractorProjectsPage() {
           </div>
         </div>
 
-        {/* Total Pipeline Value */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#E2E8F0', color: '#0F172A' }}>
+        {/* Total Pipeline Value (Pale Purple as requested) */}
+        <div style={{ ...styles.kpiCard, backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }}>
+          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#F3E8FF', color: '#9333EA' }}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -519,7 +514,7 @@ export default function ContractorProjectsPage() {
           </div>
           <div>
             <span style={styles.kpiLabel}>Pipeline Value</span>
-            <strong style={{ ...styles.kpiValue, color: '#0F172A' }}>{formatCurrency(stats.totalPortfolioVal)}</strong>
+            <strong style={{ ...styles.kpiValue, color: '#7E22CE' }}>{formatCurrency(stats.totalPortfolioVal)}</strong>
             <span style={styles.kpiSub}>Total estimated volume</span>
           </div>
         </div>
@@ -735,12 +730,12 @@ export default function ContractorProjectsPage() {
                       {/* Actions */}
                       <td style={{ ...styles.td, textAlign: 'center' }}>
                         <div style={styles.actionsFlex}>
-                          {/* 1. View Button */}
+                          {/* 1. View Button: Redirects to Dedicated Full Project View Page */}
                           <button
                             type="button"
-                            onClick={() => setViewEstimate(est)}
+                            onClick={() => navigate(`/contractor/projects/${est._id || est.id}`)}
                             style={styles.actionViewBtn}
-                            title="Inspect complete technical scope"
+                            title="Inspect complete technical scope on dedicated page"
                           >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -784,16 +779,12 @@ export default function ContractorProjectsPage() {
 
                             {isMenuOpen && (
                               <div style={styles.dotsMenuDropdown}>
-                                {/* Edit */}
+                                {/* Edit: Redirects directly to Estimator with pre-populated specs */}
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setOpenMenuId(null);
-                                    if (deckId) {
-                                      navigate(`/contractor/decks/${deckId}/edit`);
-                                    } else {
-                                      navigate('/contractor/decks/new');
-                                    }
+                                    navigate(`/contractor/decks/new?estimateId=${est._id || est.id}${deckId ? `&deckId=${deckId}` : ''}`);
                                   }}
                                   style={styles.menuItem}
                                 >
@@ -850,76 +841,7 @@ export default function ContractorProjectsPage() {
       </div>
 
       {/* ======================================================== */}
-      {/* 5. VIEW ESTIMATE MODAL                                   */}
-      {/* ======================================================== */}
-      {viewEstimate && (
-        <div style={styles.modalOverlay} onClick={() => setViewEstimate(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div>
-                <h3 style={styles.modalTitle}>
-                  {viewEstimate.deckDetails?.projectName || viewEstimate.estimateName || 'Project Details'}
-                </h3>
-                <span style={styles.modalSubtitle}>
-                  Ref: {viewEstimate.estimateNumber || viewEstimate._id} • Created {formatFullDate(viewEstimate.createdAt)}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewEstimate(null)}
-                style={styles.modalCloseBtn}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div style={styles.modalGrid2}>
-                <div style={styles.modalBox}>
-                  <h4 style={styles.modalSectionTitle}>Deck Footprint &amp; Dimensions</h4>
-                  <div style={styles.modalLine}><span>Perimeter Shape:</span><strong>{viewEstimate.deckDetails?.deckShape || viewEstimate.pricingSnapshot?.shape || 'Rectangle'}</strong></div>
-                  <div style={styles.modalLine}><span>Total Billable Area:</span><strong>{getDeckArea(viewEstimate)}</strong></div>
-                  <div style={styles.modalLine}><span>Dimensions:</span><strong>{getDeckDimensions(viewEstimate)}</strong></div>
-                  <div style={styles.modalLine}><span>Wood Species:</span><strong>{(viewEstimate.deckDetails?.surfaceMaterial || viewEstimate.pricingSnapshot?.wood || 'Pressure Treated Pine').replace(/_/g, ' ')}</strong></div>
-                  <div style={styles.modalLine}><span>Elevation:</span><strong>{(viewEstimate.deckDetails?.deckType || viewEstimate.pricingSnapshot?.elevation || 'Ground Level').replace(/_/g, ' ')}</strong></div>
-                </div>
-
-                <div style={styles.modalBox}>
-                  <h4 style={styles.modalSectionTitle}>Labour, Scope &amp; Pricing</h4>
-                  <div style={styles.modalLine}><span>Labour Hours:</span><strong>{getLabourAndMaterials(viewEstimate).hours}</strong></div>
-                  <div style={styles.modalLine}><span>Scope / Prep:</span><strong>{getLabourAndMaterials(viewEstimate).materials}</strong></div>
-                  <div style={styles.modalLine}><span>Base Rate / SqFt:</span><strong>${Number(viewEstimate.pricingSnapshot?.rate || 2.75).toFixed(2)}</strong></div>
-                  <div style={styles.modalLine}><span>Status:</span><strong>{resolveStatusBadge(viewEstimate.estimateStatus || viewEstimate.status).label}</strong></div>
-                  <div style={{ ...styles.modalLine, borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '8px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1E3A63' }}>Guaranteed Total:</span>
-                    <strong style={{ fontSize: '18px', fontWeight: '900', color: '#1E3A63' }}>{getExactPrice(viewEstimate)}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button
-                type="button"
-                onClick={() => handlePrint(viewEstimate)}
-                style={styles.modalPrintBtn}
-              >
-                Print Estimate
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewEstimate(null)}
-                style={styles.modalCloseMainBtn}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* 6. DELETE CONFIRMATION MODAL                             */}
+      {/* 5. DELETE CONFIRMATION MODAL                             */}
       {/* ======================================================== */}
       {deleteConfirmEst && (
         <div style={styles.modalOverlay} onClick={() => setDeleteConfirmEst(null)}>
@@ -1088,7 +1010,9 @@ const styles = {
   },
   searchWrap: {
     position: 'relative',
-    flex: '1 1 360px',
+    width: '340px',
+    maxWidth: '100%',
+    flexShrink: 0,
   },
   searchIcon: {
     position: 'absolute',
@@ -1100,18 +1024,19 @@ const styles = {
   searchInput: {
     width: '100%',
     boxSizing: 'border-box',
-    padding: '10px 36px 10px 40px',
-    border: '1px solid #CBD5E1',
-    borderRadius: '8px',
+    padding: '10px 38px 10px 42px',
+    border: '1.5px solid #CBD5E1',
+    borderRadius: '9999px',
     fontSize: '13px',
     color: '#0F172A',
     backgroundColor: '#FFFFFF',
     outline: 'none',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+    transition: 'all 0.15s ease',
   },
   clearSearchBtn: {
     position: 'absolute',
-    right: '10px',
+    right: '12px',
     top: '50%',
     transform: 'translateY(-50%)',
     background: 'none',
@@ -1125,36 +1050,40 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    marginLeft: 'auto',
   },
   selectWrap: {
     position: 'relative',
   },
   selectIcon: {
     position: 'absolute',
-    left: '12px',
+    left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
     pointerEvents: 'none',
   },
   filterSelect: {
-    padding: '10px 16px 10px 34px',
-    border: '1px solid #CBD5E1',
-    borderRadius: '8px',
+    padding: '10px 36px 10px 36px',
+    border: '1.5px solid #CBD5E1',
+    borderRadius: '9999px',
     fontSize: '13px',
-    color: '#0F172A',
+    fontWeight: '600',
+    color: '#1E3A63',
     backgroundColor: '#FFFFFF',
     outline: 'none',
     cursor: 'pointer',
+    appearance: 'none',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
   },
   refreshBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '7px',
-    padding: '10px 16px',
+    gap: '8px',
+    padding: '10px 20px',
     backgroundColor: '#FFFFFF',
     color: '#1E3A63',
-    border: '1px solid #CBD5E1',
-    borderRadius: '8px',
+    border: '1.5px solid #1E3A63',
+    borderRadius: '9999px',
     fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
@@ -1178,8 +1107,9 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
     borderRadius: '12px',
-    overflow: 'hidden',
+    overflow: 'visible',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+    minHeight: '360px',
   },
   table: {
     width: '100%',
@@ -1338,15 +1268,15 @@ const styles = {
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: '4px',
-    width: '180px',
+    marginTop: '6px',
+    width: '190px',
     backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '8px',
-    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.12)',
-    zIndex: 90,
+    border: '1.5px solid #CBD5E1',
+    borderRadius: '10px',
+    boxShadow: '0 14px 35px rgba(0, 0, 0, 0.2)',
+    zIndex: 99999,
     overflow: 'hidden',
-    padding: '4px 0',
+    padding: '6px 0',
   },
   menuItem: {
     display: 'flex',
