@@ -1,12 +1,12 @@
 // =============================================
 // Deck Estimator — Dedicated Admin Portal Login
-// Modern Split Layout matching UI Specification with Executive Admin Card
+// Bright Executive Split Layout matching UI Specification
 // =============================================
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import mainLogo from '../../../assets/images/MainLodo.png';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export default function AdminLoginPage() {
   const { adminLogin } = useAuth();
@@ -47,12 +47,12 @@ export default function AdminLoginPage() {
 
   return (
     <div style={styles.pageContainer}>
-      {/* Left Column: Executive Admin Login Card */}
+      {/* Left Column: Bright Executive Admin Card */}
       <div style={styles.formColumn}>
         <div style={styles.formWrapper}>
           <div style={styles.card}>
-            {/* Subtle Top Glow Accent */}
-            <div style={styles.cardGlowAccent} />
+            {/* Distinctive Orange Crown Accent Line */}
+            <div style={styles.cardCrownAccent} />
 
             {/* Brand Header */}
             <div style={styles.header}>
@@ -64,13 +64,13 @@ export default function AdminLoginPage() {
                 />
               </div>
 
-              {/* Administrative Gateway Badge */}
+              {/* Executive Amber Badge */}
               <div style={styles.adminBadge}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
-                <span>ADMINISTRATIVE CONSOLE GATEWAY</span>
+                <span>DRP ADMINISTRATIVE GOVERNANCE</span>
               </div>
 
               <h1 style={styles.title}>Administrative Sign In</h1>
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
               <div style={styles.fieldGroup}>
                 <label style={styles.label}>Administrator Email *</label>
                 <div style={styles.inputWrap}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -128,7 +128,7 @@ export default function AdminLoginPage() {
                   <label style={styles.label}>Access Key / Password *</label>
                 </div>
                 <div style={styles.inputWrap}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
@@ -150,12 +150,12 @@ export default function AdminLoginPage() {
                     tabIndex={-1}
                   >
                     {showPassword ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                         <line x1="1" y1="1" x2="23" y2="23" />
                       </svg>
                     ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                         <circle cx="12" cy="12" r="3" />
                       </svg>
@@ -164,7 +164,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* High-impact Shiny Admin Submit Button */}
+              {/* Authoritative Midnight Navy Admin Submit Button */}
               <button
                 type="submit"
                 disabled={loading || Boolean(successMessage)}
@@ -182,7 +182,7 @@ export default function AdminLoginPage() {
                 ) : (
                   <span style={styles.btnContent}>
                     <span>Authenticate &amp; Enter Console</span>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="5" y1="12" x2="19" y2="12" />
                       <polyline points="12 5 19 12 12 19" />
                     </svg>
@@ -193,7 +193,7 @@ export default function AdminLoginPage() {
 
             {/* Bottom Security Notice */}
             <div style={styles.securityNotice}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
@@ -289,7 +289,7 @@ const styles = {
   pageContainer: {
     display: 'flex',
     minHeight: '100vh',
-    backgroundColor: '#07162C',
+    backgroundColor: '#F8FAFC',
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   formColumn: {
@@ -298,32 +298,26 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '40px 24px',
-    backgroundColor: '#07162C',
-    backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(14, 42, 82, 0.45) 0%, transparent 60%)',
+    backgroundColor: '#F1F5F9',
   },
   formWrapper: {
     width: '100%',
     maxWidth: '470px',
   },
   card: {
-    backgroundColor: '#0B203E',
-    backgroundImage: 'linear-gradient(145deg, #0D2447 0%, #081933 100%)',
+    backgroundColor: '#FFFFFF',
     borderRadius: '24px',
-    border: '1px solid rgba(224, 129, 49, 0.3)',
-    boxShadow: '0 25px 60px rgba(0, 0, 0, 0.4), 0 0 25px rgba(224, 129, 49, 0.08)',
-    padding: '40px 38px 34px 38px',
+    border: '1px solid #E2E8F0',
+    borderTop: '4px solid #E08131',
+    boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(224, 129, 49, 0.06)',
+    padding: '38px 38px 34px 38px',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
     boxSizing: 'border-box',
   },
-  cardGlowAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '3px',
-    background: 'linear-gradient(90deg, #E08131 0%, #F59E0B 50%, #E08131 100%)',
+  cardCrownAccent: {
+    display: 'none',
   },
   header: {
     marginBottom: '24px',
@@ -334,10 +328,9 @@ const styles = {
     marginBottom: '16px',
   },
   logoImg: {
-    maxHeight: '46px',
+    maxHeight: '52px',
     width: 'auto',
     objectFit: 'contain',
-    filter: 'brightness(1.08)',
   },
   adminBadge: {
     display: 'inline-flex',
@@ -345,25 +338,25 @@ const styles = {
     gap: '7px',
     padding: '5px 12px',
     borderRadius: '16px',
-    backgroundColor: 'rgba(224, 129, 49, 0.12)',
-    border: '1px solid rgba(224, 129, 49, 0.35)',
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
     fontSize: '11px',
     fontWeight: '700',
-    color: '#FDBA74',
+    color: '#92400E',
     letterSpacing: '0.6px',
     marginBottom: '12px',
   },
   title: {
     fontSize: '24px',
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
     margin: '0 0 8px 0',
     letterSpacing: '-0.3px',
     lineHeight: 1.25,
   },
   subtitle: {
     fontSize: '13px',
-    color: '#94A3B8',
+    color: '#64748B',
     margin: 0,
     lineHeight: 1.55,
   },
@@ -372,10 +365,10 @@ const styles = {
     alignItems: 'center',
     gap: '10px',
     padding: '12px 14px',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    border: '1px solid rgba(16, 185, 129, 0.4)',
+    backgroundColor: '#ECFDF5',
+    border: '1px solid #10B981',
     borderRadius: '12px',
-    color: '#6EE7B7',
+    color: '#065F46',
     fontSize: '13px',
     fontWeight: '500',
     marginBottom: '20px',
@@ -385,10 +378,10 @@ const styles = {
     alignItems: 'center',
     gap: '10px',
     padding: '12px 14px',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    border: '1px solid rgba(239, 68, 68, 0.4)',
+    backgroundColor: '#FEF2F2',
+    border: '1px solid #F87171',
     borderRadius: '12px',
-    color: '#FCA5A5',
+    color: '#991B1B',
     fontSize: '13px',
     fontWeight: '500',
     marginBottom: '20px',
@@ -410,14 +403,14 @@ const styles = {
   label: {
     fontSize: '12.5px',
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#1E293B',
     marginBottom: '7px',
   },
   inputWrap: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    border: '1px solid rgba(255, 255, 255, 0.14)',
+    backgroundColor: '#F8FAFC',
+    border: '1.5px solid #CBD5E1',
     borderRadius: '12px',
     padding: '0 14px',
     height: '48px',
@@ -433,7 +426,7 @@ const styles = {
     background: 'transparent',
     outline: 'none',
     fontSize: '14px',
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '500',
     fontFamily: 'inherit',
     height: '100%',
@@ -446,19 +439,19 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    color: '#94A3B8',
+    color: '#64748B',
     marginLeft: '8px',
   },
   submitBtn: {
     height: '48px',
     borderRadius: '12px',
-    background: 'linear-gradient(180deg, #0A58CA 0%, #033B85 100%)',
-    border: '1px solid rgba(224, 129, 49, 0.4)',
+    background: 'linear-gradient(180deg, #1E293B 0%, #0F172A 100%)',
+    border: '1px solid #334155',
     color: '#FFFFFF',
     fontSize: '15px',
     fontWeight: '700',
     marginTop: '6px',
-    boxShadow: '0 8px 24px rgba(3, 59, 133, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35)',
+    boxShadow: '0 8px 22px rgba(15, 23, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   },
   btnContent: {
@@ -483,7 +476,11 @@ const styles = {
     gap: '8px',
     marginTop: '22px',
     fontSize: '11.5px',
-    color: '#64748B',
+    color: '#92400E',
+    backgroundColor: '#FFFBEB',
+    padding: '6px 12px',
+    borderRadius: '10px',
+    border: '1px solid #FEF3C7',
   },
   switchPortalWrap: {
     textAlign: 'center',
@@ -491,7 +488,7 @@ const styles = {
   },
   switchPortalLink: {
     fontSize: '12.5px',
-    color: '#94A3B8',
+    color: '#64748B',
     textDecoration: 'none',
     fontWeight: '500',
     transition: 'color 0.15s ease',
@@ -536,7 +533,7 @@ const styles = {
     marginBottom: '12px',
   },
   heroLogoImg: {
-    maxHeight: '48px',
+    maxHeight: '52px',
     width: 'auto',
     objectFit: 'contain',
     filter: 'brightness(1.08)',

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { RegistrationForm } from '../components/RegistrationForm';
-import mainLogo from '../../../assets/images/MainLodo.png';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export default function RegisterPage() {
   return (
@@ -152,7 +152,7 @@ const styles = {
     marginBottom: '12px',
   },
   heroLogoImg: {
-    maxHeight: '48px',
+    maxHeight: '52px',
     width: 'auto',
     objectFit: 'contain',
     filter: 'brightness(1.08)',

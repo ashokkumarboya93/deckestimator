@@ -7,7 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../../../api/apiErrors';
-import mainLogo from '../../../assets/images/MainLodo.png';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export function RegistrationForm() {
   const navigate = useNavigate();
@@ -625,7 +625,7 @@ const styles = {
     marginBottom: '16px',
   },
   logoImg: {
-    maxHeight: '44px',
+    maxHeight: '50px',
     width: 'auto',
     objectFit: 'contain',
   },
