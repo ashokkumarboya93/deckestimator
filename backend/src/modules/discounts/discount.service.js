@@ -279,6 +279,39 @@ async function getContractorApplicableDiscounts(contractorUserId) {
 }
 
 /**
+ * Gets effective discount rate for contractor (assigned or default 10%).
+ */
+async function getContractorEffectiveDiscount(contractorUserId) {
+  let rate = 10;
+  let policyName = 'Default Contractor Discount (10%)';
+  let policyCode = 'CONTRACTOR_DEFAULT_10';
+
+  try {
+    const assignment = await DiscountAssignment.findOne({
+      contractorId: contractorUserId,
+      status: 'active',
+    }).populate('discountPolicyId');
+
+    if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
+      rate = assignment.discountPolicyId.discountValue;
+      policyName = assignment.discountPolicyId.name || policyName;
+      policyCode = assignment.discountPolicyId.code || policyCode;
+    } else {
+      const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+      if (defaultPol && typeof defaultPol.discountValue === 'number') {
+        rate = defaultPol.discountValue;
+        policyName = defaultPol.name;
+        policyCode = defaultPol.code;
+      }
+    }
+  } catch (err) {
+    console.warn('[Get Contractor Effective Discount Warning]:', err.message);
+  }
+
+  return { rate, policyName, policyCode };
+}
+
+/**
  * Applies an approved discount policy to an estimate.
  */
 async function applyDiscountToEstimate(estimateId, { discountPolicyId, discountPolicyCode }, requestingUser) {
@@ -476,6 +509,7 @@ module.exports = {
   updateDiscountPolicyStatus,
   assignDiscountToContractor,
   getContractorApplicableDiscounts,
+  getContractorEffectiveDiscount,
   applyDiscountToEstimate,
   getEstimateDiscountHistory,
 };

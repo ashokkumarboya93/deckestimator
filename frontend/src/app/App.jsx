@@ -273,7 +273,7 @@ function App() {
                 style={{
                   padding: '6px 14px',
                   fontSize: '13px',
-                  border: '1px solid var(--color-border)',
+                  border: '2px solid #ef4444',
                   borderRadius: 'var(--radius)',
                   color: 'var(--color-text)',
                   textDecoration: 'none',

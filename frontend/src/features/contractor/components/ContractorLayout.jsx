@@ -12,6 +12,8 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import mainLogo from '../../../assets/images/MainLodo.png';
+import ContractorFooter from './ContractorFooter';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
@@ -96,30 +98,31 @@ export default function ContractorLayout() {
       >
         {/* Brand Header */}
         <div style={styles.brandBox}>
-          <Link to="/contractor/dashboard" style={styles.brandLink}>
-            <div style={styles.brandLogoIcon}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                opacity: isSidebarHovered ? 1 : 0,
-                transition: 'opacity 0.18s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={styles.brandTitle}>DECK <span style={{ color: '#1E3E62' }}>RESTORATION PLUS</span>
-              </span>
-              <span style={styles.brandSubtitle}>Contractor Portal</span>
-            </div>
-          </Link>
+          {isSidebarHovered ? (
+            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+              <img
+                src={mainLogo}
+                alt="Deck Restoration Plus"
+                style={{
+                  height: '36px',
+                  maxWidth: '185px',
+                  objectFit: 'contain',
+                }}
+              />
+            </Link>
+          ) : (
+            <Link to="/contractor/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
+              <div style={styles.brandLogoIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </div>
+            </Link>
+          )}
         </div>
 
-        {/* Navigation Menu */}
+        {/* Navigation Menu — Strictly 7 items in specified order */}
         <nav style={styles.navMenu}>
           {/* 1. Dashboard */}
           <Link
@@ -138,18 +141,19 @@ export default function ContractorLayout() {
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Dashboard
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Dashboard
             </span>
           </Link>
 
-          {/* 2. New Deck Project (Prominent create button) */}
+          {/* 2. New Estimation */}
           <Link
             to="/contractor/decks/new"
             style={{
               ...styles.navItem,
               ...(currentPath === '/contractor/decks/new' ? styles.navItemActive : {}),
             }}
-            title="New Deck Project"
+            title="New Estimation"
           >
             <span style={styles.navIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -158,11 +162,12 @@ export default function ContractorLayout() {
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>New Deck Project
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              New Estimation
             </span>
           </Link>
 
-          {/* 3. Projects & Decks */}
+          {/* 3. My Projects */}
           <Link
             to="/contractor/projects"
             style={{
@@ -171,7 +176,7 @@ export default function ContractorLayout() {
                 ? styles.navItemActive
                 : {}),
             }}
-            title="Projects & Decks"
+            title="My Projects"
           >
             <span style={styles.navIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -180,124 +185,64 @@ export default function ContractorLayout() {
                 <polyline points="2 12 12 17 22 12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Projects &amp; Decks
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              My Projects
             </span>
           </Link>
 
-          {/* 4. Assigned Leads */}
+          {/* 4. Discounts & Earnings */}
           <Link
-            to="/contractor/leads"
+            to="/contractor/discounts-earnings"
             style={{
               ...styles.navItem,
-              ...(isActive('/contractor/leads') ? styles.navItemActive : {}),
+              ...(isActive('/contractor/discounts-earnings') || isActive('/contractor/commissions') || isActive('/contractor/discounts')
+                ? styles.navItemActive
+                : {}),
             }}
-            title="Assigned Leads"
+            title="Discounts & Earnings"
           >
             <span style={styles.navIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Assigned Leads
-            </span>
-            {isSidebarHovered && leadsCount > 0 && (
-              <span style={isActive('/contractor/leads') ? styles.badgeActive : styles.badge}>
-                {leadsCount}
-              </span>
-            )}
-          </Link>
-
-          {/* 5. Estimates */}
-          <Link
-            to="/contractor/estimates"
-            style={{
-              ...styles.navItem,
-              ...(isActive('/contractor/estimates') ? styles.navItemActive : {}),
-            }}
-            title="Estimates"
-          >
-            <span style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
-            </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Estimates
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Discounts &amp; Earnings
             </span>
           </Link>
 
-          {/* 6. Verification & Compliance */}
+          {/* 5. Help & support */}
           <Link
-            to="/contractor/verification"
+            to="/contractor/support"
             style={{
               ...styles.navItem,
-              ...(isActive('/contractor/verification') ? styles.navItemActive : {}),
+              ...(isActive('/contractor/support') ? styles.navItemActive : {}),
             }}
-            title="Verification & Compliance"
+            title="Help & support"
           >
             <span style={styles.navIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-                <path d="m9 12 2 2 4-4" />
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Verification &amp; Compliance
-            </span>
-          </Link>
-
-          {/* 7. Commissions & Earnings */}
-          <Link
-            to="/contractor/commissions"
-            style={{
-              ...styles.navItem,
-              ...(isActive('/contractor/commissions') ? styles.navItemActive : {}),
-            }}
-            title="Commissions & Earnings"
-          >
-            <span style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="20" x2="12" y2="10" />
-                <line x1="18" y1="20" x2="18" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="16" />
-              </svg>
-            </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Commissions &amp; Earnings
-            </span>
-          </Link>
-
-          {/* 8. Partner Discounts */}
-          <Link
-            to="/contractor/discounts"
-            style={{
-              ...styles.navItem,
-              ...(isActive('/contractor/discounts') ? styles.navItemActive : {}),
-            }}
-            title="Partner Discounts"
-          >
-            <span style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
-                <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-              </svg>
-            </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Partner Discounts
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Help &amp; support
             </span>
           </Link>
 
           <div style={styles.navDivider} />
 
-          {/* Profile / Settings */}
+          {/* 6. Profile Settings */}
           <Link
-            to="/contractor/verification"
+            to="/contractor/profile"
             style={{
               ...styles.navItem,
-              ...(currentPath === '/contractor/settings' ? styles.navItemActive : {}),
+              ...(isActive('/contractor/profile') || currentPath === '/contractor/settings' || currentPath === '/contractor/verification'
+                ? styles.navItemActive
+                : {}),
             }}
             title="Profile Settings"
           >
@@ -307,29 +252,12 @@ export default function ContractorLayout() {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Profile Settings
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+              Profile Settings
             </span>
           </Link>
 
-          {/* Help & Guide Modal Trigger */}
-          <button
-            type="button"
-            onClick={() =>setIsHelpOpen(true)}
-            style={{ ...styles.navItem, background: 'none', border: 'none', width: '100%', cursor: 'pointer' }}
-            title="Help & Guide"
-          >
-            <span style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Help &amp; Guide
-            </span>
-          </button>
-
-          {/* Standalone Logout in Sidebar bottom */}
+          {/* 7. Sign Out */}
           <button
             type="button"
             onClick={handleLogout}
@@ -342,16 +270,17 @@ export default function ContractorLayout() {
               color: '#dc2626',
               marginTop: 'auto',
             }}
-            title="Logout"
+            title="Sign Out"
           >
-            <span style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.navIcon, color: '#dc2626' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>Logout
+            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel, color: '#dc2626', fontWeight: '700' }}>
+              Sign Out
             </span>
           </button>
         </nav>
@@ -511,14 +440,14 @@ export default function ContractorLayout() {
                     type="button"
                     onClick={() => {
                       setShowProfileMenu(false);
-                      navigate('/contractor/verification');
+                      navigate('/contractor/profile');
                     }}
                     style={styles.dropdownItem}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-                      <path d="m9 12 2 2 4-4" />
-                    </svg>Profile &amp; Compliance
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>Profile Settings
                   </button>
                   <button
                     type="button"
@@ -568,6 +497,9 @@ export default function ContractorLayout() {
         >
           <Outlet />
         </main>
+
+        {/* Dedicated Contractor Portal Footer (Shown on all pages except estimator) */}
+        {!isEstimatorPage && <ContractorFooter />}
       </div>
 
       {/* 3. HELP & GUIDE MODAL */}
@@ -611,15 +543,15 @@ const styles = {
     display: 'flex',
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   },
   sidebar: {
     position: 'fixed',
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: '#ffffff',
-    borderRight: '1px solid #e2e8f0',
+    backgroundColor: '#08457E',
+    borderRight: '1px solid rgba(255, 255, 255, 0.08)',
     display: 'flex',
     flexDirection: 'column',
     zIndex: 120,
@@ -628,11 +560,22 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   brandBox: {
-    height: '65px',
+    minHeight: '68px',
     display: 'flex',
     alignItems: 'center',
-    padding: '0 16px',
-    borderBottom: '1px solid #f1f5f9',
+    padding: '12px 16px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+  },
+  portalBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    borderRadius: '4px',
+    padding: '2px 8px',
+    fontSize: '9.5px',
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
   },
   brandLink: {
     display: 'flex',
@@ -641,19 +584,23 @@ const styles = {
     textDecoration: 'none',
   },
   brandLogoIcon: {
-    fontSize: '22px',
-    minWidth: '36px',
-    textAlign: 'center',
+    minWidth: '34px',
+    height: '34px',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandTitle: {
     fontSize: '1.15rem',
     fontWeight: '800',
     letterSpacing: '-0.3px',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   brandSubtitle: {
     fontSize: '0.72rem',
-    color: '#64748b',
+    color: '#60A5FA',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -672,16 +619,17 @@ const styles = {
     padding: '10px 14px',
     borderRadius: '8px',
     textDecoration: 'none',
-    color: '#475569',
+    color: '#FFFFFF',
     fontSize: '0.88rem',
     fontWeight: '500',
     transition: 'all 0.15s ease',
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
+    backgroundColor: '#3169CA',
+    color: '#ffffff',
     fontWeight: '600',
+    boxShadow: '0 2px 8px rgba(49, 105, 202, 0.35)',
   },
   navIcon: {
     fontSize: '18px',
@@ -690,17 +638,19 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    color: '#FFFFFF',
   },
   navLabel: {
     transition: 'opacity 0.15s ease',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    color: '#FFFFFF',
   },
   badge: {
     marginLeft: 'auto',
-    backgroundColor: '#e2e8f0',
-    color: '#475569',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    color: '#FFFFFF',
     fontSize: '11px',
     fontWeight: '700',
     padding: '2px 8px',
@@ -708,8 +658,8 @@ const styles = {
   },
   badgeActive: {
     marginLeft: 'auto',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
+    backgroundColor: '#ffffff',
+    color: '#3169CA',
     fontSize: '11px',
     fontWeight: '700',
     padding: '2px 8px',
@@ -717,7 +667,7 @@ const styles = {
   },
   navDivider: {
     height: '1px',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     margin: '12px 6px',
   },
   mainWrapper: {
@@ -736,8 +686,10 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 24px',
-    position: 'relative',
-    zIndex: 10,
+    position: 'sticky',
+    top: 0,
+    zIndex: 40,
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
   },
   headerLeft: {
     display: 'flex',
@@ -947,9 +899,9 @@ const styles = {
   logoutBtn: {
     padding: '7px 16px',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
+    border: '1px solid #fca5a5',
     borderRadius: '6px',
-    color: '#334155',
+    color: '#dc2626',
     fontSize: '0.85rem',
     fontWeight: '600',
     cursor: 'pointer',

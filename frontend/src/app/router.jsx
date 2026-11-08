@@ -14,6 +14,7 @@ import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage'
 import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
 import CustomerLayout from '../features/customer/components/CustomerLayout';
 import CustomerProfilePage from '../features/customer/pages/CustomerProfilePage';
+import CustomerSupportPage from '../features/customer/pages/CustomerSupportPage';
 
 // Contractor Pages & Layout
 import ContractorLayout from '../features/contractor/components/ContractorLayout';
@@ -30,6 +31,9 @@ import ContractorCommissionsPage from '../features/contractor/pages/ContractorCo
 import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
 import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
 import ContractorVerificationRequestPage from '../features/contractor/pages/ContractorVerificationRequestPage';
+import ContractorProfilePage from '../features/contractor/pages/ContractorProfilePage';
+import ContractorDiscountsEarningsPage from '../features/contractor/pages/ContractorDiscountsEarningsPage';
+import ContractorSupportPage from '../features/contractor/pages/ContractorSupportPage';
 
 // Admin Portal Pages & Layout
 import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
@@ -139,6 +143,10 @@ const router = createBrowserRouter([
             path: 'profile',
             element: <CustomerProfilePage />,
           },
+          {
+            path: 'support',
+            element: <CustomerSupportPage />,
+          },
         ],
       },
 
@@ -166,14 +174,10 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: 'verification-request',
-            element: <ContractorVerificationRequestPage />,
-          },
-          {
-            path: 'leads',
+            path: 'decks/new',
             element: (
               <RequireApprovedContractor>
-                <ContractorLeadsPage />
+                <ContractorDeckEstimatorPage />
               </RequireApprovedContractor>
             ),
           },
@@ -186,10 +190,26 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: 'decks/new',
+            path: 'discounts-earnings',
             element: (
               <RequireApprovedContractor>
-                <ContractorDeckEstimatorPage />
+                <ContractorDiscountsEarningsPage />
+              </RequireApprovedContractor>
+            ),
+          },
+          {
+            path: 'support',
+            element: (
+              <RequireApprovedContractor>
+                <ContractorSupportPage />
+              </RequireApprovedContractor>
+            ),
+          },
+          {
+            path: 'profile',
+            element: (
+              <RequireApprovedContractor>
+                <ContractorProfilePage />
               </RequireApprovedContractor>
             ),
           },
@@ -210,22 +230,6 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: 'estimates',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorEstimatesPage />
-              </RequireApprovedContractor>
-            ),
-          },
-          {
-            path: 'estimates/new',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorEstimateBuilderPage />
-              </RequireApprovedContractor>
-            ),
-          },
-          {
             path: 'estimates/:estimateId',
             element: (
               <RequireApprovedContractor>
@@ -233,37 +237,42 @@ const router = createBrowserRouter([
               </RequireApprovedContractor>
             ),
           },
+          // Route Compatibility Aliases for unified contractor portal
           {
-            path: 'verification',
-            element: <ContractorVerificationPage />,
+            path: 'estimates',
+            element: <Navigate to="/contractor/projects" replace />,
           },
           {
-            path: 'verification/:documentId',
-            element: <ContractorDocumentDetailPage />,
+            path: 'estimates/new',
+            element: <Navigate to="/contractor/decks/new" replace />,
+          },
+          {
+            path: 'leads',
+            element: <Navigate to="/contractor/projects" replace />,
+          },
+          {
+            path: 'verification',
+            element: <Navigate to="/contractor/profile" replace />,
+          },
+          {
+            path: 'verification-request',
+            element: <Navigate to="/contractor/profile" replace />,
+          },
+          {
+            path: 'settings',
+            element: <Navigate to="/contractor/profile" replace />,
           },
           {
             path: 'commissions',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorCommissionsPage />
-              </RequireApprovedContractor>
-            ),
+            element: <Navigate to="/contractor/discounts-earnings" replace />,
           },
           {
             path: 'commissions/:commissionId',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorCommissionDetailPage />
-              </RequireApprovedContractor>
-            ),
+            element: <Navigate to="/contractor/discounts-earnings" replace />,
           },
           {
             path: 'discounts',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorDiscountsPage />
-              </RequireApprovedContractor>
-            ),
+            element: <Navigate to="/contractor/discounts-earnings" replace />,
           },
         ],
       },

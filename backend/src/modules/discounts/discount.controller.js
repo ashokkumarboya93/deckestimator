@@ -87,9 +87,14 @@ async function assignDiscount(req, res, next) {
 async function getContractorDiscounts(req, res, next) {
   try {
     const policies = await discountService.getContractorApplicableDiscounts(req.user.id);
+    const effectiveDiscount = await discountService.getContractorEffectiveDiscount(req.user.id);
     res.status(200).json({
       success: true,
-      data: { policies },
+      data: {
+        policies,
+        effectiveRate: effectiveDiscount.rate,
+        effectiveDiscount,
+      },
     });
   } catch (err) {
     next(err);

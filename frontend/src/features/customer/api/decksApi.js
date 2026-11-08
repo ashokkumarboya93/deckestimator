@@ -38,7 +38,15 @@ export async function createDeck(deckData) {
  * Update an existing deck project.
  */
 export async function updateDeck(deckId, deckData) {
-  const res = await apiClient(ENDPOINTS.DECKS.BY_ID(deckId), {
+  const cleanId = typeof deckId === 'object' && deckId !== null
+    ? (deckId._id || deckId.id || '')
+    : String(deckId || '').trim();
+
+  if (!cleanId || cleanId === '[object Object]' || cleanId.includes('[object')) {
+    throw new Error('Invalid deck ID provided for update.');
+  }
+
+  const res = await apiClient(ENDPOINTS.DECKS.BY_ID(cleanId), {
     method: 'PATCH',
     body: JSON.stringify(deckData),
   });

@@ -345,7 +345,7 @@ const styles = {
     fontWeight: '700',
     padding: '12px 20px',
     borderRadius: '8px',
-    border: 'none',
+    border: '2px solid #ef4444',
     boxShadow: '0 4px 12px rgba(29, 78, 216, 0.4)',
     transition: 'all 0.15s ease',
   },
