@@ -66,6 +66,7 @@ export default function ContractorLayout() {
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
+  const isDashboardPage = currentPath === '/contractor' || currentPath === '/contractor/' || currentPath.includes('/dashboard');
 
   // Load live lead counts for badge
   useEffect(() => {
@@ -393,8 +394,8 @@ export default function ContractorLayout() {
             )}
           </div>
 
-          {/* Center: Search Bar */}
-          {!isEstimatorPage && (
+          {/* Center: Search Bar (Hidden on Contractor Dashboard & Estimator) */}
+          {!isEstimatorPage && !isDashboardPage && (
             <div style={styles.headerCenter}>
               <div style={styles.searchBox}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
