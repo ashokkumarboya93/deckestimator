@@ -27,6 +27,28 @@ export default function ContractorLayout() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(6);
   const [projectName, setProjectName] = useState('');
+  const [contractorProfile, setContractorProfile] = useState(null);
+
+  // Sync contractor profile data
+  useEffect(() => {
+    let mounted = true;
+    const fetchProfile = () => {
+      contractorLeadApi.getProfile()
+        .then((res) => {
+          if (mounted && res?.data) {
+            setContractorProfile(res.data.profile || res.data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchProfile();
+    window.addEventListener('contractor_profile_updated', fetchProfile);
+    return () => {
+      mounted = false;
+      window.removeEventListener('contractor_profile_updated', fetchProfile);
+    };
+  }, [user]);
 
   // Sync project name updates from active estimator
   useEffect(() => {
@@ -424,12 +446,20 @@ export default function ContractorLayout() {
             <div style={{ position: 'relative' }}>
               <div
                 style={styles.profilePill}
-                onClick={() =>setShowProfileMenu(!showProfileMenu)}
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
-                <div style={styles.avatarCircle}>{initials}</div>
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user?.fullName || 'Contractor'}
+                    style={styles.avatarImg}
+                  />
+                ) : (
+                  <div style={styles.avatarCircle}>{initials}</div>
+                )}
                 <div style={styles.profileText}>
                   <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
-                  <span style={styles.profileRole}>Apex Deck Pros LLC</span>
+                  <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
                 </div>
                 <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
               </div>
@@ -841,6 +871,14 @@ const styles = {
     border: '1px solid #e2e8f0',
     borderRadius: '24px',
     cursor: 'pointer',
+  },
+  avatarImg: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '1.5px solid #CBD5E1',
+    flexShrink: 0,
   },
   avatarCircle: {
     width: '30px',
