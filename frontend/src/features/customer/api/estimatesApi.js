@@ -75,12 +75,27 @@ export async function getEstimateHistory(id) {
   return res.data?.revisions || [];
 }
 
-export async function updateEstimateStatus(id, status) {
+export async function updateEstimateStatus(id, status, notes = '') {
   const res = await apiClient(ENDPOINTS.ESTIMATES.STATUS(id), {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ estimateStatus: status, status, notes }),
   });
   return res.data?.estimate;
+}
+
+export async function updateEstimate(id, payload) {
+  const res = await apiClient(ENDPOINTS.ESTIMATES.BY_ID(id), {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return res.data?.estimate;
+}
+
+export async function deleteEstimate(id) {
+  const res = await apiClient(ENDPOINTS.ESTIMATES.BY_ID(id), {
+    method: 'DELETE',
+  });
+  return res.data;
 }
 
 export async function calculateLivePricing(payload) {

@@ -366,7 +366,7 @@ const styles = {
     width: '100%',
     padding: '12px',
     color: '#ffffff',
-    border: 'none',
+    border: '2px solid #ef4444',
     borderRadius: '8px',
     fontSize: '0.95rem',
     fontWeight: '700',

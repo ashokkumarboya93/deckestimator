@@ -298,7 +298,32 @@ async function createEstimate(data, user, ipAddress) {
     taxPercentageVal = calculated.taxPercentage;
     taxAmountVal = calculated.taxAmount;
     totalAmountVal = calculated.totalAmount;
-    pricingSnapshotData = calculated.pricingSnapshot;
+    pricingSnapshotData = {
+      ...calculated.pricingSnapshot,
+      spec: {
+        woodSpecies: data.woodSpecies || deck.surfaceDetails?.woodSpecies || deck.surfaceDetails?.material || 'pt_pine',
+        accessType: data.accessType || deck.structureDetails?.height || 'ground',
+        exactHeightFt: data.exactHeightFt || deck.structureDetails?.exactHeightFt || null,
+        deckShape: deck.deckShape || data.deckShape || data.shape || 'rectangle',
+        length: deck.dimensions?.length || data.length || 20,
+        width: deck.dimensions?.width || data.width || 15,
+        floorArea: calculatedDeckArea,
+        existingCoating: data.coatingType || deck.surfaceDetails?.coatingStatus || 'none',
+        services: Array.isArray(data.services) && data.services.length > 0 ? data.services : ['cleaning', 'sealing'],
+        stainType: data.stainType || 'semi',
+        conditions: data.conditionFlags || data.conditions || deck.visibleConditions || ['good_condition'],
+        components: deck.structureDetails?.components || data.components || [],
+        componentSqft: {
+          railings: data.railingSqft || deck.railingDetails?.totalLength || 0,
+          stairs: data.stairSteps || data.stairCount || 0,
+          pergola: data.pergolaSqft || 0,
+          privacy_wall: data.privacyWallSqft || 0,
+          siding: data.sidingSqft || 0,
+          fascia: data.fasciaSqft || 0,
+          joists: data.joistsSqft || 0,
+        },
+      },
+    };
     warningsList = calculated.warnings || [];
   }
 
@@ -312,9 +337,9 @@ async function createEstimate(data, user, ipAddress) {
     deckLength: deck.dimensions?.length || null,
     deckWidth: deck.dimensions?.width || null,
     deckShape: deck.deckShape || 'rectangle',
-    surfaceMaterial: deck.surfaceDetails?.material || deck.surfaceMaterial || 'wood',
-    deckCondition: (deck.visibleConditions && deck.visibleConditions[0]) || 'fair',
-    deckType: deck.structureDetails?.isAttached ? 'attached' : 'detached',
+    surfaceMaterial: data.woodSpecies || deck.surfaceDetails?.woodSpecies || deck.surfaceDetails?.material || deck.surfaceMaterial || 'wood',
+    deckCondition: data.coatingType || deck.surfaceDetails?.coatingStatus || (deck.visibleConditions && deck.visibleConditions[0]) || 'fair',
+    deckType: data.accessType || deck.structureDetails?.height || (deck.structureDetails?.isAttached ? 'attached' : 'detached'),
     location: {
       street: deckLocation.street || '',
       city: deckLocation.city || '',
@@ -322,40 +347,69 @@ async function createEstimate(data, user, ipAddress) {
       zipCode: deckLocation.zipCode || '',
       country: deckLocation.country || 'USA',
     },
+    components: deck.structureDetails?.components || data.components || [],
+    services: Array.isArray(data.services) ? data.services : ['cleaning', 'sealing'],
+    visibleConditions: deck.visibleConditions || data.conditionFlags || [],
   };
 
   const estimateType = user.role === ROLES.CONTRACTOR ? 'CONTRACTOR' : 'CUSTOMER';
   const estimateNumber = generateEstimateNumber();
 
   // Apply Contractor Discount if role is Contractor
-  let discountBreakdown = { applied: false, discountPercentage: 0, discountAmount: 0 };
+  let discountBreakdown = { applied: false, discountPercentage: 0, discountAmount: 0, originalTotal: totalAmountVal };
   if (user.role === ROLES.CONTRACTOR) {
-    let appliedDiscount = 10;
+    let appliedDiscount = Number(data.contractorDiscountPercent) || 10;
     try {
       const assignment = await DiscountAssignment.findOne({
         contractorId: user.id || user._id,
         status: 'active',
       }).populate('discountPolicyId');
-      if (assignment && assignment.discountPolicyId && assignment.discountPolicyId.discountValue) {
+      if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
         appliedDiscount = assignment.discountPolicyId.discountValue;
       } else {
         const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-        if (defaultPol?.discountValue) appliedDiscount = defaultPol.discountValue;
+        if (defaultPol && typeof defaultPol.discountValue === 'number') {
+          appliedDiscount = defaultPol.discountValue;
+        }
       }
     } catch (err) {
       console.warn('[Estimate Discount Warning]:', err.message);
     }
 
-    const discountAmount = pricingEngine.round2((totalAmountVal * appliedDiscount) / 100);
-    const discountedTotal = pricingEngine.round2(totalAmountVal - discountAmount);
+    const shouldApplyDiscount = data.applyContractorDiscount !== false && data.applyDiscount !== false;
+    const originalPreDiscountTotal = totalAmountVal;
 
-    discountBreakdown = {
-      applied: true,
-      discountPercentage: appliedDiscount,
-      discountAmount,
-      discountedSubtotal: discountedTotal,
+    if (shouldApplyDiscount) {
+      const discountAmount = pricingEngine.round2((originalPreDiscountTotal * appliedDiscount) / 100);
+      const discountedTotal = pricingEngine.round2(originalPreDiscountTotal - discountAmount);
+
+      discountBreakdown = {
+        applied: true,
+        discountPercentage: appliedDiscount,
+        discountAmount,
+        discountedSubtotal: discountedTotal,
+        originalTotal: originalPreDiscountTotal,
+      };
+      totalAmountVal = discountedTotal;
+    } else {
+      discountBreakdown = {
+        applied: false,
+        discountPercentage: appliedDiscount,
+        discountAmount: 0,
+        discountedSubtotal: originalPreDiscountTotal,
+        originalTotal: originalPreDiscountTotal,
+      };
+      totalAmountVal = originalPreDiscountTotal;
+    }
+
+    pricingSnapshotData = {
+      ...pricingSnapshotData,
+      originalTotal: discountBreakdown.originalTotal,
+      discountedTotal: totalAmountVal,
+      calculatedTotal: totalAmountVal,
+      total: totalAmountVal,
+      discountBreakdown,
     };
-    totalAmountVal = discountedTotal;
   }
 
   // 8. Persist Estimate
@@ -381,7 +435,7 @@ async function createEstimate(data, user, ipAddress) {
     totalAmount: totalAmountVal,
     discountBreakdown,
     pricingSnapshot: pricingSnapshotData,
-    estimateStatus: 'DRAFT',
+    estimateStatus: data.estimateStatus ? data.estimateStatus.toUpperCase() : 'CREATED',
     version: 1,
     warnings: warningsList,
     notes,
@@ -419,7 +473,7 @@ async function getEstimates(query = {}, user) {
 
   const [items, total] = await Promise.all([
     Estimate.find(filter)
-      .populate('deckId', 'projectName dimensions deckArea surfaceMaterial')
+      .populate('deckId')
       .populate('createdBy', 'fullName email role')
       .populate('ownerId', 'fullName email')
       .sort({ createdAt: -1 })
@@ -441,7 +495,7 @@ async function getEstimates(query = {}, user) {
 
 async function getEstimateById(id, user) {
   const estimate = await Estimate.findById(id)
-    .populate('deckId', 'projectName dimensions deckArea surfaceMaterial propertyLocation')
+    .populate('deckId')
     .populate('createdBy', 'fullName email role')
     .populate('ownerId', 'fullName email');
 
@@ -601,6 +655,209 @@ async function updateEstimateStatus(id, newStatus, notes, user, ipAddress) {
   return estimate.toJSON();
 }
 
+async function deleteEstimate(id, user, ipAddress) {
+  const estimate = await Estimate.findById(id);
+  if (!estimate) {
+    throw new NotFoundError('Estimate not found.');
+  }
+
+  assertEstimateAccess(estimate, user);
+
+  const oldValues = estimate.toJSON();
+  await Estimate.findByIdAndDelete(id);
+
+  if (estimate.deckId) {
+    const otherCount = await Estimate.countDocuments({ deckId: estimate.deckId });
+    if (otherCount === 0) {
+      try {
+        const Deck = require('../decks/deck.model');
+        await Deck.findByIdAndDelete(estimate.deckId);
+      } catch (err) {
+        // Deck already removed
+      }
+    }
+  }
+
+  await recordAuditLog({
+    performedBy: user.id || user._id,
+    action: 'DELETE_ESTIMATE',
+    entityId: estimate._id,
+    oldValue: oldValues,
+    newValue: null,
+    ipAddress,
+  });
+
+  return { id, message: 'Estimate deleted successfully.' };
+}
+
+async function updateEstimate(id, payload = {}, user, ipAddress) {
+  const estimate = await Estimate.findById(id);
+  if (!estimate) {
+    throw new NotFoundError('Estimate not found.');
+  }
+
+  assertEstimateAccess(estimate, user);
+
+  const oldValues = estimate.toJSON();
+
+  const floorVal = Number(payload.floorArea || estimate.deckDetails?.areaSqFt || 400);
+  const clientCalc = pricingEngine.calculateRestorationEstimate({
+    deckArea: floorVal,
+    woodSpecies: payload.woodSpecies || estimate.deckDetails?.surfaceMaterial || 'pressure_treated_pine',
+    accessType: payload.accessType || estimate.deckDetails?.deckType || 'first',
+    exactHeightFt: payload.exactHeightFt ? Number(payload.exactHeightFt) : undefined,
+    coatingType: payload.coatingType || payload.stainType || 'semi',
+    stainType: payload.stainType || 'semi',
+    sandingType: payload.sandingType || 'mechanical_sanding',
+    conditionFlags: payload.conditionFlags || payload.damageConditions || [],
+    services: Array.isArray(payload.services) && payload.services.length > 0 ? payload.services : ['cleaning', 'sealing'],
+    railingSqft: Number(payload.railingSqft || 0),
+    stairSteps: Number(payload.stairSteps || 0),
+    pergolaSqft: Number(payload.pergolaSqft || 0),
+    privacyWallSqft: Number(payload.privacyWallSqft || 0),
+    sidingSqft: Number(payload.sidingSqft || 0),
+    fasciaSqft: Number(payload.fasciaSqft || 0),
+    joistsSqft: Number(payload.joistsSqft || 0),
+  });
+
+  if (payload.estimateName) estimate.estimateName = payload.estimateName;
+  if (payload.notes !== undefined) estimate.notes = payload.notes;
+
+  const specData = {
+    woodSpecies: payload.woodSpecies || estimate.deckDetails?.surfaceMaterial || 'pt_pine',
+    accessType: payload.accessType || estimate.deckDetails?.deckType || 'ground',
+    exactHeightFt: payload.exactHeightFt || null,
+    deckShape: payload.deckShape || payload.shape || estimate.deckDetails?.deckShape || 'rectangle',
+    length: Number(payload.length || payload.deckLength || estimate.deckDetails?.deckLength || 20),
+    width: Number(payload.width || payload.deckWidth || estimate.deckDetails?.deckWidth || 15),
+    floorArea: floorVal,
+    existingCoating: payload.coatingType || payload.existingCoating || estimate.deckDetails?.deckCondition || 'none',
+    services: Array.isArray(payload.services) && payload.services.length > 0 ? payload.services : ['cleaning', 'sealing'],
+    stainType: payload.stainType || 'semi',
+    conditions: payload.conditionFlags || payload.damageConditions || estimate.deckDetails?.visibleConditions || ['good_condition'],
+    components: payload.components || estimate.deckDetails?.components || [],
+    componentSqft: {
+      railings: Number(payload.railingSqft || 0),
+      stairs: Number(payload.stairSteps || 0),
+      pergola: Number(payload.pergolaSqft || 0),
+      privacy_wall: Number(payload.privacyWallSqft || 0),
+      siding: Number(payload.sidingSqft || 0),
+      fascia: Number(payload.fasciaSqft || 0),
+      joists: Number(payload.joistsSqft || 0),
+    },
+  };
+
+  estimate.deckDetails = {
+    ...estimate.deckDetails,
+    areaSqFt: floorVal,
+    deckLength: specData.length,
+    deckWidth: specData.width,
+    deckShape: specData.deckShape,
+    surfaceMaterial: specData.woodSpecies,
+    deckCondition: specData.existingCoating,
+    deckType: specData.accessType,
+    components: specData.components,
+    services: specData.services,
+    visibleConditions: specData.conditions,
+  };
+
+  let totalAmountVal = clientCalc.total || clientCalc.calculatedTotal || 2500;
+  if (user.role === ROLES.CONTRACTOR) {
+    let appliedDiscount = Number(payload.contractorDiscountPercent) || 10;
+    try {
+      const assignment = await DiscountAssignment.findOne({
+        contractorId: user.id || user._id,
+        status: 'active',
+      }).populate('discountPolicyId');
+      if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
+        appliedDiscount = assignment.discountPolicyId.discountValue;
+      } else {
+        const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+        if (defaultPol && typeof defaultPol.discountValue === 'number') {
+          appliedDiscount = defaultPol.discountValue;
+        }
+      }
+    } catch (err) {
+      console.warn('[Estimate Discount Warning]:', err.message);
+    }
+
+    const shouldApplyDiscount = payload.applyContractorDiscount !== false && payload.applyDiscount !== false;
+    const baseTotal = totalAmountVal;
+
+    if (shouldApplyDiscount) {
+      const discountAmount = pricingEngine.round2((baseTotal * appliedDiscount) / 100);
+      const discountedTotal = pricingEngine.round2(baseTotal - discountAmount);
+      estimate.discountBreakdown = {
+        applied: true,
+        discountPercentage: appliedDiscount,
+        discountAmount,
+        discountedSubtotal: discountedTotal,
+        originalTotal: baseTotal,
+      };
+      totalAmountVal = discountedTotal;
+    } else {
+      estimate.discountBreakdown = {
+        applied: false,
+        discountPercentage: appliedDiscount,
+        discountAmount: 0,
+        discountedSubtotal: baseTotal,
+        originalTotal: baseTotal,
+      };
+      totalAmountVal = baseTotal;
+    }
+  }
+
+  estimate.pricingSnapshot = {
+    ...clientCalc,
+    spec: specData,
+    originalTotal: estimate.discountBreakdown?.originalTotal || totalAmountVal,
+    discountedTotal: totalAmountVal,
+    calculatedTotal: totalAmountVal,
+    total: totalAmountVal,
+    discountBreakdown: estimate.discountBreakdown,
+  };
+  estimate.totalAmount = totalAmountVal;
+  estimate.subtotal = clientCalc.rawSubtotal || clientCalc.basePrice || clientCalc.total;
+  estimate.minimumAdjustment = clientCalc.minJobApplied ? (clientCalc.minJob - (clientCalc.rawSubtotal || 0)) : 0;
+  estimate.minimumJobPrice = clientCalc.minJob || 2500;
+  estimate.version = (estimate.version || 1) + 1;
+
+  await estimate.save();
+
+  // Keep underlying Deck in sync if present
+  if (estimate.deckId) {
+    try {
+      await Deck.findByIdAndUpdate(estimate.deckId, {
+        $set: {
+          projectName: payload.estimateName || estimate.estimateName,
+          'dimensions.length': specData.length,
+          'dimensions.width': specData.width,
+          'dimensions.area': floorVal,
+          deckShape: specData.deckShape,
+          'structureDetails.height': specData.accessType,
+          'structureDetails.components': specData.components,
+          'surfaceDetails.woodSpecies': specData.woodSpecies,
+          'surfaceDetails.coatingStatus': specData.existingCoating,
+          visibleConditions: specData.conditions,
+        },
+      });
+    } catch (deckSyncErr) {
+      console.warn('[Deck Sync Warning]:', deckSyncErr.message);
+    }
+  }
+
+  await recordAuditLog({
+    performedBy: user.id || user._id,
+    action: 'UPDATE_ESTIMATE',
+    entityId: estimate._id,
+    oldValue: oldValues,
+    newValue: estimate.toJSON(),
+    ipAddress,
+  });
+
+  return estimate.toJSON();
+}
+
 module.exports = {
   createEstimate,
   getEstimates,
@@ -608,4 +865,6 @@ module.exports = {
   recalculateEstimate,
   getEstimateHistory,
   updateEstimateStatus,
+  deleteEstimate,
+  updateEstimate,
 };

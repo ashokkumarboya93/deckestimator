@@ -276,8 +276,8 @@ const estimateSchema = new mongoose.Schema(
     estimateStatus: {
       type: String,
       required: true,
-      enum: ['DRAFT', 'SUBMITTED', 'COMPLETED', 'EXPIRED', 'CANCELLED'],
-      default: 'DRAFT',
+      enum: ['DRAFT', 'CREATED', 'IN_REVIEW', 'SUBMITTED', 'COMPLETED', 'EXPIRED', 'CANCELLED'],
+      default: 'CREATED',
       index: true,
     },
     version: {

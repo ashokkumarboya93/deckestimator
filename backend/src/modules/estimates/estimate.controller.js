@@ -95,6 +95,39 @@ async function updateEstimateStatus(req, res, next) {
   }
 }
 
+async function deleteEstimate(req, res, next) {
+  try {
+    const result = await estimateService.deleteEstimate(
+      req.params.id,
+      req.user,
+      getClientIp(req)
+    );
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateEstimate(req, res, next) {
+  try {
+    const estimate = await estimateService.updateEstimate(
+      req.params.id,
+      req.body,
+      req.user,
+      getClientIp(req)
+    );
+    res.status(200).json({
+      success: true,
+      data: { estimate },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createEstimate,
   getEstimates,
@@ -102,5 +135,7 @@ module.exports = {
   recalculateEstimate,
   getEstimateHistory,
   updateEstimateStatus,
+  deleteEstimate,
+  updateEstimate,
 };
 

@@ -109,7 +109,7 @@ const updateEstimateStatusSchema = {
   }),
   body: Joi.object({
     estimateStatus: Joi.string()
-      .valid('DRAFT', 'SUBMITTED', 'COMPLETED', 'EXPIRED', 'CANCELLED')
+      .valid('DRAFT', 'CREATED', 'IN_REVIEW', 'SUBMITTED', 'COMPLETED', 'EXPIRED', 'CANCELLED')
       .required(),
     notes: Joi.string().trim().max(1000).allow('').optional(),
   }).unknown(false),

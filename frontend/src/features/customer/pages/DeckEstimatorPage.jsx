@@ -2,21 +2,24 @@
 // Deck Estimator — Customer Estimator Page
 // =============================================
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import ContinuousEstimatorForm from '../components/ContinuousEstimatorForm';
 import { getDeckById } from '../api/decksApi';
 
 export default function DeckEstimatorPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { deckId } = useParams();
-  const isEditing = Boolean(deckId);
+  const editEstimate = location.state?.editEstimate || null;
+  const isEditing = Boolean(deckId) || Boolean(editEstimate);
 
   const [initialData, setInitialData] = useState(null);
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(Boolean(deckId) && !editEstimate);
   const [error, setError] = useState(null);
 
   const loadDeck = React.useCallback(async () => {
+    if (!deckId) return;
     setLoading(true);
     setError(null);
     try {
@@ -30,10 +33,137 @@ export default function DeckEstimatorPage() {
   }, [deckId]);
 
   useEffect(() => {
-    if (isEditing) {
+    if (deckId && !editEstimate) {
       loadDeck();
     }
-  }, [isEditing, loadDeck]);
+  }, [deckId, editEstimate, loadDeck]);
+
+  const effectiveData = useMemo(() => {
+    if (editEstimate) {
+      const d = editEstimate.deckDetails || {};
+      const snap = editEstimate.pricingSnapshot || {};
+      const spec = snap.spec || {};
+      const populatedDeck =
+        typeof editEstimate.deckId === 'object' && editEstimate.deckId !== null
+          ? editEstimate.deckId
+          : {};
+
+      const rawDeckId =
+        populatedDeck._id ||
+        populatedDeck.id ||
+        (typeof editEstimate.deckId === 'string' ? editEstimate.deckId : null) ||
+        (typeof d.deckId === 'string' ? d.deckId : d.deckId?._id);
+
+      const cleanDeckId =
+        typeof rawDeckId === 'string' && /^[0-9a-fA-F]{24}$/.test(rawDeckId)
+          ? rawDeckId
+          : null;
+
+      const rawEstId = editEstimate._id || editEstimate.id;
+      const cleanEstimateId =
+        typeof rawEstId === 'string' && /^[0-9a-fA-F]{24}$/.test(rawEstId)
+          ? rawEstId
+          : null;
+
+      const lengthVal =
+        spec.length ||
+        d.deckLength ||
+        populatedDeck.dimensions?.length ||
+        (d.dimensions?.length) ||
+        20;
+      const widthVal =
+        spec.width ||
+        d.deckWidth ||
+        populatedDeck.dimensions?.width ||
+        (d.dimensions?.width) ||
+        15;
+
+      return {
+        projectName:
+          d.projectName ||
+          editEstimate.estimateName ||
+          populatedDeck.projectName ||
+          'Deck Restoration Project',
+        deckShape:
+          spec.deckShape ||
+          d.deckShape ||
+          populatedDeck.deckShape ||
+          snap.shape ||
+          'rectangle',
+        dimensions: {
+          length: Number(lengthVal) || 20,
+          width: Number(widthVal) || 15,
+          area:
+            spec.floorArea ||
+            d.areaSqFt ||
+            populatedDeck.dimensions?.area ||
+            (Number(lengthVal) * Number(widthVal)),
+        },
+        surfaceDetails: {
+          woodSpecies:
+            spec.woodSpecies ||
+            populatedDeck.surfaceDetails?.woodSpecies ||
+            d.surfaceMaterial ||
+            snap.wood ||
+            populatedDeck.surfaceMaterial ||
+            'pt_pine',
+          coatingStatus:
+            spec.existingCoating ||
+            populatedDeck.surfaceDetails?.coatingStatus ||
+            d.deckCondition ||
+            snap.prep ||
+            'none',
+        },
+        structureDetails: {
+          height:
+            spec.accessType ||
+            populatedDeck.structureDetails?.height ||
+            d.deckType ||
+            snap.elevation ||
+            'first',
+          exactHeightFt:
+            spec.exactHeightFt ||
+            populatedDeck.structureDetails?.exactHeightFt ||
+            null,
+          components:
+            spec.components ||
+            populatedDeck.structureDetails?.components ||
+            d.components ||
+            [],
+        },
+        components:
+          spec.components ||
+          populatedDeck.structureDetails?.components ||
+          d.components ||
+          [],
+        componentSqft:
+          spec.componentSqft ||
+          populatedDeck.structureDetails?.componentSqft ||
+          d.componentSqft ||
+          {},
+        conditions:
+          spec.conditions ||
+          d.visibleConditions ||
+          populatedDeck.visibleConditions ||
+          ['good_condition'],
+        propertyAddress: populatedDeck.propertyAddress || d.location || {},
+        services:
+          spec.services ||
+          snap.services ||
+          d.services ||
+          [snap.prep, snap.finish].filter(Boolean),
+        stainType: spec.stainType || (snap.finish === 'solid' ? 'solid' : 'semi'),
+        notes: editEstimate.notes || '',
+        estimateId: cleanEstimateId,
+        deckId: cleanDeckId,
+        estimateNumber: editEstimate.estimateNumber,
+        totalAmount: editEstimate.totalAmount || snap.total || 2500,
+        pricingSnapshot: snap,
+        estimateStatus: editEstimate.estimateStatus || 'CREATED',
+      };
+    }
+    return initialData;
+  }, [editEstimate, initialData]);
 
   if (loading) {
     return (
@@ -48,9 +178,9 @@ export default function DeckEstimatorPage() {
       {error && <div style={styles.errorBox}>{error}</div>}
 
       <ContinuousEstimatorForm
-        initialData={initialData}
+        initialData={effectiveData}
         isEditing={isEditing}
-        deckId={deckId}
+        deckId={deckId || effectiveData?.deckId}
       />
     </div>
   );

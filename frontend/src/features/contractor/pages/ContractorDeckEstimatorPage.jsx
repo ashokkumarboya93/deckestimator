@@ -65,6 +65,7 @@ export default function ContractorDeckEstimatorPage() {
         initialData={initialData}
         isEditing={isEditing}
         deckId={deckId}
+        isContractor={true}
       />
     </div>
   );
