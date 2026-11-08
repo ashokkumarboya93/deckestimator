@@ -1,15 +1,16 @@
 // =============================================
 // Deck Estimator — Register Page
-// Modern SaaS Split View: Bright White & Light Navy Blue
+// Modern Split Layout matching UI Specification
 // =============================================
 
 import React from 'react';
 import { RegistrationForm } from '../components/RegistrationForm';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export default function RegisterPage() {
   return (
     <div style={styles.pageContainer}>
-      {/* Left Column: Form Container */}
+      {/* Left Column: Floating Form Card */}
       <div style={styles.formColumn}>
         <div style={styles.formWrapper}>
           <RegistrationForm />
@@ -19,39 +20,71 @@ export default function RegisterPage() {
       {/* Right Column: Hero Visual Showcase */}
       <div style={styles.heroColumn}>
         <div style={styles.heroOverlay} />
+
+        {/* Decorative Wave Overlay at bottom right */}
+        <div style={styles.waveOverlay}>
+          <svg viewBox="0 0 800 300" fill="none" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+            <path
+              d="M0 200 C 250 120, 500 280, 800 140 L 800 300 L 0 300 Z"
+              fill="rgba(6, 26, 56, 0.75)"
+            />
+            <path
+              d="M0 240 C 300 160, 550 310, 800 180 L 800 300 L 0 300 Z"
+              fill="rgba(3, 18, 42, 0.9)"
+            />
+          </svg>
+        </div>
+
         <div style={styles.heroContent}>
-          <div style={styles.brandBadge}>JOIN DECKPRO PLATFORM</div>
+          {/* Logo on Right Hero Column */}
+          <div style={styles.heroLogoWrap}>
+            <img
+              src={mainLogo}
+              alt="Deck Restoration Plus"
+              style={styles.heroLogoImg}
+            />
+          </div>
+
+          {/* Orange Accent Bar */}
+          <div style={styles.orangeBar} />
+
+          {/* Main Headline */}
           <h2 style={styles.heroTitle}>
-            Start Estimating Decks with Commercial Precision.
+            Precision Estimates &amp; Contractor Management in One Platform.
           </h2>
+
+          {/* Subtitle */}
           <p style={styles.heroText}>
-            Whether you are a homeowner calculating restoration costs or a licensed contractor expanding your pipeline, DeckPro provides end-to-end tooling.
+            Join thousands of homeowners and certified contractors using DeckPro for interactive blueprints, transparent material itemization, and instant pricing.
           </p>
 
+          {/* Feature Bullets with Orange Circles and Checkmarks */}
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
               <div style={styles.featureIcon}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <span>For Homeowners: Free transparent restoration quotes</span>
+              <span style={styles.featureLabel}>Live Blueprint &amp; Material Calculations</span>
             </div>
+
             <div style={styles.featureItem}>
               <div style={styles.featureIcon}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <span>For Contractors: High-intent leads and discount policies</span>
+              <span style={styles.featureLabel}>Verified &amp; Licensed Contractor Network</span>
             </div>
+
             <div style={styles.featureItem}>
               <div style={styles.featureIcon}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <span>Automated compliance and license verification</span>
+              <span style={styles.featureLabel}>Automated Payouts &amp; Commission Tracking</span>
             </div>
           </div>
         </div>
@@ -64,8 +97,8 @@ const styles = {
   pageContainer: {
     display: 'flex',
     minHeight: '100vh',
-    backgroundColor: '#ffffff',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    backgroundColor: '#F1F5F9',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   formColumn: {
     flex: '1 1 50%',
@@ -73,23 +106,24 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '40px 24px',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F1F5F9',
   },
   formWrapper: {
     width: '100%',
-    maxWidth: '480px',
+    maxWidth: '520px',
   },
   heroColumn: {
     flex: '1 1 50%',
     position: 'relative',
-    backgroundImage: 'url("https://images.unsplash.com/photo-1695550056778-de79c8cd909e?auto=format&fit=crop&w=1400&q=80")',
+    backgroundImage: 'url("https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1600&q=80")',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'flex-end',
-    padding: '60px 50px',
+    justifyContent: 'center',
+    padding: '60px 64px',
     color: '#ffffff',
+    overflow: 'hidden',
   },
   heroOverlay: {
     position: 'absolute',
@@ -97,58 +131,78 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.88) 100%)',
+    background: 'linear-gradient(135deg, rgba(8, 24, 48, 0.65) 0%, rgba(4, 15, 32, 0.85) 100%)',
+    zIndex: 1,
+  },
+  waveOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '220px',
+    zIndex: 2,
+    pointerEvents: 'none',
   },
   heroContent: {
     position: 'relative',
     zIndex: 10,
-    maxWidth: '520px',
+    maxWidth: '540px',
   },
-  brandBadge: {
-    display: 'inline-block',
-    fontSize: '11px',
-    fontWeight: '700',
-    letterSpacing: '1px',
-    padding: '4px 12px',
-    borderRadius: '20px',
-    backgroundColor: 'rgba(29, 78, 216, 0.65)',
-    border: '1px solid rgba(147, 197, 253, 0.3)',
-    marginBottom: '16px',
+  heroLogoWrap: {
+    marginBottom: '12px',
+  },
+  heroLogoImg: {
+    maxHeight: '52px',
+    width: 'auto',
+    objectFit: 'contain',
+    filter: 'brightness(1.08)',
+  },
+  orangeBar: {
+    width: '46px',
+    height: '4px',
+    backgroundColor: '#E08131',
+    borderRadius: '2px',
+    marginBottom: '20px',
   },
   heroTitle: {
-    fontSize: '2rem',
+    fontSize: '2.25rem',
     fontWeight: '800',
     lineHeight: '1.25',
     color: '#ffffff',
     margin: '0 0 16px 0',
+    letterSpacing: '-0.4px',
   },
   heroText: {
     fontSize: '1rem',
-    lineHeight: '1.6',
-    color: '#cbd5e1',
-    margin: '0 0 28px 0',
+    lineHeight: '1.65',
+    color: '#CBD5E1',
+    margin: '0 0 32px 0',
   },
   featureList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '16px',
   },
   featureItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    fontSize: '0.92rem',
-    color: '#f1f5f9',
-    fontWeight: '500',
+    gap: '14px',
   },
   featureIcon: {
     width: '24px',
     height: '24px',
     borderRadius: '50%',
-    backgroundColor: 'rgba(29, 78, 216, 0.35)',
+    backgroundColor: '#E08131',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    boxShadow: '0 2px 6px rgba(224, 129, 49, 0.4)',
+  },
+  featureLabel: {
+    fontSize: '0.98rem',
+    color: '#FFFFFF',
+    fontWeight: '600',
+    letterSpacing: '-0.1px',
   },
 };

@@ -240,34 +240,38 @@ async function assignDiscountToContractor({ contractorId, discountPolicyId, effe
  * Lists applicable discount policies for a contractor.
  */
 async function getContractorApplicableDiscounts(contractorUserId) {
-  const profile = await ContractorProfile.findOne({ userId: contractorUserId });
-  const isApproved = profile && profile.verificationStatus === VERIFICATION_STATUS.APPROVED;
-
-  if (!isApproved) {
-    return [];
-  }
-
   const now = new Date();
 
-  // Find general eligibility active policies
+  // Find general eligibility active policies or platform contractor policies
   const generalPolicies = await DiscountPolicy.find({
-    isGeneralEligibility: true,
     status: DISCOUNT_POLICY_STATUS.ACTIVE,
+    $or: [
+      { isGeneralEligibility: true },
+      { code: 'CONTRACTOR_DEFAULT_10' },
+      { code: /^DISC_/i },
+    ],
     effectiveStartDate: { $lte: now },
     $or: [{ effectiveEndDate: null }, { effectiveEndDate: { $gte: now } }],
   });
 
   // Find individual assigned policies
-  const assignments = await DiscountAssignment.find({
-    contractorId: contractorUserId,
-    status: 'active',
-    effectiveStartDate: { $lte: now },
-    $or: [{ effectiveEndDate: null }, { effectiveEndDate: { $gte: now } }],
-  }).populate('discountPolicyId');
+  let assignedPolicies = [];
+  if (contractorUserId) {
+    try {
+      const assignments = await DiscountAssignment.find({
+        contractorId: contractorUserId,
+        status: 'active',
+        effectiveStartDate: { $lte: now },
+        $or: [{ effectiveEndDate: null }, { effectiveEndDate: { $gte: now } }],
+      }).populate('discountPolicyId');
 
-  const assignedPolicies = assignments
-    .map((a) => a.discountPolicyId)
-    .filter((p) => p && p.status === DISCOUNT_POLICY_STATUS.ACTIVE);
+      assignedPolicies = assignments
+        .map((a) => a.discountPolicyId)
+        .filter((p) => p && p.status === DISCOUNT_POLICY_STATUS.ACTIVE);
+    } catch (err) {
+      console.warn('[Assigned Policies Warning]:', err.message);
+    }
+  }
 
   // Deduplicate by ID
   const map = new Map();

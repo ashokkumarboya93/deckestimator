@@ -27,6 +27,29 @@ export default function ContractorLayout() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(6);
   const [projectName, setProjectName] = useState('');
+  const [contractorProfile, setContractorProfile] = useState(null);
+  const [signoutHover, setSignoutHover] = useState(false);
+
+  // Sync contractor profile data
+  useEffect(() => {
+    let mounted = true;
+    const fetchProfile = () => {
+      contractorLeadApi.getProfile()
+        .then((res) => {
+          if (mounted && res?.data) {
+            setContractorProfile(res.data.profile || res.data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchProfile();
+    window.addEventListener('contractor_profile_updated', fetchProfile);
+    return () => {
+      mounted = false;
+      window.removeEventListener('contractor_profile_updated', fetchProfile);
+    };
+  }, [user]);
 
   // Sync project name updates from active estimator
   useEffect(() => {
@@ -43,6 +66,7 @@ export default function ContractorLayout() {
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
+  const isDashboardPage = currentPath === '/contractor' || currentPath === '/contractor/' || currentPath.includes('/dashboard');
 
   // Load live lead counts for badge
   useEffect(() => {
@@ -261,25 +285,46 @@ export default function ContractorLayout() {
           <button
             type="button"
             onClick={handleLogout}
+            onMouseEnter={() => setSignoutHover(true)}
+            onMouseLeave={() => setSignoutHover(false)}
             style={{
               ...styles.navItem,
-              background: 'none',
-              border: 'none',
+              backgroundColor: signoutHover ? 'rgba(239, 68, 68, 0.20)' : 'rgba(239, 68, 68, 0.08)',
+              border: signoutHover ? '1.5px solid #ef4444' : '1.5px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: '8px',
               width: '100%',
               cursor: 'pointer',
-              color: '#dc2626',
+              color: '#ef4444',
               marginTop: 'auto',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSidebarHovered ? 'flex-start' : 'center',
+              padding: '9px 12px',
+              gap: '10px',
+              transition: 'all 0.18s ease',
+              boxShadow: signoutHover ? '0 2px 10px rgba(239, 68, 68, 0.25)' : 'none',
+              outline: 'none',
             }}
             title="Sign Out"
           >
-            <span style={{ ...styles.navIcon, color: '#dc2626' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.navIcon, color: '#ef4444', minWidth: '20px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel, color: '#dc2626', fontWeight: '700' }}>
+            <span style={{
+              opacity: isSidebarHovered ? 1 : 0,
+              width: isSidebarHovered ? 'auto' : 0,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              color: '#ef4444',
+              fontWeight: '700',
+              fontSize: '13px',
+              transition: 'opacity 0.15s ease',
+            }}>
               Sign Out
             </span>
           </button>
@@ -349,8 +394,8 @@ export default function ContractorLayout() {
             )}
           </div>
 
-          {/* Center: Search Bar */}
-          {!isEstimatorPage && (
+          {/* Center: Search Bar (Hidden on Contractor Dashboard & Estimator) */}
+          {!isEstimatorPage && !isDashboardPage && (
             <div style={styles.headerCenter}>
               <div style={styles.searchBox}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
@@ -424,12 +469,20 @@ export default function ContractorLayout() {
             <div style={{ position: 'relative' }}>
               <div
                 style={styles.profilePill}
-                onClick={() =>setShowProfileMenu(!showProfileMenu)}
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
-                <div style={styles.avatarCircle}>{initials}</div>
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user?.fullName || 'Contractor'}
+                    style={styles.avatarImg}
+                  />
+                ) : (
+                  <div style={styles.avatarCircle}>{initials}</div>
+                )}
                 <div style={styles.profileText}>
                   <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
-                  <span style={styles.profileRole}>Apex Deck Pros LLC</span>
+                  <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
                 </div>
                 <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
               </div>
@@ -498,8 +551,8 @@ export default function ContractorLayout() {
           <Outlet />
         </main>
 
-        {/* Dedicated Contractor Portal Footer (Shown on all pages except estimator) */}
-        {!isEstimatorPage && <ContractorFooter />}
+        {/* Dedicated Contractor Portal Footer (Shown on every page) */}
+        <ContractorFooter />
       </div>
 
       {/* 3. HELP & GUIDE MODAL */}
@@ -841,6 +894,14 @@ const styles = {
     border: '1px solid #e2e8f0',
     borderRadius: '24px',
     cursor: 'pointer',
+  },
+  avatarImg: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '1.5px solid #CBD5E1',
+    flexShrink: 0,
   },
   avatarCircle: {
     width: '30px',

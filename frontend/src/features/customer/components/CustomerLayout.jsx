@@ -520,10 +520,8 @@ export default function CustomerLayout() {
           <Outlet />
         </main>
 
-        {/* FOOTER: Included for every page except estimator calculator */}
-        {!isEstimatorPage && (
-          <CustomerFooter onOpenGuide={() => setIsHelpOpen(true)} />
-        )}
+        {/* FOOTER: Included for every page */}
+        <CustomerFooter onOpenGuide={() => setIsHelpOpen(true)} />
       </div>
 
       {/* Educational Walkthrough Modal */}

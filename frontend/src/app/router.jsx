@@ -34,6 +34,7 @@ import ContractorVerificationRequestPage from '../features/contractor/pages/Cont
 import ContractorProfilePage from '../features/contractor/pages/ContractorProfilePage';
 import ContractorDiscountsEarningsPage from '../features/contractor/pages/ContractorDiscountsEarningsPage';
 import ContractorSupportPage from '../features/contractor/pages/ContractorSupportPage';
+import ContractorProjectDetailPage from '../features/contractor/pages/ContractorProjectDetailPage';
 
 // Admin Portal Pages & Layout
 import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
@@ -230,10 +231,18 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: 'projects/:projectId',
+            element: (
+              <RequireApprovedContractor>
+                <ContractorProjectDetailPage />
+              </RequireApprovedContractor>
+            ),
+          },
+          {
             path: 'estimates/:estimateId',
             element: (
               <RequireApprovedContractor>
-                <EstimateDetailPage />
+                <ContractorProjectDetailPage />
               </RequireApprovedContractor>
             ),
           },
