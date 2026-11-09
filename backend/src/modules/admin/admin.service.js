@@ -2386,12 +2386,6 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       { $match: { totalAmount: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]),
-    Project.aggregate([
-      { $match: { status: 'completed' } },
-      { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
-      { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
-      { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
-    ]),
     Project.countDocuments({ status: { $in: ['in_progress', 'IN_PROGRESS', 'active', 'ACTIVE'] } }),
     Project.countDocuments({ status: { $in: ['completed', 'COMPLETED'] } }),
     Project.countDocuments({ status: { $in: ['on_hold', 'ON_HOLD', 'pending'] } }),

@@ -80,3 +80,4 @@ const userRequestSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('UserRequest', userRequestSchema);
+
