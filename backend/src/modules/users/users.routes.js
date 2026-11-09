@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Users Routes
 // =============================================
 
@@ -14,5 +14,7 @@ router.use(authenticate); // All user profile routes require authentication
 
 router.get('/me', usersController.getProfile);
 router.patch('/me', validate(updateProfileSchema), usersController.updateProfile);
+router.post('/unblock-request', usersController.submitUnblockRequest);
+router.get('/unblock-request/status', usersController.getUnblockRequestStatus);
 
 module.exports = router;

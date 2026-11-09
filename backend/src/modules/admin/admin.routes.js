@@ -42,11 +42,17 @@ router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.updateUserStatus);
 router.delete('/users/:id', adminController.softDeleteUser);
 
-// 3. Contractor Verifications
+// User Appeals & Requests
+router.get('/user-requests', adminController.getUserRequests);
+router.patch('/user-requests/:id/action', adminController.handleUserRequest);
+
+// 3. Contractor Verifications & Documents
 router.get('/verifications', adminController.listVerifications);
 router.post('/verifications/:id/approve', adminController.approveContractorVerification);
 router.post('/verifications/:id/reject', adminController.rejectContractorVerification);
 router.get('/verifications/:contractorId/history', adminController.getVerificationHistory);
+router.get('/contractor-documents', adminController.listContractorDocuments);
+router.patch('/contractor-documents/:id/review', adminController.reviewContractorDocument);
 
 // 4. Projects & Progress Tracking
 router.get('/projects', adminController.listProjects);

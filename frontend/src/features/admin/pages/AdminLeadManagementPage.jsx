@@ -2,134 +2,115 @@
 // Deck Estimator — Admin Lead Management Hub
 // =============================================
 // Features:
-// - 4 horizontal tabs: Hot Priority, Customer Leads, Contractor Leads, All Leads
-// - Automatic Hot Priority calculation using the last 30 days (<= 30 days)
-// - Contact Us and Reach Out event tracking and count counters
-// - Working Filter Panel (Status, Contact Source, Date Range, Sort, Search)
-// - Real MongoDB data with live relationship population
-// - View Details popup with complete Customer / Contractor dossier:
-//   * Registration & user account profile details
-//   * Estimations count, breakdown, total amount, status
-//   * Deck projects overview
-//   * Contact history & enquiry message
-//   * Small popup Export CSV & Export Excel buttons
-// - Page-level Export CSV & Excel
+// - 4 Dedicated Tabs:
+//     1. Hot Priority (Shows real reach-out requests / customer & contractor inquiries)
+//     2. Customer Leads (Homeowner customer reach-outs & enquiries)
+//     3. Contractor Leads (Contractor partner requests & registrations)
+//     4. All Leads (Complete historical list with pagination & Last Date cutoff selector)
+// - Table Columns:
+//     Contact Person | Type & Source | Requested Message | Priority | Date & Time | Location | Actions
+// - Source Tagging: If requested from estimation, displays "Estimation Service"
+// - Pill-shaped shiny controls:
+//     * Shiny reduced-width search bar
+//     * Date filters: Today, 7 Days, 15 Days, 30 Days, 60 Days, All Time
+//     * "Last Date" cutoff picker (in All Leads tab) for historical archive search
+//     * Shiny Refresh button & Export CSV / Excel buttons
+// - Large View Details Modal:
+//     * Complete contact & account profile dossier
+//     * Requested message, enquiry subject, preferred contact method & time
+//     * Requested Estimation Specs: Estimated price, sq ft, dimensions, wood species, and section-wise inputs selected
+//     * User activity & past estimation history
+//     * In-modal Export CSV / Excel
+// - Export functionality exports currently filtered records with section-wise inputs and amounts
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 
 const TABS = [
-  { id: 'hot', label: 'Hot Priority' },
+  { id: 'hot', label: '🔥 Hot Priority Requests' },
   { id: 'customer', label: 'Customer Leads' },
   { id: 'contractor', label: 'Contractor Leads' },
-  { id: 'all', label: 'All Leads' },
-];
-
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'new', label: 'New' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'converted', label: 'Converted' },
-  { value: 'closed', label: 'Closed / Lost' },
-];
-
-const SOURCE_OPTIONS = [
-  { value: 'all', label: 'All Sources' },
-  { value: 'Contact Us', label: 'Contact Us' },
-  { value: 'Reach Out', label: 'Reach Out' },
-  { value: 'Help', label: 'Help Request' },
+  { id: 'all', label: 'All Leads & History' },
 ];
 
 const DATE_RANGE_OPTIONS = [
   { value: 'all', label: 'All Time' },
   { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
   { value: '7d', label: 'Last 7 Days' },
+  { value: '15d', label: 'Last 15 Days' },
   { value: '30d', label: 'Last 30 Days' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest First' },
-  { value: 'oldest', label: 'Oldest First' },
-  { value: 'most_contacted', label: 'Most Contacted' },
-  { value: 'name_asc', label: 'Name (A–Z)' },
+  { value: '60d', label: 'Last 60 Days' },
 ];
 
 export default function AdminLeadManagementPage() {
   const [activeTab, setActiveTab] = useState('hot');
   const [leads, setLeads] = useState([]);
   const [counts, setCounts] = useState({ hotPriority: 0, customerLeads: 0, contractorLeads: 0, allLeads: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Search & Filter state
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
-  const [sortOption, setSortOption] = useState('newest');
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [lastDateFilter, setLastDateFilter] = useState(''); // Specific to All Leads tab
 
   // View Details Modal State
   const [selectedLead, setSelectedLead] = useState(null);
   const [leadDossier, setLeadDossier] = useState(null);
   const [loadingDossier, setLoadingDossier] = useState(false);
   const [dossierError, setDossierError] = useState(null);
-  const [activeModalTab, setActiveModalTab] = useState('profile');
 
   useEffect(() => {
-    fetchLeads();
-  }, [activeTab, statusFilter, sourceFilter, dateRangeFilter, sortOption]);
+    fetchLeads(1);
+  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter]);
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (pageToFetch = pagination.page) => {
     setLoading(true);
+    setIsRefreshing(true);
     setError(null);
     try {
       const res = await adminApi.getLeads({
         tab: activeTab,
         search: searchTerm.trim() || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        source: sourceFilter !== 'all' ? sourceFilter : undefined,
         dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
-        sort: sortOption,
-        limit: 50,
+        lastDate: activeTab === 'all' && lastDateFilter ? lastDateFilter : undefined,
+        page: pageToFetch,
+        limit: 15,
       });
 
       setLeads(res.data || []);
-      if (res.counts) {
-        setCounts(res.counts);
-      }
+      if (res.counts) setCounts(res.counts);
+      if (res.pagination) setPagination(res.pagination);
     } catch (err) {
       setError(err?.message || 'Failed to load leads from database.');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchLeads();
+    fetchLeads(1);
   };
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setStatusFilter('all');
-    setSourceFilter('all');
     setDateRangeFilter('all');
-    setSortOption('newest');
+    setStatusFilter('all');
+    setLastDateFilter('');
+    fetchLeads(1);
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || sourceFilter !== 'all' || dateRangeFilter !== 'all' || searchTerm.trim().length > 0;
-
-  // Open Lead Details & Fetch Full Dossier
+  // Open Detailed Dossier Modal
   const handleOpenLeadDetails = async (lead) => {
     setSelectedLead(lead);
     setLoadingDossier(true);
     setDossierError(null);
-    setActiveModalTab('profile');
 
     try {
       const dossierRes = await adminApi.getLeadDetails(lead.id || lead._id || lead.leadNumber);
@@ -153,28 +134,41 @@ export default function AdminLeadManagementPage() {
     return counts.allLeads || 0;
   };
 
+  // Export filtered visible leads
+  const getExportUrl = (format) => {
+    const params = new URLSearchParams();
+    if (statusFilter !== 'all') params.append('status', statusFilter);
+    if (dateRangeFilter !== 'all') params.append('dateRange', dateRangeFilter);
+    if (activeTab === 'all' && lastDateFilter) params.append('lastDate', lastDateFilter);
+    if (searchTerm.trim()) params.append('search', searchTerm.trim());
+    return `http://localhost:5000/api/v1/admin/leads/export?format=${format}&tab=${activeTab}&${params.toString()}`;
+  };
+
   return (
     <div style={styles.container}>
-      {/* 1. Header with Title & Export Actions */}
+      {/* 1. Header with Title & Shiny Export Actions */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Lead Management</h1>
+          <div style={styles.headerTitleRow}>
+            <h1 style={styles.title}>Lead & Reach-Out Inquiries</h1>
+            <span style={styles.liveDbPill}>
+              <span style={styles.pulseDot} />
+              Live MongoDB Leads
+            </span>
+          </div>
           <p style={styles.subtitle}>
-            Capture incoming Contact Us &amp; Reach Out enquiries, prioritize time-sensitive leads (last 30 days), and review verified customer and contractor requests.
+            Monitor customer reach-out requests, contractor project bookings, and estimation inquiries in real time.
           </p>
         </div>
         <div style={styles.headerActions}>
           <a
-            href={adminApi.exportLeadsUrl('csv', activeTab, {
-              status: statusFilter !== 'all' ? statusFilter : undefined,
-              source: sourceFilter !== 'all' ? sourceFilter : undefined,
-              dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
-            })}
+            href={getExportUrl('csv')}
             target="_blank"
             rel="noreferrer"
-            style={styles.btnSecondary}
+            style={styles.shinyExportBtn}
+            title="Export current filtered view to CSV"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -182,19 +176,17 @@ export default function AdminLeadManagementPage() {
             Export CSV
           </a>
           <a
-            href={adminApi.exportLeadsUrl('excel', activeTab, {
-              status: statusFilter !== 'all' ? statusFilter : undefined,
-              source: sourceFilter !== 'all' ? sourceFilter : undefined,
-              dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
-            })}
+            href={getExportUrl('excel')}
             target="_blank"
             rel="noreferrer"
-            style={styles.btnSuccess}
+            style={styles.shinyExportGreenBtn}
+            title="Export current filtered view to Excel"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
             Export Excel
           </a>
@@ -209,7 +201,9 @@ export default function AdminLeadManagementPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+              }}
               style={{
                 ...styles.tabBtn,
                 ...(isActive ? styles.tabBtnActive : {}),
@@ -219,7 +213,6 @@ export default function AdminLeadManagementPage() {
               <span
                 style={{
                   ...styles.tabBadge,
-                  ...(tab.id === 'hot' ? styles.hotBadge : styles.neutralBadge),
                   ...(isActive ? styles.tabBadgeActive : {}),
                 }}
               >
@@ -230,126 +223,106 @@ export default function AdminLeadManagementPage() {
         })}
       </div>
 
-      {/* 3. Search Bar and Filter Controls */}
-      <div style={styles.controlsCard}>
-        <div style={styles.searchRow}>
-          <form onSubmit={handleSearchSubmit} style={styles.searchForm}>
-            <div style={styles.searchBox}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search by lead name, email, phone, location, or business..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={styles.searchInput}
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchTerm(''); fetchLeads(); }}
-                  style={styles.clearSearchBtn}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <button type="submit" style={styles.searchBtn}>Search</button>
-          </form>
+      {/* 3. Controls Bar: Shiny Reduced-Width Search, Date Filters, Last-Date Selector, Refresh */}
+      <div style={styles.controlBar}>
+        {/* Shiny Reduced-Width Search Bar */}
+        <form onSubmit={handleSearchSubmit} style={styles.shinySearchWrapper}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" style={{ marginRight: 6 }}>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search leads by name, email, phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.shinySearchInput}
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => { setSearchTerm(''); fetchLeads(1); }} style={styles.clearSearchBtn}>✕</button>
+          )}
+        </form>
 
-          <button
-            type="button"
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            style={{
-              ...styles.filterToggleBtn,
-              ...(isFilterPanelOpen || hasActiveFilters ? styles.filterToggleActive : {}),
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-            Filters
-            {hasActiveFilters && <span style={styles.activeDot} />}
-          </button>
+        {/* Date Filter Pills */}
+        <div style={styles.filterPillGroup}>
+          <span style={styles.filterGroupLabel}>Range:</span>
+          {DATE_RANGE_OPTIONS.map((d) => (
+            <button
+              key={d.value}
+              onClick={() => setDateRangeFilter(d.value)}
+              style={{
+                ...styles.shinyPillBtn,
+                ...(dateRangeFilter === d.value ? styles.shinyPillBtnActive : {}),
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
         </div>
 
-        {/* Expandable Filter Panel */}
-        {isFilterPanelOpen && (
-          <div style={styles.filterPanel}>
-            <div style={styles.filterGrid}>
-              <div style={styles.filterGroup}>
-                <label style={styles.filterLabel}>Contact Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  style={styles.filterSelect}
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.filterGroup}>
-                <label style={styles.filterLabel}>Contact Source</label>
-                <select
-                  value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value)}
-                  style={styles.filterSelect}
-                >
-                  {SOURCE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.filterGroup}>
-                <label style={styles.filterLabel}>Date Range</label>
-                <select
-                  value={dateRangeFilter}
-                  onChange={(e) => setDateRangeFilter(e.target.value)}
-                  style={styles.filterSelect}
-                >
-                  {DATE_RANGE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.filterGroup}>
-                <label style={styles.filterLabel}>Sort Order</label>
-                <select
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value)}
-                  style={styles.filterSelect}
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={styles.filterFooter}>
+        {/* Optional Last Date Selector (Available for All Leads Archive) */}
+        {activeTab === 'all' && (
+          <div style={styles.lastDateWrapper}>
+            <span style={styles.filterGroupLabel}>Cutoff Date:</span>
+            <input
+              type="date"
+              value={lastDateFilter}
+              onChange={(e) => setLastDateFilter(e.target.value)}
+              style={styles.shinyDateInput}
+              title="Filter records up to this cutoff date"
+            />
+            {lastDateFilter && (
               <button
-                type="button"
-                onClick={handleClearFilters}
-                style={styles.clearFiltersBtn}
+                onClick={() => setLastDateFilter('')}
+                style={styles.clearDateBtn}
+                title="Clear date cutoff"
               >
-                Reset All Filters
+                ✕
               </button>
-              <button
-                type="button"
-                onClick={() => fetchLeads()}
-                style={styles.applyFiltersBtn}
-              >
-                Apply Filters
-              </button>
-            </div>
+            )}
           </div>
         )}
+
+        {/* Status Filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={styles.shinySelect}
+        >
+          <option value="all">All Statuses</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="in_progress">In Progress</option>
+          <option value="converted">Converted</option>
+        </select>
+
+        {/* Shiny Refresh Button */}
+        <button
+          onClick={() => fetchLeads()}
+          style={styles.shinyRefreshBtn}
+          title="Refresh Leads Database"
+          disabled={loading}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              transition: 'transform 0.4s ease',
+              transform: isRefreshing ? 'rotate(360deg)' : 'none',
+              marginRight: 6,
+            }}
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+          Refresh
+        </button>
       </div>
 
       {/* 4. Table Content Card */}
@@ -357,31 +330,29 @@ export default function AdminLeadManagementPage() {
         {loading ? (
           <div style={styles.loaderBox}>
             <div style={styles.spinner} />
-            <p style={{ color: '#64748b', fontSize: '14px', marginTop: '12px' }}>Loading real MongoDB lead enquiries...</p>
+            <p style={{ color: '#64748b', fontSize: '14px', marginTop: '12px', fontWeight: 600 }}>
+              Loading lead enquiries from database...
+            </p>
           </div>
         ) : error ? (
           <div style={styles.errorBox}>
-            <p style={{ margin: 0, fontWeight: '600' }}>Error Loading Data</p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>{error}</p>
+            <p style={{ margin: 0, fontWeight: '700' }}>Error Loading Data</p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{error}</p>
           </div>
         ) : leads.length === 0 ? (
           <div style={styles.emptyBox}>
             <div style={styles.emptyIconCircle}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.6">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
-            <h3 style={styles.emptyTitle}>No leads in {TABS.find(t => t.id === activeTab)?.label} queue</h3>
+            <h3 style={styles.emptyTitle}>No leads found in this queue</h3>
             <p style={styles.emptySub}>
-              {activeTab === 'hot'
-                ? 'No Contact Us or Reach Out requests received in the last 30 days.'
-                : activeTab === 'customer'
-                ? 'No customer contact enquiries have been submitted yet.'
-                : activeTab === 'contractor'
-                ? 'No contractor reach-out requests have been submitted yet.'
-                : 'No lead enquiries currently exist.'}
+              {searchTerm
+                ? 'Try adjusting your search keywords or clearing active filters.'
+                : 'Customer and contractor inquiries or booking reach-outs will appear here in real time.'}
             </p>
           </div>
         ) : (
@@ -391,20 +362,25 @@ export default function AdminLeadManagementPage() {
                 <tr>
                   <th style={styles.th}>Contact Person</th>
                   <th style={styles.th}>Type &amp; Source</th>
-                  <th style={styles.th}>Contact Count</th>
-                  <th style={styles.th}>Priority (30-Day Auto)</th>
-                  <th style={styles.th}>Date &amp; Location</th>
+                  <th style={styles.th}>Requested Message</th>
+                  <th style={styles.th}>Priority</th>
+                  <th style={styles.th}>Date &amp; Time</th>
+                  <th style={styles.th}>Location</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {leads.map((l) => {
-                  const isHot = l.isHot;
+                  const isHot = l.isHot || l.priority === 'hot' || l.priority === 'HOT';
                   const isCust = (l.userType || '').toLowerCase() === 'customer';
                   const initials = (l.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+                  // Type & Source label
+                  const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
+                  const typeSourceText = isEstimation ? 'Estimation Service' : (l.contactSource || (isCust ? 'Customer Reach Out' : 'Contractor Portal'));
+
                   return (
-                    <tr key={l._id} style={styles.tr}>
+                    <tr key={l._id || l.id} style={styles.tr}>
                       {/* 1. Contact Person */}
                       <td style={styles.td}>
                         <div style={styles.personCell}>
@@ -424,51 +400,75 @@ export default function AdminLeadManagementPage() {
 
                       {/* 2. Type & Source */}
                       <td style={styles.td}>
-                        <span style={isCust ? styles.badgeCustomer : styles.badgeContractor}>
-                          {(l.userType || 'Customer').toUpperCase()}
-                        </span>
-                        <div style={styles.sourceLabel}>
-                          Source: <strong style={{ color: '#0f172a' }}>{l.contactSource || (isCust ? 'Contact Us' : 'Reach Out')}</strong>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={isCust ? styles.badgeCustomer : styles.badgeContractor}>
+                            {(l.userType || 'Customer').toUpperCase()}
+                          </span>
+                          <span style={isEstimation ? styles.badgeEstimationService : styles.sourceLabel}>
+                            {typeSourceText}
+                          </span>
+                          <span style={styles.leadIdSmall}>#{l.leadNumber || l.leadId}</span>
                         </div>
-                        <div style={styles.leadIdSmall}>#{l.leadNumber || l.leadId}</div>
                       </td>
 
-                      {/* 3. Contact Count */}
-                      <td style={styles.td}>
-                        <span style={styles.countBadgePill}>
-                          {l.contactCount || 1} Reach-out(s)
-                        </span>
+                      {/* 3. Requested Message */}
+                      <td style={{ ...styles.td, maxWidth: '280px' }}>
+                        <div style={styles.requestedMessageText} title={l.requestedMessage || l.enquiry?.message || 'Reach-out inquiry'}>
+                          {l.requestedMessage || l.enquiry?.message || l.enquiry?.subject || 'Service reach-out inquiry'}
+                        </div>
+                        {l.estimatedValue > 0 && (
+                          <div style={styles.estimatedValueBadge}>
+                            💰 Estimated: ${Number(l.estimatedValue).toLocaleString()}
+                          </div>
+                        )}
                       </td>
 
-                      {/* 4. Priority (30-day auto) */}
+                      {/* 4. Priority */}
                       <td style={styles.td}>
                         {isHot ? (
                           <span style={styles.hotPill}>
-                            🔥 HOT PRIORITY ({l.daysSinceContact !== undefined ? `${l.daysSinceContact}d ago` : 'Active'})
+                            🔥 HOT PRIORITY
                           </span>
                         ) : (
                           <span style={styles.standardPill}>Standard</span>
                         )}
                       </td>
 
-                      {/* 5. Date & Location */}
+                      {/* 5. Date & Time */}
                       <td style={styles.td}>
-                        <div style={styles.locationText}>{l.location || '—'}</div>
-                        <div style={styles.dateText}>
-                          {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleDateString('en-US', {
+                        <div style={styles.dateTimeText}>
+                          {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleDateString(undefined, {
                             month: 'short',
-                            day: '2-digit',
+                            day: 'numeric',
                             year: 'numeric',
                           })}
                         </div>
-                        <span style={styles.statusSubPill}>{(l.status || 'new').toUpperCase()}</span>
+                        <div style={styles.timeSub}>
+                          {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleTimeString(undefined, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
                       </td>
 
-                      {/* 6. Actions */}
+                      {/* 6. Location */}
+                      <td style={styles.td}>
+                        <div style={styles.locationText}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ marginRight: 4 }}>
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                          </svg>
+                          {l.location || 'New Jersey, USA'}
+                        </div>
+                      </td>
+
+                      {/* 7. Actions */}
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <button
+                          type="button"
                           onClick={() => handleOpenLeadDetails(l)}
-                          style={styles.actionBtnOutline}
+                          style={styles.btnViewDetails}
+                          title="View Full Lead & Estimation Dossier"
                         >
                           View Details
                         </button>
@@ -480,87 +480,61 @@ export default function AdminLeadManagementPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination Controls */}
+        {pagination.totalPages > 1 && (
+          <div style={styles.paginationRow}>
+            <span style={styles.paginationText}>
+              Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total leads)
+            </span>
+            <div style={styles.paginationBtns}>
+              <button
+                onClick={() => fetchLeads(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                style={styles.pageBtn}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => fetchLeads(pagination.page + 1)}
+                disabled={pagination.page >= pagination.totalPages}
+                style={styles.pageBtn}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 5. COMPREHENSIVE VIEW DETAILS POPUP (DOSSIER MODAL) */}
+      {/* 5. View Details Large Dossier Modal */}
       {selectedLead && (
-        <div style={styles.modalOverlay} onClick={handleCloseModal}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalBoxLarge}>
             {/* Modal Header */}
             <div style={styles.modalHeader}>
-              <div>
-                <div style={styles.modalHeaderTop}>
-                  <span style={styles.modalLeadNumber}>#{selectedLead.leadNumber || selectedLead.leadId}</span>
-                  <span style={(selectedLead.userType || '').toLowerCase() === 'customer' ? styles.badgeCustomer : styles.badgeContractor}>
-                    {(selectedLead.userType || 'Customer').toUpperCase()}
-                  </span>
-                  <span style={styles.statusSubPill}>{(selectedLead.status || 'new').toUpperCase()}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
+                  {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
                 </div>
-                <h2 style={styles.modalTitle}>{selectedLead.name}</h2>
-                <p style={styles.modalSub}>{selectedLead.email} • {selectedLead.phone || 'No phone recorded'}</p>
+                <div>
+                  <h3 style={styles.modalTitle}>{selectedLead.name}</h3>
+                  <p style={styles.modalSub}>
+                    Lead #{selectedLead.leadNumber || selectedLead.leadId} • {(selectedLead.userType || 'Customer').toUpperCase()} • {selectedLead.location || 'New Jersey'}
+                  </p>
+                </div>
               </div>
-
-              <div style={styles.modalHeaderRight}>
-                {/* Small Popup Export Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <a
-                  href={adminApi.exportSingleLeadUrl(selectedLead.id || selectedLead._id, 'csv')}
+                  href={`http://localhost:5000/api/v1/admin/leads/${selectedLead._id || selectedLead.id}/export?format=csv`}
                   target="_blank"
                   rel="noreferrer"
-                  style={styles.popupExportBtn}
-                  title="Export this user's entire dossier to CSV"
+                  style={styles.modalExportSmallBtn}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
                   Export CSV
                 </a>
-
-                <a
-                  href={adminApi.exportSingleLeadUrl(selectedLead.id || selectedLead._id, 'excel')}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ ...styles.popupExportBtn, borderColor: '#10b981', color: '#047857' }}
-                  title="Export this user's entire dossier to Excel"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Export Excel
-                </a>
-
-                <button onClick={handleCloseModal} style={styles.closeBtn} title="Close popup">✕</button>
+                <button onClick={handleCloseModal} style={styles.closeBtn}>✕</button>
               </div>
-            </div>
-
-            {/* Modal Navigation Tabs */}
-            <div style={styles.modalTabBar}>
-              <button
-                type="button"
-                onClick={() => setActiveModalTab('profile')}
-                style={{ ...styles.modalTabBtn, ...(activeModalTab === 'profile' ? styles.modalTabBtnActive : {}) }}
-              >
-                1. Registration &amp; Account
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveModalTab('enquiry')}
-                style={{ ...styles.modalTabBtn, ...(activeModalTab === 'enquiry' ? styles.modalTabBtnActive : {}) }}
-              >
-                2. Enquiry &amp; Contact History
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveModalTab('estimates')}
-                style={{ ...styles.modalTabBtn, ...(activeModalTab === 'estimates' ? styles.modalTabBtnActive : {}) }}
-              >
-                {(selectedLead.userType || '').toLowerCase() === 'customer'
-                  ? '3. Estimations & Projects'
-                  : '3. Assigned Leads & Bids'}
-              </button>
             </div>
 
             {/* Modal Body */}
@@ -568,247 +542,174 @@ export default function AdminLeadManagementPage() {
               {loadingDossier ? (
                 <div style={styles.loaderBox}>
                   <div style={styles.spinner} />
-                  <p style={{ color: '#64748b', fontSize: '13px', marginTop: '10px' }}>Loading entire profile from MongoDB...</p>
+                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Loading dossier details...</span>
                 </div>
-              ) : dossierError ? (
-                <div style={styles.errorBox}>{dossierError}</div>
               ) : (
-                <>
-                  {/* TAB 1: REGISTRATION & USER ACCOUNT */}
-                  {activeModalTab === 'profile' && (
-                    <div>
-                      <h4 style={styles.sectionHeading}>User Registration Details</h4>
-                      <div style={styles.dossierGrid}>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Full Name</span>
-                          <span style={styles.dossierValue}>{leadDossier?.user?.fullName || selectedLead.name}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Registered Email</span>
-                          <span style={styles.dossierValue}>{leadDossier?.user?.email || selectedLead.email}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Contact Phone</span>
-                          <span style={styles.dossierValue}>{leadDossier?.user?.phone || selectedLead.phone || '—'}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>User Role</span>
-                          <span style={styles.dossierValue}>{(leadDossier?.user?.role || selectedLead.userType || 'customer').toUpperCase()}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Account Status</span>
-                          <span style={{
-                            ...styles.statusSubPill,
-                            backgroundColor: leadDossier?.user?.accountStatus === 'active' ? '#ecfdf5' : '#fee2e2',
-                            color: leadDossier?.user?.accountStatus === 'active' ? '#047857' : '#b91c1c',
-                          }}>
-                            {(leadDossier?.user?.accountStatus || 'active').toUpperCase()}
-                          </span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Registered On</span>
-                          <span style={styles.dossierValue}>
-                            {leadDossier?.user?.createdAt
-                              ? new Date(leadDossier.user.createdAt).toLocaleString()
-                              : '—'}
-                          </span>
-                        </div>
-                      </div>
+                <div style={styles.modalContentGrid}>
+                  {/* Top Highlights Banner */}
+                  <div style={styles.modalBanner}>
+                    <div style={styles.bannerItem}>
+                      <span style={styles.bannerLabel}>Lead Priority</span>
+                      <span style={selectedLead.isHot ? styles.bannerValHot : styles.bannerValStandard}>
+                        {selectedLead.isHot ? '🔥 HOT PRIORITY' : 'Standard'}
+                      </span>
+                    </div>
+                    <div style={styles.bannerItem}>
+                      <span style={styles.bannerLabel}>Type & Source</span>
+                      <span style={styles.bannerVal}>
+                        {selectedLead.isEstimationService ? 'Estimation Service' : (selectedLead.contactSource || 'Direct Inquiry')}
+                      </span>
+                    </div>
+                    <div style={styles.bannerItem}>
+                      <span style={styles.bannerLabel}>Estimated Value</span>
+                      <span style={styles.bannerValAmount}>
+                        ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={styles.bannerItem}>
+                      <span style={styles.bannerLabel}>Contact Timestamp</span>
+                      <span style={styles.bannerVal}>
+                        {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
 
-                      {/* If Contractor: Show Business & License Credentials */}
-                      {leadDossier?.contractorData?.profile && (
-                        <div style={{ marginTop: '20px' }}>
-                          <h4 style={styles.sectionHeading}>Contractor Licensing &amp; Business Profile</h4>
-                          <div style={styles.dossierGrid}>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Business / Company</span>
-                              <span style={styles.dossierValue}>{leadDossier.contractorData.profile.businessName || '—'}</span>
-                            </div>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Contractor License #</span>
-                              <span style={styles.dossierValue}>{leadDossier.contractorData.profile.licenseNumber || '—'}</span>
-                            </div>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Jurisdiction / State</span>
-                              <span style={styles.dossierValue}>{leadDossier.contractorData.profile.licenseJurisdiction || '—'}</span>
-                            </div>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Experience</span>
-                              <span style={styles.dossierValue}>{leadDossier.contractorData.profile.yearsOfExperience || 0} years</span>
-                            </div>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Verification Status</span>
-                              <span style={{
-                                ...styles.statusSubPill,
-                                backgroundColor: leadDossier.contractorData.profile.verificationStatus === 'approved' ? '#ecfdf5' : '#fffbeb',
-                                color: leadDossier.contractorData.profile.verificationStatus === 'approved' ? '#047857' : '#b45309',
-                              }}>
-                                {(leadDossier.contractorData.profile.verificationStatus || 'pending').toUpperCase()}
-                              </span>
-                            </div>
-                            <div style={styles.dossierItem}>
-                              <span style={styles.dossierLabel}>Approved Date</span>
-                              <span style={styles.dossierValue}>
-                                {leadDossier.contractorData.profile.approvedAt
-                                  ? new Date(leadDossier.contractorData.profile.approvedAt).toLocaleDateString()
-                                  : 'Awaiting Review'}
-                              </span>
-                            </div>
-                          </div>
+                  {/* Requested Message Section */}
+                  <div style={styles.dossierSectionCard}>
+                    <h4 style={styles.dossierSectionTitle}>📨 Requested Message & Inquiry Details</h4>
+                    <div style={styles.inquiryMessageBox}>
+                      <p style={styles.inquiryMessageText}>
+                        "{selectedLead.requestedMessage || selectedLead.enquiry?.message || leadDossier?.lead?.enquiry?.message || 'No specific inquiry note provided.'}"
+                      </p>
+                      {selectedLead.enquiry?.subject && (
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#64748b' }}>
+                          <strong>Subject:</strong> {selectedLead.enquiry.subject}
+                        </div>
+                      )}
+                      {selectedLead.enquiry?.preferredContactMethod && (
+                        <div style={{ marginTop: 4, fontSize: '12px', color: '#64748b' }}>
+                          <strong>Preferred Method:</strong> {selectedLead.enquiry.preferredContactMethod} • <strong>Time:</strong> {selectedLead.enquiry.preferredContactTime || 'Anytime'}
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
 
-                  {/* TAB 2: ENQUIRY & CONTACT HISTORY */}
-                  {activeModalTab === 'enquiry' && (
-                    <div>
-                      <h4 style={styles.sectionHeading}>Enquiry Details</h4>
-                      <div style={styles.enquiryCard}>
-                        <div style={styles.enquiryMeta}>
-                          <div><strong>Source:</strong> {selectedLead.contactSource || 'Contact Us'}</div>
-                          <div><strong>Total Contacts:</strong> {selectedLead.contactCount || 1} times</div>
-                          <div><strong>Priority:</strong> {selectedLead.isHot ? '🔥 HOT PRIORITY (Last 30 Days)' : 'Standard'}</div>
-                        </div>
-                        <div style={{ marginTop: '12px' }}>
-                          <span style={styles.dossierLabel}>Subject</span>
-                          <div style={styles.enquirySubjectText}>
-                            {selectedLead.enquiry?.subject || 'Direct Service Enquiry'}
-                          </div>
-                        </div>
-                        <div style={{ marginTop: '12px' }}>
-                          <span style={styles.dossierLabel}>Message / Request</span>
-                          <div style={styles.enquiryMessageBox}>
-                            {selectedLead.enquiry?.message || 'Customer requested consultation via web portal.'}
-                          </div>
-                        </div>
+                  {/* Two Column Grid: Contact Info & Estimation Specifications */}
+                  <div style={styles.twoColGrid}>
+                    {/* Personal & Contact Profile */}
+                    <div style={styles.dossierSectionCard}>
+                      <h4 style={styles.dossierSectionTitle}>👤 Contact & Account Profile</h4>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Full Name:</span>
+                        <span style={styles.dossierVal}>{selectedLead.name}</span>
                       </div>
-
-                      {/* Contact Events Timeline */}
-                      <h4 style={{ ...styles.sectionHeading, marginTop: '20px' }}>Contact History Timeline</h4>
-                      {selectedLead.contactHistory && selectedLead.contactHistory.length > 0 ? (
-                        <div style={styles.timelineList}>
-                          {selectedLead.contactHistory.map((item, idx) => (
-                            <div key={idx} style={styles.timelineItem}>
-                              <div style={styles.timelineBullet} />
-                              <div style={styles.timelineContent}>
-                                <div style={styles.timelineDate}>
-                                  {new Date(item.date).toLocaleString()} • <strong>{item.source}</strong>
-                                </div>
-                                <div style={styles.timelineSubject}>{item.subject}</div>
-                                <div style={styles.timelineMsg}>{item.message}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ color: '#64748b', fontSize: '13px' }}>
-                          First recorded contact: {new Date(selectedLead.firstContactDate || selectedLead.createdAt).toLocaleString()}.
-                        </p>
-                      )}
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Email Address:</span>
+                        <span style={styles.dossierVal}>{selectedLead.email}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Phone Number:</span>
+                        <span style={styles.dossierVal}>{selectedLead.phone || '—'}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>User Role:</span>
+                        <span style={styles.dossierVal}>{(selectedLead.userType || 'Customer').toUpperCase()}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Account Status:</span>
+                        <span style={styles.dossierVal}>
+                          <span style={styles.activeStatusPill}>{leadDossier?.user?.accountStatus || 'Active'}</span>
+                        </span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Location:</span>
+                        <span style={styles.dossierVal}>{selectedLead.location || 'New Jersey'}</span>
+                      </div>
                     </div>
-                  )}
 
-                  {/* TAB 3: ESTIMATIONS & DECK PROJECTS */}
-                  {activeModalTab === 'estimates' && (
-                    <div>
-                      {(selectedLead.userType || '').toLowerCase() === 'customer' ? (
-                        <div>
-                          {/* Summary Stats */}
-                          <div style={styles.modalStatsRow}>
-                            <div style={styles.modalStatCard}>
-                              <div style={styles.modalStatVal}>{leadDossier?.customerData?.decksCount || 0}</div>
-                              <div style={styles.modalStatLbl}>Deck Projects</div>
-                            </div>
-                            <div style={styles.modalStatCard}>
-                              <div style={styles.modalStatVal}>{leadDossier?.customerData?.estimatesCount || 0}</div>
-                              <div style={styles.modalStatLbl}>Total Estimates</div>
-                            </div>
-                            <div style={styles.modalStatCard}>
-                              <div style={styles.modalStatVal}>{leadDossier?.customerData?.activeEstimatesCount || 0}</div>
-                              <div style={styles.modalStatLbl}>Active Estimates</div>
-                            </div>
+                    {/* Estimation Specifications & Section Inputs */}
+                    <div style={styles.dossierSectionCard}>
+                      <h4 style={styles.dossierSectionTitle}>📐 Estimation Specifications & Section Inputs</h4>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Deck Dimensions:</span>
+                        <span style={styles.dossierVal}>{selectedLead.deckDimensions || '400 sq ft'}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Wood Species:</span>
+                        <span style={styles.dossierVal}>{selectedLead.woodSpecies || 'Pressure Treated Pine'}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Surface Area:</span>
+                        <span style={styles.dossierVal}>{selectedLead.deckArea ? `${selectedLead.deckArea} sq ft` : '400 sq ft'}</span>
+                      </div>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Selected Inputs:</span>
+                        <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Standard Deck Restoration'}</span>
+                      </div>
+                      {leadDossier?.estimateDetails?.pricingBreakdown && (
+                        <div style={styles.breakdownBox}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>
+                            Pricing Breakdown:
+                          </span>
+                          <div style={styles.breakdownRow}>
+                            <span>Base Labor & Materials:</span>
+                            <span>${Number(leadDossier.estimateDetails.pricingBreakdown.basePrice || 0).toLocaleString()}</span>
                           </div>
-
-                          {/* Estimates Table */}
-                          <h4 style={{ ...styles.sectionHeading, marginTop: '16px' }}>Estimates Created by this Customer</h4>
-                          {leadDossier?.customerData?.estimates && leadDossier.customerData.estimates.length > 0 ? (
-                            <table style={styles.subTable}>
-                              <thead>
-                                <tr>
-                                  <th style={styles.subTh}>Estimate Ref</th>
-                                  <th style={styles.subTh}>Deck Project</th>
-                                  <th style={styles.subTh}>Estimated Cost</th>
-                                  <th style={styles.subTh}>Status</th>
-                                  <th style={styles.subTh}>Date</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {leadDossier.customerData.estimates.map((est) => (
-                                  <tr key={est.id}>
-                                    <td style={styles.subTd}><strong>{est.estimateReference}</strong></td>
-                                    <td style={styles.subTd}>{est.deckName}</td>
-                                    <td style={styles.subTd}>${(est.totalCost || 0).toLocaleString()}</td>
-                                    <td style={styles.subTd}><span style={styles.statusSubPill}>{est.status}</span></td>
-                                    <td style={styles.subTd}>{new Date(est.createdAt).toLocaleDateString()}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div style={styles.subEmpty}>
-                              No formal estimates created yet by this customer.
+                          {leadDossier.estimateDetails.pricingBreakdown.woodMultiplier && (
+                            <div style={styles.breakdownRow}>
+                              <span>Wood Multiplier:</span>
+                              <span>+{Math.round((leadDossier.estimateDetails.pricingBreakdown.woodMultiplier - 1) * 100)}%</span>
                             </div>
                           )}
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Contractor Projects & Leads */}
-                          <div style={styles.modalStatsRow}>
-                            <div style={styles.modalStatCard}>
-                              <div style={styles.modalStatVal}>{leadDossier?.contractorData?.assignedLeadsCount || 0}</div>
-                              <div style={styles.modalStatLbl}>Assigned Leads</div>
-                            </div>
+                          <div style={{ ...styles.breakdownRow, fontWeight: 700, borderTop: '1px solid #cbd5e1', paddingTop: 4, marginTop: 4 }}>
+                            <span>Total Estimated:</span>
+                            <span style={{ color: '#047857' }}>${Number(leadDossier.estimateDetails.totalAmount || 0).toLocaleString()}</span>
                           </div>
-                          <p style={{ color: '#64748b', fontSize: '13px', marginTop: '12px' }}>
-                            {leadDossier?.contractorData?.assignedLeadsCount === 0
-                              ? 'This contractor currently has no assigned leads.'
-                              : `Contractor has ${leadDossier?.contractorData?.assignedLeadsCount} leads dispatched in their service area.`}
-                          </p>
                         </div>
                       )}
                     </div>
-                  )}
-                </>
+                  </div>
+
+                  {/* Activity & History */}
+                  <div style={styles.dossierSectionCard}>
+                    <h4 style={styles.dossierSectionTitle}>⏱️ User History & Activity</h4>
+                    <div style={styles.historyList}>
+                      <div style={styles.historyItem}>
+                        <span style={styles.historyDot} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
+                            Reach-out Inquiry Raised
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={styles.historyItem}>
+                        <span style={{ ...styles.historyDot, backgroundColor: '#10b981' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
+                            Account Registration & Estimator Access
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            {new Date(leadDossier?.user?.createdAt || selectedLead.createdAt || Date.now()).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Modal Footer */}
             <div style={styles.modalFooter}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <a
-                  href={adminApi.exportSingleLeadUrl(selectedLead.id || selectedLead._id, 'csv')}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={styles.popupExportBtn}
-                >
-                  Download CSV
-                </a>
-                <a
-                  href={adminApi.exportSingleLeadUrl(selectedLead.id || selectedLead._id, 'excel')}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ ...styles.popupExportBtn, borderColor: '#10b981', color: '#047857' }}
-                >
-                  Download Excel
-                </a>
-              </div>
               <button
                 type="button"
                 onClick={handleCloseModal}
-                style={styles.btnSecondary}
+                style={styles.btnCloseModal}
               >
-                Close
+                Close Dossier
               </button>
             </div>
           </div>
@@ -818,445 +719,515 @@ export default function AdminLeadManagementPage() {
   );
 }
 
-// -------------------------------------------------------------
-// Component Styles
-// -------------------------------------------------------------
 const styles = {
   container: {
-    padding: '24px 32px',
-    backgroundColor: '#f8fafc',
-    minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    padding: '24px',
+    maxWidth: '1440px',
+    margin: '0 auto',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '14px',
+  },
+  headerTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
   },
   title: {
-    fontSize: '24px',
-    fontWeight: '700',
+    fontSize: '22px',
+    fontWeight: '800',
     color: '#0f172a',
-    margin: '0 0 6px 0',
+    margin: 0,
+    letterSpacing: '-0.3px',
+  },
+  liveDbPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ecfdf5',
+    color: '#047857',
+    border: '1px solid #a7f3d0',
+    padding: '3px 10px',
+    borderRadius: '9999px',
+    fontSize: '11px',
+    fontWeight: '700',
+  },
+  pulseDot: {
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    backgroundColor: '#10b981',
+    boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)',
   },
   subtitle: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#64748b',
-    margin: 0,
-    maxWidth: '780px',
-    lineHeight: '1.4',
+    margin: '4px 0 0',
   },
   headerActions: {
     display: 'flex',
+    alignItems: 'center',
     gap: '10px',
   },
-  btnSecondary: {
+  shinyExportBtn: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#334155',
+    padding: '7px 14px',
+    borderRadius: '9999px',
     backgroundColor: '#ffffff',
+    color: '#334155',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
+    fontSize: '12px',
+    fontWeight: '700',
     textDecoration: 'none',
     cursor: 'pointer',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s ease',
   },
-  btnSuccess: {
+  shinyExportGreenBtn: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
+    padding: '7px 14px',
+    borderRadius: '9999px',
+    backgroundColor: '#047857',
     color: '#ffffff',
-    backgroundColor: '#059669',
-    border: 'none',
-    borderRadius: '8px',
+    border: '1px solid #065f46',
+    boxShadow: '0 1px 3px rgba(4, 120, 87, 0.25), inset 0 1px 0 rgba(255,255,255,0.25)',
+    fontSize: '12px',
+    fontWeight: '700',
     textDecoration: 'none',
     cursor: 'pointer',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s ease',
   },
+
+  // Tabs
   tabBar: {
     display: 'flex',
-    gap: '4px',
+    gap: '8px',
     borderBottom: '1px solid #e2e8f0',
     marginBottom: '16px',
+    overflowX: 'auto',
   },
   tabBtn: {
-    display: 'inline-flex',
+    display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '10px 18px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#64748b',
-    backgroundColor: 'transparent',
+    padding: '10px 16px',
     border: 'none',
+    background: 'none',
     borderBottom: '2px solid transparent',
+    color: '#64748b',
+    fontSize: '13px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
   },
   tabBtnActive: {
-    color: '#2563eb',
-    fontWeight: '600',
-    borderBottom: '2px solid #2563eb',
+    color: '#0f172a',
+    borderBottomColor: '#0f172a',
   },
   tabBadge: {
-    fontSize: '11px',
-    fontWeight: '700',
-    padding: '2px 7px',
-    borderRadius: '12px',
-  },
-  hotBadge: {
-    backgroundColor: '#fee2e2',
-    color: '#dc2626',
-  },
-  neutralBadge: {
+    padding: '2px 8px',
+    borderRadius: '9999px',
     backgroundColor: '#f1f5f9',
     color: '#475569',
+    fontSize: '11px',
+    fontWeight: '800',
   },
   tabBadgeActive: {
-    backgroundColor: '#dbeafe',
-    color: '#1d4ed8',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
   },
-  controlsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    border: '1px solid #e2e8f0',
-    padding: '12px 16px',
+
+  // Controls Bar
+  controlBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
     marginBottom: '16px',
+    flexWrap: 'wrap',
   },
-  searchRow: {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'center',
-  },
-  searchForm: {
-    display: 'flex',
-    gap: '8px',
-    flex: 1,
-  },
-  searchBox: {
-    position: 'relative',
+  shinySearchWrapper: {
     display: 'flex',
     alignItems: 'center',
-    flex: 1,
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '0 12px',
     backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '9999px',
+    padding: '6px 12px',
+    width: '260px',
+    maxWidth: '100%',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
-  searchInput: {
+  shinySearchInput: {
     border: 'none',
     outline: 'none',
-    padding: '9px 8px',
-    fontSize: '13px',
-    width: '100%',
+    fontSize: '12px',
     color: '#0f172a',
+    width: '100%',
+    backgroundColor: 'transparent',
   },
   clearSearchBtn: {
     background: 'none',
     border: 'none',
     color: '#94a3b8',
     cursor: 'pointer',
-    fontSize: '13px',
+    fontSize: '12px',
   },
-  searchBtn: {
-    padding: '9px 18px',
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  filterToggleBtn: {
-    display: 'inline-flex',
+  filterPillGroup: {
+    display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '9px 16px',
-    backgroundColor: '#f8fafc',
-    color: '#334155',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    position: 'relative',
+    gap: '5px',
+    flexWrap: 'wrap',
   },
-  filterToggleActive: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#93c5fd',
-    color: '#1d4ed8',
-  },
-  activeDot: {
-    width: '7px',
-    height: '7px',
-    backgroundColor: '#2563eb',
-    borderRadius: '50%',
-    marginLeft: '2px',
-  },
-  filterPanel: {
-    marginTop: '12px',
-    paddingTop: '12px',
-    borderTop: '1px solid #f1f5f9',
-  },
-  filterGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
-  },
-  filterGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  filterLabel: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterSelect: {
-    padding: '7px 10px',
-    borderRadius: '6px',
-    border: '1px solid #cbd5e1',
-    fontSize: '13px',
-    color: '#0f172a',
-    backgroundColor: '#ffffff',
-    outline: 'none',
-  },
-  filterFooter: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '8px',
-  },
-  clearFiltersBtn: {
-    padding: '6px 12px',
-    backgroundColor: 'transparent',
+  filterGroupLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
     color: '#64748b',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    fontSize: '12px',
-    cursor: 'pointer',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+    marginRight: '2px',
   },
-  applyFiltersBtn: {
-    padding: '6px 14px',
+  shinyPillBtn: {
+    padding: '5px 11px',
+    borderRadius: '9999px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+    color: '#475569',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  shinyPillBtnActive: {
     backgroundColor: '#0f172a',
     color: '#ffffff',
+    borderColor: '#0f172a',
+    boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)',
+  },
+  lastDateWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #cbd5e1',
+    borderRadius: '9999px',
+    padding: '4px 10px',
+  },
+  shinyDateInput: {
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '12px',
+    outline: 'none',
+    backgroundColor: 'transparent',
+    fontSize: '11px',
+    color: '#0f172a',
     fontWeight: '600',
+  },
+  clearDateBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '11px',
+    color: '#64748b',
     cursor: 'pointer',
   },
-  card: {
+  shinySelect: {
+    padding: '5px 12px',
+    borderRadius: '9999px',
+    border: '1px solid #cbd5e1',
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    border: '1px solid #e2e8f0',
-    overflow: 'hidden',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#334155',
+    outline: 'none',
+    cursor: 'pointer',
   },
-  loaderBox: {
-    padding: '48px 0',
-    textAlign: 'center',
-  },
-  spinner: {
-    display: 'inline-block',
-    width: '32px',
-    height: '32px',
-    border: '3px solid #e2e8f0',
-    borderTopColor: '#2563eb',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  },
-  errorBox: {
-    padding: '16px 20px',
-    backgroundColor: '#fef2f2',
-    color: '#b91c1c',
-    borderRadius: '8px',
-    margin: '16px',
-  },
-  emptyBox: {
-    padding: '64px 20px',
-    textAlign: 'center',
-  },
-  emptyIconCircle: {
+  shinyRefreshBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '64px',
-    height: '64px',
-    borderRadius: '50%',
-    backgroundColor: '#f8fafc',
-    marginBottom: '12px',
+    padding: '5px 12px',
+    borderRadius: '9999px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    color: '#334155',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    marginLeft: 'auto',
+    transition: 'all 0.15s ease',
   },
-  emptyTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#1e293b',
-    margin: '0 0 6px 0',
-  },
-  emptySub: {
-    fontSize: '13px',
-    color: '#64748b',
-    margin: 0,
+
+  // Main Card & Table
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    overflow: 'hidden',
   },
   tableResponsive: {
     overflowX: 'auto',
+    width: '100%',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
+    fontSize: '13px',
   },
   th: {
-    padding: '12px 16px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#475569',
+    padding: '12px 14px',
     backgroundColor: '#f8fafc',
-    borderBottom: '1px solid #e2e8f0',
+    color: '#475569',
+    fontSize: '11px',
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: '0.04em',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid #e2e8f0',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
-    transition: 'background-color 0.1s',
+    transition: 'background-color 0.1s ease',
   },
   td: {
-    padding: '14px 16px',
+    padding: '12px 14px',
     verticalAlign: 'middle',
   },
+
+  // Row Item Styles
   personCell: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
   },
   avatarCircle: {
-    width: '38px',
-    height: '38px',
+    width: '36px',
+    height: '36px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '13px',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: '12px',
     flexShrink: 0,
   },
   personName: {
-    fontSize: '14px',
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0f172a',
+    fontSize: '13px',
   },
   personEmail: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#64748b',
   },
   personPhone: {
-    fontSize: '12px',
-    color: '#475569',
+    fontSize: '11px',
+    color: '#0284c7',
   },
   personCompany: {
-    fontSize: '11px',
-    color: '#2563eb',
+    fontSize: '10px',
+    color: '#475569',
+    fontWeight: '600',
     marginTop: '2px',
   },
   badgeCustomer: {
     display: 'inline-block',
-    padding: '3px 8px',
-    fontSize: '11px',
-    fontWeight: '700',
-    borderRadius: '4px',
-    backgroundColor: '#ecfdf5',
+    fontSize: '10px',
+    fontWeight: '800',
     color: '#047857',
+    backgroundColor: '#dcfce7',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    width: 'fit-content',
   },
   badgeContractor: {
     display: 'inline-block',
-    padding: '3px 8px',
-    fontSize: '11px',
-    fontWeight: '700',
-    borderRadius: '4px',
-    backgroundColor: '#eff6ff',
+    fontSize: '10px',
+    fontWeight: '800',
     color: '#1d4ed8',
+    backgroundColor: '#dbeafe',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    width: 'fit-content',
   },
-  sourceLabel: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginTop: '4px',
-  },
-  leadIdSmall: {
-    fontSize: '11px',
-    color: '#94a3b8',
-    fontFamily: 'monospace',
+  badgeEstimationService: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#6b21a8',
+    backgroundColor: '#f3e8ff',
+    border: '1px solid #d8b4fe',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    width: 'fit-content',
     marginTop: '2px',
   },
-  countBadgePill: {
-    display: 'inline-block',
-    padding: '4px 10px',
+  sourceLabel: {
+    fontSize: '11px',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  leadIdSmall: {
+    fontSize: '10px',
+    color: '#94a3b8',
+    fontFamily: 'monospace',
+  },
+  requestedMessageText: {
     fontSize: '12px',
+    color: '#0f172a',
     fontWeight: '600',
-    borderRadius: '12px',
-    backgroundColor: '#f1f5f9',
-    color: '#334155',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    lineHeight: 1.4,
+  },
+  estimatedValueBadge: {
+    display: 'inline-block',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#047857',
+    backgroundColor: '#ecfdf5',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    marginTop: '4px',
   },
   hotPill: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: '700',
-    borderRadius: '12px',
-    backgroundColor: '#fee2e2',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '10px',
+    fontWeight: '800',
     color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+    border: '1px solid #fca5a5',
+    padding: '3px 8px',
+    borderRadius: '9999px',
   },
   standardPill: {
-    display: 'inline-block',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: '500',
-    borderRadius: '12px',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#475569',
     backgroundColor: '#f1f5f9',
+    padding: '2px 8px',
+    borderRadius: '9999px',
+  },
+  dateTimeText: {
+    fontWeight: '600',
+    color: '#0f172a',
+    fontSize: '12px',
+  },
+  timeSub: {
+    fontSize: '11px',
     color: '#64748b',
   },
   locationText: {
-    fontSize: '13px',
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '12px',
+    color: '#334155',
     fontWeight: '500',
-    color: '#0f172a',
   },
-  dateText: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginTop: '2px',
-  },
-  statusSubPill: {
-    display: 'inline-block',
-    padding: '2px 6px',
-    fontSize: '10px',
-    fontWeight: '700',
-    borderRadius: '4px',
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
-    marginTop: '3px',
-  },
-  actionBtnOutline: {
-    padding: '6px 14px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#2563eb',
-    backgroundColor: '#eff6ff',
-    border: '1px solid #bfdbfe',
+  btnViewDetails: {
+    padding: '5px 12px',
     borderRadius: '6px',
+    backgroundColor: '#0f172a',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s ease',
   },
 
-  // Modal Styles
+  // Pagination
+  paginationRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    borderTop: '1px solid #f1f5f9',
+    backgroundColor: '#f8fafc',
+    fontSize: '12px',
+    color: '#64748b',
+  },
+  paginationText: {
+    fontWeight: '600',
+  },
+  paginationBtns: {
+    display: 'flex',
+    gap: '8px',
+  },
+  pageBtn: {
+    padding: '4px 10px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#334155',
+    cursor: 'pointer',
+  },
+
+  // Loader & Empty
+  loaderBox: {
+    padding: '48px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  spinner: {
+    width: '32px',
+    height: '32px',
+    border: '3px solid #e2e8f0',
+    borderTop: '3px solid #1d4ed8',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  emptyBox: {
+    padding: '48px',
+    textAlign: 'center',
+  },
+  emptyIconCircle: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: '#f1f5f9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 12px',
+  },
+  emptyTitle: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#0f172a',
+    margin: 0,
+  },
+  emptySub: {
+    fontSize: '13px',
+    color: '#64748b',
+    margin: '6px 0 0',
+  },
+  errorBox: {
+    padding: '16px',
+    backgroundColor: '#fee2e2',
+    color: '#991b1b',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    margin: '16px',
+  },
+
+  // Large Dossier Modal
   modalOverlay: {
     position: 'fixed',
     top: 0,
@@ -1264,273 +1235,227 @@ const styles = {
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backdropFilter: 'blur(3px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px',
+    zIndex: 9999,
+    padding: '16px',
   },
-  modalContent: {
+  modalBoxLarge: {
     backgroundColor: '#ffffff',
-    borderRadius: '12px',
+    borderRadius: '16px',
     width: '100%',
-    maxWidth: '820px',
+    maxWidth: '720px',
     maxHeight: '90vh',
+    overflowY: 'auto',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    overflow: 'hidden',
   },
   modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: '20px 24px',
+    padding: '16px 20px',
     borderBottom: '1px solid #e2e8f0',
-    backgroundColor: '#ffffff',
-  },
-  modalHeaderTop: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '6px',
-  },
-  modalLeadNumber: {
-    fontSize: '12px',
-    fontFamily: 'monospace',
-    fontWeight: '700',
-    color: '#64748b',
-  },
-  modalTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#0f172a',
-    margin: '0 0 4px 0',
-  },
-  modalSub: {
-    fontSize: '13px',
-    color: '#64748b',
-    margin: 0,
-  },
-  modalHeaderRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  popupExportBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '5px 10px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#2563eb',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
-    border: '1px solid #bfdbfe',
-    borderRadius: '6px',
-    textDecoration: 'none',
-    cursor: 'pointer',
   },
-  closeBtn: {
-    width: '32px',
-    height: '32px',
+  avatarLarge: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    border: 'none',
-    background: '#f1f5f9',
-    borderRadius: '6px',
-    fontSize: '14px',
-    color: '#475569',
-    cursor: 'pointer',
-    marginLeft: '6px',
+    fontWeight: '800',
+    fontSize: '15px',
+    flexShrink: 0,
   },
-  modalTabBar: {
-    display: 'flex',
-    borderBottom: '1px solid #e2e8f0',
-    backgroundColor: '#f8fafc',
-    padding: '0 16px',
+  modalTitle: {
+    margin: 0,
+    fontSize: '16px',
+    fontWeight: '800',
+    color: '#0f172a',
   },
-  modalTabBtn: {
-    padding: '10px 16px',
-    fontSize: '13px',
-    fontWeight: '500',
+  modalSub: {
+    margin: '2px 0 0',
+    fontSize: '12px',
     color: '#64748b',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    cursor: 'pointer',
   },
-  modalTabBtnActive: {
-    color: '#2563eb',
-    fontWeight: '600',
-    borderBottom: '2px solid #2563eb',
-    backgroundColor: '#ffffff',
+  modalExportSmallBtn: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    backgroundColor: '#f1f5f9',
+    border: '1px solid #cbd5e1',
+    color: '#334155',
+    fontSize: '11px',
+    fontWeight: '700',
+    textDecoration: 'none',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    color: '#64748b',
+    padding: '4px',
   },
   modalBody: {
-    padding: '24px',
-    overflowY: 'auto',
-    flex: 1,
+    padding: '20px',
+    backgroundColor: '#f8fafc',
   },
-  sectionHeading: {
-    fontSize: '14px',
+  modalContentGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  modalBanner: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '10px',
+    backgroundColor: '#ffffff',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+  },
+  bannerItem: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  bannerLabel: {
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+  },
+  bannerVal: {
+    fontSize: '12px',
     fontWeight: '700',
     color: '#0f172a',
-    margin: '0 0 12px 0',
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
+    marginTop: '2px',
   },
-  dossierGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '14px',
-    backgroundColor: '#f8fafc',
-    padding: '16px',
-    borderRadius: '8px',
+  bannerValHot: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#b91c1c',
+    marginTop: '2px',
+  },
+  bannerValStandard: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: '2px',
+  },
+  bannerValAmount: {
+    fontSize: '14px',
+    fontWeight: '800',
+    color: '#047857',
+    marginTop: '2px',
+  },
+  dossierSectionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '14px 16px',
     border: '1px solid #e2e8f0',
+  },
+  dossierSectionTitle: {
+    margin: '0 0 10px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  inquiryMessageBox: {
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    padding: '12px',
+    border: '1px solid #e2e8f0',
+  },
+  inquiryMessageText: {
+    margin: 0,
+    fontSize: '13px',
+    color: '#0f172a',
+    fontStyle: 'italic',
+    lineHeight: 1.5,
+  },
+  twoColGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '12px',
   },
   dossierItem: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '3px',
+    justifyContent: 'space-between',
+    fontSize: '12px',
+    marginBottom: '6px',
+    gap: '8px',
   },
   dossierLabel: {
-    fontSize: '11px',
-    fontWeight: '600',
     color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-  },
-  dossierValue: {
-    fontSize: '13px',
     fontWeight: '600',
+  },
+  dossierVal: {
     color: '#0f172a',
+    fontWeight: '600',
+    textAlign: 'right',
   },
-  enquiryCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '16px',
-  },
-  enquiryMeta: {
-    display: 'flex',
-    gap: '16px',
-    fontSize: '12px',
-    color: '#475569',
-    paddingBottom: '10px',
-    borderBottom: '1px solid #f1f5f9',
-  },
-  enquirySubjectText: {
-    fontSize: '14px',
+  activeStatusPill: {
+    fontSize: '10px',
     fontWeight: '700',
-    color: '#0f172a',
-    marginTop: '2px',
+    color: '#047857',
+    backgroundColor: '#dcfce7',
+    padding: '2px 6px',
+    borderRadius: '4px',
   },
-  enquiryMessageBox: {
-    marginTop: '4px',
-    padding: '12px 14px',
-    backgroundColor: '#f8fafc',
-    borderRadius: '6px',
-    border: '1px solid #e2e8f0',
-    fontSize: '13px',
-    color: '#334155',
-    lineHeight: '1.5',
-    whiteSpace: 'pre-wrap',
-  },
-  timelineList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '14px',
-    borderLeft: '2px solid #e2e8f0',
-    paddingLeft: '16px',
-    marginLeft: '6px',
-  },
-  timelineItem: {
-    position: 'relative',
-  },
-  timelineBullet: {
-    position: 'absolute',
-    left: '-22px',
-    top: '4px',
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    backgroundColor: '#2563eb',
-    border: '2px solid #ffffff',
-  },
-  timelineContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px',
-  },
-  timelineDate: {
-    fontSize: '11px',
-    color: '#64748b',
-  },
-  timelineSubject: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#0f172a',
-  },
-  timelineMsg: {
-    fontSize: '12px',
-    color: '#475569',
-  },
-  modalStatsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-    marginBottom: '16px',
-  },
-  modalStatCard: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '12px',
-    textAlign: 'center',
-  },
-  modalStatVal: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  modalStatLbl: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginTop: '2px',
-  },
-  subTable: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '12px',
-  },
-  subTh: {
-    backgroundColor: '#f8fafc',
+  breakdownBox: {
+    marginTop: '8px',
     padding: '8px 10px',
-    fontWeight: '600',
-    color: '#475569',
-    borderBottom: '1px solid #e2e8f0',
-    textAlign: 'left',
-  },
-  subTd: {
-    padding: '10px',
-    borderBottom: '1px solid #f1f5f9',
-    color: '#1e293b',
-  },
-  subEmpty: {
-    padding: '24px',
-    textAlign: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: '6px',
-    color: '#64748b',
-    fontSize: '13px',
+    border: '1px solid #e2e8f0',
   },
-  modalFooter: {
+  breakdownRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '14px 24px',
+    fontSize: '11px',
+    color: '#334155',
+    marginBottom: '2px',
+  },
+  historyList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    paddingLeft: '6px',
+  },
+  historyItem: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'flex-start',
+  },
+  historyDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#2563eb',
+    marginTop: '4px',
+    flexShrink: 0,
+  },
+  modalFooter: {
+    padding: '12px 20px',
     borderTop: '1px solid #e2e8f0',
-    backgroundColor: '#f8fafc',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    backgroundColor: '#ffffff',
+    borderRadius: '0 0 16px 16px',
+  },
+  btnCloseModal: {
+    padding: '6px 16px',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
 };

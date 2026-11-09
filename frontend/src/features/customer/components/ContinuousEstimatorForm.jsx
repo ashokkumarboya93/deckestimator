@@ -815,6 +815,9 @@ export default function ContinuousEstimatorForm({
   const [applyContractorDiscount, setApplyContractorDiscount] = useState(true);
   const [contractorDiscountPercent, setContractorDiscountPercent] = useState(10);
 
+  // Minimum Job Mobilization Price Toggle (Default FALSE: pure calculated price without min job applied)
+  const [applyMinJobPrice, setApplyMinJobPrice] = useState(false);
+
   // Fetch Contractor's Active or Admin-tuned discount rate
   useEffect(() => {
     if (!isContractor) return;
@@ -855,6 +858,30 @@ export default function ContinuousEstimatorForm({
         }
       } catch (err) {
         console.warn('[Discount Sync Warning]:', err.message);
+      }
+    }
+  };
+
+  // Toggle Minimum Job Mobilization Price (Default unchecked)
+  const handleToggleMinJobPrice = async (checked) => {
+    setApplyMinJobPrice(checked);
+    if (officialEstimate?.estimateId) {
+      try {
+        const updated = await updateEstimate(officialEstimate.estimateId, {
+          applyMinJobPrice: checked,
+          applyContractorDiscount: isContractor ? applyContractorDiscount : false,
+          contractorDiscountPercent: isContractor ? contractorDiscountPercent : 0,
+        });
+        if (updated) {
+          setOfficialEstimate((prev) => ({
+            ...prev,
+            total: updated.totalAmount,
+            discountBreakdown: updated.discountBreakdown,
+            applyMinJobPrice: checked,
+          }));
+        }
+      } catch (err) {
+        console.warn('[Min Job Sync Warning]:', err.message);
       }
     }
   };
@@ -922,9 +949,15 @@ export default function ContinuousEstimatorForm({
       const calculatedAmt = snap?.calculatedTotal !== undefined ? snap.calculatedTotal : (initialData.totalAmount || 2500);
       const minJobFloor = snap?.minJob || 2500;
       const minJobApplies = snap?.minJobApplied ?? (calculatedAmt < minJobFloor);
+      const hasMinJobApplied = Boolean(initialData.applyMinJobPrice || snap?.applyMinJobPrice);
+      setApplyMinJobPrice(hasMinJobApplied);
       setOfficialEstimate({
         ref: initialData.estimateNumber || `DP-${new Date().getFullYear()}-REV`,
-        total: calculatedAmt,
+        total: initialData.totalAmount || (hasMinJobApplied ? minJobFloor : calculatedAmt),
+        calculatedTotal: calculatedAmt,
+        floorTotal: snap?.floorTotal || minJobFloor,
+        applyMinJobPrice: hasMinJobApplied,
+        rawTotal: snap?.calculatedTotal || calculatedAmt,
         minJobApplies,
         minJobAmount: minJobFloor,
         minJobNotice: minJobApplies
@@ -1314,20 +1347,26 @@ export default function ContinuousEstimatorForm({
       forContractor: isContractor,
     });
 
-    const fallbackTotal = localCalc.total || localCalc.calculatedTotal || 2500;
+    const pureCalculatedTotal = localCalc.calculatedTotal !== undefined ? localCalc.calculatedTotal : (localCalc.total || 2500);
+    const minJobFloor = localCalc.minJob || 2500;
+    const floorCalculatedTotal = localCalc.floorTotal || Math.max(pureCalculatedTotal, minJobFloor);
+    const initialChosenTotal = applyMinJobPrice ? floorCalculatedTotal : pureCalculatedTotal;
     const fallbackRef = `DP-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const immediateEstimate = {
       ref: fallbackRef,
-      total: fallbackTotal,
-      rawTotal: fallbackTotal,
-      rawLow: localCalc.low || fallbackTotal,
-      rawHigh: localCalc.high || fallbackTotal,
+      total: initialChosenTotal,
+      calculatedTotal: pureCalculatedTotal,
+      floorTotal: floorCalculatedTotal,
+      applyMinJobPrice,
+      rawTotal: pureCalculatedTotal,
+      rawLow: localCalc.lowCalculated || localCalc.low || pureCalculatedTotal,
+      rawHigh: localCalc.highCalculated || localCalc.high || pureCalculatedTotal,
       minJobApplies: localCalc.minJobApplied,
-      minJobAmount: localCalc.minJob || 2500,
+      minJobAmount: minJobFloor,
       minJobNotice: localCalc.minJobNotice,
-      low: localCalc.low || 2500,
-      high: localCalc.high || 2500,
+      low: applyMinJobPrice ? (localCalc.low || minJobFloor) : (localCalc.lowCalculated || localCalc.low || pureCalculatedTotal),
+      high: applyMinJobPrice ? (localCalc.high || minJobFloor) : (localCalc.highCalculated || localCalc.high || pureCalculatedTotal),
       billableArea: localCalc.A || activeFloorArea,
       rate: localCalc.rate || 3.00,
       prep: localCalc.prep || 'clean',
@@ -1454,6 +1493,7 @@ export default function ContinuousEstimatorForm({
         width: activeWidth,
         notes: notes.trim(),
         estimateStatus: 'CREATED',
+        applyMinJobPrice,
         applyContractorDiscount: isContractor ? applyContractorDiscount : false,
         contractorDiscountPercent: isContractor ? contractorDiscountPercent : 0,
       };
@@ -1473,20 +1513,24 @@ export default function ContinuousEstimatorForm({
 
       if (est) {
         const snap = est.pricingSnapshot || {};
+        const estPureCalculated = snap.calculatedTotal !== undefined ? snap.calculatedTotal : pureCalculatedTotal;
+        const estFloorTotal = snap.floorTotal || minJobFloor;
         const finalCalculatedTotal = typeof est.totalAmount === 'number' && est.totalAmount > 0
           ? est.totalAmount
-          : (snap.calculatedTotal !== undefined ? snap.calculatedTotal : fallbackTotal);
-        const originalRaw = est.discountBreakdown?.originalTotal || snap.originalTotal || fallbackTotal;
-        const minJobFloor = snap.minJob || localCalc.minJob || 2500;
-        const minJobApplies = snap.minJobApplied ?? (finalCalculatedTotal < minJobFloor);
+          : (applyMinJobPrice ? estFloorTotal : estPureCalculated);
+        const originalRaw = est.discountBreakdown?.originalTotal || (applyMinJobPrice ? estFloorTotal : estPureCalculated);
+        const minJobApplies = snap.minJobApplied ?? (estPureCalculated < minJobFloor);
 
         setOfficialEstimate((prev) => ({
           ...prev,
           ref: est.estimateNumber || prev?.ref || fallbackRef,
           total: finalCalculatedTotal,
+          calculatedTotal: estPureCalculated,
+          floorTotal: estFloorTotal,
+          applyMinJobPrice,
           rawTotal: originalRaw,
-          rawLow: localCalc.low || Math.round(originalRaw * 0.9),
-          rawHigh: localCalc.high || Math.round(originalRaw * 1.15),
+          rawLow: localCalc.lowCalculated || Math.round(originalRaw * 0.9),
+          rawHigh: localCalc.highCalculated || Math.round(originalRaw * 1.15),
           minJobApplies,
           minJobAmount: minJobFloor,
           deckId: activeDeckId,
@@ -2662,7 +2706,13 @@ export default function ContinuousEstimatorForm({
                 <div style={styles.customerTotalBox}>
                   <span style={styles.customerTotalSub}>Official Guaranteed Estimate Total</span>
                   <strong style={styles.customerTotalAmt}>
-                    ${officialEstimate.total.toLocaleString()}
+                    ${((applyMinJobPrice
+                      ? Math.max(
+                          officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total,
+                          officialEstimate.minJobAmount || 2500
+                        )
+                      : (officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total)
+                    )).toLocaleString()}
                   </strong>
                   <span style={styles.customerTotalSubNotice}>
                     {officialEstimate.status === 'needs_contractor_quote'
@@ -2672,22 +2722,39 @@ export default function ContinuousEstimatorForm({
                       : 'Comprehensive estimate based on Deck Restoration Plus quality standards'}
                   </span>
 
-                  {/* USER REQUIREMENT: Minimum Job Notice without forcing $2,500 onto the estimate */}
-                  {officialEstimate.minJobApplies && (
-                    <div style={styles.customerMinJobNoticeBox}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                      <div>
-                        <strong style={{ color: '#92400E', fontSize: '13px' }}>Important Minimum Job Notice:</strong>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#78350F', lineHeight: 1.4 }}>
-                          Deck Restoration Plus maintains a standard mobilization minimum of ${officialEstimate.minJobAmount.toLocaleString()} for this service tier. Because your calculated job size is below this threshold, the ${officialEstimate.minJobAmount.toLocaleString()} minimum job price will apply upon final booking and crew dispatch.
-                        </p>
-                      </div>
+                  {/* USER REQUIREMENT: Minimum Job Notice & Default Unchecked Checkbox to Apply Min Job Price */}
+                  <div style={styles.customerMinJobNoticeBox}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <strong style={{ color: '#92400E', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                        Important Note — Minimum Job Price:
+                      </strong>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#78350F', lineHeight: 1.45 }}>
+                        Deck Restoration Plus maintains a standard mobilization minimum of <strong>${(officialEstimate.minJobAmount || 2500).toLocaleString()}</strong> for this service tier.
+                        By default, your estimate shows the pure calculated price (${(officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total).toLocaleString()}) without the minimum job price applied.
+                      </p>
+                      <label style={styles.minJobCheckboxLabel}>
+                        <input
+                          type="checkbox"
+                          checked={applyMinJobPrice}
+                          onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
+                          style={styles.minJobCheckboxInput}
+                        />
+                        <span style={styles.minJobCheckboxText}>
+                          Apply standard minimum job mobilization price (${(officialEstimate.minJobAmount || 2500).toLocaleString()})
+                        </span>
+                      </label>
+                      {applyMinJobPrice && (
+                        <span style={{ display: 'block', marginTop: '6px', fontSize: '11px', color: '#B45309', fontWeight: '600' }}>
+                          ✓ Minimum job mobilization price applied (${(Math.max(officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total, officialEstimate.minJobAmount || 2500)).toLocaleString()}). Uncheck to return to pure calculated price.
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               ) : (
                 /* CONTRACTOR VIEW: Full Operational Breakdown */
@@ -2696,57 +2763,103 @@ export default function ContinuousEstimatorForm({
                     <div style={styles.resultTotalBox}>
                       <span style={styles.resultTotalSub}>Contractor Quoted Total</span>
 
-                      {applyContractorDiscount ? (
-                        <div style={{ margin: '6px 0 8px 0' }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                            <span style={styles.strikePrice}>
-                              ${(officialEstimate.rawTotal || officialEstimate.total).toLocaleString()}
-                            </span>
-                            <strong style={{ ...styles.resultTotalAmt, color: '#15803D' }}>
-                              ${Math.max(0, Math.round((officialEstimate.rawTotal || officialEstimate.total) * (1 - contractorDiscountPercent / 100))).toLocaleString()}
-                            </strong>
-                            <span style={styles.discountBadgePill}>
-                              ✓ {contractorDiscountPercent}% Contractor Discount Applied
-                            </span>
-                          </div>
-                          <span style={styles.discountSavingsSubtext}>
-                            Wholesale Savings: ${Math.round((officialEstimate.rawTotal || officialEstimate.total) * (contractorDiscountPercent / 100)).toLocaleString()} deducted via active tier
-                          </span>
-                        </div>
-                      ) : (
-                        <div style={{ margin: '6px 0 8px 0' }}>
-                          <strong style={{ ...styles.resultTotalAmt, color: '#0F2C59' }}>
-                            ${(officialEstimate.rawTotal || officialEstimate.total).toLocaleString()}
-                          </strong>
-                          <span style={styles.discountSavingsSubtext}>
-                            Standard retail rate (Wholesale discount unchecked)
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
+                        const contractorMinJobAmt = officialEstimate.minJobAmount || 2500;
+                        const activeBase = applyMinJobPrice ? Math.max(pureBase, contractorMinJobAmt) : pureBase;
+                        const discountedAmt = Math.max(0, Math.round(activeBase * (1 - contractorDiscountPercent / 100)));
+                        const wholesaleSavings = Math.round(activeBase * (contractorDiscountPercent / 100));
 
-                      {/* Interactive Contractor Wholesale Discount Checkbox (Default Checked) */}
-                      <label style={styles.contractorDiscountCheckboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={applyContractorDiscount}
-                          onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
-                          style={styles.contractorDiscountCheckboxInput}
-                        />
-                        <span style={styles.contractorDiscountCheckboxText}>
-                          Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
-                        </span>
-                      </label>
+                        return (
+                          <>
+                            {applyContractorDiscount ? (
+                              <div style={{ margin: '6px 0 8px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                                  <span style={styles.strikePrice}>
+                                    ${activeBase.toLocaleString()}
+                                  </span>
+                                  <strong style={{ ...styles.resultTotalAmt, color: '#15803D' }}>
+                                    ${discountedAmt.toLocaleString()}
+                                  </strong>
+                                  <span style={styles.discountBadgePill}>
+                                    ✓ {contractorDiscountPercent}% Contractor Discount Applied
+                                  </span>
+                                </div>
+                                <span style={styles.discountSavingsSubtext}>
+                                  Wholesale Savings: ${wholesaleSavings.toLocaleString()} deducted via active tier
+                                </span>
+                              </div>
+                            ) : (
+                              <div style={{ margin: '6px 0 8px 0' }}>
+                                <strong style={{ ...styles.resultTotalAmt, color: '#0F2C59' }}>
+                                  ${activeBase.toLocaleString()}
+                                </strong>
+                                <span style={styles.discountSavingsSubtext}>
+                                  Standard retail rate (Wholesale discount unchecked)
+                                </span>
+                              </div>
+                            )}
 
-                      <span style={styles.resultRangeNotice}>
-                        Calculated Range: $
-                        {applyContractorDiscount
-                          ? Math.round((officialEstimate.rawLow || officialEstimate.low || Math.round((officialEstimate.rawTotal || officialEstimate.total) * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                          : (officialEstimate.rawLow || officialEstimate.low || Math.round((officialEstimate.rawTotal || officialEstimate.total) * 0.9)).toLocaleString()}{' '}
-                        – $
-                        {applyContractorDiscount
-                          ? Math.round((officialEstimate.rawHigh || officialEstimate.high || Math.round((officialEstimate.rawTotal || officialEstimate.total) * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                          : (officialEstimate.rawHigh || officialEstimate.high || Math.round((officialEstimate.rawTotal || officialEstimate.total) * 1.15)).toLocaleString()}
-                      </span>
+                            {/* Interactive Contractor Wholesale Discount Checkbox (Default Checked) */}
+                            <label style={styles.contractorDiscountCheckboxLabel}>
+                              <input
+                                type="checkbox"
+                                checked={applyContractorDiscount}
+                                onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
+                                style={styles.contractorDiscountCheckboxInput}
+                              />
+                              <span style={styles.contractorDiscountCheckboxText}>
+                                Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
+                              </span>
+                            </label>
+
+                            <span style={styles.resultRangeNotice}>
+                              Calculated Range: $
+                              {applyContractorDiscount
+                                ? Math.round((officialEstimate.rawLow || Math.round(activeBase * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                                : (officialEstimate.rawLow || Math.round(activeBase * 0.9)).toLocaleString()}{' '}
+                              – $
+                              {applyContractorDiscount
+                                ? Math.round((officialEstimate.rawHigh || Math.round(activeBase * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                                : (officialEstimate.rawHigh || Math.round(activeBase * 1.15)).toLocaleString()}
+                            </span>
+
+                            {/* CONTRACTOR IMPORTANT NOTE: Minimum Job Price with interactive checkbox (default unchecked) */}
+                            <div style={styles.contractorMinNoticeBox}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                              </svg>
+                              <div style={{ flex: 1, textAlign: 'left' }}>
+                                <strong style={{ color: '#0369A1', fontSize: '12.5px', display: 'block', marginBottom: '3px' }}>
+                                  Important Note — Minimum Job Price:
+                                </strong>
+                                <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#0C4A6E', lineHeight: 1.45 }}>
+                                  Standard mobilization minimum is <strong>${contractorMinJobAmt.toLocaleString()}</strong>.
+                                  By default, this estimate shows the pure calculated price (${pureBase.toLocaleString()}) without minimum job price applied.
+                                </p>
+                                <label style={styles.contractorMinJobCheckboxLabel}>
+                                  <input
+                                    type="checkbox"
+                                    checked={applyMinJobPrice}
+                                    onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
+                                    style={styles.minJobCheckboxInput}
+                                  />
+                                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0369A1' }}>
+                                    Apply standard minimum job mobilization price (${contractorMinJobAmt.toLocaleString()})
+                                  </span>
+                                </label>
+                                {applyMinJobPrice && (
+                                  <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#0284C7', fontWeight: '600' }}>
+                                    ✓ Minimum job mobilization price applied (${activeBase.toLocaleString()}). Uncheck to return to pure calculated price.
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div style={styles.resultSpecsBox}>
@@ -2780,12 +2893,6 @@ export default function ContinuousEstimatorForm({
                       </div>
                     </div>
                   </div>
-
-                  {officialEstimate.minJobApplies && (
-                    <div style={styles.contractorMinNotice}>
-                      <span>Min Job Floor Applied: Calculated ${officialEstimate.total.toLocaleString()} is below ${officialEstimate.minJobAmount.toLocaleString()} threshold.</span>
-                    </div>
-                  )}
 
                   {/* Dedicated Repair Estimate Line Item with Overlap Preventions */}
                   {officialEstimate.repairEstimate && officialEstimate.repairEstimate.repairTotal > 0 && (
@@ -3961,14 +4068,63 @@ const styles = {
   },
   customerMinJobNoticeBox: {
     marginTop: '16px',
-    padding: '12px 16px',
+    padding: '14px 18px',
     backgroundColor: '#FFFBEB',
-    border: '1px solid #FDE68A',
-    borderRadius: '8px',
+    border: '1.5px solid #FDE68A',
+    borderRadius: '10px',
     display: 'flex',
     alignItems: 'flex-start',
     gap: '12px',
     textAlign: 'left',
+    maxWidth: '560px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  minJobCheckboxLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    backgroundColor: '#FEF3C7',
+    padding: '7px 12px',
+    borderRadius: '6px',
+    border: '1.5px solid #FCD34D',
+    userSelect: 'none',
+    transition: 'all 0.15s ease',
+  },
+  minJobCheckboxInput: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#D97706',
+  },
+  minJobCheckboxText: {
+    fontSize: '12.5px',
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  contractorMinNoticeBox: {
+    marginTop: '12px',
+    padding: '12px 14px',
+    backgroundColor: '#F0F9FF',
+    border: '1px solid #BAE6FD',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    textAlign: 'left',
+  },
+  contractorMinJobCheckboxLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    backgroundColor: '#E0F2FE',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid #BAE6FD',
+    userSelect: 'none',
+    transition: 'all 0.15s ease',
   },
   contractorBreakdownBox: {
     display: 'flex',

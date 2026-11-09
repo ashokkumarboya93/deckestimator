@@ -12,12 +12,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import mainLogoDeck from '../../../assets/images/MainLodo.png';
+import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
+import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(2);
@@ -273,18 +280,17 @@ export default function CustomerLayout() {
               !isSidebarHovered ? (
                 <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
                   <img
-                    src={mainLogoDeck}
+                    src={mainLogoV2}
                     alt="Deck Restoration Plus"
                     style={{
-                      height: '36px',
-                      maxWidth: '190px',
+                      height: '38px',
+                      maxWidth: '200px',
                       objectFit: 'contain',
-                      filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
                     }}
                   />
                 </Link>
               ) : (
-                <div style={{ height: '36px', width: '190px', visibility: 'hidden' }} />
+                <div style={{ height: '38px', width: '200px', visibility: 'hidden' }} />
               )
             ) : isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -633,7 +639,8 @@ const styles = {
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: '#1E3A63',
+    backgroundColor: '#0A1E3F',
+    backgroundImage: 'linear-gradient(180deg, #071933 0%, #0B2447 50%, #06162C 100%)',
     borderRight: '1px solid rgba(255, 255, 255, 0.08)',
     zIndex: 120,
     display: 'flex',
@@ -697,10 +704,11 @@ const styles = {
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#2E5B94',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     color: '#ffffff',
     fontWeight: '600',
-    boxShadow: '0 2px 8px rgba(30, 58, 99, 0.35)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+    borderLeft: '3px solid #E08131',
   },
   navItemButton: {
     display: 'flex',

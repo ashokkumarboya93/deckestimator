@@ -14,11 +14,17 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
+import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3);
@@ -603,7 +609,8 @@ const styles = {
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: '#08457E',
+    backgroundColor: '#0A1E3F',
+    backgroundImage: 'linear-gradient(180deg, #071933 0%, #0B2447 50%, #06162C 100%)',
     borderRight: '1px solid rgba(255, 255, 255, 0.08)',
     display: 'flex',
     flexDirection: 'column',
@@ -679,10 +686,11 @@ const styles = {
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#3169CA',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     color: '#ffffff',
     fontWeight: '600',
-    boxShadow: '0 2px 8px rgba(49, 105, 202, 0.35)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+    borderLeft: '3px solid #E08131',
   },
   navIcon: {
     fontSize: '18px',
@@ -712,7 +720,7 @@ const styles = {
   badgeActive: {
     marginLeft: 'auto',
     backgroundColor: '#ffffff',
-    color: '#3169CA',
+    color: '#071933',
     fontSize: '11px',
     fontWeight: '700',
     padding: '2px 8px',

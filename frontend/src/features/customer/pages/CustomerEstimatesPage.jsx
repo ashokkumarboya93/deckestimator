@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getEstimates, deleteEstimate } from '../api/estimatesApi';
+import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
@@ -160,7 +160,8 @@ export default function CustomerEstimatesPage() {
   function getNormalizedStatus(est) {
     const raw = (est.estimateStatus || '').toUpperCase();
     if (raw === 'COMPLETED') return 'COMPLETED';
-    if (raw === 'IN_REVIEW' || raw === 'SUBMITTED' || raw === 'APPROVED') return 'IN_REVIEW';
+    if (raw === 'IN_PROGRESS') return 'IN_PROGRESS';
+    if (raw === 'REQUESTED' || raw === 'IN_REVIEW' || raw === 'SUBMITTED' || raw === 'APPROVED') return 'REQUESTED';
     return 'CREATED';
   }
 
@@ -173,11 +174,19 @@ export default function CustomerEstimatesPage() {
         </span>
       );
     }
-    if (statusKey === 'IN_REVIEW') {
+    if (statusKey === 'IN_PROGRESS') {
+      return (
+        <span style={{ ...styles.badgeInReview, backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+          <span style={{ ...styles.badgeDotInReview, backgroundColor: '#2563eb' }} />
+          In Progress
+        </span>
+      );
+    }
+    if (statusKey === 'REQUESTED') {
       return (
         <span style={styles.badgeInReview}>
           <span style={styles.badgeDotInReview} />
-          In Review
+          Requested
         </span>
       );
     }
@@ -951,6 +960,27 @@ export default function CustomerEstimatesPage() {
             </div>
 
             <div style={styles.modalFooter}>
+              {getNormalizedStatus(viewEstimate) === 'CREATED' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const estId = viewEstimate._id || viewEstimate.id;
+                    try {
+                      await requestProjectEstimate(estId, {
+                        message: `Customer requested service booking / reach-out for ${viewEstimate.deckDetails?.projectName || 'Deck'} ($${viewEstimate.totalAmount || 0})`,
+                      });
+                      alert('Request submitted! Our team will contact you shortly and your project status is now Requested.');
+                      setViewEstimate(null);
+                      fetchEstimates();
+                    } catch (err) {
+                      alert(err?.message || 'Failed to submit booking request.');
+                    }
+                  }}
+                  style={{ ...styles.modalPrimaryActionBtn, backgroundColor: '#d97706', borderColor: '#b45309', color: '#ffffff' }}
+                >
+                  Reach Out / Book Project
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

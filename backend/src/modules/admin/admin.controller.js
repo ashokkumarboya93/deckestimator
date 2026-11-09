@@ -67,8 +67,48 @@ async function updateUserStatus(req, res, next) {
 
 async function softDeleteUser(req, res, next) {
   try {
-    const result = await adminService.softDeleteUser(req.user, req.params.id, req.body.reason);
+    const isPermanent = req.query.permanent === 'true' || req.body?.permanent === true;
+    const reason = req.body?.reason || (isPermanent ? 'Permanent deletion requested' : 'Administrative account deletion');
+    const result = await adminService.softDeleteUser(req.user, req.params.id, reason, isPermanent);
     res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getUserRequests(req, res, next) {
+  try {
+    const result = await adminService.listUserRequests(req.query);
+    res.status(200).json({ success: true, data: result.data, pagination: result.pagination, counts: result.counts });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function handleUserRequest(req, res, next) {
+  try {
+    const { action, adminNotes } = req.body;
+    const result = await adminService.resolveUserRequest(req.user, req.params.id, { action, adminNotes });
+    res.status(200).json({ success: true, data: result, message: `Request successfully ${action === 'approve' || action === 'unblock' ? 'approved and user unblocked' : 'updated'}` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listContractorDocuments(req, res, next) {
+  try {
+    const result = await adminService.listContractorDocuments(req.query);
+    res.status(200).json({ success: true, data: result.data, pagination: result.pagination, counts: result.counts });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function reviewContractorDocument(req, res, next) {
+  try {
+    const { status, notes } = req.body;
+    const result = await adminService.reviewContractorDocument(req.user, req.params.id, { status, notes });
+    res.status(200).json({ success: true, data: result, message: `Document successfully ${status === 'verified' ? 'approved' : 'rejected'}.` });
   } catch (err) {
     next(err);
   }
@@ -539,6 +579,10 @@ module.exports = {
   exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
+  getUserRequests,
+  handleUserRequest,
+  listContractorDocuments,
+  reviewContractorDocument,
   listVerifications,
   approveContractorVerification,
   rejectContractorVerification,

@@ -9,6 +9,7 @@
 // - Directly backed by MongoDB via adminApi
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 
 const TABS = [
@@ -16,11 +17,14 @@ const TABS = [
   { id: 'customer', label: 'Customers' },
   { id: 'contractor', label: 'Contractors' },
   { id: 'activity', label: 'User Activity' },
+  { id: 'requests', label: 'User Requests' },
 ];
 
 export default function AdminUserManagementPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [users, setUsers] = useState([]);
+  const [userRequests, setUserRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -31,14 +35,13 @@ export default function AdminUserManagementPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
-  // Modals
+  // Modals & User Requests
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [detailedUserProfile, setDetailedUserProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [profileModalTab, setProfileModalTab] = useState('profile');
   const [actionModal, setActionModal] = useState({ open: false, type: '', user: null, reason: '' });
   const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [requestModal, setRequestModal] = useState({ open: false, request: null, notes: '' });
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -48,6 +51,19 @@ export default function AdminUserManagementPage() {
     setLoading(true);
     setError(null);
     try {
+      if (activeTab === 'requests') {
+        const res = await adminApi.getUserRequests({
+          page,
+          limit: 12,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          search: searchTerm.trim() || undefined,
+        });
+        const reqList = res.data?.data || res.data || [];
+        setUserRequests(reqList);
+        setPagination(res.data?.pagination || res.pagination || { page: 1, totalPages: 1, total: reqList.length });
+        return;
+      }
+
       const params = {
         page,
         limit: 12,
@@ -101,22 +117,23 @@ export default function AdminUserManagementPage() {
     }
   };
 
-  const openUserProfile = async (user) => {
-    const targetId = user._id || user.id;
+  const openUserProfile = (user) => {
     setSelectedUser(user);
-    setDetailedUserProfile(null);
     setIsProfileModalOpen(true);
-    setLoadingProfile(true);
-    setProfileModalTab('profile');
+  };
+
+  const handleResolveRequest = async (requestId, action) => {
+    setRequestSubmitting(true);
+    setError(null);
     try {
-      const detailed = await adminApi.getUserProfile(targetId);
-      const data = detailed.data || detailed;
-      setDetailedUserProfile(data);
-      if (data?.user) setSelectedUser(data.user);
-    } catch (e) {
-      console.warn('Failed to fetch detailed profile:', e.message);
+      await adminApi.resolveUserRequest(requestId, action, requestModal.notes);
+      setSuccessMsg(`Appeal successfully ${action === 'approve' || action === 'unblock' ? 'approved and user account unblocked' : 'rejected'}.`);
+      setRequestModal({ open: false, request: null, notes: '' });
+      fetchUsers();
+    } catch (err) {
+      setError(err?.message || 'Failed to process user appeal.');
     } finally {
-      setLoadingProfile(false);
+      setRequestSubmitting(false);
     }
   };
 
@@ -183,8 +200,103 @@ export default function AdminUserManagementPage() {
         })}
       </div>
 
-      {/* Activity Log Tab View */}
-      {activeTab === 'activity' ? (
+      {/* Requests Tab View */}
+      {activeTab === 'requests' ? (
+        <div style={styles.card}>
+          <div style={styles.cardHeaderFlex}>
+            <div>
+              <h3 style={styles.cardTitle}>User Reactivation &amp; Unblock Appeals</h3>
+              <p style={styles.cardSub}>
+                Blocked customers and contractors who have submitted requests to the Deck Restoration Plus Team.
+              </p>
+            </div>
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.selectInput}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="resolved">Resolved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>User / Account</th>
+                  <th style={styles.th}>Role</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Submitted Date</th>
+                  <th style={styles.th}>Appeal Summary</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={styles.emptyTd}>No unblock appeal requests found.</td>
+                  </tr>
+                ) : (
+                  userRequests.map((req) => (
+                    <tr key={req._id || req.id} style={styles.tr}>
+                      <td style={styles.td}>
+                        <div style={styles.userCell}>
+                          <div style={styles.avatarPill}>
+                            {(req.fullName || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={styles.userName}>{req.fullName}</div>
+                            <div style={styles.userEmail}>{req.email}</div>
+                            {req.phone && <div style={{ fontSize: '11px', color: '#64748b' }}>{req.phone}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={getRoleBadgeStyle(req.role)}>
+                          {(req.role || 'user').toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={getStatusBadgeStyle(req.status)}>
+                          {(req.status || 'pending').toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          {new Date(req.createdAt).toLocaleString()}
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, maxWidth: '280px' }}>
+                        <div style={{ fontSize: '12px', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {req.message}
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={() => setRequestModal({ open: true, request: req, notes: req.adminNotes || '' })}
+                          style={styles.actionBtnOutline}
+                        >
+                          View Request
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : activeTab === 'activity' ? (
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Recent User Moderation & Security Logs</h3>
           <p style={styles.cardSub}>Audit trail of account approvals, status transitions, blocks, and data modifications.</p>
@@ -547,6 +659,98 @@ export default function AdminUserManagementPage() {
               >
                 {actionSubmitting ? 'Processing...' : 'Confirm Action'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* USER REQUEST DETAILS & APPEAL REVIEW MODAL */}
+      {requestModal.open && requestModal.request && (
+        <div style={styles.modalOverlay} onClick={() => setRequestModal({ open: false, request: null, notes: '' })}>
+          <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h2 style={styles.modalTitle}>User Reactivation Appeal Details</h2>
+                <p style={styles.modalSub}>Submitted by blocked user to Deck Restoration Plus Team</p>
+              </div>
+              <button onClick={() => setRequestModal({ open: false, request: null, notes: '' })} style={styles.modalCloseBtn}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={styles.profileGrid}>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Applicant Name</span>
+                  <span style={styles.fieldValue}>{requestModal.request.fullName}</span>
+                </div>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Registered Email</span>
+                  <span style={styles.fieldValue}>{requestModal.request.email}</span>
+                </div>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Account Role</span>
+                  <span style={getRoleBadgeStyle(requestModal.request.role)}>{(requestModal.request.role || 'user').toUpperCase()}</span>
+                </div>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Appeal Status</span>
+                  <span style={getStatusBadgeStyle(requestModal.request.status)}>{(requestModal.request.status || 'pending').toUpperCase()}</span>
+                </div>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Contact Phone</span>
+                  <span style={styles.fieldValue}>{requestModal.request.phone || 'Not provided'}</span>
+                </div>
+                <div style={styles.profileField}>
+                  <span style={styles.fieldLabel}>Submission Timestamp</span>
+                  <span style={styles.fieldValue}>{new Date(requestModal.request.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <span style={styles.fieldLabel}>Applicant's Explanation &amp; Appeal Message</span>
+                <div style={styles.appealMessageBox}>
+                  {requestModal.request.message}
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <label style={styles.fieldLabel}>Admin Resolution Notes</label>
+                <textarea
+                  rows={3}
+                  value={requestModal.notes}
+                  onChange={(e) => setRequestModal((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Enter optional notes explaining the approval or rejection decision..."
+                  style={styles.modalTextarea}
+                />
+              </div>
+
+              <div style={{ ...styles.modalActions, marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setRequestModal({ open: false, request: null, notes: '' })}
+                  style={styles.actionBtnSecondary}
+                >
+                  Close
+                </button>
+                {requestModal.request.status === 'pending' && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={requestSubmitting}
+                      onClick={() => handleResolveRequest(requestModal.request._id || requestModal.request.id, 'reject')}
+                      style={styles.actionBtnDangerLg}
+                    >
+                      {requestSubmitting ? 'Processing...' : 'Reject Appeal'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={requestSubmitting}
+                      onClick={() => handleResolveRequest(requestModal.request._id || requestModal.request.id, 'approve')}
+                      style={styles.actionBtnSuccessLg}
+                    >
+                      {requestSubmitting ? 'Processing...' : '✓ Unblock Account & Approve'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1309,5 +1513,34 @@ const styles = {
     padding: '14px 24px',
     borderTop: '1px solid #e2e8f0',
     backgroundColor: '#f8fafc',
+  },
+  cardHeaderFlex: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+    borderBottom: '1px solid #f1f5f9',
+    paddingBottom: '12px',
+  },
+  appealMessageBox: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '12px 14px',
+    fontSize: '13px',
+    color: '#1e293b',
+    lineHeight: 1.5,
+    marginTop: '6px',
+    whiteSpace: 'pre-wrap',
+  },
+  actionBtnSuccessLg: {
+    padding: '8px 18px',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
 };
