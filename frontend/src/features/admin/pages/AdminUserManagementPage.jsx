@@ -37,6 +37,7 @@ export default function AdminUserManagementPage() {
 
   // Modals & User Requests
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [actionModal, setActionModal] = useState({ open: false, type: '', user: null, reason: '' });
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [requestModal, setRequestModal] = useState({ open: false, request: null, notes: '' });
@@ -117,8 +118,8 @@ export default function AdminUserManagementPage() {
   };
 
   const openUserProfile = (user) => {
-    const targetId = user._id || user.id;
-    navigate(`/admin/users/${targetId}`);
+    setSelectedUser(user);
+    setIsProfileModalOpen(true);
   };
 
   const handleResolveRequest = async (requestId, action) => {

@@ -1102,7 +1102,7 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     else if (s === 'completed') query.estimateStatus = { $in: ['COMPLETED', 'completed'] };
     else query.estimateStatus = s;
   }
-  if (customerId) query.userId = customerId;
+  if (customerId) query.ownerId = customerId;
 
   if (search && search.trim()) {
     const reg = new RegExp(search.trim(), 'i');
@@ -1119,7 +1119,8 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
   // Both Customer and Contractor Estimations are monitored as Projects
   const [estimates, totalEstimates, allStatusCounts] = await Promise.all([
     Estimate.find(query)
-      .populate('userId', 'fullName email phone role')
+      .populate('ownerId', 'fullName email phone role')
+      .populate('createdBy', 'fullName email phone role')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
@@ -1144,9 +1145,10 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     else if (rawSt === 'in_progress') stage = 'in_progress';
     else if (rawSt === 'requested' || rawSt === 'in_review' || rawSt === 'submitted') stage = 'requested';
 
-    const isContractor = e.userId?.role === 'contractor';
-    const customerName = isContractor ? 'Contractor Partner' : (e.userId?.fullName || e.customerSnapshot?.name || 'Customer');
-    const contractorName = isContractor ? (e.userId?.fullName || 'Contractor') : (e.assignedContractorName || 'Deck Restoration Plus Staff');
+    const userDoc = e.ownerId || e.createdBy;
+    const isContractor = userDoc?.role === 'contractor' || e.estimateType === 'CONTRACTOR';
+    const customerName = isContractor ? 'Contractor Partner' : (userDoc?.fullName || e.customerSnapshot?.name || 'Customer');
+    const contractorName = isContractor ? (userDoc?.fullName || 'Contractor') : (e.assignedContractorName || 'Deck Restoration Plus Staff');
 
     return {
       _id: e._id.toString(),
@@ -1158,8 +1160,8 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
       customerName,
       contractorName,
       userRole: isContractor ? 'contractor' : 'customer',
-      userEmail: e.userId?.email || e.customerSnapshot?.email || '',
-      userPhone: e.userId?.phone || e.customerSnapshot?.phone || '',
+      userEmail: userDoc?.email || e.customerSnapshot?.email || '',
+      userPhone: userDoc?.phone || e.customerSnapshot?.phone || '',
       deckSize: `${e.deckDetails?.areaSqFt || e.deckDetails?.area || 400} sq ft`,
       areaSqFt: e.deckDetails?.areaSqFt || e.deckDetails?.area || 400,
       totalAmount: e.totalAmount || 0,

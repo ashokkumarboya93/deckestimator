@@ -46,6 +46,10 @@ export default function AdminVerificationProgressPage() {
   const [customers, setCustomers] = useState([]);
   const [contractors, setContractors] = useState([]);
 
+  // Progress Modal State
+  const [progressModal, setProgressModal] = useState({ open: false, project: null, progress: 0, status: '', note: '' });
+  const [savingProgress, setSavingProgress] = useState(false);
+
   useEffect(() => {
     loadTabData(false);
 
