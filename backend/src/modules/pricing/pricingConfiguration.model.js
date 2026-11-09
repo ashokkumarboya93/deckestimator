@@ -102,6 +102,10 @@ const pricingConfigurationSchema = new mongoose.Schema(
         lowConfidenceVariation: { type: Number, default: 20 },
       },
     },
+    restorationPricing: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     effectiveFrom: {
       type: Date,
       default: Date.now,

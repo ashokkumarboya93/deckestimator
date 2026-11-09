@@ -27,6 +27,7 @@ const { EstimatorField, EstimatorDependency } = require('./estimatorConfig.model
 const { CatalogProduct, CatalogSubstrate, CatalogCoverageRate } = require('./catalogExtended.model');
 const PermissionsPolicy = require('./permissionsPolicy.model');
 const AuditLog = require('../../shared/models/auditLog.model');
+const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
 
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../../shared/errors');
@@ -1785,10 +1786,15 @@ async function getPricingConfig() {
     config = await PricingConfiguration.create({
       configurationName: 'Default Platform Pricing',
       isActive: true,
-      laborRate: 75,
-      minimumJobPrice: 500,
+      laborRate: 250,
+      minimumJobPrice: 2500,
       basePricePerSqFt: 3.5,
+      restorationPricing: DEFAULT_PRICING_CONFIG,
     });
+  } else if (!config.restorationPricing) {
+    config.restorationPricing = DEFAULT_PRICING_CONFIG;
+    config.markModified('restorationPricing');
+    await config.save();
   }
   return config;
 }
@@ -1804,6 +1810,13 @@ async function updatePricingConfig(adminUser, updates) {
       ...config.calculatorPricing,
       ...updates.calculatorPricing,
     };
+  }
+  if (updates.restorationPricing) {
+    config.restorationPricing = {
+      ...(config.restorationPricing || DEFAULT_PRICING_CONFIG),
+      ...updates.restorationPricing,
+    };
+    config.markModified('restorationPricing');
   }
   if (updates.laborRate !== undefined) config.laborRate = updates.laborRate;
   if (updates.basePricePerSqFt !== undefined) config.basePricePerSqFt = updates.basePricePerSqFt;

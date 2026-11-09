@@ -171,7 +171,9 @@ async function createEstimate(data, user, ipAddress) {
       ...(data.restorationDetails || {}),
     };
 
-    const clientCalc = pricingEngine.calculateRestorationEstimate(clientParams);
+    const activePricing = await PricingConfiguration.findOne({ isActive: true });
+    const customCfg = activePricing?.restorationPricing || null;
+    const clientCalc = pricingEngine.calculateRestorationEstimate(clientParams, customCfg);
 
     selectedMaterialsItems = [
       {
@@ -713,6 +715,8 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   const oldValues = estimate.toJSON();
 
   const floorVal = Number(payload.floorArea || estimate.deckDetails?.areaSqFt || 400);
+  const activePricing = await PricingConfiguration.findOne({ isActive: true });
+  const customCfg = activePricing?.restorationPricing || null;
   const clientCalc = pricingEngine.calculateRestorationEstimate({
     deckArea: floorVal,
     woodSpecies: payload.woodSpecies || estimate.deckDetails?.surfaceMaterial || 'pressure_treated_pine',
@@ -730,7 +734,7 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
     sidingSqft: Number(payload.sidingSqft || 0),
     fasciaSqft: Number(payload.fasciaSqft || 0),
     joistsSqft: Number(payload.joistsSqft || 0),
-  });
+  }, customCfg);
 
   if (payload.estimateName) estimate.estimateName = payload.estimateName;
   if (payload.notes !== undefined) estimate.notes = payload.notes;
