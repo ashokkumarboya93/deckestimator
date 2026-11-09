@@ -12,6 +12,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import mainLogoDeck from '../../../assets/images/MainLodo.png';
+import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
 
 export default function CustomerLayout() {
@@ -273,18 +274,17 @@ export default function CustomerLayout() {
               !isSidebarHovered ? (
                 <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
                   <img
-                    src={mainLogoDeck}
+                    src={mainLogoV2}
                     alt="Deck Restoration Plus"
                     style={{
-                      height: '36px',
-                      maxWidth: '190px',
+                      height: '38px',
+                      maxWidth: '200px',
                       objectFit: 'contain',
-                      filter: 'drop-shadow(0 1px 2px rgba(15, 23, 42, 0.45)) drop-shadow(0 0 1px rgba(15, 23, 42, 0.35))',
                     }}
                   />
                 </Link>
               ) : (
-                <div style={{ height: '36px', width: '190px', visibility: 'hidden' }} />
+                <div style={{ height: '38px', width: '200px', visibility: 'hidden' }} />
               )
             ) : isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
