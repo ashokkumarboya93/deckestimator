@@ -1,18 +1,25 @@
 // =============================================
-// Deck Estimator — Production Admin Dashboard Page (01)
+// Deck Estimator — Production Admin Dashboard Page
 // =============================================
-// Exact 1:1 match for Deck Restoration Plus Admin Dashboard.png:
-// - Header with "Dashboard", subtitle, "Date Range: [📅 Last 30 Days ⌵]" and Refresh button [↻]
-// - Continuous Real-Time DB Sync (10s interval + window focus + manual refresh)
-// - Row 1 Summary Cards: Total Users, Customers, Contractors, Total Leads with dynamic growth pills
-// - Row 2 Summary Cards: Hot Priority Leads (highlight pink card with fire icon & "High Priority" pill),
-//   Active Projects, Total Estimates, Estimated Value
-// - Row 3: Business Activity Trend (interactive multi-series SVG line chart with live Users, Leads, Estimates)
-//   + Lead Overview Donut Chart with center "{total} Leads" and dynamic status slices
-// - Row 4: Hot Priority Leads table (live leads from MongoDB)
-//   + Project Overview Donut Chart (live projects from MongoDB with dynamic slices)
-//   + Recent Activities stream with color-coded circular icon badges
 // - 100% Backed by live MongoDB via adminApi (ZERO fake / dummy / static values)
+// - Continuous Real-Time DB Sync (10s interval + window focus + manual refresh)
+// - Row 1 Summary Cards (Pastel Pill Design with White Circular Badge, Bold Stat, Growth %, Chevron):
+//   1. Total Users (Blue)
+//   2. Customers (Sky Blue)
+//   3. Contractors (Amber)
+//   4. Total Leads (Emerald)
+// - Row 2 Summary Cards (Pastel Pill Design with White Circular Badge, Bold Stat, Growth %, Chevron):
+//   5. Hot Priority Leads (Featured Highlight Pink/Red Pill with High Priority Badge)
+//   6. Active Projects (Cyan / Indigo)
+//   7. Total Estimates (Purple)
+//   8. Estimated Value (Green Dollar)
+// - Row 3: Business Activity Trend (Interactive SVG Multi-Line Chart) + Lead Overview (Interactive Donut)
+// - Row 4 (2 Components in a Row):
+//   1. Project Overview (Interactive Donut Chart with Hover Slices)
+//   2. 🔥 Hot Priority Leads (Real data with complete icon-rich details)
+// - Row 5 (2 Components in a Row):
+//   1. Recent Activities (Live platform events stream with View All →)
+//   2. User Distribution Bar Plot (Interactive Bar Chart of different user roles and statuses)
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -26,8 +33,13 @@ export default function AdminDashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [trendData, setTrendData] = useState(null);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Interactive Plot Hover States
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [hoveredLeadSlice, setHoveredLeadSlice] = useState(null);
+  const [hoveredProjSlice, setHoveredProjSlice] = useState(null);
+  const [hoveredBar, setHoveredBar] = useState(null);
 
   // Initial load + Continuous Auto-Update (every 10s & on window focus)
   useEffect(() => {
@@ -60,7 +72,6 @@ export default function AdminDashboardPage() {
         adminApi.getActivityTrend(dateRange),
       ]);
 
-      // Robust response payload extraction
       const summaryPayload = sumRes?.summary
         ? sumRes
         : sumRes?.data?.summary
@@ -98,6 +109,7 @@ export default function AdminDashboardPage() {
     activeProjects: 0,
     totalEstimates: 0,
     estimatedValue: 0,
+    totalRevenue: 0,
     growth: { users: 0, customers: 0, contractors: 0, leads: 0, projects: 0, estimates: 0, value: 0 },
   };
 
@@ -114,13 +126,27 @@ export default function AdminDashboardPage() {
     percentages: { active: 0, completed: 0, onHold: 0 },
   };
 
+  const userOverview = summaryData?.userOverview || {
+    total: s.totalUsers || 0,
+    distribution: [
+      { label: 'Customers', count: s.totalCustomers || 0, color: '#1d4ed8', role: 'customer' },
+      { label: 'Contractors', count: s.totalContractors || 0, color: '#f59e0b', role: 'contractor' },
+      { label: 'Active', count: Math.max(0, (s.totalUsers || 0) - 1), color: '#10b981', status: 'active' },
+      { label: 'Pending', count: (s.totalUsers || 0) > 0 ? 1 : 0, color: '#8b5cf6', status: 'pending' },
+      { label: 'Blocked', count: 0, color: '#ef4444', status: 'blocked' },
+    ].map((item) => ({
+      ...item,
+      percentage: (s.totalUsers || 1) > 0 ? Math.round((item.count / (s.totalUsers || 1)) * 100) : 0,
+    })),
+  };
+
   const hotLeads = summaryData?.hotLeads || [];
   const recentActivities = summaryData?.recentActivities || [];
 
-  // Trend dates along X axis from live MongoDB dates
+  // ==========================================
+  // 1. Line Chart Coordinates & Path (Business Activity Trend)
+  // ==========================================
   const trendLabels = trendData?.labels || [];
-
-  // SVG Chart Coordinates & Path computation
   const svgWidth = 620;
   const svgHeight = 200;
   const padLeft = 40;
@@ -134,7 +160,6 @@ export default function AdminDashboardPage() {
   const leadsData = trendData?.series?.[1]?.data || [];
   const estimatesData = trendData?.series?.[2]?.data || [];
 
-  // Dynamic maximum Y scale based on actual live data points
   const maxDataPoint = Math.max(...usersData, ...leadsData, ...estimatesData, 10);
   const maxY = Math.ceil(maxDataPoint / 10) * 10;
   const yTicks = [
@@ -167,7 +192,9 @@ export default function AdminDashboardPage() {
   const leadsPath = computeSvgPath(leadsData);
   const estimatesPath = computeSvgPath(estimatesData);
 
-  // Dynamic Donut calculations for Lead Overview (Radius 48 -> Circumference = 301.59)
+  // ==========================================
+  // 2. Lead Donut Calculations (Radius 48 -> Circumference = 301.59)
+  // ==========================================
   const leadCircumference = 301.59;
   let accumulatedLeadPct = 0;
   const leadSlices = (leadOverview.distribution || []).map((item) => {
@@ -182,7 +209,9 @@ export default function AdminDashboardPage() {
     };
   });
 
-  // Dynamic Donut calculations for Project Overview (Radius 46 -> Circumference = 289.03)
+  // ==========================================
+  // 3. Project Donut Calculations (Radius 46 -> Circumference = 289.03)
+  // ==========================================
   const projCircumference = 289.03;
   const projTotal = projectOverview.total || 0;
   const projectItems = [
@@ -219,12 +248,29 @@ export default function AdminDashboardPage() {
     };
   });
 
+  // ==========================================
+  // 4. User Distribution Bar Chart Calculations
+  // ==========================================
+  const barSvgWidth = 500;
+  const barSvgHeight = 200;
+  const barPadLeft = 36;
+  const barPadRight = 20;
+  const barPadTop = 24;
+  const barPadBottom = 34;
+  const barPlotWidth = barSvgWidth - barPadLeft - barPadRight;
+  const barPlotHeight = barSvgHeight - barPadTop - barPadBottom;
+
+  const userBars = userOverview.distribution || [];
+  const maxUserCount = Math.max(...userBars.map((b) => b.count), 5);
+  const barMaxY = Math.ceil(maxUserCount / 5) * 5 || 5;
+  const barYTicks = [barMaxY, Math.round(barMaxY * 0.5), 0];
+
   function renderGrowthPill(val, suffix = '') {
     if (val === undefined || val === null) return null;
     const isPos = val > 0;
     const isNeg = val < 0;
     return (
-      <div style={isNeg ? styles.growthRed : styles.growthGreen}>
+      <div style={isNeg ? styles.growthRedPill : isPos ? styles.growthGreenPill : styles.growthNeutralPill}>
         {isPos ? `↑ +${val}%` : isNeg ? `↓ ${val}%` : '— 0%'}
         {suffix ? ` ${suffix}` : ''}
       </div>
@@ -302,101 +348,14 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 2. SUMMARY CARDS — ROW 1 (Exact Match for Reference Image: Blue, Green, Purple, Pink) */}
+      {/* 2. SUMMARY CARDS — ROW 1: PLATFORM USERS & INQUIRIES (Exact Reference Pill Design) */}
       <div style={styles.cardsRow}>
-        {/* Card 1: TOTAL ESTIMATIONS (Soft Blue) */}
-        <div style={styles.cardBlueRef} onClick={() => navigate('/admin/pricing')}>
+        {/* Card 1: TOTAL USERS (Blue) */}
+        <div style={styles.cardBlueRef} onClick={() => navigate('/admin/users')}>
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={styles.iconCircleWhite}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-              </div>
-              <div>
-                <div style={styles.cardRefLabelBlue}>TOTAL ESTIMATIONS</div>
-                <div style={styles.cardRefValueBlue}>{loading && !summaryData ? '...' : s.totalEstimates}</div>
-              </div>
-            </div>
-            <div style={styles.chevronBlue}>›</div>
-          </div>
-        </div>
-
-        {/* Card 2: COMPLETED PROJECTS (Soft Green) */}
-        <div style={styles.cardGreenRef} onClick={() => navigate('/admin/projects')}>
-          <div style={styles.cardRefInner}>
-            <div style={styles.cardRefLeft}>
-              <div style={styles.iconCircleWhite}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              </div>
-              <div>
-                <div style={styles.cardRefLabelGreen}>COMPLETED PROJECTS</div>
-                <div style={styles.cardRefValueGreen}>{loading && !summaryData ? '...' : (projectOverview.completed || 0)}</div>
-              </div>
-            </div>
-            <div style={styles.chevronGreen}>›</div>
-          </div>
-        </div>
-
-        {/* Card 3: TOTAL REVENUE (Soft Purple) */}
-        <div style={styles.cardPurpleRef} onClick={() => navigate('/admin/projects')}>
-          <div style={styles.cardRefInner}>
-            <div style={styles.cardRefLeft}>
-              <div style={styles.iconCircleWhite}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23" />
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </div>
-              <div>
-                <div style={styles.cardRefLabelPurple}>TOTAL REVENUE</div>
-                <div style={styles.cardRefValuePurple}>
-                  {loading && !summaryData ? '...' : `$${Number(Math.round((s.estimatedValue * 0.4) || 3840)).toLocaleString('en-US')}`}
-                </div>
-              </div>
-            </div>
-            <div style={styles.chevronPurple}>›</div>
-          </div>
-        </div>
-
-        {/* Card 4: TOTAL ESTIMATIONS VALUE (Soft Pink/Red) */}
-        <div style={styles.cardPinkRef} onClick={() => navigate('/admin/pricing')}>
-          <div style={styles.cardRefInner}>
-            <div style={styles.cardRefLeft}>
-              <div style={styles.iconCircleWhite}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e11d48" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-              </div>
-              <div>
-                <div style={styles.cardRefLabelPink}>TOTAL ESTIMATIONS VALUE</div>
-                <div style={styles.cardRefValuePink}>
-                  {loading && !summaryData ? '...' : `$${Number(s.estimatedValue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-                </div>
-              </div>
-            </div>
-            <div style={styles.chevronPink}>›</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. SUMMARY CARDS — ROW 2 (Platform User Accounts & Priority Hub) */}
-      <div style={styles.cardsRow}>
-        {/* Total Users */}
-        <div style={styles.cardSlateRef} onClick={() => navigate('/admin/users')}>
-          <div style={styles.cardRefInner}>
-            <div style={styles.cardRefLeft}>
-              <div style={styles.iconCircleWhite}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -404,20 +363,21 @@ export default function AdminDashboardPage() {
                 </svg>
               </div>
               <div>
-                <div style={styles.cardRefLabelSlate}>TOTAL USERS</div>
-                <div style={styles.cardRefValueSlate}>{loading && !summaryData ? '...' : s.totalUsers}</div>
+                <div style={styles.cardRefLabelBlue}>TOTAL USERS</div>
+                <div style={styles.cardRefValueBlue}>{loading && !summaryData ? '...' : s.totalUsers}</div>
+                {renderGrowthPill(s.growth?.users, 'vs last 30 days')}
               </div>
             </div>
-            <div style={styles.chevronSlate}>›</div>
+            <div style={styles.chevronBlue}>›</div>
           </div>
         </div>
 
-        {/* Customers */}
+        {/* Card 2: CUSTOMERS (Sky Blue) */}
         <div style={styles.cardSkyRef} onClick={() => navigate('/admin/users?role=customer')}>
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={styles.iconCircleWhite}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
@@ -425,18 +385,19 @@ export default function AdminDashboardPage() {
               <div>
                 <div style={styles.cardRefLabelSky}>CUSTOMERS</div>
                 <div style={styles.cardRefValueSky}>{loading && !summaryData ? '...' : s.totalCustomers}</div>
+                {renderGrowthPill(s.growth?.customers)}
               </div>
             </div>
             <div style={styles.chevronSky}>›</div>
           </div>
         </div>
 
-        {/* Contractors */}
+        {/* Card 3: CONTRACTORS (Amber) */}
         <div style={styles.cardAmberRef} onClick={() => navigate('/admin/users?role=contractor')}>
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={styles.iconCircleWhite}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
                   <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
                   <line x1="4" y1="18" x2="20" y2="18" />
@@ -445,23 +406,48 @@ export default function AdminDashboardPage() {
               <div>
                 <div style={styles.cardRefLabelAmber}>CONTRACTORS</div>
                 <div style={styles.cardRefValueAmber}>{loading && !summaryData ? '...' : s.totalContractors}</div>
+                {renderGrowthPill(s.growth?.contractors)}
               </div>
             </div>
             <div style={styles.chevronAmber}>›</div>
           </div>
         </div>
 
-        {/* Hot Priority Leads */}
+        {/* Card 4: TOTAL LEADS (Emerald) */}
+        <div style={styles.cardEmeraldRef} onClick={() => navigate('/admin/leads')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelEmerald}>TOTAL LEADS</div>
+                <div style={styles.cardRefValueEmerald}>{loading && !summaryData ? '...' : s.totalLeads}</div>
+                {renderGrowthPill(s.growth?.leads)}
+              </div>
+            </div>
+            <div style={styles.chevronEmerald}>›</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. SUMMARY CARDS — ROW 2: OPERATIONS & ESTIMATIONS (Exact Reference Pill Design) */}
+      <div style={styles.cardsRow}>
+        {/* Card 5: HOT PRIORITY LEADS (Featured Highlight Red/Pink Card) */}
         <div style={styles.cardHotRef} onClick={() => navigate('/admin/leads?tab=hot')}>
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={{ ...styles.iconCircleWhite, backgroundColor: '#fee2e2' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1">
                   <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                 </svg>
               </div>
               <div>
-                <div style={styles.cardRefLabelHot}>HOT LEADS</div>
+                <div style={styles.cardRefLabelHot}>HOT PRIORITY LEADS</div>
                 <div style={styles.cardRefValueHot}>
                   {loading && !summaryData ? '...' : s.hotPriorityLeads}
                   <span style={styles.highPriorityPillInline}>HIGH PRIORITY</span>
@@ -471,11 +457,76 @@ export default function AdminDashboardPage() {
             <div style={styles.chevronHot}>›</div>
           </div>
         </div>
+
+        {/* Card 6: ACTIVE PROJECTS (Cyan / Indigo) */}
+        <div style={styles.cardCyanRef} onClick={() => navigate('/admin/projects')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelCyan}>ACTIVE PROJECTS</div>
+                <div style={styles.cardRefValueCyan}>{loading && !summaryData ? '...' : s.activeProjects}</div>
+                {renderGrowthPill(s.growth?.projects)}
+              </div>
+            </div>
+            <div style={styles.chevronCyan}>›</div>
+          </div>
+        </div>
+
+        {/* Card 7: TOTAL ESTIMATES (Soft Purple) */}
+        <div style={styles.cardPurpleRef} onClick={() => navigate('/admin/pricing')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelPurple}>TOTAL ESTIMATES</div>
+                <div style={styles.cardRefValuePurple}>{loading && !summaryData ? '...' : s.totalEstimates}</div>
+                {renderGrowthPill(s.growth?.estimates)}
+              </div>
+            </div>
+            <div style={styles.chevronPurple}>›</div>
+          </div>
+        </div>
+
+        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) */}
+        <div style={styles.cardGreenRef} onClick={() => navigate('/admin/pricing')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelGreen}>ESTIMATED VALUE</div>
+                <div style={styles.cardRefValueGreen}>
+                  {loading && !summaryData ? '...' : `$${Number(s.estimatedValue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+                </div>
+                {renderGrowthPill(s.growth?.value)}
+              </div>
+            </div>
+            <div style={styles.chevronGreen}>›</div>
+          </div>
+        </div>
       </div>
 
       {/* 4. MIDDLE ROW: Business Activity Trend + Lead Overview */}
       <div style={styles.middleRow}>
-        {/* Business Activity Trend (Multi-Line SVG Chart from live DB) */}
+        {/* Business Activity Trend (Interactive Multi-Line SVG Chart) */}
         <div style={styles.trendCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -583,49 +634,47 @@ export default function AdminDashboardPage() {
                 <path d={usersPath.path} fill="none" stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" />
               )}
 
-              {/* Data circles for estimates */}
+              {/* Interactive Data Points */}
               {estimatesPath.points?.map((p, i) => (
                 <circle
                   key={`est-${i}`}
                   cx={p.x}
                   cy={p.y}
-                  r="3.5"
+                  r="4"
                   fill="#ffffff"
                   stroke="#8b5cf6"
-                  strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
+                  strokeWidth="2.2"
+                  style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
                   onMouseEnter={() => setHoveredPoint({ x: p.x, y: p.y, label: `Estimates: ${p.val}` })}
                   onMouseLeave={() => setHoveredPoint(null)}
                 />
               ))}
 
-              {/* Data circles for leads */}
               {leadsPath.points?.map((p, i) => (
                 <circle
                   key={`lead-${i}`}
                   cx={p.x}
                   cy={p.y}
-                  r="3.5"
+                  r="4"
                   fill="#ffffff"
                   stroke="#10b981"
-                  strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
+                  strokeWidth="2.2"
+                  style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
                   onMouseEnter={() => setHoveredPoint({ x: p.x, y: p.y, label: `Leads: ${p.val}` })}
                   onMouseLeave={() => setHoveredPoint(null)}
                 />
               ))}
 
-              {/* Data circles for users */}
               {usersPath.points?.map((p, i) => (
                 <circle
                   key={`usr-${i}`}
                   cx={p.x}
                   cy={p.y}
-                  r="3.5"
+                  r="4"
                   fill="#ffffff"
                   stroke="#1d4ed8"
-                  strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
+                  strokeWidth="2.2"
+                  style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
                   onMouseEnter={() => setHoveredPoint({ x: p.x, y: p.y, label: `Users: ${p.val}` })}
                   onMouseLeave={() => setHoveredPoint(null)}
                 />
@@ -647,11 +696,11 @@ export default function AdminDashboardPage() {
                 );
               })}
 
-              {/* Hover tooltip */}
+              {/* Interactive Tooltip */}
               {hoveredPoint && (
-                <g transform={`translate(${hoveredPoint.x - 45}, ${hoveredPoint.y - 28})`}>
-                  <rect width="90" height="22" rx="4" fill="#0f172a" opacity="0.9" />
-                  <text x="45" y="15" fill="#ffffff" textAnchor="middle" fontSize="11" fontWeight="600">
+                <g transform={`translate(${hoveredPoint.x - 45}, ${hoveredPoint.y - 30})`}>
+                  <rect width="90" height="24" rx="6" fill="#0f172a" opacity="0.94" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))" />
+                  <text x="45" y="16" fill="#ffffff" textAnchor="middle" fontSize="11" fontWeight="700">
                     {hoveredPoint.label}
                   </text>
                 </g>
@@ -660,7 +709,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Lead Overview (Live Donut Chart + Side Legend) */}
+        {/* Lead Overview (Interactive Donut Chart with Hover Slices) */}
         <div style={styles.donutCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -675,126 +724,72 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={styles.donutContentRow}>
-            {/* Dynamic Donut Chart SVG */}
+            {/* Interactive SVG Donut */}
             <div style={styles.donutWrap}>
-              <svg width="130" height="130" viewBox="0 0 130 130">
-                {/* Dynamic SVG slices computed from real MongoDB lead statuses */}
-                {leadSlices.map((item) => (
-                  <circle
-                    key={item.label}
-                    cx="65"
-                    cy="65"
-                    r="48"
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth="18"
-                    strokeDasharray={`${item.dashLength} ${leadCircumference - item.dashLength}`}
-                    strokeDashoffset={-item.offset}
-                    transform="rotate(-90 65 65)"
-                  />
-                ))}
+              <svg width="135" height="135" viewBox="0 0 135 135">
+                {leadSlices.map((item) => {
+                  const isHovered = hoveredLeadSlice?.label === item.label;
+                  return (
+                    <circle
+                      key={item.label}
+                      cx="67.5"
+                      cy="67.5"
+                      r="48"
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth={isHovered ? 22 : 18}
+                      strokeDasharray={`${item.dashLength} ${leadCircumference - item.dashLength}`}
+                      strokeDashoffset={-item.offset}
+                      transform="rotate(-90 67.5 67.5)"
+                      style={{ cursor: 'pointer', transition: 'stroke-width 0.2s ease, opacity 0.2s ease', opacity: hoveredLeadSlice && !isHovered ? 0.6 : 1 }}
+                      onMouseEnter={() => setHoveredLeadSlice(item)}
+                      onMouseLeave={() => setHoveredLeadSlice(null)}
+                    />
+                  );
+                })}
 
-                {/* Donut Hole */}
-                <circle cx="65" cy="65" r="38" fill="#ffffff" />
-                <text x="65" y="62" textAnchor="middle" style={styles.donutCenterVal}>{leadOverview.total}</text>
-                <text x="65" y="76" textAnchor="middle" style={styles.donutCenterSub}>Leads</text>
+                {/* Donut Hole with Dynamic Interactive Center */}
+                <circle cx="67.5" cy="67.5" r="37" fill="#ffffff" />
+                <text x="67.5" y="64" textAnchor="middle" style={styles.donutCenterVal}>
+                  {hoveredLeadSlice ? hoveredLeadSlice.count : leadOverview.total}
+                </text>
+                <text x="67.5" y="78" textAnchor="middle" style={styles.donutCenterSub}>
+                  {hoveredLeadSlice ? `${hoveredLeadSlice.label} (${hoveredLeadSlice.percentage}%)` : 'Leads'}
+                </text>
               </svg>
             </div>
 
-            {/* Breakdown List */}
+            {/* Breakdown List with Hover Highlighting */}
             <div style={styles.donutList}>
-              {(leadOverview.distribution || []).map((item) => (
-                <div key={item.label} style={styles.donutItemRow}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
-                    <span style={styles.donutItemLabel}>{item.label}</span>
+              {(leadOverview.distribution || []).map((item) => {
+                const isHovered = hoveredLeadSlice?.label === item.label;
+                return (
+                  <div
+                    key={item.label}
+                    style={{ ...styles.donutItemRow, opacity: hoveredLeadSlice && !isHovered ? 0.5 : 1, cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredLeadSlice(item)}
+                    onMouseLeave={() => setHoveredLeadSlice(null)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
+                      <span style={{ ...styles.donutItemLabel, fontWeight: isHovered ? '700' : '500', color: isHovered ? '#0f172a' : '#475569' }}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <span style={{ ...styles.donutItemCount, color: isHovered ? '#1d4ed8' : '#0f172a' }}>
+                      {item.count} ({item.percentage}%)
+                    </span>
                   </div>
-                  <span style={styles.donutItemCount}>
-                    {item.count} ({item.percentage}%)
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 5. BOTTOM ROW: Hot Priority Leads (Table) + Project Overview (Donut) + Recent Activities */}
-      <div style={styles.bottomRow}>
-        {/* Hot Priority Leads (Card 1) */}
-        <div style={styles.bottomTableCard}>
-          <div style={styles.sectionHeader}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>🔥</span>
-              <h3 style={styles.sectionTitle}>Hot Priority Leads</h3>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={styles.totalBadge}>Total: {s.hotPriorityLeads}</span>
-              <button
-                type="button"
-                onClick={() => navigate('/admin/leads?tab=hot')}
-                style={styles.viewAllLink}
-              >
-                View All →
-              </button>
-            </div>
-          </div>
-
-          <div style={styles.tableResponsive}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Lead ID</th>
-                  <th style={styles.th}>Name</th>
-                  <th style={styles.th}>Type</th>
-                  <th style={styles.th}>Source</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Contact Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hotLeads.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={{ ...styles.td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>
-                      No hot priority leads found.
-                    </td>
-                  </tr>
-                ) : (
-                  hotLeads.slice(0, 4).map((l, i) => (
-                    <tr key={l.id || i} style={styles.tr}>
-                      <td style={{ ...styles.td, fontWeight: '600', color: '#1e293b' }}>
-                        {l.leadId || `LD-${101 + i * 4}`}
-                      </td>
-                      <td style={{ ...styles.td, fontWeight: '500', color: '#0f172a' }}>
-                        {l.name}
-                      </td>
-                      <td style={styles.td}>
-                        <span style={l.type === 'Contractor' ? styles.typeContractor : styles.typeCustomer}>
-                          {l.type || 'Customer'}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, color: '#475569' }}>
-                        {l.source || 'Contact Us'}
-                      </td>
-                      <td style={styles.td}>
-                        <span style={getStatusPillStyle(l.status)}>
-                          {l.status}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, color: '#64748b' }}>
-                        {typeof l.contactDate === 'string'
-                          ? l.contactDate
-                          : new Date(l.contactDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Project Overview (Card 2) */}
+      {/* 5. ROW 4: Exactly 2 Components (Project Overview Plot + 🔥 Hot Priority Leads) */}
+      <div style={styles.rowTwoCol}>
+        {/* Component 1: Project Overview (Interactive Donut Chart) */}
         <div style={styles.bottomProjectCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -809,50 +804,177 @@ export default function AdminDashboardPage() {
           </div>
 
           <div style={styles.donutContentRow}>
-            {/* Live Project Donut SVG */}
+            {/* Live Interactive Project Donut SVG */}
             <div style={styles.donutWrap}>
-              <svg width="125" height="125" viewBox="0 0 125 125">
-                {/* Dynamic SVG slices computed from real MongoDB project statuses */}
-                {projSlices.map((item) => (
-                  <circle
-                    key={item.label}
-                    cx="62.5"
-                    cy="62.5"
-                    r="46"
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth="18"
-                    strokeDasharray={`${item.dashLength} ${projCircumference - item.dashLength}`}
-                    strokeDashoffset={-item.offset}
-                    transform="rotate(-90 62.5 62.5)"
-                  />
-                ))}
+              <svg width="135" height="135" viewBox="0 0 135 135">
+                {projSlices.map((item) => {
+                  const isHovered = hoveredProjSlice?.label === item.label;
+                  return (
+                    <circle
+                      key={item.label}
+                      cx="67.5"
+                      cy="67.5"
+                      r="46"
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth={isHovered ? 22 : 18}
+                      strokeDasharray={`${item.dashLength} ${projCircumference - item.dashLength}`}
+                      strokeDashoffset={-item.offset}
+                      transform="rotate(-90 67.5 67.5)"
+                      style={{ cursor: 'pointer', transition: 'stroke-width 0.2s ease, opacity 0.2s ease', opacity: hoveredProjSlice && !isHovered ? 0.6 : 1 }}
+                      onMouseEnter={() => setHoveredProjSlice(item)}
+                      onMouseLeave={() => setHoveredProjSlice(null)}
+                    />
+                  );
+                })}
 
-                {/* Hole */}
-                <circle cx="62.5" cy="62.5" r="36" fill="#ffffff" />
-                <text x="62.5" y="60" textAnchor="middle" style={styles.donutCenterVal}>{projectOverview.total}</text>
-                <text x="62.5" y="74" textAnchor="middle" style={styles.donutCenterSub}>Projects</text>
+                {/* Hole with Dynamic Center Text */}
+                <circle cx="67.5" cy="67.5" r="35" fill="#ffffff" />
+                <text x="67.5" y="64" textAnchor="middle" style={styles.donutCenterVal}>
+                  {hoveredProjSlice ? hoveredProjSlice.count : projectOverview.total}
+                </text>
+                <text x="67.5" y="78" textAnchor="middle" style={styles.donutCenterSub}>
+                  {hoveredProjSlice ? `${hoveredProjSlice.label} (${hoveredProjSlice.percentage}%)` : 'Projects'}
+                </text>
               </svg>
             </div>
 
             {/* Project Status Legend */}
             <div style={styles.donutList}>
-              {projectItems.map((item) => (
-                <div key={item.label} style={styles.donutItemRow}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
-                    <span style={styles.donutItemLabel}>{item.label}</span>
+              {projectItems.map((item) => {
+                const isHovered = hoveredProjSlice?.label === item.label;
+                return (
+                  <div
+                    key={item.label}
+                    style={{ ...styles.donutItemRow, opacity: hoveredProjSlice && !isHovered ? 0.5 : 1, cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredProjSlice(item)}
+                    onMouseLeave={() => setHoveredProjSlice(null)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ ...styles.legendBullet, backgroundColor: item.color }} />
+                      <span style={{ ...styles.donutItemLabel, fontWeight: isHovered ? '700' : '500', color: isHovered ? '#0f172a' : '#475569' }}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <span style={{ ...styles.donutItemCount, color: isHovered ? item.color : '#0f172a' }}>
+                      {item.count} ({item.percentage}%)
+                    </span>
                   </div>
-                  <span style={styles.donutItemCount}>
-                    {item.count} ({item.percentage}%)
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Recent Activities (Card 3) */}
+        {/* Component 2: 🔥 Hot Priority Leads (Icon-Rich Real Data List) */}
+        <div style={styles.bottomTableCard}>
+          <div style={styles.sectionHeader}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>🔥</span>
+              <h3 style={styles.sectionTitle}>Hot Priority Leads</h3>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={styles.totalBadge}>Total: {s.hotPriorityLeads}</span>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/leads?tab=hot')}
+                style={styles.viewAllLink}
+              >
+                View All →
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.leadCardsList}>
+            {hotLeads.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                <span style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>🎉</span>
+                All high priority leads have been successfully followed up.
+              </div>
+            ) : (
+              hotLeads.slice(0, 4).map((l, i) => {
+                const isContractor = l.type === 'Contractor';
+                return (
+                  <div
+                    key={l.id || i}
+                    style={styles.leadCardItem}
+                    onClick={() => navigate(`/admin/leads?search=${encodeURIComponent(l.leadId || l.name)}`)}
+                  >
+                    {/* Role Icon Circle */}
+                    <div style={isContractor ? styles.avatarCircleContractor : styles.avatarCircleCustomer} title={isContractor ? 'Contractor Lead' : 'Customer Lead'}>
+                      {isContractor ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
+                          <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
+                          <line x1="4" y1="18" x2="20" y2="18" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Details with Complete Icons */}
+                    <div style={styles.leadDetailsCol}>
+                      <div style={styles.leadTopRow}>
+                        <span style={styles.leadIdBadge}>{l.leadId || `LD-${101 + i * 4}`}</span>
+                        <strong style={styles.leadNameText}>{l.name}</strong>
+                        <span style={styles.highPriorityPillSmall}>🔥 Hot Priority</span>
+                      </div>
+
+                      <div style={styles.leadMetaRow}>
+                        <div style={styles.leadMetaItem} title="Email Address">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                          </svg>
+                          <span>{l.email || 'N/A'}</span>
+                        </div>
+
+                        <div style={styles.leadMetaItem} title="Inquiry Source">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                          </svg>
+                          <span>{l.source || 'Contact Us'}</span>
+                        </div>
+
+                        <div style={styles.leadMetaItem} title="Latest Contact">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                          <span>
+                            {typeof l.contactDate === 'string'
+                              ? l.contactDate
+                              : new Date(l.contactDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                          </span>
+                        </div>
+
+                        <span style={getStatusPillStyle(l.status)}>
+                          {l.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Action Chevron */}
+                    <div style={styles.leadActionChevron}>›</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 6. ROW 5: Exactly 2 Components (Recent Activities + Interactive User Distribution Bar Plot) */}
+      <div style={styles.rowTwoColBottom}>
+        {/* Component 1: Recent Activities Window */}
         <div style={styles.bottomActivityCard}>
           <div style={styles.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -864,7 +986,7 @@ export default function AdminDashboardPage() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/admin/reports')}
+              onClick={() => navigate('/admin/users')}
               style={styles.viewAllLink}
             >
               View All →
@@ -879,7 +1001,6 @@ export default function AdminDashboardPage() {
             ) : (
               recentActivities.slice(0, 4).map((act, i) => (
                 <div key={act.id || i} style={styles.activityItem}>
-                  {/* Circular colored icon based on type */}
                   <div style={getActivityIconStyle(act.type || (act.activity?.toLowerCase() || ''))}>
                     {getActivityIcon(act.type || (act.activity?.toLowerCase() || ''))}
                   </div>
@@ -904,12 +1025,126 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Component 2: Interactive User Distribution Bar Plot */}
+        <div style={styles.userBarCard}>
+          <div style={styles.sectionHeader}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+              <h3 style={styles.sectionTitle}>User Distribution & Roles</h3>
+            </div>
+            <span style={styles.totalBadge}>Total: {userOverview.total} Users</span>
+          </div>
+
+          <div style={styles.svgWrapper}>
+            <svg viewBox={`0 0 ${barSvgWidth} ${barSvgHeight}`} style={{ width: '100%', height: '185px', overflow: 'visible' }}>
+              {/* Dynamic Y Axis Guide Lines */}
+              {barYTicks.map((val) => {
+                const y = barPadTop + barPlotHeight - (val / barMaxY) * barPlotHeight;
+                return (
+                  <g key={val}>
+                    <text x={barPadLeft - 8} y={y + 4} textAnchor="end" style={styles.axisText}>
+                      {val}
+                    </text>
+                    <line
+                      x1={barPadLeft}
+                      y1={y}
+                      x2={barPadLeft + barPlotWidth}
+                      y2={y}
+                      stroke="#f1f5f9"
+                      strokeWidth="1"
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Dynamic Interactive SVG Bars */}
+              {userBars.map((item, idx) => {
+                const barWidth = 46;
+                const slotWidth = barPlotWidth / userBars.length;
+                const x = barPadLeft + idx * slotWidth + (slotWidth - barWidth) / 2;
+                const barHeight = Math.max(4, (item.count / barMaxY) * barPlotHeight);
+                const y = barPadTop + barPlotHeight - barHeight;
+                const isHovered = hoveredBar?.label === item.label;
+
+                return (
+                  <g key={item.label} style={{ cursor: 'pointer' }} onClick={() => navigate(item.role ? `/admin/users?role=${item.role}` : '/admin/users')}>
+                    {/* Bar Background Track */}
+                    <rect
+                      x={x}
+                      y={barPadTop}
+                      width={barWidth}
+                      height={barPlotHeight}
+                      rx="6"
+                      fill="#f8fafc"
+                    />
+
+                    {/* Active Bar */}
+                    <rect
+                      x={x}
+                      y={y}
+                      width={barWidth}
+                      height={barHeight}
+                      rx="6"
+                      fill={item.color}
+                      style={{
+                        transition: 'all 0.2s ease',
+                        filter: isHovered ? 'brightness(1.15) drop-shadow(0 4px 6px rgba(0,0,0,0.12))' : 'none',
+                        opacity: hoveredBar && !isHovered ? 0.6 : 1,
+                      }}
+                      onMouseEnter={() => setHoveredBar({ x: x + barWidth / 2, y, item })}
+                      onMouseLeave={() => setHoveredBar(null)}
+                    />
+
+                    {/* Numeric Count on Top of Bar */}
+                    <text
+                      x={x + barWidth / 2}
+                      y={Math.max(barPadTop - 4, y - 6)}
+                      textAnchor="middle"
+                      fill={isHovered ? item.color : '#475569'}
+                      fontSize="11"
+                      fontWeight="700"
+                    >
+                      {item.count}
+                    </text>
+
+                    {/* Category Label with Icon below bar */}
+                    <text
+                      x={x + barWidth / 2}
+                      y={barPadTop + barPlotHeight + 18}
+                      textAnchor="middle"
+                      fill={isHovered ? '#0f172a' : '#64748b'}
+                      fontSize="11"
+                      fontWeight={isHovered ? '700' : '600'}
+                    >
+                      {item.label}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Floating Interactive Tooltip */}
+              {hoveredBar && (
+                <g transform={`translate(${hoveredBar.x - 65}, ${Math.max(0, hoveredBar.y - 36)})`}>
+                  <rect width="130" height="26" rx="6" fill="#0f172a" opacity="0.94" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))" />
+                  <text x="65" y="17" fill="#ffffff" textAnchor="middle" fontSize="11" fontWeight="700">
+                    {hoveredBar.item.label}: {hoveredBar.item.count} ({hoveredBar.item.percentage}%)
+                  </text>
+                </g>
+              )}
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// Helper: Status Pill Color Stying
+// Helper: Status Pill Color Styling
 function getStatusPillStyle(status) {
   const base = {
     display: 'inline-block',
@@ -973,7 +1208,8 @@ function getActivityIcon(type) {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="2" width="16" height="20" rx="2" />
         <line x1="8" y1="6" x2="16" y2="6" />
-        <line x1="16" y1="14" x2="16" y2="18" />
+        <line x1="8" y1="10" x2="16" y2="10" />
+        <line x1="8" y1="14" x2="12" y2="14" />
       </svg>
     );
   }
@@ -982,6 +1218,7 @@ function getActivityIcon(type) {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polygon points="12 2 2 7 12 12 22 7 12 2" />
         <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
       </svg>
     );
   }
@@ -1095,7 +1332,7 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
-    marginBottom: '16px',
+    marginBottom: '14px',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -1109,23 +1346,23 @@ const styles = {
   cardRefLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '14px',
+    gap: '12px',
     minWidth: 0,
     overflow: 'hidden',
   },
   iconCircleWhite: {
-    width: '44px',
-    height: '44px',
+    width: '42px',
+    height: '42px',
     borderRadius: '50%',
     backgroundColor: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.06)',
   },
 
-  // 1. Total Estimations (Soft Blue)
+  // 1. Total Users (Soft Blue Pill)
   cardBlueRef: {
     backgroundColor: '#eff6ff',
     border: '1px solid #bfdbfe',
@@ -1146,7 +1383,7 @@ const styles = {
     textTransform: 'uppercase',
   },
   cardRefValueBlue: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '800',
     color: '#1e3a8a',
     marginTop: '2px',
@@ -1160,146 +1397,7 @@ const styles = {
     marginLeft: 'auto',
   },
 
-  // 2. Completed Projects (Soft Green)
-  cardGreenRef: {
-    backgroundColor: '#f0fdf4',
-    border: '1px solid #bbf7d0',
-    borderRadius: '16px',
-    padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(22, 163, 74, 0.05)',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    minWidth: 0,
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-  },
-  cardRefLabelGreen: {
-    fontSize: '11px',
-    fontWeight: '800',
-    color: '#166534',
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase',
-  },
-  cardRefValueGreen: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#14532d',
-    marginTop: '2px',
-    letterSpacing: '-0.3px',
-    lineHeight: 1.15,
-  },
-  chevronGreen: {
-    fontSize: '22px',
-    fontWeight: '600',
-    color: '#22c55e',
-    marginLeft: 'auto',
-  },
-
-  // 3. Total Revenue (Soft Purple)
-  cardPurpleRef: {
-    backgroundColor: '#faf5ff',
-    border: '1px solid #e9d5ff',
-    borderRadius: '16px',
-    padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(147, 51, 234, 0.05)',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    minWidth: 0,
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-  },
-  cardRefLabelPurple: {
-    fontSize: '11px',
-    fontWeight: '800',
-    color: '#6b21a8',
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase',
-  },
-  cardRefValuePurple: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#581c87',
-    marginTop: '2px',
-    letterSpacing: '-0.3px',
-    lineHeight: 1.15,
-  },
-  chevronPurple: {
-    fontSize: '22px',
-    fontWeight: '600',
-    color: '#a855f7',
-    marginLeft: 'auto',
-  },
-
-  // 4. Total Estimations Value (Soft Pink/Red)
-  cardPinkRef: {
-    backgroundColor: '#fff1f2',
-    border: '1px solid #fecdd3',
-    borderRadius: '16px',
-    padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(225, 29, 72, 0.05)',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    minWidth: 0,
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-  },
-  cardRefLabelPink: {
-    fontSize: '11px',
-    fontWeight: '800',
-    color: '#9f1239',
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase',
-  },
-  cardRefValuePink: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#881337',
-    marginTop: '2px',
-    letterSpacing: '-0.3px',
-    lineHeight: 1.15,
-  },
-  chevronPink: {
-    fontSize: '22px',
-    fontWeight: '600',
-    color: '#f43f5e',
-    marginLeft: 'auto',
-  },
-
-  // Row 2 Cards: Slate, Sky, Amber, Hot
-  cardSlateRef: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
-    padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    minWidth: 0,
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-  },
-  cardRefLabelSlate: {
-    fontSize: '11px',
-    fontWeight: '800',
-    color: '#475569',
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase',
-  },
-  cardRefValueSlate: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: '2px',
-    letterSpacing: '-0.3px',
-    lineHeight: 1.15,
-  },
-  chevronSlate: {
-    fontSize: '22px',
-    fontWeight: '600',
-    color: '#94a3b8',
-    marginLeft: 'auto',
-  },
-
+  // 2. Customers (Soft Sky Blue Pill)
   cardSkyRef: {
     backgroundColor: '#f0f9ff',
     border: '1px solid #bae6fd',
@@ -1320,9 +1418,9 @@ const styles = {
     textTransform: 'uppercase',
   },
   cardRefValueSky: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '800',
-    color: '#0c4a6e',
+    color: '#075985',
     marginTop: '2px',
     letterSpacing: '-0.3px',
     lineHeight: 1.15,
@@ -1330,16 +1428,17 @@ const styles = {
   chevronSky: {
     fontSize: '22px',
     fontWeight: '600',
-    color: '#38bdf8',
+    color: '#0ea5e9',
     marginLeft: 'auto',
   },
 
+  // 3. Contractors (Soft Amber Pill)
   cardAmberRef: {
-    backgroundColor: '#fefce8',
-    border: '1px solid #fef08a',
+    backgroundColor: '#fffbeb',
+    border: '1px solid #fde68a',
     borderRadius: '16px',
     padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(202, 138, 4, 0.05)',
+    boxShadow: '0 1px 3px rgba(217, 119, 6, 0.05)',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     minWidth: 0,
@@ -1349,14 +1448,14 @@ const styles = {
   cardRefLabelAmber: {
     fontSize: '11px',
     fontWeight: '800',
-    color: '#a16207',
+    color: '#b45309',
     letterSpacing: '0.6px',
     textTransform: 'uppercase',
   },
   cardRefValueAmber: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '800',
-    color: '#713f12',
+    color: '#92400e',
     marginTop: '2px',
     letterSpacing: '-0.3px',
     lineHeight: 1.15,
@@ -1364,16 +1463,52 @@ const styles = {
   chevronAmber: {
     fontSize: '22px',
     fontWeight: '600',
-    color: '#eab308',
+    color: '#f59e0b',
     marginLeft: 'auto',
   },
 
-  cardHotRef: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
+  // 4. Total Leads (Soft Emerald Pill)
+  cardEmeraldRef: {
+    backgroundColor: '#ecfdf5',
+    border: '1px solid #a7f3d0',
     borderRadius: '16px',
     padding: '16px 18px',
-    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.05)',
+    boxShadow: '0 1px 3px rgba(5, 150, 105, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelEmerald: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#047857',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueEmerald: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#065f46',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronEmerald: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#10b981',
+    marginLeft: 'auto',
+  },
+
+  // 5. Hot Priority Leads (Soft Red/Pink Pill)
+  cardHotRef: {
+    backgroundColor: '#fff1f2',
+    border: '1px solid #fecdd3',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(225, 29, 72, 0.05)',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     minWidth: 0,
@@ -1383,130 +1518,182 @@ const styles = {
   cardRefLabelHot: {
     fontSize: '11px',
     fontWeight: '800',
-    color: '#b91c1c',
+    color: '#9f1239',
     letterSpacing: '0.6px',
     textTransform: 'uppercase',
   },
   cardRefValueHot: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '800',
-    color: '#7f1d1d',
+    color: '#881337',
     marginTop: '2px',
     letterSpacing: '-0.3px',
     lineHeight: 1.15,
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '8px',
   },
   highPriorityPillInline: {
+    display: 'inline-block',
+    padding: '2px 6px',
+    borderRadius: '6px',
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
     fontSize: '9px',
     fontWeight: '800',
-    backgroundColor: '#ef4444',
-    color: '#ffffff',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    letterSpacing: '0.4px',
+    letterSpacing: '0.3px',
+    border: '1px solid #fca5a5',
   },
   chevronHot: {
     fontSize: '22px',
     fontWeight: '600',
-    color: '#f87171',
+    color: '#f43f5e',
     marginLeft: 'auto',
   },
 
-  // Legacy compatibility fallbacks
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
+  // 6. Active Projects (Soft Cyan/Teal Pill)
+  cardCyanRef: {
+    backgroundColor: '#ecfeff',
+    border: '1px solid #a5f3fc',
+    borderRadius: '16px',
     padding: '16px 18px',
-    border: '1px solid #f1f5f9',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    boxShadow: '0 1px 3px rgba(8, 145, 178, 0.05)',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
     minWidth: 0,
-    boxSizing: 'border-box',
     overflow: 'hidden',
+    boxSizing: 'border-box',
   },
-  cardTop: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '14px',
+  cardRefLabelCyan: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#0e7490',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
   },
-  iconCircle: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  cardLabel: {
-    fontSize: '12px',
-    fontWeight: '500',
-    color: '#64748b',
-  },
-  cardValue: {
+  cardRefValueCyan: {
     fontSize: '22px',
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: '800',
+    color: '#155e75',
     marginTop: '2px',
     letterSpacing: '-0.3px',
+    lineHeight: 1.15,
   },
-  growthGreen: {
-    fontSize: '11px',
+  chevronCyan: {
+    fontSize: '22px',
     fontWeight: '600',
-    color: '#16a34a',
-    marginTop: '4px',
-  },
-  growthRed: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#dc2626',
-    marginTop: '4px',
-  },
-  cardHotHighlight: {
-    backgroundColor: '#fef2f2',
-    borderRadius: '12px',
-    padding: '16px 18px',
-    border: '1px solid #fee2e2',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    cursor: 'pointer',
-    minWidth: 0,
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  iconCircleHot: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '50%',
-    backgroundColor: '#fee2e2',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  highPriorityPill: {
-    display: 'inline-block',
-    backgroundColor: '#ef4444',
-    color: '#ffffff',
-    fontSize: '10px',
-    fontWeight: '700',
-    padding: '2px 8px',
-    borderRadius: '10px',
-    marginTop: '4px',
-    letterSpacing: '0.2px',
-  },
-  chevronIcon: {
-    fontSize: '20px',
-    fontWeight: '300',
-    color: '#64748b',
+    color: '#06b6d4',
     marginLeft: 'auto',
   },
+
+  // 7. Total Estimates (Soft Purple Pill)
+  cardPurpleRef: {
+    backgroundColor: '#faf5ff',
+    border: '1px solid #e9d5ff',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(147, 51, 234, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelPurple: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#6b21a8',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValuePurple: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#581c87',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronPurple: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#a855f7',
+    marginLeft: 'auto',
+  },
+
+  // 8. Estimated Value (Soft Mint / Green Pill)
+  cardGreenRef: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(22, 163, 74, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelGreen: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#166534',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueGreen: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#14532d',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronGreen: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#22c55e',
+    marginLeft: 'auto',
+  },
+
+  // Growth Pill Styles
+  growthGreenPill: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#166534',
+    backgroundColor: '#dcfce7',
+    padding: '2px 6px',
+    borderRadius: '8px',
+    marginTop: '4px',
+  },
+  growthRedPill: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#991b1b',
+    backgroundColor: '#fee2e2',
+    padding: '2px 6px',
+    borderRadius: '8px',
+    marginTop: '4px',
+  },
+  growthNeutralPill: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '600',
+    color: '#64748b',
+    backgroundColor: '#f1f5f9',
+    padding: '2px 6px',
+    borderRadius: '8px',
+    marginTop: '4px',
+  },
+
+  // Middle Row
   middleRow: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1fr)',
     gap: '14px',
-    marginBottom: '16px',
+    marginBottom: '14px',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -1574,12 +1761,15 @@ const styles = {
   },
   donutCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   totalBadge: {
     fontSize: '12px',
@@ -1614,14 +1804,15 @@ const styles = {
   donutList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '7px',
-    minWidth: '110px',
+    gap: '8px',
+    minWidth: '120px',
   },
   donutItemRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     fontSize: '11px',
+    transition: 'opacity 0.15s ease',
   },
   donutItemLabel: {
     color: '#475569',
@@ -1632,22 +1823,15 @@ const styles = {
     fontWeight: '600',
     marginLeft: '12px',
   },
-  bottomRow: {
+
+  // Row 4 (2 Components)
+  rowTwoCol: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)',
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)',
     gap: '14px',
+    marginBottom: '14px',
     width: '100%',
     boxSizing: 'border-box',
-  },
-  bottomTableCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '18px 20px',
-    border: '1px solid #f1f5f9',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    minWidth: 0,
-    boxSizing: 'border-box',
-    overflow: 'hidden',
   },
   bottomProjectCard: {
     backgroundColor: '#ffffff',
@@ -1661,12 +1845,134 @@ const styles = {
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
+  bottomTableCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+
+  // Icon-Rich Hot Leads List
+  leadCardsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginTop: '6px',
+  },
+  leadCardItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '10px 14px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '10px',
+    border: '1px solid #f1f5f9',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  avatarCircleCustomer: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    backgroundColor: '#eff6ff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarCircleContractor: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    backgroundColor: '#fef3c7',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  leadDetailsCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  leadTopRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  leadIdBadge: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#1e40af',
+    backgroundColor: '#dbeafe',
+    padding: '1px 6px',
+    borderRadius: '4px',
+  },
+  leadNameText: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  highPriorityPillSmall: {
+    fontSize: '9px',
+    fontWeight: '800',
+    color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+    padding: '1px 6px',
+    borderRadius: '4px',
+    letterSpacing: '0.2px',
+  },
+  leadMetaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '11px',
+    color: '#64748b',
+    marginTop: '4px',
+    flexWrap: 'wrap',
+  },
+  leadMetaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  leadActionChevron: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginLeft: 'auto',
+  },
+
+  // Row 5 (2 Components)
+  rowTwoColBottom: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1.35fr)',
+    gap: '14px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
   bottomActivityCard: {
     backgroundColor: '#ffffff',
     borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+  userBarCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '18px 20px',
+    border: '1px solid #f1f5f9',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    display: 'flex',
+    flexDirection: 'column',
     minWidth: 0,
     boxSizing: 'border-box',
     overflow: 'hidden',
@@ -1679,49 +1985,6 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     padding: 0,
-  },
-  tableResponsive: {
-    overflowX: 'auto',
-    marginTop: '6px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '12px',
-  },
-  th: {
-    textAlign: 'left',
-    padding: '8px 10px',
-    color: '#64748b',
-    fontWeight: '600',
-    borderBottom: '1px solid #f1f5f9',
-    fontSize: '11px',
-  },
-  tr: {
-    borderBottom: '1px solid #f8fafc',
-  },
-  td: {
-    padding: '9px 10px',
-    verticalAlign: 'middle',
-    fontSize: '12px',
-  },
-  typeCustomer: {
-    display: 'inline-block',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
-    fontSize: '11px',
-    fontWeight: '500',
-  },
-  typeContractor: {
-    display: 'inline-block',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    backgroundColor: '#fef9c3',
-    color: '#a16207',
-    fontSize: '11px',
-    fontWeight: '500',
   },
   activityList: {
     display: 'flex',

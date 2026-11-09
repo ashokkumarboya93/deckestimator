@@ -102,6 +102,7 @@ async function getDashboardSummary(dateRange = '30d') {
     completedRevenueAgg,
     leadStatusCounts,
     projectStatusCounts,
+    userStatusCounts,
     hotLeadsList,
     auditLogsList,
     // Prior period counts for real dynamic growth rates
@@ -149,6 +150,10 @@ async function getDashboardSummary(dateRange = '30d') {
     ]),
     Project.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
+    User.aggregate([
+      { $match: { accountStatus: { $ne: 'disabled' } } },
+      { $group: { _id: '$accountStatus', count: { $sum: 1 } } },
     ]),
     Lead.find({
       $or: [
@@ -382,6 +387,19 @@ async function getDashboardSummary(dateRange = '30d') {
     },
     hotLeads: formattedHotLeads,
     recentActivities: formattedActivities,
+    userOverview: {
+      total: totalUsers,
+      distribution: [
+        { label: 'Customers', count: totalCustomers, color: '#1d4ed8', role: 'customer' },
+        { label: 'Contractors', count: totalContractors, color: '#f59e0b', role: 'contractor' },
+        { label: 'Active', count: userStatusCounts.reduce((acc, u) => (u._id === 'active' ? acc + u.count : acc), 0), color: '#10b981', status: 'active' },
+        { label: 'Pending', count: userStatusCounts.reduce((acc, u) => (u._id !== 'active' && u._id !== 'blocked' ? acc + u.count : acc), 0), color: '#8b5cf6', status: 'pending' },
+        { label: 'Blocked', count: userStatusCounts.reduce((acc, u) => (u._id === 'blocked' ? acc + u.count : acc), 0), color: '#ef4444', status: 'blocked' },
+      ].map((item) => ({
+        ...item,
+        percentage: totalUsers > 0 ? Math.round((item.count / totalUsers) * 100) : 0,
+      })),
+    },
   };
 }
 
