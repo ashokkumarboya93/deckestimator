@@ -1092,121 +1092,191 @@ async function getVerificationHistoryList(contractorProfileId) {
 // 4. PROJECTS & PROGRESS TRACKING (With History & Export)
 // ====================================================================
 
-async function listProjects({ page = 1, limit = 10, status = 'all', search = '', contractorId, customerId }) {
+async function listProjects({ page = 1, limit = 50, status = 'all', search = '', contractorId, customerId }) {
   const query = {};
-  if (status && status !== 'all') query.status = status.toLowerCase();
-  if (contractorId) query.contractorId = contractorId;
-  if (customerId) query.customerId = customerId;
+  if (status && status !== 'all') {
+    const s = status.toLowerCase();
+    if (s === 'created') query.estimateStatus = { $in: ['CREATED', 'DRAFT'] };
+    else if (s === 'requested') query.estimateStatus = { $in: ['REQUESTED', 'IN_REVIEW', 'SUBMITTED'] };
+    else if (s === 'in_progress' || s === 'in progress') query.estimateStatus = { $in: ['IN_PROGRESS', 'in_progress'] };
+    else if (s === 'completed') query.estimateStatus = { $in: ['COMPLETED', 'completed'] };
+    else query.estimateStatus = s;
+  }
+  if (customerId) query.userId = customerId;
 
-  if (search) {
+  if (search && search.trim()) {
     const reg = new RegExp(search.trim(), 'i');
-    query.$or = [{ projectName: reg }, { projectId: reg }];
+    query.$or = [
+      { estimateReference: reg },
+      { 'deckDetails.projectName': reg },
+      { 'customerSnapshot.name': reg },
+      { 'deckDetails.city': reg },
+    ];
   }
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [projects, total, counts] = await Promise.all([
-    Project.find(query)
-      .populate('customerId', 'fullName email phone')
-      .populate('contractorId', 'fullName email phone')
+  // Both Customer and Contractor Estimations are monitored as Projects
+  const [estimates, totalEstimates, allStatusCounts] = await Promise.all([
+    Estimate.find(query)
+      .populate('userId', 'fullName email phone role')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
-    Project.countDocuments(query),
+    Estimate.countDocuments(query),
     Promise.all([
-      Project.countDocuments(),
-      Project.countDocuments({ status: 'in_progress' }),
-      Project.countDocuments({ status: 'completed' }),
-      Project.countDocuments({ status: 'on_hold' }),
-      Project.countDocuments({ status: 'pending' }),
+      Estimate.countDocuments(),
+      Estimate.countDocuments({ estimateStatus: { $in: ['CREATED', 'DRAFT'] } }),
+      Estimate.countDocuments({ estimateStatus: { $in: ['REQUESTED', 'IN_REVIEW', 'SUBMITTED'] } }),
+      Estimate.countDocuments({ estimateStatus: { $in: ['IN_PROGRESS', 'in_progress'] } }),
+      Estimate.countDocuments({ estimateStatus: { $in: ['COMPLETED', 'completed'] } }),
+      Estimate.aggregate([
+        { $match: { totalAmount: { $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
     ]),
   ]);
 
-  const mapped = projects.map((p) => ({
-    ...p.toJSON(),
-    _id: p._id.toString(),
-    id: p._id.toString(),
-    title: p.projectName,
-    customerName: p.customerId?.fullName || 'Customer',
-    contractorName: p.contractorId?.fullName || (p.contractorId ? 'Alex K (Apex LLC)' : 'Unassigned'),
-    deckSpecs: p.deckSpecs || { length: 20, width: 14, woodSpecies: 'Redwood' },
-  }));
+  const mapped = estimates.map((e) => {
+    const rawSt = (e.estimateStatus || 'CREATED').toLowerCase();
+    let stage = 'created';
+    if (rawSt === 'completed') stage = 'completed';
+    else if (rawSt === 'in_progress') stage = 'in_progress';
+    else if (rawSt === 'requested' || rawSt === 'in_review' || rawSt === 'submitted') stage = 'requested';
+
+    const isContractor = e.userId?.role === 'contractor';
+    const customerName = isContractor ? 'Contractor Partner' : (e.userId?.fullName || e.customerSnapshot?.name || 'Customer');
+    const contractorName = isContractor ? (e.userId?.fullName || 'Contractor') : (e.assignedContractorName || 'Deck Restoration Plus Staff');
+
+    return {
+      _id: e._id.toString(),
+      id: e._id.toString(),
+      projectId: e.estimateReference || `PRJ-${e._id.toString().slice(-6).toUpperCase()}`,
+      estimateReference: e.estimateReference || `EST-${e._id.toString().slice(-6).toUpperCase()}`,
+      title: e.deckDetails?.projectName || `Deck Project (${e.estimateReference || 'Estimation'})`,
+      projectName: e.deckDetails?.projectName || `Deck Project (${e.estimateReference || 'Estimation'})`,
+      customerName,
+      contractorName,
+      userRole: isContractor ? 'contractor' : 'customer',
+      userEmail: e.userId?.email || e.customerSnapshot?.email || '',
+      userPhone: e.userId?.phone || e.customerSnapshot?.phone || '',
+      deckSize: `${e.deckDetails?.areaSqFt || e.deckDetails?.area || 400} sq ft`,
+      areaSqFt: e.deckDetails?.areaSqFt || e.deckDetails?.area || 400,
+      totalAmount: e.totalAmount || 0,
+      status: stage,
+      stage,
+      progress: stage === 'completed' ? 100 : stage === 'in_progress' ? 65 : stage === 'requested' ? 30 : 10,
+      woodSpecies: e.deckDetails?.woodSpecies || e.deckDetails?.surfaceMaterial || 'Redwood / Pine',
+      location: e.deckDetails?.city ? `${e.deckDetails.city}, ${e.deckDetails.state || 'NJ'}` : 'New Jersey, USA',
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      deckSpecs: {
+        dimensions: e.deckDetails?.dimensions || `${Math.round(Math.sqrt(e.deckDetails?.areaSqFt || 400))} x ${Math.round(Math.sqrt(e.deckDetails?.areaSqFt || 400))}`,
+        area: e.deckDetails?.areaSqFt || 400,
+        woodSpecies: e.deckDetails?.woodSpecies || 'Pressure Treated Pine',
+      },
+      estimateData: e,
+    };
+  });
 
   return {
     data: mapped,
     pagination: {
       page: Number(page),
       limit: Number(limit),
-      total,
-      totalPages: Math.ceil(total / Number(limit)) || 1,
+      total: totalEstimates,
+      totalPages: Math.ceil(totalEstimates / Number(limit)) || 1,
     },
     counts: {
-      total: counts[0],
-      active: counts[1],
-      completed: counts[2],
-      onHold: counts[3],
-      pending: counts[4],
+      total: allStatusCounts[0],
+      created: allStatusCounts[1],
+      requested: allStatusCounts[2],
+      inProgress: allStatusCounts[3],
+      completed: allStatusCounts[4],
+      totalValue: allStatusCounts[5]?.[0]?.total || 0,
     },
   };
 }
 
-async function updateProjectProgress(adminUser, projectId, { progress, status, notes = '' }) {
-  const project = await Project.findById(projectId);
-  if (!project) throw new NotFoundError('Project not found.');
+async function updateProjectProgress(adminUser, projectId, { stage, status, progress, note = '', notes = '' }) {
+  const actualNote = note || notes || '';
+  const targetStage = (stage || status || 'created').toLowerCase();
+  let mappedEstimateStatus = 'CREATED';
+  if (targetStage === 'requested') mappedEstimateStatus = 'REQUESTED';
+  else if (targetStage === 'in_progress' || targetStage === 'in progress') mappedEstimateStatus = 'IN_PROGRESS';
+  else if (targetStage === 'completed') mappedEstimateStatus = 'COMPLETED';
 
-  const prevProgress = project.progress;
-  const prevStatus = project.status;
+  // 1. Update in Estimate collection
+  const estimate = await Estimate.findByIdAndUpdate(
+    projectId,
+    {
+      $set: {
+        estimateStatus: mappedEstimateStatus,
+        'customerFacingStatus.status': targetStage.toUpperCase(),
+        'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
+        'customerFacingStatus.updatedAt': new Date(),
+      },
+    },
+    { new: true }
+  );
 
-  if (progress !== undefined) {
-    project.progress = Math.min(100, Math.max(0, Number(progress)));
-  }
-  if (status) {
-    project.status = status;
-  }
-  if (project.progress === 100 && project.status !== 'completed') {
-    project.status = 'completed';
-    project.actualCompletionDate = new Date();
-  }
+  // 2. Also update in Project collection if a record exists
+  await Project.findOneAndUpdate(
+    { $or: [{ estimateId: projectId }, { _id: projectId }, { projectId }] },
+    {
+      $set: {
+        status: targetStage === 'requested' ? 'pending' : targetStage === 'in_progress' ? 'in_progress' : targetStage === 'completed' ? 'completed' : 'pending',
+        progress: targetStage === 'completed' ? 100 : targetStage === 'in_progress' ? 65 : targetStage === 'requested' ? 30 : 10,
+        notes: actualNote || `Admin updated stage to ${targetStage}`,
+      },
+      $push: {
+        progressHistory: {
+          previousProgress: 0,
+          newProgress: targetStage === 'completed' ? 100 : targetStage === 'in_progress' ? 65 : 30,
+          previousStatus: 'created',
+          newStatus: targetStage,
+          notes: actualNote || `Admin updated stage to ${targetStage}`,
+          updatedBy: adminUser?._id,
+        },
+      },
+    }
+  );
 
-  project.lastUpdatedBy = adminUser.id || adminUser._id;
-  if (notes) project.notes = notes;
-
-  if (!project.progressHistory) project.progressHistory = [];
-  project.progressHistory.push({
-    previousProgress: prevProgress,
-    newProgress: project.progress,
-    previousStatus: prevStatus,
-    newStatus: project.status,
-    notes: notes || 'Progress updated by administrator',
-    updatedBy: adminUser.id || adminUser._id,
-    updatedAt: new Date(),
+  // 3. Log to AuditLog
+  await AuditLog.create({
+    action: 'UPDATE_PROJECT_STAGE',
+    entityType: 'PROJECT',
+    entityId: projectId,
+    performedBy: adminUser?._id,
+    metadata: {
+      newStage: targetStage,
+      estimateStatus: mappedEstimateStatus,
+      note: actualNote,
+    },
   });
 
-  await project.save();
-  await logAdminAction(adminUser, 'PROJECT_PROGRESS_UPDATE', 'Project', project._id, { progress: prevProgress, status: prevStatus }, { progress: project.progress, status: project.status, notes });
-
-  return project.toJSON();
+  return {
+    success: true,
+    message: `Project stage successfully updated to ${targetStage.replace(/_/g, ' ').toUpperCase()}.`,
+    stage: targetStage,
+    estimateStatus: mappedEstimateStatus,
+  };
 }
 
 async function exportProjectsData(format = 'csv', filters = {}) {
-  const query = {};
-  if (filters.status && filters.status !== 'all') query.status = filters.status.toLowerCase();
-
-  const projects = await Project.find(query)
-    .populate('customerId', 'fullName email')
-    .populate('contractorId', 'fullName email')
-    .sort({ createdAt: -1 });
-
-  const headers = ['Project ID', 'Project Name', 'Customer', 'Contractor', 'Progress', 'Status', 'Start Date', 'Notes'];
-  const rows = projects.map((p) => [
-    p.projectId || 'N/A',
-    p.projectName,
-    p.customerId?.fullName || 'N/A',
-    p.contractorId?.fullName || 'Unassigned',
-    `${p.progress || 0}%`,
-    p.status,
-    p.startDate ? p.startDate.toISOString().split('T')[0] : 'N/A',
-    p.notes || '',
+  const result = await listProjects({ page: 1, limit: 1000, ...filters });
+  const headers = ['Project / Estimate ID', 'Project Title', 'Customer / Initiator', 'Contractor Partner', 'Role', 'Deck Size', 'Total Estimated Value ($)', 'Current Life Cycle Stage', 'Location', 'Created Date'];
+  const rows = result.data.map((p) => [
+    p.projectId || p.estimateReference || 'N/A',
+    p.title || p.projectName,
+    p.customerName || 'Customer',
+    p.contractorName || 'Unassigned',
+    p.userRole || 'customer',
+    p.deckSize || '400 sq ft',
+    p.totalAmount || 0,
+    (p.stage || p.status || 'created').replace(/_/g, ' ').toUpperCase(),
+    p.location || 'New Jersey, USA',
+    p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
   ]);
 
   const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
@@ -1229,6 +1299,7 @@ async function listLeads({
   limit = 10,
   search = '',
   dateRange = 'all',
+  lastDate,
   startDate,
   endDate,
   status = 'all',
@@ -1262,6 +1333,16 @@ async function listLeads({
     query.contactSource = new RegExp(source.replace(/[_-]/g, ' '), 'i');
   }
 
+  // Last Date Cutoff Filter (Used especially in All Leads to view older customers)
+  if (lastDate) {
+    const lDate = new Date(lastDate);
+    lDate.setHours(23, 59, 59, 999);
+    query.$or = [
+      { latestContactDate: { $lte: lDate } },
+      { createdAt: { $lte: lDate } },
+    ];
+  }
+
   // Date Range Filter
   if (dateRange && dateRange !== 'all') {
     const now = new Date();
@@ -1283,8 +1364,14 @@ async function listLeads({
     } else if (dateRange === '7d') {
       past.setDate(now.getDate() - 7);
       query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === '15d') {
+      past.setDate(now.getDate() - 15);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
     } else if (dateRange === '30d') {
       past.setDate(now.getDate() - 30);
+      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+    } else if (dateRange === '60d') {
+      past.setDate(now.getDate() - 60);
       query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
     } else if (dateRange === 'this_month') {
       past = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1345,7 +1432,7 @@ async function listLeads({
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
       .populate('deckId', 'name dimensions area surfaceMaterial conditionLevel')
-      .populate('estimateId', 'estimateReference totalCost calculationDetails status')
+      .populate('estimateId', 'estimateReference totalCost totalAmount calculationDetails status deckDetails rawCalculatorInputs pricingBreakdown')
       .sort(sortOption)
       .skip(skip)
       .limit(Number(limit)),
@@ -1389,6 +1476,23 @@ async function listLeads({
       ? `${l.deckSnapshot.city}${l.deckSnapshot.state ? `, ${l.deckSnapshot.state}` : ''}`
       : '—';
 
+    const est = l.estimateId;
+    const requestedMessage = l.enquiry?.message || l.enquiry?.subject || (l.contactHistory?.[0]?.notes) || 'Project Service Request';
+    const isEstimationService = !!(l.estimateId || l.estimateSnapshot?.estimateId);
+    const estimatedValue = est?.totalAmount || l.estimateSnapshot?.totalAmount || est?.totalCost || 0;
+    const woodSpecies = est?.deckDetails?.woodSpecies || est?.deckDetails?.surfaceMaterial || l.deckSnapshot?.surfaceMaterial || 'Pressure Treated Pine';
+    const deckArea = est?.deckDetails?.areaSqFt || est?.deckDetails?.area || l.deckSnapshot?.area || 0;
+    const deckDimensions = est?.deckDetails?.dimensions || (deckArea > 0 ? `${deckArea} sq ft` : '—');
+    
+    // Summarize section inputs
+    const rawInputs = est?.rawCalculatorInputs || est?.pricingInputs || {};
+    const sectionInputs = [];
+    if (rawInputs.structuralDetails?.length) sectionInputs.push(`Structure: ${rawInputs.structuralDetails.join(', ')}`);
+    if (rawInputs.railings) sectionInputs.push(`Railings: ${typeof rawInputs.railings === 'object' ? JSON.stringify(rawInputs.railings) : rawInputs.railings}`);
+    if (rawInputs.stairs) sectionInputs.push(`Stairs: ${typeof rawInputs.stairs === 'object' ? JSON.stringify(rawInputs.stairs) : rawInputs.stairs}`);
+    if (rawInputs.restorationScope) sectionInputs.push(`Scope: ${rawInputs.restorationScope}`);
+    const selectedInputsSummary = sectionInputs.length > 0 ? sectionInputs.join(' | ') : (l.enquiry?.subject || 'Standard Deck Restoration');
+
     return {
       _id: l._id.toString(),
       id: l._id.toString(),
@@ -1398,7 +1502,7 @@ async function listLeads({
       email: contactEmail,
       phone: contactPhone,
       userType: isCust ? 'Customer' : 'Contractor',
-      contactSource: l.contactSource || (isCust ? 'Contact Us' : 'Reach Out'),
+      contactSource: isEstimationService ? 'Estimation Service' : (l.contactSource || (isCust ? 'Contact Us' : 'Reach Out')),
       contactCount: l.contactCount || 1,
       priority: isHot ? 'hot' : (l.priority?.toLowerCase() || 'standard'),
       isHot,
@@ -1414,6 +1518,13 @@ async function listLeads({
       licenseNumber: cpObj?.licenseNumber || l.contractorSnapshot?.licenseNumber || '',
       licenseJurisdiction: cpObj?.licenseJurisdiction || '',
       enquiry: l.enquiry || {},
+      requestedMessage,
+      isEstimationService,
+      estimatedValue,
+      deckDimensions,
+      woodSpecies,
+      deckArea,
+      selectedInputsSummary,
       contactHistory: l.contactHistory || [],
       userId: userObj?._id?.toString() || null,
       customerId: l.customerId?._id?.toString() || null,
@@ -1550,23 +1661,45 @@ async function getLeadDetails(leadId) {
         createdAt: p.createdAt,
       })),
     } : null,
+    estimateDetails: lead.estimateId || null,
   };
 }
 
 async function exportLeadsData(format = 'csv', tab = 'all', filters = {}) {
   const result = await listLeads({ tab, page: 1, limit: 1000, ...filters });
-  const headers = ['Lead ID', 'Name', 'User Type', 'Email', 'Phone', 'Source', 'Contact Count', 'Contact Date', 'Status', 'Location'];
+  const headers = [
+    'Lead ID',
+    'Contact Person',
+    'Type & Source',
+    'User Role',
+    'Email',
+    'Phone',
+    'Requested Message',
+    'Estimated Value ($)',
+    'Dimensions / Area',
+    'Wood Species',
+    'Selected Inputs Section-wise',
+    'Priority',
+    'Date & Time',
+    'Location',
+    'Status',
+  ];
   const rows = result.data.map((l) => [
     l.leadNumber || l.leadId || 'N/A',
     l.name || 'N/A',
+    l.contactSource || (l.isEstimationService ? 'Estimation Service' : 'Direct Inquiry'),
     l.userType || 'Customer',
     l.email || 'N/A',
     l.phone || 'N/A',
-    l.contactSource || 'Contact Us',
-    l.contactCount || 1,
-    l.latestContactDate ? new Date(l.latestContactDate).toISOString().split('T')[0] : 'N/A',
-    l.status || 'New',
+    l.requestedMessage || 'N/A',
+    l.estimatedValue ? `$${Number(l.estimatedValue).toLocaleString()}` : '$0',
+    l.deckDimensions || (l.deckArea ? `${l.deckArea} sq ft` : 'N/A'),
+    l.woodSpecies || 'N/A',
+    l.selectedInputsSummary || 'N/A',
+    (l.priority || 'standard').toUpperCase(),
+    l.latestContactDate ? new Date(l.latestContactDate).toLocaleString() : 'N/A',
     l.location || 'N/A',
+    (l.status || 'new').toUpperCase(),
   ]);
 
   const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
@@ -2392,7 +2525,8 @@ async function savePermissionsMatrix(adminUser, permissionsList) {
 async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRange = '30d' } = {}) {
   const [
     userCount, custCount, contCount, leadCount, projectCount, estCount, estAgg,
-    activeProjectsCount, completedProjectsCount, onHoldProjectsCount, newLeadsCount, hotLeadsCount
+    activeProjectsCount, completedProjectsCount, onHoldProjectsCount, newLeadsCount, hotLeadsCount,
+    woodAgg, monthlyAgg
   ] = await Promise.all([
     User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
     User.countDocuments({ role: ROLES.CUSTOMER }),
@@ -2409,11 +2543,44 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
     Project.countDocuments({ status: { $in: ['on_hold', 'ON_HOLD', 'pending'] } }),
     Lead.countDocuments({ status: { $in: ['new', 'NEW'] } }),
     Lead.countDocuments({ priority: 'HOT' }),
+    Estimate.aggregate([
+      { $match: { 'deckDetails.woodSpecies': { $exists: true, $ne: '' } } },
+      { $group: { _id: '$deckDetails.woodSpecies', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]),
+    Estimate.aggregate([
+      { $match: { totalAmount: { $gt: 0 } } },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          total: { $sum: '$totalAmount' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id': 1 } },
+    ]),
   ]);
 
-  const totalValue = estAgg?.[0]?.total || 61548;
-  const avgVal = estCount > 0 ? Math.round(totalValue / estCount) : 1578;
-  const convRate = leadCount > 0 ? Math.round((projectCount / leadCount) * 100) : 50;
+  const totalValue = estAgg?.[0]?.total || 0;
+  const avgVal = estCount > 0 ? Math.round(totalValue / estCount) : 0;
+  const convRate = leadCount > 0 ? Math.round((projectCount / leadCount) * 100) : 0;
+
+  const totalWoodCount = woodAgg.reduce((sum, w) => sum + w.count, 0) || (estCount || 1);
+  const materialSelection = woodAgg.length > 0 ? woodAgg.map((w) => ({
+    name: w._id || 'Pressure Treated Pine',
+    count: w.count,
+    percentage: Math.round((w.count / totalWoodCount) * 100),
+  })) : [
+    { name: 'Pressure Treated Pine', count: estCount, percentage: 100 },
+  ];
+
+  // Dynamic monthly revenue trajectory from real estimates
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyRevenue = (monthlyAgg.length > 0 ? monthlyAgg : [{ _id: new Date().getMonth() + 1, total: totalValue, count: estCount }]).map((m) => ({
+    month: monthNames[(m._id - 1) % 12] || 'Month',
+    revenue: m.total || 0,
+    count: m.count || 0,
+  }));
 
   return {
     metrics: {
@@ -2433,13 +2600,13 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       hotLeads: hotLeadsCount,
     },
     userDistribution: [
-      { label: 'Customers', percentage: userCount > 0 ? Math.round((custCount / userCount) * 100) : 83, count: custCount, color: '#1d4ed8' },
-      { label: 'Contractors', percentage: userCount > 0 ? Math.round((contCount / userCount) * 100) : 17, count: contCount, color: '#10b981' },
+      { label: 'Customers', percentage: userCount > 0 ? Math.round((custCount / userCount) * 100) : 0, count: custCount, color: '#1d4ed8' },
+      { label: 'Contractors', percentage: userCount > 0 ? Math.round((contCount / userCount) * 100) : 0, count: contCount, color: '#10b981' },
     ],
     projectStatusDistribution: [
-      { label: 'Active', percentage: projectCount > 0 ? Math.round((activeProjectsCount / projectCount) * 100) : 25, count: activeProjectsCount, color: '#10b981' },
-      { label: 'Completed', percentage: projectCount > 0 ? Math.round((completedProjectsCount / projectCount) * 100) : 50, count: completedProjectsCount, color: '#1d4ed8' },
-      { label: 'On Hold', percentage: projectCount > 0 ? Math.round((onHoldProjectsCount / projectCount) * 100) : 25, count: onHoldProjectsCount, color: '#f59e0b' },
+      { label: 'Active', percentage: projectCount > 0 ? Math.round((activeProjectsCount / projectCount) * 100) : 0, count: activeProjectsCount, color: '#10b981' },
+      { label: 'Completed', percentage: projectCount > 0 ? Math.round((completedProjectsCount / projectCount) * 100) : 0, count: completedProjectsCount, color: '#1d4ed8' },
+      { label: 'On Hold', percentage: projectCount > 0 ? Math.round((onHoldProjectsCount / projectCount) * 100) : 0, count: onHoldProjectsCount, color: '#f59e0b' },
     ],
     leadFunnel: [
       { step: 'New Leads', count: newLeadsCount, color: '#1d4ed8' },
@@ -2447,13 +2614,11 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       { step: 'In Progress / Assigned', count: Math.max(0, leadCount - newLeadsCount), color: '#f59e0b' },
       { step: 'Converted to Project', count: projectCount, color: '#10b981' },
     ],
-    materialSelection: [
-      { name: 'Redwood / Pine', count: 3, percentage: 75 },
-      { name: 'Cedar Wood', count: 1, percentage: 25 },
-    ],
+    materialSelection,
+    monthlyRevenue,
     pricingBreakdown: [
-      { label: 'Labor Cost', percentage: 58, color: '#1d4ed8' },
-      { label: 'Material Cost', percentage: 42, color: '#10b981' },
+      { label: 'Labor Cost', percentage: 60, color: '#1d4ed8' },
+      { label: 'Material Cost', percentage: 40, color: '#10b981' },
     ],
   };
 }

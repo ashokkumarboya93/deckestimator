@@ -14,13 +14,62 @@ import { adminApi } from '../api/adminApi';
 
 // The 6 Approved Tabs (<= 6 tabs, contractor discounts on its own separate tab)
 const TABS = [
-  { id: 'master_rates', label: '1. Master Rates & Thresholds', icon: '⚡' },
-  { id: 'rate_card', label: '2. Base Rate Card Matrix', icon: '📊' },
-  { id: 'wood_species', label: '3. Wood Species & Materials', icon: '🌲' },
-  { id: 'deck_components', label: '4. Deck Components', icon: '📐' },
-  { id: 'scope_of_work', label: '5. Scope of Work', icon: '🛠️' },
-  { id: 'contractor_discounts', label: '6. Contractor Discounts', icon: '🤝' },
+  { id: 'master_rates', label: '1. Master Rates & Thresholds' },
+  { id: 'rate_card', label: '2. Base Rate Card Matrix' },
+  { id: 'wood_species', label: '3. Wood Species & Materials' },
+  { id: 'deck_components', label: '4. Deck Components' },
+  { id: 'scope_of_work', label: '5. Scope of Work' },
+  { id: 'contractor_discounts', label: '6. Contractor Discounts' },
 ];
+
+const renderTabIcon = (tabId) => {
+  switch (tabId) {
+    case 'master_rates':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      );
+    case 'rate_card':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      );
+    case 'wood_species':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2L4 14h5v6h6v-6h5L12 2z" />
+        </svg>
+      );
+    case 'deck_components':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21h18" />
+          <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+        </svg>
+      );
+    case 'scope_of_work':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+      );
+    case 'contractor_discounts':
+      return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
 
 // Fallback Baseline Defaults from DRP Pricing Engine
 const DEFAULT_ENGINE_CONFIG = {
@@ -417,7 +466,12 @@ export default function AdminPricingDiscountsPage() {
             disabled={saving}
             style={styles.primarySaveBtn}
           >
-            {saving ? 'Saving to Database...' : '💾 Save & Publish Pricing'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            {saving ? 'Saving to Database...' : 'Save & Publish Pricing'}
           </button>
         </div>
       </div>
@@ -446,7 +500,7 @@ export default function AdminPricingDiscountsPage() {
               onClick={() => setActiveTab(tab.id)}
               style={isActive ? styles.activeTabBtn : styles.tabBtn}
             >
-              <span>{tab.icon}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>{renderTabIcon(tab.id)}</span>
               <span>{tab.label}</span>
             </button>
           );
@@ -495,7 +549,19 @@ export default function AdminPricingDiscountsPage() {
             {/* Rate Position Interpolator */}
             <div style={styles.formCard}>
               <div style={styles.cardHeaderRow}>
-                <span style={styles.cardIcon}>🎚️</span>
+                <span style={styles.cardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="4" y1="21" x2="4" y2="14" />
+                    <line x1="4" y1="10" x2="4" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12" y2="3" />
+                    <line x1="20" y1="21" x2="20" y2="16" />
+                    <line x1="20" y1="12" x2="20" y2="3" />
+                    <line x1="1" y1="14" x2="7" y2="14" />
+                    <line x1="9" y1="8" x2="15" y2="8" />
+                    <line x1="17" y1="16" x2="23" y2="16" />
+                  </svg>
+                </span>
                 <strong style={styles.cardTitle}>Rate Position (Midpoint % Interpolator)</strong>
               </div>
               <p style={styles.cardHelp}>
@@ -520,7 +586,11 @@ export default function AdminPricingDiscountsPage() {
             {/* Stacked Finish Addon */}
             <div style={styles.formCard}>
               <div style={styles.cardHeaderRow}>
-                <span style={styles.cardIcon}>🎨</span>
+                <span style={styles.cardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z" />
+                  </svg>
+                </span>
                 <strong style={styles.cardTitle}>Stacked-Finish Surcharge ($/sq ft)</strong>
               </div>
               <p style={styles.cardHelp}>
@@ -544,7 +614,14 @@ export default function AdminPricingDiscountsPage() {
             {/* Minimum Job Floor (Near) */}
             <div style={styles.formCard}>
               <div style={styles.cardHeaderRow}>
-                <span style={styles.cardIcon}>🚚</span>
+                <span style={styles.cardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="3" width="15" height="13" />
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                    <circle cx="5.5" cy="18.5" r="2.5" />
+                    <circle cx="18.5" cy="18.5" r="2.5" />
+                  </svg>
+                </span>
                 <strong style={styles.cardTitle}>Minimum Mobilization Price (Near Distance)</strong>
               </div>
               <p style={styles.cardHelp}>
@@ -567,7 +644,12 @@ export default function AdminPricingDiscountsPage() {
             {/* Minimum Job Floor (Far) */}
             <div style={styles.formCard}>
               <div style={styles.cardHeaderRow}>
-                <span style={styles.cardIcon}>📍</span>
+                <span style={styles.cardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </span>
                 <strong style={styles.cardTitle}>Minimum Mobilization Price (Far Distance)</strong>
               </div>
               <p style={styles.cardHelp}>
@@ -590,7 +672,12 @@ export default function AdminPricingDiscountsPage() {
             {/* Travel Radius & Fee */}
             <div style={styles.formCard}>
               <div style={styles.cardHeaderRow}>
-                <span style={styles.cardIcon}>⛽</span>
+                <span style={styles.cardIcon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#034EA2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                  </svg>
+                </span>
                 <strong style={styles.cardTitle}>Travel Radius & Surcharge</strong>
               </div>
               <p style={styles.cardHelp}>
@@ -860,14 +947,22 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.editActionBtn}
                         title="Edit Species"
                       >
-                        ✏️ Edit
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDeleteWoodSpecies(key)}
                         style={styles.deleteActionBtn}
                         title="Delete Species"
                       >
-                        🗑️ Delete
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -955,14 +1050,22 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.editActionBtn}
                         title="Edit Multiplier"
                       >
-                        ✏️ Edit
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDeleteComponent(key)}
                         style={styles.deleteActionBtn}
                         title="Delete Component"
                       >
-                        🗑️ Delete
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -1050,14 +1153,22 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.editActionBtn}
                         title="Edit Production Speed"
                       >
-                        ✏️ Edit
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDeleteService(key)}
                         style={styles.deleteActionBtn}
                         title="Delete Service"
                       >
-                        🗑️ Delete
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -1179,7 +1290,12 @@ export default function AdminPricingDiscountsPage() {
                         }}
                         style={styles.editActionBtn}
                       >
-                        🎯 Set Custom %
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="2" />
+                        </svg>
+                        Set Custom %
                       </button>
                     </td>
                   </tr>

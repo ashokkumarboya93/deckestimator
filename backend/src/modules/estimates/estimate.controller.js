@@ -128,6 +128,24 @@ async function updateEstimate(req, res, next) {
   }
 }
 
+async function requestProjectEstimate(req, res, next) {
+  try {
+    const result = await estimateService.requestProjectEstimate(
+      req.params.id,
+      req.body,
+      req.user,
+      getClientIp(req)
+    );
+    res.status(200).json({
+      success: true,
+      message: 'Project request / booking successfully submitted to Deck Restoration Plus Team.',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createEstimate,
   getEstimates,
@@ -137,5 +155,6 @@ module.exports = {
   updateEstimateStatus,
   deleteEstimate,
   updateEstimate,
+  requestProjectEstimate,
 };
 

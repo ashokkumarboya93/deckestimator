@@ -98,6 +98,14 @@ export async function deleteEstimate(id) {
   return res.data;
 }
 
+export async function requestProjectEstimate(id, payload = {}) {
+  const res = await apiClient(`${ENDPOINTS.ESTIMATES.BASE}/${id}/request`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return res.data;
+}
+
 export async function calculateLivePricing(payload) {
   const res = await apiClient(ENDPOINTS.PRICING.CALCULATE, {
     method: 'POST',

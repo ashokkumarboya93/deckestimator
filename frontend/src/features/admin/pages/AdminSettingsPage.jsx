@@ -437,7 +437,13 @@ export default function AdminSettingsPage() {
                       ...(notifForm.recipientType === 'customer' ? styles.audienceBtnActive : {}),
                     }}
                   >
-                    👥 All Customers
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    All Customers
                   </button>
                   <button
                     type="button"
@@ -447,7 +453,12 @@ export default function AdminSettingsPage() {
                       ...(notifForm.recipientType === 'contractor' ? styles.audienceBtnActive : {}),
                     }}
                   >
-                    👷 All Contractors
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                      <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
+                      <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
+                      <line x1="4" y1="18" x2="20" y2="18" />
+                    </svg>
+                    All Contractors
                   </button>
                   <button
                     type="button"
@@ -457,7 +468,12 @@ export default function AdminSettingsPage() {
                       ...(notifForm.recipientType === 'both' ? styles.audienceBtnActive : {}),
                     }}
                   >
-                    🌐 Both (Everyone)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="2" y1="12" x2="22" y2="12" />
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </svg>
+                    Both (Everyone)
                   </button>
                   <button
                     type="button"
@@ -467,7 +483,12 @@ export default function AdminSettingsPage() {
                       ...(notifForm.recipientType === 'specific' ? styles.audienceBtnActive : {}),
                     }}
                   >
-                    🎯 Specific User(s)...
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    Specific User(s)...
                   </button>
                 </div>
               </div>
@@ -583,7 +604,11 @@ export default function AdminSettingsPage() {
               </div>
 
               <button type="submit" disabled={dispatchingNotif} style={styles.btnPrimary}>
-                {dispatchingNotif ? 'Dispatching Broadcast...' : '🚀 Send & Broadcast Notification'}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                {dispatchingNotif ? 'Dispatching Broadcast...' : 'Send & Broadcast Notification'}
               </button>
             </form>
 

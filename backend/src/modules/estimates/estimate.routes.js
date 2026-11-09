@@ -35,6 +35,7 @@ router.get('/:id', validate(idParamSchema), estimateController.getEstimateById);
 router.post('/:id/recalculate', validate(recalculateEstimateSchema), estimateController.recalculateEstimate);
 router.get('/:id/history', validate(idParamSchema), estimateController.getEstimateHistory);
 router.patch('/:id/status', validate(updateEstimateStatusSchema), estimateController.updateEstimateStatus);
+router.post('/:id/request', estimateController.requestProjectEstimate);
 router.put('/:id', validate(idParamSchema), estimateController.updateEstimate);
 router.delete('/:id', validate(idParamSchema), estimateController.deleteEstimate);
 

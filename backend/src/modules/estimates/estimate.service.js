@@ -15,6 +15,8 @@ const DiscountAssignment = require('../discounts/discountAssignment.model');
 const pricingService = require('../pricing/pricing.service');
 const pricingEngine = require('../pricing/pricingEngine');
 const AuditLog = require('../../shared/models/auditLog.model');
+const Lead = require('../leads/lead.model');
+const Project = require('../admin/project.model');
 const {
   BadRequestError,
   NotFoundError,
@@ -885,6 +887,115 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   return estimate.toJSON();
 }
 
+async function requestProjectEstimate(estimateId, body, user, ipAddress) {
+  const estimate = await Estimate.findById(estimateId);
+  if (!estimate) {
+    throw new NotFoundError('Estimate not found.');
+  }
+
+  // 1. Update estimate status to REQUESTED
+  estimate.estimateStatus = 'REQUESTED';
+  estimate.customerFacingStatus = {
+    status: 'REQUESTED',
+    note: body.message || 'User requested booking and reach-out for this estimation.',
+    updatedAt: new Date(),
+  };
+  await estimate.save();
+
+  // 2. Create or sync a Hot Priority Lead
+  const isContractor = user.role === ROLES.CONTRACTOR;
+  const leadNum = `LD-${estimate.estimateReference || Date.now().toString().slice(-4)}`;
+
+  let lead = await Lead.findOne({ estimateId: estimate._id });
+  if (!lead) {
+    lead = new Lead({
+      leadNumber: leadNum,
+      customerId: !isContractor ? user._id : null,
+      contractorId: isContractor ? user._id : null,
+      deckId: estimate.deckId,
+      estimateId: estimate._id,
+      leadSource: isContractor ? 'contractor_portal' : 'customer_estimator',
+      priority: 'HOT',
+      status: 'new',
+      enquiry: {
+        subject: body.subject || `Project Service Request (${estimate.deckDetails?.projectName || 'Deck Project'})`,
+        message: body.message || `User requested booking / reach-out for estimation ${estimate.estimateReference || ''} ($${estimate.totalAmount || 0})`,
+        preferredContactMethod: body.preferredContactMethod || 'any',
+        preferredContactTime: body.preferredContactTime || 'any',
+      },
+      customerSnapshot: {
+        name: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      },
+      contractorSnapshot: isContractor ? {
+        name: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      } : {},
+      deckSnapshot: {
+        projectName: estimate.deckDetails?.projectName || 'Project Deck',
+        city: estimate.deckDetails?.city || '',
+        state: estimate.deckDetails?.state || '',
+        area: estimate.deckDetails?.areaSqFt || estimate.deckDetails?.area || 0,
+        surfaceMaterial: estimate.deckDetails?.woodSpecies || estimate.deckDetails?.surfaceMaterial || '',
+      },
+      estimateSnapshot: {
+        estimateId: estimate._id,
+        estimateReference: estimate.estimateReference || '',
+        totalAmount: estimate.totalAmount || 0,
+      },
+      latestContactDate: new Date(),
+    });
+    await lead.save();
+  } else {
+    lead.priority = 'HOT';
+    lead.status = 'new';
+    lead.latestContactDate = new Date();
+    if (body.message) {
+      lead.enquiry = lead.enquiry || {};
+      lead.enquiry.message = body.message;
+    }
+    await lead.save();
+  }
+
+  // 3. Create or update Project record
+  let project = await Project.findOne({ estimateId: estimate._id });
+  if (!project) {
+    project = new Project({
+      projectId: estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
+      projectName: estimate.deckDetails?.projectName || 'Deck Restoration Project',
+      customerId: !isContractor ? user._id : estimate.userId,
+      contractorId: isContractor ? user._id : null,
+      deckId: estimate.deckId,
+      estimateId: estimate._id,
+      status: 'pending',
+      progress: 30,
+      notes: body.message || 'User booked estimation request',
+    });
+    await project.save();
+  } else {
+    project.status = 'pending';
+    project.progress = 30;
+    await project.save();
+  }
+
+  // 4. Audit Log
+  await recordAuditLog({
+    performedBy: user.id || user._id,
+    action: 'REQUEST_ESTIMATE_PROJECT',
+    entityId: estimate._id,
+    newValue: { estimateStatus: 'REQUESTED', leadId: lead._id, projectId: project._id },
+    ipAddress,
+  });
+
+  return {
+    estimate: estimate.toJSON(),
+    lead: lead.toJSON(),
+    project: project.toJSON(),
+  };
+}
+
 module.exports = {
   createEstimate,
   getEstimates,
@@ -894,4 +1005,5 @@ module.exports = {
   updateEstimateStatus,
   deleteEstimate,
   updateEstimate,
+  requestProjectEstimate,
 };

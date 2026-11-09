@@ -2,28 +2,41 @@
 // Deck Estimator — Admin Projects Directory & Progress Page
 // =============================================
 // Features:
-// - Status summary metric cards: Total, Active / In Progress, Completed, On Hold
-// - Table of projects with dimensions, customer, contractor, and progress bar
-// - Update progress modal with 0-100% slider, status dropdown, note, and progress history timeline
-// - Export to CSV & Excel with status filter
-// - Directly backed by MongoDB via adminApi
+// - Summary KPI cards matching the pastel pill design (White circular badge, uppercase label, bold metric, chevron)
+// - Real-time MongoDB synchronization across Customer and Contractor estimations
+// - 4 Discrete Life Cycle Stages (No percentage bars):
+//     created  ->  requested (amber)  ->  in progress (blue)  ->  completed (green)
+// - Direct Admin Stage Controls: Update project stage with real-time customer & contractor portal sync
+// - Shiny pill-shaped search bar, status filter pills, refresh button, and export actions
+// - Comprehensive View Details modal showing deck specs, customer & contractor info, amounts, and history
+// - Export to CSV & Excel
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 
+const STAGES = [
+  { id: 'all', label: 'All Stages' },
+  { id: 'created', label: 'Created' },
+  { id: 'requested', label: 'Requested' },
+  { id: 'in_progress', label: 'In Progress' },
+  { id: 'completed', label: 'Completed' },
+];
+
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState([]);
+  const [counts, setCounts] = useState({ total: 0, created: 0, requested: 0, inProgress: 0, completed: 0, totalValue: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [progressModal, setProgressModal] = useState({ open: false, project: null, progress: 0, status: '', note: '' });
-  const [savingProgress, setSavingProgress] = useState(false);
+  const [stageModal, setStageModal] = useState({ open: false, project: null, stage: 'in_progress', note: '' });
+  const [savingStage, setSavingStage] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -31,17 +44,22 @@ export default function AdminProjectsPage() {
 
   const fetchProjects = async () => {
     setLoading(true);
+    setIsRefreshing(true);
     setError(null);
     try {
       const res = await adminApi.getProjects({
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        limit: 50,
+        limit: 100,
       });
       setProjects(res.data || []);
+      if (res.counts) {
+        setCounts(res.counts);
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load projects');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -50,42 +68,42 @@ export default function AdminProjectsPage() {
     const term = searchTerm.toLowerCase();
     return (
       p.title?.toLowerCase().includes(term) ||
+      p.projectName?.toLowerCase().includes(term) ||
+      p.projectId?.toLowerCase().includes(term) ||
       p.customerName?.toLowerCase().includes(term) ||
-      p.contractorName?.toLowerCase().includes(term)
+      p.contractorName?.toLowerCase().includes(term) ||
+      p.location?.toLowerCase().includes(term) ||
+      p.woodSpecies?.toLowerCase().includes(term)
     );
   });
 
-  const totalCount = projects.length;
-  const inProgressCount = projects.filter((p) => p.status === 'in_progress').length;
-  const completedCount = projects.filter((p) => p.status === 'completed').length;
-  const onHoldCount = projects.filter((p) => p.status === 'on_hold').length;
-
-  const handleOpenProgress = (project) => {
-    setProgressModal({
+  const handleOpenStageModal = (project) => {
+    const current = (project.stage || project.status || 'created').toLowerCase();
+    const nextDefault = current === 'created' ? 'requested' : current === 'requested' ? 'in_progress' : current === 'in_progress' ? 'completed' : 'completed';
+    setStageModal({
       open: true,
       project,
-      progress: project.progress || 0,
-      status: project.status || 'in_progress',
+      stage: nextDefault,
       note: '',
     });
   };
 
-  const handleSaveProgress = async () => {
-    if (!progressModal.project) return;
-    setSavingProgress(true);
+  const handleSaveStage = async () => {
+    if (!stageModal.project) return;
+    setSavingStage(true);
     try {
-      await adminApi.updateProjectProgress(progressModal.project._id, {
-        progress: Number(progressModal.progress),
-        status: progressModal.status,
-        note: progressModal.note || `Progress adjusted to ${progressModal.progress}%`,
+      await adminApi.updateProjectProgress(stageModal.project._id, {
+        stage: stageModal.stage,
+        status: stageModal.stage,
+        note: stageModal.note || `Stage updated to ${stageModal.stage.replace('_', ' ').toUpperCase()} by Administrator`,
       });
-      setSuccessMsg(`Progress updated for project: ${progressModal.project.title}`);
-      setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' });
+      setSuccessMsg(`Project stage updated to "${stageModal.stage.replace('_', ' ').toUpperCase()}" successfully.`);
+      setStageModal({ open: false, project: null, stage: 'in_progress', note: '' });
       fetchProjects();
     } catch (err) {
-      setError(err?.message || 'Failed to update project progress.');
+      setError(err?.message || 'Failed to update project stage.');
     } finally {
-      setSavingProgress(false);
+      setSavingStage(false);
     }
   };
 
@@ -94,14 +112,54 @@ export default function AdminProjectsPage() {
     setIsDetailsModalOpen(true);
   };
 
+  const renderStageBadge = (stage) => {
+    const s = (stage || 'created').toLowerCase();
+    if (s === 'completed') {
+      return (
+        <span style={styles.badgeCompleted}>
+          <span style={styles.badgeDotGreen} />
+          Completed
+        </span>
+      );
+    }
+    if (s === 'in_progress' || s === 'in progress') {
+      return (
+        <span style={styles.badgeInProgress}>
+          <span style={styles.badgeDotBlue} />
+          In Progress
+        </span>
+      );
+    }
+    if (s === 'requested') {
+      return (
+        <span style={styles.badgeRequested}>
+          <span style={styles.badgeDotAmber} />
+          Requested
+        </span>
+      );
+    }
+    return (
+      <span style={styles.badgeCreated}>
+        <span style={styles.badgeDotSlate} />
+        Created
+      </span>
+    );
+  };
+
   return (
     <div style={styles.container}>
-      {/* Header */}
+      {/* 1. Header with Title and Shiny Pill Export Buttons */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Projects Directory</h1>
+          <div style={styles.headerTitleRow}>
+            <h1 style={styles.title}>Project Management</h1>
+            <span style={styles.liveDbPill}>
+              <span style={styles.pulseDot} />
+              Live Database Connected
+            </span>
+          </div>
           <p style={styles.subtitle}>
-            Monitor all deck restoration and staining projects across customer and contractor lifecycles.
+            Monitor customer and contractor deck restoration estimations throughout their complete life cycle.
           </p>
         </div>
         <div style={styles.headerActions}>
@@ -109,16 +167,29 @@ export default function AdminProjectsPage() {
             href={adminApi.exportProjectsUrl('csv', statusFilter)}
             target="_blank"
             rel="noreferrer"
-            style={styles.btnSecondary}
+            style={styles.shinyExportBtn}
+            title="Export filtered projects as CSV"
           >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
             Export CSV
           </a>
           <a
             href={adminApi.exportProjectsUrl('excel', statusFilter)}
             target="_blank"
             rel="noreferrer"
-            style={styles.btnSuccess}
+            style={styles.shinyExportGreenBtn}
+            title="Export filtered projects as Excel"
           >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
             Export Excel
           </a>
         </div>
@@ -127,156 +198,288 @@ export default function AdminProjectsPage() {
       {/* Alerts */}
       {successMsg && (
         <div style={styles.alertSuccess}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2.2">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span style={{ marginLeft: 8 }}>{successMsg}</span>
+          <span style={{ marginLeft: 8, flex: 1 }}>{successMsg}</span>
           <button onClick={() => setSuccessMsg(null)} style={styles.alertCloseBtn}>✕</button>
         </div>
       )}
 
       {error && (
         <div style={styles.alertError}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.2">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
           </svg>
-          <span style={{ marginLeft: 8 }}>{error}</span>
+          <span style={{ marginLeft: 8, flex: 1 }}>{error}</span>
           <button onClick={() => setError(null)} style={styles.alertCloseBtn}>✕</button>
         </div>
       )}
 
-      {/* Summary KPI Cards */}
-      <div style={styles.kpiGrid}>
-        <div style={styles.kpiCard}>
-          <span style={styles.kpiLabel}>Total Projects</span>
-          <span style={styles.kpiValue}>{totalCount}</span>
+      {/* 2. Summary KPI Cards (Pastel Pill Cards Matching Uploaded Reference Image) */}
+      <div style={styles.cardsRow}>
+        {/* Card 1: TOTAL ESTIMATIONS (Blue Pill) */}
+        <div style={styles.cardBlueRef} onClick={() => setStatusFilter('all')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelBlue}>TOTAL ESTIMATIONS</div>
+                <div style={styles.cardRefValueBlue}>{loading ? '...' : (counts.total ?? projects.length)}</div>
+              </div>
+            </div>
+            <div style={styles.chevronBlue}>›</div>
+          </div>
         </div>
-        <div style={styles.kpiCard}>
-          <span style={styles.kpiLabel}>In Progress</span>
-          <span style={{ ...styles.kpiValue, color: '#1d4ed8' }}>{inProgressCount}</span>
+
+        {/* Card 2: REQUESTED PROJECTS (Amber Pill) */}
+        <div style={styles.cardAmberRef} onClick={() => setStatusFilter('requested')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelAmber}>REQUESTED PROJECTS</div>
+                <div style={styles.cardRefValueAmber}>{loading ? '...' : (counts.requested ?? 0)}</div>
+              </div>
+            </div>
+            <div style={styles.chevronAmber}>›</div>
+          </div>
         </div>
-        <div style={styles.kpiCard}>
-          <span style={styles.kpiLabel}>Completed</span>
-          <span style={{ ...styles.kpiValue, color: '#047857' }}>{completedCount}</span>
+
+        {/* Card 3: IN PROGRESS (Purple Pill) */}
+        <div style={styles.cardPurpleRef} onClick={() => setStatusFilter('in_progress')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7e22ce" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelPurple}>IN PROGRESS</div>
+                <div style={styles.cardRefValuePurple}>{loading ? '...' : (counts.inProgress ?? 0)}</div>
+              </div>
+            </div>
+            <div style={styles.chevronPurple}>›</div>
+          </div>
         </div>
-        <div style={styles.kpiCard}>
-          <span style={styles.kpiLabel}>On Hold</span>
-          <span style={{ ...styles.kpiValue, color: '#b45309' }}>{onHoldCount}</span>
+
+        {/* Card 4: COMPLETED PROJECTS (Emerald Pill) */}
+        <div style={styles.cardGreenRef} onClick={() => setStatusFilter('completed')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelGreen}>COMPLETED PROJECTS</div>
+                <div style={styles.cardRefValueGreen}>{loading ? '...' : (counts.completed ?? 0)}</div>
+              </div>
+            </div>
+            <div style={styles.chevronGreen}>›</div>
+          </div>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div style={styles.filterBar}>
-        <div style={styles.searchBox}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+      {/* 3. Controls Bar: Shiny Pill Search, Stage Filter Tabs, and Shiny Refresh Button */}
+      <div style={styles.controlBar}>
+        {/* Shiny Pill Search Input */}
+        <div style={styles.shinySearchWrapper}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" style={{ marginRight: 8, flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             type="text"
-            placeholder="Search projects by name, customer, contractor..."
+            placeholder="Search estimations by name, customer, contractor, location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
+            style={styles.shinySearchInput}
           />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} style={styles.clearSearchBtn} title="Clear search">✕</button>
+          )}
         </div>
 
-        <div style={styles.statusPills}>
-          {['all', 'in_progress', 'completed', 'on_hold'].map((s) => (
+        {/* Stage Filter Pills */}
+        <div style={styles.stageFilterPills}>
+          {STAGES.map((s) => (
             <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
+              key={s.id}
+              onClick={() => setStatusFilter(s.id)}
               style={{
-                ...styles.filterPill,
-                ...(statusFilter === s ? styles.filterPillActive : {}),
+                ...styles.shinyStageBtn,
+                ...(statusFilter === s.id ? styles.shinyStageBtnActive : {}),
               }}
             >
-              {s === 'all' ? 'All' : s === 'in_progress' ? 'In Progress' : s.replace('_', ' ').toUpperCase()}
+              {s.label}
+              {s.id === 'created' && counts.created ? ` (${counts.created})` : ''}
+              {s.id === 'requested' && counts.requested ? ` (${counts.requested})` : ''}
+              {s.id === 'in_progress' && counts.inProgress ? ` (${counts.inProgress})` : ''}
+              {s.id === 'completed' && counts.completed ? ` (${counts.completed})` : ''}
             </button>
           ))}
         </div>
+
+        {/* Shiny Refresh Button */}
+        <button
+          onClick={fetchProjects}
+          style={styles.shinyRefreshBtn}
+          title="Refresh Projects Database"
+          disabled={loading}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              transition: 'transform 0.4s ease',
+              transform: isRefreshing ? 'rotate(360deg)' : 'none',
+              marginRight: 6,
+            }}
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+          Refresh
+        </button>
       </div>
 
-      {/* Projects Table */}
+      {/* 4. Projects Table */}
       <div style={styles.card}>
         {loading ? (
           <div style={styles.loaderBox}>
             <div style={styles.spinner} />
-            <span>Loading project records...</span>
+            <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 600 }}>Loading project estimations from database...</span>
           </div>
         ) : filteredProjects.length === 0 ? (
           <div style={styles.emptyBox}>
-            <p style={styles.emptyTitle}>No projects found</p>
-            <p style={styles.emptySub}>Estimates accepted by customers will create projects here automatically.</p>
+            <div style={styles.emptyIconCircle}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+              </svg>
+            </div>
+            <p style={styles.emptyTitle}>No project estimations found</p>
+            <p style={styles.emptySub}>
+              {searchTerm
+                ? 'No matching projects match your search keywords.'
+                : 'Customer and contractor estimations will automatically show up as projects.'}
+            </p>
           </div>
         ) : (
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Project & Deck Details</th>
-                  <th style={styles.th}>Customer</th>
-                  <th style={styles.th}>Contractor</th>
-                  <th style={styles.th}>Progress (%)</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Last Updated</th>
+                  <th style={styles.th}>Project / Estimation</th>
+                  <th style={styles.th}>Customer / Initiator</th>
+                  <th style={styles.th}>Assigned Contractor</th>
+                  <th style={styles.th}>Dimensions & Specs</th>
+                  <th style={styles.th}>Estimated Value</th>
+                  <th style={styles.th}>Life Cycle Stage</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProjects.map((p) => (
-                  <tr key={p._id} style={styles.tr}>
+                  <tr key={p._id || p.id} style={styles.tr}>
+                    {/* Project & Ref */}
                     <td style={styles.td}>
-                      <div style={{ fontWeight: '600', color: '#0f172a' }}>{p.title}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {p.deckSpecs?.length || 0}' × {p.deckSpecs?.width || 0}' ({((p.deckSpecs?.length || 0) * (p.deckSpecs?.width || 0))} sq ft)
-                        {p.deckSpecs?.woodSpecies ? ` • ${p.deckSpecs.woodSpecies}` : ''}
+                      <div style={styles.projectTitleRow}>
+                        <span style={styles.projectTitle}>{p.title || p.projectName || 'Deck Restoration Project'}</span>
+                        <span style={styles.referenceBadge}>{p.estimateReference || p.projectId || 'EST'}</span>
+                      </div>
+                      <div style={styles.projectSub}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4 }}>
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        {p.location || 'New Jersey, USA'}
                       </div>
                     </td>
+
+                    {/* Customer */}
                     <td style={styles.td}>
-                      <div style={{ fontWeight: '500', color: '#0f172a' }}>{p.customerName || 'Customer'}</div>
+                      <div style={styles.contactName}>{p.customerName || 'Homeowner Customer'}</div>
+                      <div style={styles.contactEmail}>{p.userEmail || '—'}</div>
+                      {p.userPhone && <div style={styles.contactPhone}>{p.userPhone}</div>}
                     </td>
+
+                    {/* Contractor */}
                     <td style={styles.td}>
-                      <div style={{ fontWeight: '500', color: '#0f172a' }}>{p.contractorName || 'Assigned Specialist'}</div>
-                    </td>
-                    <td style={styles.td}>
-                      <div style={styles.progressContainer}>
-                        <div style={styles.progressTrack}>
-                          <div
-                            style={{
-                              ...styles.progressBar,
-                              width: `${p.progress || 0}%`,
-                              backgroundColor: p.progress === 100 ? '#10b981' : '#1d4ed8',
-                            }}
-                          />
-                        </div>
-                        <span style={styles.progressText}>{p.progress || 0}%</span>
+                      <div style={styles.contactName}>{p.contractorName || 'Deck Restoration Plus Staff'}</div>
+                      <div style={styles.contactRoleBadge}>
+                        {p.userRole === 'contractor' ? 'Contractor Estimate' : 'Customer Request'}
                       </div>
                     </td>
+
+                    {/* Dimensions & Specs */}
                     <td style={styles.td}>
-                      <span style={getStatusBadge(p.status)}>
-                        {(p.status || 'IN_PROGRESS').replace('_', ' ').toUpperCase()}
-                      </span>
+                      <div style={styles.specPrimary}>
+                        {p.deckSpecs?.dimensions ? `${p.deckSpecs.dimensions} ft` : p.deckSize || '400 sq ft'}
+                      </div>
+                      <div style={styles.specSecondary}>
+                        {p.woodSpecies || p.deckSpecs?.woodSpecies || 'Pressure Treated Pine'}
+                      </div>
                     </td>
+
+                    {/* Estimated Value */}
                     <td style={styles.td}>
-                      <span style={{ fontSize: '13px', color: '#64748b' }}>
-                        {new Date(p.updatedAt || Date.now()).toLocaleDateString()}
-                      </span>
+                      <div style={styles.amountPrimary}>
+                        ${Number(p.totalAmount || 0).toLocaleString()}
+                      </div>
+                      <div style={styles.amountSub}>Calculated Price</div>
                     </td>
+
+                    {/* Life Cycle Stage */}
+                    <td style={styles.td}>
+                      {renderStageBadge(p.stage || p.status)}
+                    </td>
+
+                    {/* Actions */}
                     <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <div style={styles.actionButtonGroup}>
+                      <div style={styles.actionGroup}>
                         <button
-                          onClick={() => handleOpenDetails(p)}
-                          style={styles.actionBtnOutline}
+                          onClick={() => handleOpenStageModal(p)}
+                          style={styles.btnUpdateStage}
+                          title="Update Life Cycle Stage"
                         >
-                          Details
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 4 }}>
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                          Update Stage
                         </button>
                         <button
-                          onClick={() => handleOpenProgress(p)}
-                          style={styles.actionBtnPrimary}
+                          onClick={() => handleOpenDetails(p)}
+                          style={styles.btnViewDetails}
+                          title="View Full Estimation Dossier"
                         >
-                          Update Progress
+                          View Details
                         </button>
                       </div>
                     </td>
@@ -288,193 +491,220 @@ export default function AdminProjectsPage() {
         )}
       </div>
 
-      {/* UPDATE PROGRESS MODAL */}
-      {progressModal.open && progressModal.project && (
-        <div style={styles.modalOverlay} onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Update Project Progress</h3>
-            <p style={styles.modalSub}>{progressModal.project.title}</p>
-
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <label style={styles.inputLabel}>Progress Completion:</label>
-                <span style={{ fontWeight: '700', color: '#1d4ed8' }}>{progressModal.progress}%</span>
+      {/* 5. Update Life Cycle Stage Modal */}
+      {stageModal.open && stageModal.project && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalBox}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Update Life Cycle Stage</h3>
+                <p style={styles.modalSub}>
+                  {stageModal.project.title || stageModal.project.projectName} ({stageModal.project.estimateReference || stageModal.project.projectId})
+                </p>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={progressModal.progress}
-                onChange={(e) => setProgressModal({ ...progressModal, progress: Number(e.target.value) })}
-                style={{ width: '100%', accentColor: '#1d4ed8' }}
-              />
-            </div>
-
-            <div style={{ marginTop: '16px' }}>
-              <label style={styles.inputLabel}>Milestone Status:</label>
-              <select
-                value={progressModal.status}
-                onChange={(e) => setProgressModal({ ...progressModal, status: e.target.value })}
-                style={styles.selectInputFull}
+              <button
+                onClick={() => setStageModal({ open: false, project: null, stage: 'in_progress', note: '' })}
+                style={styles.closeBtn}
               >
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="on_hold">On Hold</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+                ✕
+              </button>
             </div>
 
-            <div style={{ marginTop: '16px' }}>
-              <label style={styles.inputLabel}>Progress Note / History Log:</label>
-              <textarea
-                rows={2}
-                style={styles.modalTextarea}
-                placeholder="e.g. Completed pressure cleaning and sanding. Awaiting dry time..."
-                value={progressModal.note}
-                onChange={(e) => setProgressModal({ ...progressModal, note: e.target.value })}
-              />
-            </div>
+            <div style={styles.modalBody}>
+              <div style={styles.formGroup}>
+                <label style={styles.inputLabel}>Current Stage</label>
+                <div style={{ marginBottom: 12 }}>
+                  {renderStageBadge(stageModal.project.stage || stageModal.project.status)}
+                </div>
+              </div>
 
-            {/* Existing Progress History in modal */}
-            {progressModal.project.progressHistory && progressModal.project.progressHistory.length > 0 && (
-              <div style={{ marginTop: '16px', maxHeight: '140px', overflowY: 'auto' }}>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Recent Milestone Logs:</span>
-                <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {progressModal.project.progressHistory.map((h, i) => (
-                    <div key={i} style={{ fontSize: '12px', padding: '6px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-                      <strong>{h.progress}%</strong> — {h.note || 'Milestone updated'} ({new Date(h.updatedAt).toLocaleDateString()})
+              <div style={styles.formGroup}>
+                <label style={styles.inputLabel}>Select New Life Cycle Stage</label>
+                <div style={styles.stageChoiceGrid}>
+                  {[
+                    { id: 'created', label: 'Created', desc: 'Initial estimation generated', color: '#64748b' },
+                    { id: 'requested', label: 'Requested', desc: 'Customer/Contractor reached out or booked', color: '#d97706' },
+                    { id: 'in_progress', label: 'In Progress', desc: 'Staff or crew work commenced', color: '#2563eb' },
+                    { id: 'completed', label: 'Completed', desc: 'Deck restoration finished & delivered', color: '#16a34a' },
+                  ].map((st) => (
+                    <div
+                      key={st.id}
+                      onClick={() => setStageModal({ ...stageModal, stage: st.id })}
+                      style={{
+                        ...styles.stageChoiceCard,
+                        ...(stageModal.stage === st.id ? styles.stageChoiceCardActive : {}),
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 700, fontSize: '13px', color: st.color }}>{st.label}</span>
+                        <input
+                          type="radio"
+                          name="targetStage"
+                          checked={stageModal.stage === st.id}
+                          onChange={() => setStageModal({ ...stageModal, stage: st.id })}
+                        />
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: 4 }}>{st.desc}</div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+
+              <div style={styles.formGroup}>
+                <label style={styles.inputLabel}>Stage Update Note / Customer Facing Message</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g., Work schedule confirmed; crew dispatched for stripping and restoration..."
+                  value={stageModal.note}
+                  onChange={(e) => setStageModal({ ...stageModal, note: e.target.value })}
+                  style={styles.modalTextarea}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: 4, display: 'block' }}>
+                  This update synchronizes in real time with the customer and contractor portals.
+                </span>
+              </div>
+            </div>
 
             <div style={styles.modalFooter}>
               <button
-                onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}
-                style={styles.btnSecondary}
-                disabled={savingProgress}
+                type="button"
+                onClick={() => setStageModal({ open: false, project: null, stage: 'in_progress', note: '' })}
+                style={styles.btnCancel}
+                disabled={savingStage}
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveProgress}
-                style={styles.btnPrimary}
-                disabled={savingProgress}
+                type="button"
+                onClick={handleSaveStage}
+                style={styles.btnSaveStage}
+                disabled={savingStage}
               >
-                {savingProgress ? 'Saving...' : 'Save Milestone'}
+                {savingStage ? 'Updating Stage...' : 'Apply Stage Update'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROJECT DETAILS MODAL */}
+      {/* 6. View Details Modal */}
       {isDetailsModalOpen && selectedProject && (
-        <div style={styles.modalOverlay} onClick={() => setIsDetailsModalOpen(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalBox, maxWidth: '640px' }}>
             <div style={styles.modalHeader}>
               <div>
-                <h2 style={styles.modalTitle}>{selectedProject.title}</h2>
-                <p style={styles.modalSub}>Detailed Project Specifications & Timeline</p>
+                <h3 style={styles.modalTitle}>{selectedProject.title || selectedProject.projectName}</h3>
+                <p style={styles.modalSub}>
+                  Reference: {selectedProject.estimateReference || selectedProject.projectId} • Created {new Date(selectedProject.createdAt || Date.now()).toLocaleDateString()}
+                </p>
               </div>
               <button onClick={() => setIsDetailsModalOpen(false)} style={styles.closeBtn}>✕</button>
             </div>
 
             <div style={styles.modalBody}>
-              <div style={styles.detailGrid}>
-                <div style={styles.detailItem}>
-                  <span style={styles.detailLabel}>Customer</span>
-                  <span style={styles.detailValue}>{selectedProject.customerName || 'Customer'}</span>
+              {/* Top Highlights */}
+              <div style={styles.detailsHighlightRow}>
+                <div style={styles.highlightBlock}>
+                  <span style={styles.highlightLabel}>Life Cycle Stage</span>
+                  <div style={{ marginTop: 4 }}>
+                    {renderStageBadge(selectedProject.stage || selectedProject.status)}
+                  </div>
                 </div>
-                <div style={styles.detailItem}>
-                  <span style={styles.detailLabel}>Contractor</span>
-                  <span style={styles.detailValue}>{selectedProject.contractorName || 'Assigned Specialist'}</span>
+                <div style={styles.highlightBlock}>
+                  <span style={styles.highlightLabel}>Estimated Total Amount</span>
+                  <span style={styles.highlightAmount}>${Number(selectedProject.totalAmount || 0).toLocaleString()}</span>
                 </div>
-                <div style={styles.detailItem}>
-                  <span style={styles.detailLabel}>Status</span>
-                  <span style={getStatusBadge(selectedProject.status)}>
-                    {(selectedProject.status || 'IN_PROGRESS').replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
-                <div style={styles.detailItem}>
-                  <span style={styles.detailLabel}>Current Progress</span>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#1d4ed8' }}>
-                    {selectedProject.progress || 0}%
+                <div style={styles.highlightBlock}>
+                  <span style={styles.highlightLabel}>Deck Dimensions & Area</span>
+                  <span style={styles.highlightText}>
+                    {selectedProject.deckSpecs?.dimensions ? `${selectedProject.deckSpecs.dimensions} ft` : ''} ({selectedProject.areaSqFt || selectedProject.deckSpecs?.area || 400} sq ft)
                   </span>
                 </div>
               </div>
 
-              {selectedProject.deckSpecs && (
-                <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#0f172a' }}>Deck Specifications</h4>
-                  <div style={styles.detailGrid}>
-                    <div style={styles.detailItem}>
-                      <span style={styles.detailLabel}>Dimensions</span>
-                      <span style={styles.detailValue}>{selectedProject.deckSpecs.length}' Length × {selectedProject.deckSpecs.width}' Width</span>
-                    </div>
-                    <div style={styles.detailItem}>
-                      <span style={styles.detailLabel}>Area</span>
-                      <span style={styles.detailValue}>{(selectedProject.deckSpecs.length || 0) * (selectedProject.deckSpecs.width || 0)} sq ft</span>
-                    </div>
-                    <div style={styles.detailItem}>
-                      <span style={styles.detailLabel}>Wood Species</span>
-                      <span style={styles.detailValue}>{selectedProject.deckSpecs.woodSpecies || 'Pressure Treated'}</span>
-                    </div>
-                    <div style={styles.detailItem}>
-                      <span style={styles.detailLabel}>Condition</span>
-                      <span style={styles.detailValue}>{selectedProject.deckSpecs.condition || 'Fair'}</span>
-                    </div>
+              {/* Dossier Grid */}
+              <div style={styles.dossierGrid}>
+                <div style={styles.dossierCard}>
+                  <h4 style={styles.dossierSectionTitle}>Customer Details</h4>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Name:</span>
+                    <span style={styles.dossierVal}>{selectedProject.customerName || 'Homeowner'}</span>
                   </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Email:</span>
+                    <span style={styles.dossierVal}>{selectedProject.userEmail || '—'}</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Phone:</span>
+                    <span style={styles.dossierVal}>{selectedProject.userPhone || '—'}</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Location:</span>
+                    <span style={styles.dossierVal}>{selectedProject.location || 'New Jersey, USA'}</span>
+                  </div>
+                </div>
+
+                <div style={styles.dossierCard}>
+                  <h4 style={styles.dossierSectionTitle}>Deck Specifications</h4>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Wood Species:</span>
+                    <span style={styles.dossierVal}>{selectedProject.woodSpecies || 'Pressure Treated Pine'}</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Surface Area:</span>
+                    <span style={styles.dossierVal}>{selectedProject.areaSqFt || selectedProject.deckSpecs?.area || 400} sq ft</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Assigned Partner:</span>
+                    <span style={styles.dossierVal}>{selectedProject.contractorName || 'Deck Restoration Plus Staff'}</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Origin Role:</span>
+                    <span style={styles.dossierVal}>{selectedProject.userRole?.toUpperCase() || 'CUSTOMER'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estimate Data Breakdown if present */}
+              {selectedProject.estimateData && (
+                <div style={styles.pricingSummaryBox}>
+                  <h4 style={styles.dossierSectionTitle}>Estimation Data Snapshot</h4>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Estimate Reference:</span>
+                    <span style={styles.dossierVal}>{selectedProject.estimateReference}</span>
+                  </div>
+                  <div style={styles.dossierItem}>
+                    <span style={styles.dossierLabel}>Status:</span>
+                    <span style={styles.dossierVal}>{selectedProject.estimateData.estimateStatus || 'CREATED'}</span>
+                  </div>
+                  {selectedProject.estimateData.customerFacingStatus?.note && (
+                    <div style={styles.dossierItem}>
+                      <span style={styles.dossierLabel}>Last Note:</span>
+                      <span style={styles.dossierVal}>{selectedProject.estimateData.customerFacingStatus.note}</span>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Progress History Timeline */}
-              <div style={{ marginTop: '20px' }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#0f172a' }}>Progress History Timeline</h4>
-                {selectedProject.progressHistory && selectedProject.progressHistory.length > 0 ? (
-                  <div style={styles.historyList}>
-                    {selectedProject.progressHistory.map((h, i) => (
-                      <div key={i} style={styles.historyItem}>
-                        <div style={styles.historyDot} />
-                        <div style={styles.historyContent}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <strong>{h.progress}% Progress</strong>
-                            <span style={{ fontSize: '12px', color: '#94a3b8' }}>{new Date(h.updatedAt).toLocaleString()}</span>
-                          </div>
-                          {h.note && <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#475569' }}>{h.note}</p>}
-                          <span style={{ fontSize: '11px', color: '#64748b' }}>By: {h.updatedBy || 'Admin System'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No progress history logged yet.</p>
-                )}
-              </div>
             </div>
 
-            <div style={{ ...styles.modalFooter, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <a
-                  href={adminApi.exportSingleProjectUrl(selectedProject._id || selectedProject.id, 'csv')}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={styles.actionBtnOutline}
-                >
-                  Export Project CSV
-                </a>
-                <a
-                  href={adminApi.exportSingleProjectUrl(selectedProject._id || selectedProject.id, 'excel')}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ ...styles.actionBtnPrimary, textDecoration: 'none', display: 'inline-block' }}
-                >
-                  Export Project Excel
-                </a>
-              </div>
-              <button onClick={() => setIsDetailsModalOpen(false)} style={styles.btnSecondary}>Close</button>
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setIsDetailsModalOpen(false)}
+                style={styles.btnCancel}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDetailsModalOpen(false);
+                  handleOpenStageModal(selectedProject);
+                }}
+                style={styles.btnSaveStage}
+              >
+                Update Stage
+              </button>
             </div>
           </div>
         </div>
@@ -483,439 +713,808 @@ export default function AdminProjectsPage() {
   );
 }
 
-function getStatusBadge(status) {
-  const base = {
-    display: 'inline-block',
-    padding: '3px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '700',
-  };
-  const s = (status || '').toLowerCase();
-  if (s === 'completed') return { ...base, backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
-  if (s === 'on_hold') return { ...base, backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
-  if (s === 'cancelled') return { ...base, backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' };
-  return { ...base, backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' };
-}
-
 const styles = {
   container: {
-    padding: '24px 32px',
-    backgroundColor: '#f8fafc',
-    minHeight: '100%',
+    padding: '24px',
+    maxWidth: '1440px',
+    margin: '0 auto',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '24px',
+    marginBottom: '20px',
     flexWrap: 'wrap',
-    gap: '16px',
+    gap: '14px',
+  },
+  headerTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
   },
   title: {
-    margin: 0,
-    fontSize: '24px',
-    fontWeight: '700',
+    fontSize: '22px',
+    fontWeight: '800',
     color: '#0f172a',
+    margin: 0,
+    letterSpacing: '-0.3px',
+  },
+  liveDbPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ecfdf5',
+    color: '#047857',
+    border: '1px solid #a7f3d0',
+    padding: '3px 10px',
+    borderRadius: '9999px',
+    fontSize: '11px',
+    fontWeight: '700',
+  },
+  pulseDot: {
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    backgroundColor: '#10b981',
+    boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)',
   },
   subtitle: {
-    margin: '6px 0 0',
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#64748b',
+    margin: '4px 0 0',
   },
   headerActions: {
     display: 'flex',
+    alignItems: 'center',
     gap: '10px',
   },
-  btnSecondary: {
-    padding: '8px 16px',
+  shinyExportBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    borderRadius: '9999px',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
     color: '#334155',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-    cursor: 'pointer',
-  },
-  btnSuccess: {
-    padding: '8px 16px',
-    backgroundColor: '#047857',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#ffffff',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-    cursor: 'pointer',
-  },
-  btnPrimary: {
-    padding: '8px 18px',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  kpiCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    padding: '16px 20px',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-  },
-  kpiLabel: {
+    border: '1px solid #cbd5e1',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
     fontSize: '12px',
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: '700',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  shinyExportGreenBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    borderRadius: '9999px',
+    backgroundColor: '#047857',
+    color: '#ffffff',
+    border: '1px solid #065f46',
+    boxShadow: '0 1px 3px rgba(4, 120, 87, 0.25), inset 0 1px 0 rgba(255,255,255,0.25)',
+    fontSize: '12px',
+    fontWeight: '700',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+
+  // Pastel Pill Summary Cards
+  cardsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '14px',
+    marginBottom: '20px',
+  },
+  cardRefInner: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardRefLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+  },
+  iconCircleWhite: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    flexShrink: 0,
+  },
+
+  // 1. Blue Pill
+  cardBlueRef: {
+    backgroundColor: '#eff6ff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '20px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(29, 78, 216, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  cardRefLabelBlue: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#1d4ed8',
+    letterSpacing: '0.6px',
     textTransform: 'uppercase',
   },
-  kpiValue: {
+  cardRefValueBlue: {
     fontSize: '24px',
     fontWeight: '800',
-    color: '#0f172a',
-    marginTop: '6px',
-    display: 'block',
+    color: '#1e3a8a',
+    marginTop: '2px',
+    lineHeight: 1.15,
   },
-  filterBar: {
+  chevronBlue: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#3b82f6',
+  },
+
+  // 2. Amber Pill
+  cardAmberRef: {
+    backgroundColor: '#fffbeb',
+    border: '1px solid #fde68a',
+    borderRadius: '20px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(217, 119, 6, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  cardRefLabelAmber: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#b45309',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueAmber: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#78350f',
+    marginTop: '2px',
+    lineHeight: 1.15,
+  },
+  chevronAmber: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#f59e0b',
+  },
+
+  // 3. Purple Pill
+  cardPurpleRef: {
+    backgroundColor: '#faf5ff',
+    border: '1px solid #e9d5ff',
+    borderRadius: '20px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(126, 34, 206, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  cardRefLabelPurple: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#7e22ce',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValuePurple: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#581c87',
+    marginTop: '2px',
+    lineHeight: 1.15,
+  },
+  chevronPurple: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#a855f7',
+  },
+
+  // 4. Emerald Pill
+  cardGreenRef: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '20px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(22, 163, 74, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  cardRefLabelGreen: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#15803d',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueGreen: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#14532d',
+    marginTop: '2px',
+    lineHeight: 1.15,
+  },
+  chevronGreen: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#22c55e',
+  },
+
+  // Controls Bar
+  controlBar: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
     marginBottom: '16px',
     flexWrap: 'wrap',
-    gap: '16px',
   },
-  searchBox: {
+  shinySearchWrapper: {
     display: 'flex',
     alignItems: 'center',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '0 12px',
-    flex: '1 1 300px',
-    height: '40px',
+    borderRadius: '9999px',
+    padding: '6px 14px',
+    width: '320px',
+    maxWidth: '100%',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04), inset 0 1px 2px rgba(0,0,0,0.02)',
   },
-  searchInput: {
+  shinySearchInput: {
     border: 'none',
     outline: 'none',
-    padding: '0 8px',
-    width: '100%',
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#0f172a',
+    width: '100%',
+    backgroundColor: 'transparent',
   },
-  statusPills: {
+  clearSearchBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#94a3b8',
+    cursor: 'pointer',
+    fontSize: '12px',
+    padding: '0 4px',
+  },
+  stageFilterPills: {
     display: 'flex',
-    gap: '8px',
+    alignItems: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
   },
-  filterPill: {
+  shinyStageBtn: {
     padding: '6px 14px',
+    borderRadius: '9999px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+    color: '#475569',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+  },
+  shinyStageBtnActive: {
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
+    borderColor: '#0f172a',
+    boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)',
+  },
+  shinyRefreshBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '6px 14px',
+    borderRadius: '9999px',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
-    borderRadius: '20px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#64748b',
+    color: '#334155',
+    fontSize: '12px',
+    fontWeight: '700',
     cursor: 'pointer',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+    transition: 'all 0.15s ease',
   },
-  filterPillActive: {
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    borderColor: '#1d4ed8',
-  },
+
+  // Main Card & Table
   card: {
     backgroundColor: '#ffffff',
+    borderRadius: '16px',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    overflow: 'hidden',
   },
   tableResponsive: {
     overflowX: 'auto',
+    width: '100%',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
+    fontSize: '13px',
   },
   th: {
-    padding: '12px 14px',
-    fontSize: '12px',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: '#64748b',
-    borderBottom: '1px solid #e2e8f0',
+    padding: '12px 16px',
     backgroundColor: '#f8fafc',
+    color: '#475569',
+    fontSize: '11px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid #e2e8f0',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
+    transition: 'background-color 0.1s ease',
   },
   td: {
-    padding: '14px',
-    fontSize: '14px',
-    color: '#1e293b',
+    padding: '14px 16px',
     verticalAlign: 'middle',
   },
-  progressContainer: {
+
+  // Row Details
+  projectTitleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    width: '140px',
+    gap: '8px',
   },
-  progressTrack: {
-    flex: 1,
-    height: '8px',
-    backgroundColor: '#e2e8f0',
-    borderRadius: '4px',
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: '4px',
-    transition: 'width 0.3s ease',
-  },
-  progressText: {
-    fontSize: '12px',
+  projectTitle: {
     fontWeight: '700',
-    color: '#334155',
-    width: '32px',
-    textAlign: 'right',
+    color: '#0f172a',
+    fontSize: '13px',
   },
-  actionButtonGroup: {
+  referenceBadge: {
+    fontSize: '10px',
+    fontWeight: '700',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    border: '1px solid #e2e8f0',
+  },
+  projectSub: {
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '11px',
+    color: '#64748b',
+    marginTop: '3px',
+  },
+  contactName: {
+    fontWeight: '600',
+    color: '#0f172a',
+    fontSize: '13px',
+  },
+  contactEmail: {
+    fontSize: '11px',
+    color: '#64748b',
+  },
+  contactPhone: {
+    fontSize: '11px',
+    color: '#0284c7',
+  },
+  contactRoleBadge: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#475569',
+    backgroundColor: '#f1f5f9',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    marginTop: '2px',
+  },
+  specPrimary: {
+    fontWeight: '700',
+    color: '#0f172a',
+    fontSize: '13px',
+  },
+  specSecondary: {
+    fontSize: '11px',
+    color: '#64748b',
+  },
+  amountPrimary: {
+    fontWeight: '800',
+    color: '#047857',
+    fontSize: '14px',
+  },
+  amountSub: {
+    fontSize: '10px',
+    color: '#64748b',
+  },
+
+  // 4 Discrete Stage Badges
+  badgeCreated: {
     display: 'inline-flex',
+    alignItems: 'center',
     gap: '6px',
-  },
-  actionBtnOutline: {
-    padding: '5px 10px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
+    padding: '4px 10px',
+    borderRadius: '9999px',
+    backgroundColor: '#f1f5f9',
     color: '#334155',
-    cursor: 'pointer',
+    border: '1px solid #cbd5e1',
+    fontSize: '11px',
+    fontWeight: '700',
   },
-  actionBtnPrimary: {
-    padding: '5px 12px',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    border: 'none',
+  badgeDotSlate: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#64748b',
+  },
+  badgeRequested: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 10px',
+    borderRadius: '9999px',
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+    border: '1px solid #fcd34d',
+    fontSize: '11px',
+    fontWeight: '800',
+  },
+  badgeDotAmber: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#d97706',
+  },
+  badgeInProgress: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 10px',
+    borderRadius: '9999px',
+    backgroundColor: '#dbeafe',
+    color: '#1e40af',
+    border: '1px solid #93c5fd',
+    fontSize: '11px',
+    fontWeight: '800',
+  },
+  badgeDotBlue: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#2563eb',
+  },
+  badgeCompleted: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px 10px',
+    borderRadius: '9999px',
+    backgroundColor: '#dcfce7',
+    color: '#166534',
+    border: '1px solid #86efac',
+    fontSize: '11px',
+    fontWeight: '800',
+  },
+  badgeDotGreen: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: '#16a34a',
+  },
+
+  // Actions
+  actionGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '8px',
+  },
+  btnUpdateStage: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '5px 10px',
     borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #cbd5e1',
+    color: '#0f172a',
+    fontSize: '11px',
+    fontWeight: '700',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
+  btnViewDetails: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    backgroundColor: '#0f172a',
+    border: 'none',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+
+  // Alerts
+  alertSuccess: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#ecfdf5',
+    color: '#065f46',
+    border: '1px solid #a7f3d0',
+    marginBottom: '16px',
+    fontSize: '13px',
+    fontWeight: '600',
+  },
+  alertError: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#fef2f2',
+    color: '#991b1b',
+    border: '1px solid #fecaca',
+    marginBottom: '16px',
+    fontSize: '13px',
+    fontWeight: '600',
+  },
+  alertCloseBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '14px',
+    cursor: 'pointer',
+    color: '#64748b',
+  },
+
+  // Loader & Empty
   loaderBox: {
+    padding: '48px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '48px 0',
     gap: '12px',
-    color: '#64748b',
   },
   spinner: {
     width: '32px',
     height: '32px',
     border: '3px solid #e2e8f0',
-    borderTopColor: '#1d4ed8',
+    borderTop: '3px solid #1d4ed8',
     borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
+    animation: 'spin 0.8s linear infinite',
   },
   emptyBox: {
+    padding: '48px',
     textAlign: 'center',
-    padding: '48px 0',
+  },
+  emptyIconCircle: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: '#f1f5f9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 12px',
   },
   emptyTitle: {
     fontSize: '16px',
-    fontWeight: '600',
-    color: '#334155',
-    margin: '12px 0 4px',
+    fontWeight: '700',
+    color: '#0f172a',
+    margin: 0,
   },
   emptySub: {
     fontSize: '13px',
-    color: '#94a3b8',
-    margin: 0,
+    color: '#64748b',
+    margin: '6px 0 0',
   },
-  alertSuccess: {
-    display: 'flex',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    color: '#065f46',
-    border: '1px solid #a7f3d0',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    fontSize: '14px',
-  },
-  alertError: {
-    display: 'flex',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    color: '#991b1b',
-    border: '1px solid #fecaca',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    fontSize: '14px',
-  },
-  alertCloseBtn: {
-    marginLeft: 'auto',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    color: 'inherit',
-    fontWeight: 'bold',
-  },
+
+  // Modal
   modalOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backdropFilter: 'blur(3px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 9999,
     padding: '16px',
   },
-  modalContent: {
+  modalBox: {
     backgroundColor: '#ffffff',
-    borderRadius: '12px',
+    borderRadius: '16px',
     width: '100%',
-    maxWidth: '650px',
+    maxWidth: '520px',
     maxHeight: '90vh',
     overflowY: 'auto',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-  },
-  modalContentSmall: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    width: '100%',
-    maxWidth: '480px',
-    padding: '24px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalHeader: {
-    padding: '20px 24px',
+    padding: '16px 20px',
     borderBottom: '1px solid #e2e8f0',
     display: 'flex',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
   modalTitle: {
     margin: 0,
-    fontSize: '18px',
-    fontWeight: '700',
+    fontSize: '16px',
+    fontWeight: '800',
     color: '#0f172a',
   },
   modalSub: {
-    margin: '4px 0 0',
-    fontSize: '13px',
+    margin: '3px 0 0',
+    fontSize: '12px',
     color: '#64748b',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    fontSize: '18px',
-    color: '#64748b',
+    fontSize: '16px',
     cursor: 'pointer',
+    color: '#64748b',
   },
   modalBody: {
-    padding: '24px',
+    padding: '20px',
   },
-  detailGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  },
-  detailItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  detailLabel: {
-    fontSize: '12px',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  detailValue: {
-    fontSize: '14px',
-    color: '#0f172a',
-    fontWeight: '500',
-  },
-  historyList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    paddingLeft: '8px',
-  },
-  historyItem: {
-    display: 'flex',
-    gap: '12px',
-    position: 'relative',
-  },
-  historyDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    backgroundColor: '#1d4ed8',
-    marginTop: '5px',
-    flexShrink: 0,
-  },
-  historyContent: {
-    flex: 1,
+  formGroup: {
+    marginBottom: '16px',
   },
   inputLabel: {
     display: 'block',
-    fontSize: '13px',
-    fontWeight: '600',
+    fontSize: '12px',
+    fontWeight: '700',
     color: '#334155',
     marginBottom: '6px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+  },
+  stageChoiceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+  },
+  stageChoiceCard: {
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  stageChoiceCardActive: {
+    borderColor: '#0f172a',
+    backgroundColor: '#f8fafc',
+    boxShadow: '0 0 0 1px #0f172a',
   },
   modalTextarea: {
     width: '100%',
     padding: '10px',
-    borderRadius: '6px',
+    borderRadius: '8px',
     border: '1px solid #cbd5e1',
     fontSize: '13px',
     color: '#0f172a',
     outline: 'none',
     boxSizing: 'border-box',
     fontFamily: 'inherit',
-  },
-  selectInputFull: {
-    width: '100%',
-    height: '40px',
-    padding: '0 12px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    fontSize: '13px',
-    color: '#0f172a',
-    outline: 'none',
-    boxSizing: 'border-box',
+    resize: 'vertical',
   },
   modalFooter: {
-    padding: '16px 24px',
+    padding: '14px 20px',
     borderTop: '1px solid #e2e8f0',
     display: 'flex',
+    alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: '10px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '0 0 16px 16px',
+  },
+  btnCancel: {
+    padding: '7px 14px',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    color: '#475569',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  btnSaveStage: {
+    padding: '7px 16px',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+
+  // View Details Highlights
+  detailsHighlightRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gap: '10px',
+    backgroundColor: '#f8fafc',
+    padding: '12px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    marginBottom: '16px',
+  },
+  highlightBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  highlightLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+  },
+  highlightAmount: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#047857',
+    marginTop: '2px',
+  },
+  highlightText: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: '2px',
+  },
+  dossierGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '12px',
-    marginTop: '16px',
+    marginBottom: '16px',
+  },
+  dossierCard: {
+    padding: '12px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  dossierSectionTitle: {
+    margin: '0 0 10px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    borderBottom: '1px solid #f1f5f9',
+    paddingBottom: '4px',
+  },
+  dossierItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '12px',
+    marginBottom: '6px',
+    gap: '8px',
+  },
+  dossierLabel: {
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  dossierVal: {
+    color: '#0f172a',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  pricingSummaryBox: {
+    padding: '12px',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#f8fafc',
   },
 };
-
