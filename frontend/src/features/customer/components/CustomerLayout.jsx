@@ -633,7 +633,8 @@ const styles = {
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: '#1E3A63',
+    backgroundColor: '#0A1E3F',
+    backgroundImage: 'linear-gradient(180deg, #071933 0%, #0B2447 50%, #06162C 100%)',
     borderRight: '1px solid rgba(255, 255, 255, 0.08)',
     zIndex: 120,
     display: 'flex',
@@ -697,10 +698,11 @@ const styles = {
     position: 'relative',
   },
   navItemActive: {
-    backgroundColor: '#2E5B94',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     color: '#ffffff',
     fontWeight: '600',
-    boxShadow: '0 2px 8px rgba(30, 58, 99, 0.35)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+    borderLeft: '3px solid #E08131',
   },
   navItemButton: {
     display: 'flex',
