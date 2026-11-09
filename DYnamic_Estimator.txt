@@ -1,0 +1,546 @@
+================================================================================
+                    DECK RESTORATION PLUS — ESTIMATOR ENGINE
+            INTERNAL CALCULATION ARCHITECTURE, FORMULAS & CONSTANTS
+================================================================================
+Document: DYnamic_Estimator.txt
+System: Deck Restoration Plus / DeckPro Estimation Platform
+Environment: Node.js (Backend Pricing Engine) & React/Vite (Frontend Live Client)
+Purpose: Exhaustive Technical Reference of all Formulas, Hard-Coded Rates,
+         Multiplier Tables, Overlap Prevention Rules, and Section-Wise Inputs.
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+1. SECTION-BY-SECTION INPUT INVENTORY (SECTIONS 1 TO 9)
+2. FORMULA F1: TOTAL BILLABLE SURFACE AREA CALCULATION (A)
+3. FORMULA F2 & F3: JOB PREPARATION CLASSIFICATION & RATE CARD LOOKUP
+4. FORMULA F4 & F5: STACKED FINISH SURCHARGES & UNIT RATE INTERPOLATION
+5. FORMULA F8: PRODUCTION LABOR HOURS CALCULATION
+6. FORMULA F9: WOOD SPECIES DIFFICULTY MULTIPLIERS & SENSITIVITY
+7. FORMULA F10: SITE ACCESSIBILITY & ELEVATION MULTIPLIERS
+8. FORMULA F11 & F12: HOURLY LABOR RATE & TOTAL LABOR ADJUSTMENT
+9. FORMULA F13: MOBILIZATION, TRAVEL SURCHARGES & MINIMUM JOB FLOOR
+10. FORMULA F14 & F15: FINAL TOTAL ESTIMATION & RANGE CALCULATION
+11. DAMAGE CONDITION & STRUCTURAL REPAIR PRICING ENGINE (OVERLAP PREVENTION)
+12. CONTRACTOR WHOLESALE DISCOUNT FORMULAS
+13. COMPLETE NUMERICAL WALKTHROUGH WITH 3 DETAILED WORKED EXAMPLES
+================================================================================
+
+
+================================================================================
+1. SECTION-BY-SECTION INPUT INVENTORY (SECTIONS 1 TO 9)
+================================================================================
+
+SECTION 1: DECK DIMENSIONS & BLUEPRINT
+--------------------------------------------------------------------------------
+- Shape Selection (Geometry Options):
+  * 'rectangle' (Standard 4-corner deck)
+  * 'square' (Equal length and width)
+  * 'l_shape' (Two connected rectangular sections)
+  * 'multi_level' (Upper and lower terrace platforms)
+  * 'custom' (Irregular / polygon custom perimeter)
+- Length (ft): Floating point number (e.g., 20.0 ft)
+- Width (ft): Floating point number (e.g., 16.0 ft)
+- Calculated Usable Floor Area (sqft): Length * Width (or user override for custom)
+
+
+SECTION 2: DECK COMPONENTS & FEATURES (ADDITIVE SURFACE AREAS)
+--------------------------------------------------------------------------------
+Users select which architectural features exist and specify square footage or linear dimensions:
+1. Railings:
+   - Input: Linear feet (LF) OR Square Feet (sqft)
+   - Code Conversion Constant: 1 LF of railing = 4.0 sqft billable surface area
+2. Stairs & Steps:
+   - Input: Total number of stair steps (treads + risers) OR Square Feet (sqft)
+   - Code Conversion Constant: 1 Step = 12.0 sqft billable surface area
+3. Pergola:
+   - Input: Linear feet (LF) OR Square Feet (sqft)
+   - Code Conversion Constant: 1 LF = 1.5 sqft billable surface area
+4. Privacy Wall:
+   - Input: Linear feet (LF) OR Square Feet (sqft)
+   - Code Conversion Constant: 1 LF = 2.0 sqft billable surface area (front + back)
+5. House Siding Flashing:
+   - Input: Square Feet (sqft)
+6. Fascia Banding Boards:
+   - Input: Linear feet (LF) OR Square Feet (sqft)
+   - Code Conversion Constant: 1 LF = 1.5 sqft billable surface area
+7. Joists & Framing Substructure:
+   - Input: Boolean (includeJoists) OR Joist Sqft
+   - Code Conversion Constant: When included without direct sqft, Joist Area = Floor Area * 0.40 (40% of flooring)
+8. Support Posts:
+   - Input: Count of vertical posts
+   - Code Conversion Constant: 1 Post = 6.0 sqft billable surface area
+
+
+SECTION 3: WOOD SPECIES & MATERIAL SELECTION (8 TYPES)
+--------------------------------------------------------------------------------
+Affects sanding density, chemical dwell absorption, and labor adjustment:
+1. 'pt_pine' (Pressure-Treated Southern Yellow Pine) -> 0% labor adjustment (Baseline)
+2. 'cedar' (Western Red Cedar)                      -> +10% labor adjustment
+3. 'redwood' (California Redwood)                   -> +15% labor adjustment
+4. 'mahogany' (Honduran / Genuine Mahogany)         -> +20% labor adjustment
+5. 'meranti' (Philippine Mahogany / Meranti)        -> +20% labor adjustment
+6. 'tigerwood' (Exotic Tigerwood / Muiracatiara)    -> +30% labor adjustment
+7. 'teak' (Burmese / Plantation Teak)               -> +35% labor adjustment
+8. 'ipe' (Brazilian Walnut / Ipe)                   -> +35% labor adjustment
+* Special: 'trex' / 'composite'                     -> -55% labor discount (Cleaning/Pressure washing scope ONLY)
+
+
+SECTION 4: SITE ACCESSIBILITY & ELEVATION
+--------------------------------------------------------------------------------
+Affects ladder rigging, safety harness setups, staging, and technician mobility:
+1. 'ground' / 'ground_level' (0 - 2 ft off grade)   -> +0% labor hours (0 fixed hours)
+2. 'low' / 'first_story' (2 - 4 ft or 4 - 8 ft)     -> +15% labor hours (or 4.0 fixed hours)
+3. 'second' / 'second_story' (8 - 12 ft)            -> +35% labor hours (or 8.0 fixed hours)
+4. 'roof' / 'high_work' (> 12 ft elevation)         -> +60% labor hours (or 16.0 fixed hours)
+
+
+SECTION 5: EXISTING DECK FINISH & COATING
+--------------------------------------------------------------------------------
+Used for diagnostic stripping heuristics (no direct standalone price impact):
+1. 'bare_weathered' (Uncoated, gray oxidized wood fibers)
+2. 'maintained_penetrating' (Light penetrating oil toner in good condition)
+3. 'oil_one_coat' (Semi-transparent oil stain, mild fade)
+4. 'heavy_oil_buildup' (Multiple previous layers of oil/alkyd stain)
+5. 'film_former' (Waterborne synthetic acrylic / urethane hybrid)
+6. 'solid_paint' (Heavy solid color stain or latex exterior porch paint)
+
+
+SECTION 6: RESTORATION SCOPE OF WORK (8 SERVICES + NO COATING)
+--------------------------------------------------------------------------------
+Determines the chemical prep level, finish column, and production speed:
+1. 'cleaning' / 'pressure_washing' (Deep sodium hypochlorite/percarbonate wash)
+2. 'wood_brightening' (Oxalic acid pH balancing neutralizer)
+3. 'stain_stripping' / 'paint_removal' (Sodium metasilicate / caustic stripper)
+4. 'sanding' / 'mechanical_sanding' (Rotary / orbital deck restoration sanding)
+5. 'staining' / 'deck_staining' (Oil or waterborne protective deck stain)
+6. 'sealing' / 'deck_sealing' (Clear hydrophobic seal coating)
+7. 'waterproofing' / 'waterproofing_barrier' (Deep penetrating moisture barrier)
+8. 'no_coating' (Customer requests bare clean wood with no chemical sealant)
+Stain Finish Column Selection:
+- 'sealer' (Clear sealer or transparent natural toner)
+- 'semi' (Semi-transparent stain, medium pigment)
+- 'semi_solid' (Semi-solid heavy pigment stain)
+- 'solid' (Solid color opaque coating)
+
+
+SECTION 7: DECK PHYSICAL CONDITION (9 DAMAGE CONDITIONS)
+--------------------------------------------------------------------------------
+Drives the Dedicated Contractor Structural Repair Engine:
+1. 'good' (Deck is structurally sound; zero repairs; mutually exclusive option)
+2. 'crack' (Surface checks and structural splits requiring epoxy filler)
+3. 'rotted' (Dry or wet rot requiring framing assessment and board demolition)
+4. 'warped' (Cupped, crowned, or twisted deck planks requiring replacement)
+5. 'loose_board' (Popped fasteners and squeaking/bouncing floor planks)
+6. 'water_damaged' (Soft/delaminated spongy wood from chronic pooling)
+7. 'peeling' (Curling, flaking finish requiring mechanical feather sanding)
+8. 'weathered' (Severe gray cellulose breakdown)
+9. 'mold' / 'mildew' (Deep black/green organic spores requiring fungicide)
+
+
+SECTION 8: UPLOAD PHOTOS (OPTIONAL)
+--------------------------------------------------------------------------------
+- Photo file attachments (JPEG/PNG) for senior estimator verification.
+
+
+SECTION 9: PROJECT INFORMATION & PROPERTY LOCATION
+--------------------------------------------------------------------------------
+- Project Name (Required): Name of deck project / property
+- Property Address: Street address
+- City, State, ZIP: Location for dispatch and travel distance calculation
+- Travel Minutes (numeric, default: 30 minutes)
+================================================================================
+
+
+================================================================================
+2. FORMULA F1: TOTAL BILLABLE SURFACE AREA CALCULATION (A)
+================================================================================
+
+Total Billable Surface Area (A) is the sum of all restored wooden surfaces:
+
+  A = A_floor + A_railings + A_stairs + A_pergola + A_privacyWall
+      + A_siding + A_posts + A_joists + A_fascia + A_other
+
+Component Formula Breakdown:
+--------------------------------------------------------------------------------
+Component         | User Input Units       | Hard-Coded Conversion Formula
+--------------------------------------------------------------------------------
+Flooring          | Length (ft), Width (ft)| A_floor = Length * Width
+Railings          | Linear Feet (LF)       | A_railings = LF * 4.0 sqft
+Stairs            | Step Count             | A_stairs = Steps * 12.0 sqft
+Pergola           | Linear Feet (LF)       | A_pergola = LF * 1.5 sqft
+Privacy Wall      | Linear Feet (LF)       | A_privacyWall = LF * 2.0 sqft
+House Siding      | Direct Sqft            | A_siding = Direct Sqft
+Posts             | Post Count             | A_posts = Posts * 6.0 sqft
+Joists / Framing  | Boolean Checkbox       | A_joists = A_floor * 0.40
+Fascia Banding    | Linear Feet (LF)       | A_fascia = LF * 1.5 sqft
+Other Features    | Custom Direct Sqft     | A_other = Direct Sqft
+
+* Rounding: All individual component areas and total area A are rounded to 2 decimal places.
+* Rule: If A <= 0, the engine throws a ValidationError.
+================================================================================
+
+
+================================================================================
+3. FORMULA F2 & F3: JOB PREPARATION CLASSIFICATION & RATE CARD LOOKUP
+================================================================================
+
+Step 1: Determine Job Preparation Level ('prep')
+--------------------------------------------------------------------------------
+- Has Stripping? = Selected services contain 'stain_stripping', 'paint_removal', or 'deck_stripping'
+- Has Sanding?   = Selected services contain 'sanding', 'mechanical_sanding', or 'deck_sanding'
+
+Decision Tree:
+  IF (Has Stripping AND Has Sanding) -> prep = 'strip_sand'
+  ELSE IF (Has Stripping)            -> prep = 'strip'
+  ELSE                               -> prep = 'clean'
+
+Step 2: Determine Finish Column ('col')
+--------------------------------------------------------------------------------
+- If 'no_coating' is selected        -> finish = 'none', col = 'sealer'
+- Else if Stain Type is 'semi_solid' -> col = 'semi_solid'
+- Else if Stain Type is 'solid'      -> col = 'solid'
+- Else if Stain Type is 'sealer'     -> col = 'sealer'
+- Default                            -> col = 'semi'
+
+Step 3: Rate Card Base Lookup Table ($/sqft) [HARD-CODED CONSTANTS]
+--------------------------------------------------------------------------------
+The official Deck Restoration Plus Base Rate Matrix [low, high]:
+
+PREPARATION LEVEL   | Sealer / Clear  | Semi-Transparent | Semi-Solid      | Solid Coating
+--------------------+-----------------+------------------+-----------------+-----------------
+'clean'             | [$2.50, $3.00]  | [$3.00, $3.50]   | [$3.25, $3.75]  | [$3.50, $4.00]
+'strip'             | [$3.00, $3.50]  | [$3.50, $4.00]   | [$4.25, $5.00]  | [$5.00, $6.00]
+'strip_sand'        | [$3.50, $4.50]  | [$4.00, $4.50]   | [$4.75, $5.50]  | [$5.50, $6.50]
+
+Special Adjustment Rule (Sanding without Stripping):
+  When a customer selects Sanding without Chemical Stripping, the clean rate is
+  incremented by the exact delta between 'strip_sand' and 'strip':
+    Delta_Low  = rateCard.strip_sand[col][0] - rateCard.strip[col][0]
+    Delta_High = rateCard.strip_sand[col][1] - rateCard.strip[col][1]
+    lo = lo + Delta_Low
+    hi = hi + Delta_High
+================================================================================
+
+
+================================================================================
+4. FORMULA F4 & F5: STACKED FINISH SURCHARGES & UNIT RATE INTERPOLATION
+================================================================================
+
+Stacked-Finish Add-On Formula (F4):
+--------------------------------------------------------------------------------
+When multiple finishing coats are requested (e.g. Staining + Sealing + Waterproofing):
+  FinishList = ['staining', 'sealing', 'waterproofing'] that are selected
+  FinishCount = FinishList.length
+  FinishAddonPerSqft = $1.00 per sqft (Hard-coded constant: addonPerSqft = 1.0)
+
+  FinishAddon = MAX(0, FinishCount - 1) * 1.00
+
+Interpolated Base Unit Rate Formula (F5):
+--------------------------------------------------------------------------------
+The platform uses the exact midpoint (ratePosition = 0.50):
+
+  BaseUnitRate(pos) = (lo + (hi - lo) * pos) + FinishAddon
+  sqftPrice         = BaseUnitRate(0.50)
+
+Base Price Calculation:
+  BasePrice = A * sqftPrice
+================================================================================
+
+
+================================================================================
+5. FORMULA F8: PRODUCTION LABOR HOURS CALCULATION
+================================================================================
+
+Technician labor hours are derived using hard-coded production speeds:
+
+  H_base = SUM( A / ProductionRate(service) ) for all selected services
+
+Hard-Coded Production Rates Table (sqft per man-hour):
+--------------------------------------------------------------------------------
+Service Scope                          | Production Rate (sqft/hr)
+---------------------------------------+----------------------------------------
+Deck Cleaning / Pressure Washing       | 100 sqft / hr
+Wood Brightening & Neutralizing        | 100 sqft / hr
+Staining & Conditioning                | 100 sqft / hr
+Clear Sealing Application              | 100 sqft / hr
+Waterproofing Barrier Application      | 100 sqft / hr
+Detail Sanding                         | 90 sqft / hr
+Mechanical Floor & Railing Sanding     | 60 sqft / hr
+Stain Stripping (Chemical)             | 50 sqft / hr
+Paint Removal (Heavy)                  | 40 sqft / hr
+================================================================================
+
+
+================================================================================
+6. FORMULA F9: WOOD SPECIES DIFFICULTY MULTIPLIERS & SENSITIVITY
+================================================================================
+
+Different wood densities require additional dwell time, fine sanding, or special handling:
+
+  H_wood = H_base * WoodMultiplier
+
+Hard-Coded Wood Multipliers Table:
+--------------------------------------------------------------------------------
+Wood Species Key        | Display Label             | Labor Percentage Adjustment
+------------------------+---------------------------+---------------------------
+'pt_pine'               | Pressure-Treated Pine     |   0%  (WoodMultiplier = 0.00)
+'cedar'                 | Western Red Cedar         | +10%  (WoodMultiplier = 0.10)
+'redwood'               | California Redwood        | +15%  (WoodMultiplier = 0.15)
+'mahogany'              | Genuine Mahogany          | +20%  (WoodMultiplier = 0.20)
+'meranti'               | Meranti Mahogany          | +20%  (WoodMultiplier = 0.20)
+'tigerwood'             | Exotic Tigerwood          | +30%  (WoodMultiplier = 0.30)
+'teak'                  | Burmese Teak              | +35%  (WoodMultiplier = 0.35)
+'ipe'                   | Brazilian Ipe             | +35%  (WoodMultiplier = 0.35)
+'trex' / 'composite'    | Composite / Trex          | -55%  (WoodMultiplier = -0.55)
+================================================================================
+
+
+================================================================================
+7. FORMULA F10: SITE ACCESSIBILITY & ELEVATION MULTIPLIERS
+================================================================================
+
+Elevation and difficult ladder access increase technician staging time:
+
+  H_access = H_base * AccessMultiplier  (in 'percent' mode)
+  OR
+  H_access = FixedHours                 (in 'fixed_hours' mode)
+
+Hard-Coded Access Multipliers Table:
+--------------------------------------------------------------------------------
+Elevation Range (ft)    | Access Key    | Percentage Mode | Fixed Hours Mode
+------------------------+---------------+-----------------+---------------------
+0 - 2 ft (Ground Grade) | 'ground'      |   0% (0.00)     |  0 hours
+2 - 4 ft (Low Deck)     | 'low'         | +15% (0.15)     |  4 hours
+4 - 8 ft (First Story)  | 'first'       | +15% (0.15)     |  4 hours
+8 - 12 ft (Second Story)| 'second'      | +35% (0.35)     |  8 hours
+> 12 ft (Roof / High)   | 'roof'        | +60% (0.60)     | 16 hours
+================================================================================
+
+
+================================================================================
+8. FORMULA F11 & F12: HOURLY LABOR RATE & TOTAL LABOR ADJUSTMENT
+================================================================================
+
+Total Additional Labor Hours:
+  H_add = H_wood + H_access
+
+Labor Adjustment Surcharge ($):
+  LaborAdjustment = H_add * MasterLaborRate
+
+Hard-Coded Constant:
+  MasterLaborRate = $250.00 / hour (labourRate = 250)
+================================================================================
+
+
+================================================================================
+9. FORMULA F13: MOBILIZATION, TRAVEL SURCHARGES & MINIMUM JOB FLOOR
+================================================================================
+
+Travel Distance Evaluation:
+--------------------------------------------------------------------------------
+- Free Travel Radius: 45 Minutes (freeMinutes = 45)
+- Standard Travel Mobilization Fee: $200.00 (fee = 200)
+
+Decision Logic:
+  IF (travelMinutes > 45 minutes) {
+      isFarDistance = TRUE
+      travelFee = $200.00
+      minJobPrice = $3,000.00  (minJob.far = 3000)
+  } ELSE {
+      isFarDistance = FALSE
+      travelFee = $0.00
+      minJobPrice = $2,500.00  (minJob.near = 2500)
+  }
+================================================================================
+
+
+================================================================================
+10. FORMULA F14 & F15: FINAL TOTAL ESTIMATION & RANGE CALCULATION
+================================================================================
+
+1. Pure Calculated Estimate (No Floor Enforced):
+   CalculatedSubtotal = BasePrice + LaborAdjustment + TravelFee
+   CalculatedTotal    = round(CalculatedSubtotal)
+
+2. Standard Dispatched Price (With Minimum Floor Applied):
+   FloorTotal = MAX(CalculatedTotal, minJobPrice)
+   minJobApplied = CalculatedTotal < minJobPrice
+
+3. Range Estimates (Low / High):
+   LowCalculated  = round( (A * BaseUnitRate(0.00)) + LaborAdjustment + TravelFee )
+   HighCalculated = round( (A * BaseUnitRate(1.00)) + LaborAdjustment + TravelFee )
+   LowPrice       = MAX(LowCalculated, minJobPrice)
+   HighPrice      = MAX(HighCalculated, minJobPrice)
+
+4. Client Q12 Policy Compliance:
+   Homeowners see ONLY ONE TOTAL NUMBER (FloorTotal) with zero confusing line-item
+   breakdown, while Contractors & Administrators see the complete operational ledger.
+================================================================================
+
+
+================================================================================
+11. DAMAGE CONDITION & STRUCTURAL REPAIR PRICING ENGINE
+================================================================================
+
+Section 8 Damage Repair Unit Costs (Hard-Coded Constants):
+--------------------------------------------------------------------------------
+Repair Item                             | Material Cost | Labor Cost | Total Cost
+----------------------------------------+---------------+------------+------------
+Structural Moisture & Frame Inspection  | $0.00         | $150.00    | $150.00 fee
+Rotted / Cupped Board Replacement       | $20.00/board  | $25.00/brd | $45.00 / board
+Crack & Split Wood Epoxy Filler         | $5.00/board   | $10.00/brd | $15.00 / board
+Loose Plank Countersinking / Fastening  | $3.00/board   | $9.00/brd  | $12.00 / board
+Peeling Scrape & Feather Sanding        | $0.00         | $100.00    | $100.00 flat
+
+Overlap Prevention Business Rules:
+--------------------------------------------------------------------------------
+1. Good Condition Exclusion:
+   If 'good' is selected, ALL damage line items are suppressed ($0 repair cost).
+2. Rotted + Water Damaged Shared Inspection:
+   If both 'rotted' and 'water_damaged' are checked, only ONE $150 inspection fee
+   is billed, preventing duplicate diagnostic charges.
+3. Crack + Loose Fastener Overlap Prevention:
+   If a board exhibits both a structural crack and loose fasteners, the board is
+   marked for complete replacement ($45.00). The engine does NOT bill $15 for crack
+   epoxy plus $12 for refastening, saving the homeowner from double charges.
+4. Peeling Coating Overlap with Chemical Stripping:
+   If the deck requires chemical stripping, peeling surface prep is $0 because
+   the caustic chemical stripper inherently dissolves and removes peeling coatings.
+5. Weathered (5%) and Heavy Mold (15%) Admin Switches:
+   Weathered labor (+5%) and Mold labor (+15%) are gated behind administrative
+   switches and remain OFF by default until verified on site.
+================================================================================
+
+
+================================================================================
+12. CONTRACTOR WHOLESALE DISCOUNT FORMULAS
+================================================================================
+
+Contractors receive an automated trade tier discount on all estimations:
+
+  Standard Tier 1: 10% Wholesale Discount
+  Verified Pro:    15% Wholesale Discount
+  DRP Elite Pro:   20% Wholesale Discount
+
+Calculation:
+  DiscountPercentage = contractorTierDiscount (default: 10.0%)
+  DiscountAmount     = round2( TotalEstimate * (DiscountPercentage / 100.0) )
+  ContractorPrice    = MAX(0, TotalEstimate - DiscountAmount)
+
+Display UX:
+  The estimated price box renders the original price struck-through ($1,000)
+  and renders the discounted price ($900) alongside an interactive 10% discount
+  checkbox that recalculates live when toggled.
+================================================================================
+
+
+================================================================================
+13. COMPLETE NUMERICAL WALKTHROUGH WITH 3 DETAILED WORKED EXAMPLES
+================================================================================
+
+--------------------------------------------------------------------------------
+EXAMPLE 1: STANDARD HOMEOWNER PINE DECK (CLEAN & STAIN)
+--------------------------------------------------------------------------------
+Inputs:
+- Dimensions: Length = 20 ft, Width = 15 ft -> A_floor = 300 sqft
+- Railing: 25 LF -> A_railing = 25 * 4.0 = 100 sqft
+- Stairs: 5 steps -> A_stairs = 5 * 12.0 = 60 sqft
+- Total Area (A) = 300 + 100 + 60 = 460 sqft
+- Wood: Pressure-Treated Pine (WoodMultiplier = 0%)
+- Access: Ground Level 0-2 ft (AccessMultiplier = 0%)
+- Services: Deck Cleaning, Deck Staining (Semi-Transparent)
+- Travel: 20 minutes (<= 45 min)
+
+Step-by-Step Math:
+1. Prep & Column:
+   - No stripping, no sanding -> prep = 'clean'
+   - Semi-transparent stain   -> col = 'semi'
+   - Rate Card: clean.semi = [$3.00, $3.50]
+2. Unit Rate:
+   - Midpoint (pos = 0.5): 3.00 + (3.50 - 3.00) * 0.5 = $3.25 / sqft
+   - Finishes selected = 1 ('staining') -> FinishAddon = $0.00
+   - Final sqftPrice = $3.25
+3. Base Price:
+   - 460 sqft * $3.25 = $1,495.00
+4. Production Hours:
+   - Cleaning: 460 / 100 = 4.60 hours
+   - Staining: 460 / 100 = 4.60 hours
+   - H_base = 4.60 + 4.60 = 9.20 hours
+5. Labor Adjustments:
+   - Wood = 9.20 * 0% = 0 hours
+   - Access = 9.20 * 0% = 0 hours
+   - LaborAdjustment = 0 * $250 = $0.00
+6. Travel Fee: $0.00
+7. Pure Calculated Total:
+   - CalculatedTotal = $1,495.00 + $0.00 + $0.00 = $1,495.00
+8. Minimum Job Floor:
+   - minJobPrice = $2,500.00
+   - FloorTotal  = MAX(1495, 2500) = $2,500.00
+   - Flag: min_job_applied = TRUE
+
+Result:
+- Pure Estimation without Minimum: $1,495.00
+- Official Customer Price with Floor: $2,500.00
+
+
+--------------------------------------------------------------------------------
+EXAMPLE 2: HIGH-ELEVATION CEDAR RESTORATION WITH STRIPPING & SANDING
+--------------------------------------------------------------------------------
+Inputs:
+- Dimensions: Length = 24 ft, Width = 20 ft -> A_floor = 480 sqft
+- Railing: 40 LF -> A_railing = 40 * 4.0 = 160 sqft
+- Stairs: 10 steps -> A_stairs = 10 * 12.0 = 120 sqft
+- Fascia: 40 LF -> A_fascia = 40 * 1.5 = 60 sqft
+- Total Area (A) = 480 + 160 + 120 + 60 = 820 sqft
+- Wood: Western Red Cedar (WoodMultiplier = +10%)
+- Access: Second Story 8-12 ft (AccessMultiplier = +35%)
+- Services: Stain Stripping, Mechanical Sanding, Deck Staining (Semi-Solid)
+- Travel: 30 minutes (<= 45 min)
+
+Step-by-Step Math:
+1. Prep & Column:
+   - Has Stripping AND Sanding -> prep = 'strip_sand'
+   - Semi-Solid Stain          -> col = 'semi_solid'
+   - Rate Card: strip_sand.semi_solid = [$4.75, $5.50]
+2. Unit Rate:
+   - Midpoint (pos = 0.5): 4.75 + (5.50 - 4.75) * 0.5 = $5.125 / sqft
+   - Finishes selected = 1 ('staining') -> FinishAddon = $0.00
+   - Final sqftPrice = $5.125
+3. Base Price:
+   - 820 sqft * $5.125 = $4,202.50
+4. Production Hours:
+   - Stripping: 820 / 50 = 16.40 hours
+   - Sanding:   820 / 60 = 13.67 hours
+   - Staining:  820 / 100 = 8.20 hours
+   - H_base = 16.40 + 13.67 + 8.20 = 38.27 hours
+5. Labor Adjustments:
+   - Wood Hours (Cedar 10%):   38.27 * 0.10 = 3.827 hours
+   - Access Hours (Second 35%): 38.27 * 0.35 = 13.395 hours
+   - H_add = 3.827 + 13.395 = 17.222 hours
+   - LaborAdjustment = 17.222 hours * $250.00/hr = $4,305.50
+6. Travel Fee: $0.00
+7. Pure Calculated Total:
+   - CalculatedTotal = $4,202.50 (Base) + $4,305.50 (Labor Adj) + $0 = $8,508.00
+8. Minimum Job Floor:
+   - minJobPrice = $2,500.00
+   - FloorTotal  = MAX(8508, 2500) = $8,508.00
+
+Result:
+- Pure Estimation without Minimum: $8,508.00
+- Official Customer Price: $8,508.00
+
+
+--------------------------------------------------------------------------------
+EXAMPLE 3: CONTRACTOR 10% DISCOUNT APPLIED TO ESTIMATE 2
+--------------------------------------------------------------------------------
+Contractor View on Example 2:
+- Calculated Total Price: $8,508.00
+- Contractor Trade Discount: 10%
+- Discount Amount: $8,508.00 * 0.10 = $850.80
+- Discounted Contractor Net Price: $8,508.00 - $850.80 = $7,657.20
+- Display in Box: ~~$8,508.00~~ -> $7,657.20 (with active [✓] 10% Contractor Discount checkbox)
+================================================================================
+                    END OF DYnamic_Estimator.txt REFERENCE
+================================================================================
+

@@ -226,14 +226,26 @@ async function createEstimate(data, user, ipAddress) {
       };
     }
 
-    subtotalAmount = clientCalc.rawSubtotal || clientCalc.total;
-    minAdjustmentAmount = clientCalc.minJobApplied ? (clientCalc.minJob - (clientCalc.rawSubtotal || 0)) : 0;
-    minJobPriceVal = clientCalc.minJob || 2500;
-    preTaxAmount = clientCalc.total;
+    const applyMinJob = Boolean(data.applyMinJobPrice || payload.applyMinJobPrice);
+    const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
+    const minJobThreshold = clientCalc.minJob || 2500;
+    const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
+    const chosenBase = applyMinJob ? floorAmount : pureCalculated;
+
+    subtotalAmount = pureCalculated;
+    minAdjustmentAmount = applyMinJob && clientCalc.minJobApplied ? (minJobThreshold - pureCalculated) : 0;
+    minJobPriceVal = minJobThreshold;
+    preTaxAmount = chosenBase;
     taxPercentageVal = 0;
     taxAmountVal = 0;
-    totalAmountVal = clientCalc.total;
-    pricingSnapshotData = clientCalc;
+    totalAmountVal = chosenBase;
+    pricingSnapshotData = {
+      ...clientCalc,
+      applyMinJobPrice: applyMinJob,
+      calculatedTotal: pureCalculated,
+      floorTotal: floorAmount,
+      total: chosenBase,
+    };
     warningsList = (clientCalc.warnings || []).map((w) => ({
       materialName: 'Restoration Scope',
       serviceName: 'Deck Restoration',
@@ -761,7 +773,16 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
     visibleConditions: specData.conditions,
   };
 
-  let totalAmountVal = clientCalc.total || clientCalc.calculatedTotal || 2500;
+  const applyMinJob = payload.applyMinJobPrice !== undefined
+    ? Boolean(payload.applyMinJobPrice)
+    : Boolean(estimate.pricingSnapshot?.applyMinJobPrice);
+
+  const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
+  const minJobThreshold = clientCalc.minJob || 2500;
+  const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
+  const chosenBase = applyMinJob ? floorAmount : pureCalculated;
+
+  let totalAmountVal = chosenBase;
   if (user.role === ROLES.CONTRACTOR) {
     let appliedDiscount = Number(payload.contractorDiscountPercent) || 10;
     try {
@@ -810,16 +831,18 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   estimate.pricingSnapshot = {
     ...clientCalc,
     spec: specData,
-    originalTotal: estimate.discountBreakdown?.originalTotal || totalAmountVal,
+    applyMinJobPrice: applyMinJob,
+    originalTotal: estimate.discountBreakdown?.originalTotal || chosenBase,
     discountedTotal: totalAmountVal,
-    calculatedTotal: totalAmountVal,
+    calculatedTotal: pureCalculated,
+    floorTotal: floorAmount,
     total: totalAmountVal,
     discountBreakdown: estimate.discountBreakdown,
   };
   estimate.totalAmount = totalAmountVal;
-  estimate.subtotal = clientCalc.rawSubtotal || clientCalc.basePrice || clientCalc.total;
-  estimate.minimumAdjustment = clientCalc.minJobApplied ? (clientCalc.minJob - (clientCalc.rawSubtotal || 0)) : 0;
-  estimate.minimumJobPrice = clientCalc.minJob || 2500;
+  estimate.subtotal = pureCalculated;
+  estimate.minimumAdjustment = applyMinJob && clientCalc.minJobApplied ? (minJobThreshold - pureCalculated) : 0;
+  estimate.minimumJobPrice = minJobThreshold;
   estimate.version = (estimate.version || 1) + 1;
 
   await estimate.save();

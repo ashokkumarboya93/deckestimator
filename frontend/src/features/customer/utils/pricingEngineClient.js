@@ -448,10 +448,13 @@ export function calculateRestorationEstimateClient(inp = {}, customCfg = null) {
   const floorTotal = Math.max(calculatedTotal, minJob);
   const minJobApplied = calculatedTotal < minJob;
 
+  const applyMinJobPrice = Boolean(inp.applyMinJobPrice);
+  const chosenTotal = applyMinJobPrice ? floorTotal : calculatedTotal;
+
   const lowCalculated = Math.round(Math.max(0, A * rateAt(0) + labourAdj + travelFee));
   const highCalculated = Math.round(Math.max(0, A * rateAt(1) + labourAdj + travelFee));
-  const low = Math.max(lowCalculated, minJob);
-  const high = Math.max(highCalculated, minJob);
+  const low = applyMinJobPrice ? Math.max(lowCalculated, minJob) : lowCalculated;
+  const high = applyMinJobPrice ? Math.max(highCalculated, minJob) : highCalculated;
 
   const repairEstimate = calculateRepairEstimateClient(inp, { isStripping: stripping, baseHours }, cfg);
 
@@ -485,9 +488,10 @@ export function calculateRestorationEstimateClient(inp = {}, customCfg = null) {
     travelMinutes,
     minJob,
     minJobApplied,
+    applyMinJobPrice,
     calculatedTotal,
     floorTotal,
-    total: floorTotal,
+    total: chosenTotal,
     low,
     high,
     lowCalculated,
@@ -499,8 +503,10 @@ export function calculateRestorationEstimateClient(inp = {}, customCfg = null) {
     minJobNotice,
     repairEstimate,
     customerOutput: {
-      total: calculatedTotal,
+      total: chosenTotal,
+      calculatedTotal,
       floorTotal,
+      applyMinJobPrice,
       minJobApplied,
       minJobAmount: minJob,
       minJobNotice,
