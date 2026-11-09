@@ -475,7 +475,7 @@ export default function AdminPricingDiscountsPage() {
                 <strong style={styles.cardTitle}>Master Technician Hourly Labor Rate</strong>
               </div>
               <p style={styles.cardHelp}>
-                Multiplier for all additive labor hours ($H_{wood} + H_{access}$). Current baseline is $250.00/hr.
+                Multiplier for all additive labor hours (H_wood + H_access). Current baseline is $250.00/hr.
               </p>
               <div style={styles.inputPrefixWrap}>
                 <span style={styles.inputPrefix}>$</span>

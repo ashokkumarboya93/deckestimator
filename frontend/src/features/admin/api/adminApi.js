@@ -39,17 +39,31 @@ export const adminApi = {
     const res = await client.patch(`/admin/users/${id}/status`, { status, reason });
     return res.data;
   },
-  softDeleteUser: async (id, reason = '') => {
-    const res = await client.delete(`/admin/users/${id}`, { body: JSON.stringify({ reason }) });
+  softDeleteUser: async (id, reason = '', permanent = false) => {
+    const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, body: JSON.stringify({ reason, permanent }) });
+    return res.data;
+  },
+  getUserRequests: async (params = {}) => {
+    return client.get('/admin/user-requests', { params });
+  },
+  resolveUserRequest: async (id, action, adminNotes = '') => {
+    const res = await client.patch(`/admin/user-requests/${id}/action`, { action, adminNotes });
     return res.data;
   },
   exportUserUrl: (id, format = 'csv') => {
     return `http://localhost:5000/api/v1/admin/users/${id}/export?format=${format}`;
   },
 
-  // 3. Contractor Verifications
+  // 3. Contractor Verifications & Documents
   getVerifications: async (params = {}) => {
     return client.get('/admin/verifications', { params });
+  },
+  getContractorDocuments: async (params = {}) => {
+    return client.get('/admin/contractor-documents', { params });
+  },
+  reviewContractorDocument: async (id, status, notes = '') => {
+    const res = await client.patch(`/admin/contractor-documents/${id}/review`, { status, notes });
+    return res.data;
   },
   approveVerification: async (id) => {
     const res = await client.post(`/admin/verifications/${id}/approve`);

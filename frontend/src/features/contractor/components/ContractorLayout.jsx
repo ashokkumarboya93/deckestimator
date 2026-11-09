@@ -14,11 +14,17 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
+import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3);

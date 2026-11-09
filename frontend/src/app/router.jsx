@@ -41,6 +41,7 @@ import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
 import AdminLayout from '../features/admin/components/AdminLayout';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 import AdminUserManagementPage from '../features/admin/pages/AdminUserManagementPage';
+import AdminUserProfilePage from '../features/admin/pages/AdminUserProfilePage';
 import AdminVerificationProgressPage from '../features/admin/pages/AdminVerificationProgressPage';
 import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
 import AdminProjectsPage from '../features/admin/pages/AdminProjectsPage';
@@ -308,6 +309,10 @@ const router = createBrowserRouter([
           {
             path: 'users',
             element: <AdminUserManagementPage />,
+          },
+          {
+            path: 'users/:id',
+            element: <AdminUserProfilePage />,
           },
           // 3. Verification & Progress
           {

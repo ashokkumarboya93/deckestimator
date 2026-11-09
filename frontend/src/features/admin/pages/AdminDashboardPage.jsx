@@ -302,162 +302,173 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 2. SUMMARY CARDS — ROW 1 (Business Summary) */}
+      {/* 2. SUMMARY CARDS — ROW 1 (Exact Match for Reference Image: Blue, Green, Purple, Pink) */}
       <div style={styles.cardsRow}>
-        {/* Total Users */}
-        <div style={styles.card} onClick={() => navigate('/admin/users')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
+        {/* Card 1: TOTAL ESTIMATIONS (Soft Blue) */}
+        <div style={styles.cardBlueRef} onClick={() => navigate('/admin/pricing')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelBlue}>TOTAL ESTIMATIONS</div>
+                <div style={styles.cardRefValueBlue}>{loading && !summaryData ? '...' : s.totalEstimates}</div>
+              </div>
             </div>
-            <div>
-              <div style={styles.cardLabel}>Total Users</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalUsers}</div>
-              {renderGrowthPill(s.growth?.users, 'vs last 30 days')}
-            </div>
+            <div style={styles.chevronBlue}>›</div>
           </div>
         </div>
 
-        {/* Customers */}
-        <div style={styles.card} onClick={() => navigate('/admin/users?role=customer')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+        {/* Card 2: COMPLETED PROJECTS (Soft Green) */}
+        <div style={styles.cardGreenRef} onClick={() => navigate('/admin/projects')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelGreen}>COMPLETED PROJECTS</div>
+                <div style={styles.cardRefValueGreen}>{loading && !summaryData ? '...' : (projectOverview.completed || 0)}</div>
+              </div>
             </div>
-            <div>
-              <div style={styles.cardLabel}>Customers</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalCustomers}</div>
-              {renderGrowthPill(s.growth?.customers)}
-            </div>
+            <div style={styles.chevronGreen}>›</div>
           </div>
         </div>
 
-        {/* Contractors */}
-        <div style={styles.card} onClick={() => navigate('/admin/users?role=contractor')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#fef9c3', color: '#ca8a04' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
-                <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
+        {/* Card 3: TOTAL REVENUE (Soft Purple) */}
+        <div style={styles.cardPurpleRef} onClick={() => navigate('/admin/projects')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9333ea" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelPurple}>TOTAL REVENUE</div>
+                <div style={styles.cardRefValuePurple}>
+                  {loading && !summaryData ? '...' : `$${Number(s.totalRevenue !== undefined ? s.totalRevenue : (s.estimatedValue ? Math.round(s.estimatedValue * 0.4) : 0)).toLocaleString('en-US')}`}
+                </div>
+              </div>
             </div>
-            <div>
-              <div style={styles.cardLabel}>Contractors</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalContractors}</div>
-              {renderGrowthPill(s.growth?.contractors)}
-            </div>
+            <div style={styles.chevronPurple}>›</div>
           </div>
         </div>
 
-        {/* Total Leads */}
-        <div style={styles.card} onClick={() => navigate('/admin/leads')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="6" />
-                <circle cx="12" cy="12" r="2" />
-              </svg>
+        {/* Card 4: TOTAL ESTIMATIONS VALUE (Soft Pink/Red) */}
+        <div style={styles.cardPinkRef} onClick={() => navigate('/admin/pricing')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e11d48" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelPink}>TOTAL ESTIMATIONS VALUE</div>
+                <div style={styles.cardRefValuePink}>
+                  {loading && !summaryData ? '...' : `$${Number(s.estimatedValue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+                </div>
+              </div>
             </div>
-            <div>
-              <div style={styles.cardLabel}>Total Leads</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalLeads}</div>
-              {renderGrowthPill(s.growth?.leads)}
-            </div>
+            <div style={styles.chevronPink}>›</div>
           </div>
         </div>
       </div>
 
-      {/* 3. SUMMARY CARDS — ROW 2 (Business Operations) */}
+      {/* 3. SUMMARY CARDS — ROW 2 (Platform User Accounts & Priority Hub) */}
       <div style={styles.cardsRow}>
-        {/* Hot Priority Leads (Special Highlight Pink Card!) */}
-        <div style={styles.cardHotHighlight} onClick={() => navigate('/admin/leads?tab=hot')}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={styles.iconCircleHot}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1">
+        {/* Total Users */}
+        <div style={styles.cardSlateRef} onClick={() => navigate('/admin/users')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelSlate}>TOTAL USERS</div>
+                <div style={styles.cardRefValueSlate}>{loading && !summaryData ? '...' : s.totalUsers}</div>
+              </div>
+            </div>
+            <div style={styles.chevronSlate}>›</div>
+          </div>
+        </div>
+
+        {/* Customers */}
+        <div style={styles.cardSkyRef} onClick={() => navigate('/admin/users?role=customer')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelSky}>CUSTOMERS</div>
+                <div style={styles.cardRefValueSky}>{loading && !summaryData ? '...' : s.totalCustomers}</div>
+              </div>
+            </div>
+            <div style={styles.chevronSky}>›</div>
+          </div>
+        </div>
+
+        {/* Contractors */}
+        <div style={styles.cardAmberRef} onClick={() => navigate('/admin/users?role=contractor')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={styles.iconCircleWhite}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 18h20v-2a6 6 0 0 0-6-6h-8a6 6 0 0 0-6 6v2z" />
+                  <path d="M10 10V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.cardRefLabelAmber}>CONTRACTORS</div>
+                <div style={styles.cardRefValueAmber}>{loading && !summaryData ? '...' : s.totalContractors}</div>
+              </div>
+            </div>
+            <div style={styles.chevronAmber}>›</div>
+          </div>
+        </div>
+
+        {/* Hot Priority Leads */}
+        <div style={styles.cardHotRef} onClick={() => navigate('/admin/leads?tab=hot')}>
+          <div style={styles.cardRefInner}>
+            <div style={styles.cardRefLeft}>
+              <div style={{ ...styles.iconCircleWhite, backgroundColor: '#fee2e2' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" strokeWidth="1">
                   <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
                 </svg>
               </div>
               <div>
-                <div style={{ ...styles.cardLabel, color: '#475569' }}>Hot Priority Leads</div>
-                <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.hotPriorityLeads}</div>
-                <div style={styles.highPriorityPill}>High Priority</div>
+                <div style={styles.cardRefLabelHot}>HOT LEADS</div>
+                <div style={styles.cardRefValueHot}>
+                  {loading && !summaryData ? '...' : s.hotPriorityLeads}
+                  <span style={styles.highPriorityPillInline}>HIGH PRIORITY</span>
+                </div>
               </div>
             </div>
-            <div style={styles.chevronIcon}>›</div>
-          </div>
-        </div>
-
-        {/* Active Projects */}
-        <div style={styles.card} onClick={() => navigate('/admin/projects')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-            </div>
-            <div>
-              <div style={styles.cardLabel}>Active Projects</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.activeProjects}</div>
-              {renderGrowthPill(s.growth?.projects)}
-            </div>
-          </div>
-        </div>
-
-        {/* Total Estimates */}
-        <div style={styles.card} onClick={() => navigate('/admin/pricing')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="2" width="16" height="20" rx="2" />
-                <line x1="8" y1="6" x2="16" y2="6" />
-                <line x1="16" y1="14" x2="16" y2="18" />
-                <path d="M16 10h.01" />
-                <path d="M12 10h.01" />
-                <path d="M8 10h.01" />
-                <path d="M12 14h.01" />
-                <path d="M8 14h.01" />
-                <path d="M12 18h.01" />
-                <path d="M8 18h.01" />
-              </svg>
-            </div>
-            <div>
-              <div style={styles.cardLabel}>Total Estimates</div>
-              <div style={styles.cardValue}>{loading && !summaryData ? '...' : s.totalEstimates}</div>
-              {renderGrowthPill(s.growth?.estimates)}
-            </div>
-          </div>
-        </div>
-
-        {/* Estimated Value */}
-        <div style={styles.card} onClick={() => navigate('/admin/pricing')}>
-          <div style={styles.cardTop}>
-            <div style={{ ...styles.iconCircle, backgroundColor: '#ecfdf5', color: '#059669' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="8" cy="8" r="6" />
-                <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
-                <path d="M7 6h1.5a1.5 1.5 0 0 1 0 3H7m0 0h2a1.5 1.5 0 0 1 0 3H7m1-6V5m0 7v1" />
-              </svg>
-            </div>
-            <div>
-              <div style={styles.cardLabel}>Estimated Value</div>
-              <div style={styles.cardValue}>
-                ${Number(s.estimatedValue).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-              </div>
-              {renderGrowthPill(s.growth?.value)}
-            </div>
+            <div style={styles.chevronHot}>›</div>
           </div>
         </div>
       </div>
@@ -999,13 +1010,19 @@ const styles = {
     padding: '24px 28px',
     backgroundColor: '#f8fafc',
     minHeight: '100%',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
+    overflowX: 'hidden',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: '20px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   title: {
     fontSize: '22px',
@@ -1076,18 +1093,338 @@ const styles = {
   },
   cardsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
-    marginBottom: '14px',
+    marginBottom: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
+  cardRefInner: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  cardRefLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    minWidth: 0,
+    overflow: 'hidden',
+  },
+  iconCircleWhite: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  },
+
+  // 1. Total Estimations (Soft Blue)
+  cardBlueRef: {
+    backgroundColor: '#eff6ff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(37, 99, 235, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelBlue: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#1e40af',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueBlue: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#1e3a8a',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronBlue: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#3b82f6',
+    marginLeft: 'auto',
+  },
+
+  // 2. Completed Projects (Soft Green)
+  cardGreenRef: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(22, 163, 74, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelGreen: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#166534',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueGreen: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#14532d',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronGreen: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#22c55e',
+    marginLeft: 'auto',
+  },
+
+  // 3. Total Revenue (Soft Purple)
+  cardPurpleRef: {
+    backgroundColor: '#faf5ff',
+    border: '1px solid #e9d5ff',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(147, 51, 234, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelPurple: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#6b21a8',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValuePurple: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#581c87',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronPurple: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#a855f7',
+    marginLeft: 'auto',
+  },
+
+  // 4. Total Estimations Value (Soft Pink/Red)
+  cardPinkRef: {
+    backgroundColor: '#fff1f2',
+    border: '1px solid #fecdd3',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(225, 29, 72, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelPink: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#9f1239',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValuePink: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#881337',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronPink: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#f43f5e',
+    marginLeft: 'auto',
+  },
+
+  // Row 2 Cards: Slate, Sky, Amber, Hot
+  cardSlateRef: {
+    backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelSlate: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#475569',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueSlate: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronSlate: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginLeft: 'auto',
+  },
+
+  cardSkyRef: {
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bae6fd',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(2, 132, 199, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelSky: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#0369a1',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueSky: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#0c4a6e',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronSky: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#38bdf8',
+    marginLeft: 'auto',
+  },
+
+  cardAmberRef: {
+    backgroundColor: '#fefce8',
+    border: '1px solid #fef08a',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(202, 138, 4, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelAmber: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#a16207',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueAmber: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#713f12',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+  },
+  chevronAmber: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#eab308',
+    marginLeft: 'auto',
+  },
+
+  cardHotRef: {
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '16px',
+    padding: '16px 18px',
+    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.05)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  cardRefLabelHot: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#b91c1c',
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  },
+  cardRefValueHot: {
+    fontSize: '24px',
+    fontWeight: '800',
+    color: '#7f1d1d',
+    marginTop: '2px',
+    letterSpacing: '-0.3px',
+    lineHeight: 1.15,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  highPriorityPillInline: {
+    fontSize: '9px',
+    fontWeight: '800',
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    letterSpacing: '0.4px',
+  },
+  chevronHot: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#f87171',
+    marginLeft: 'auto',
+  },
+
+  // Legacy compatibility fallbacks
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '16px 18px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     cursor: 'pointer',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   cardTop: {
     display: 'flex',
@@ -1129,12 +1466,14 @@ const styles = {
   },
   cardHotHighlight: {
     backgroundColor: '#fef2f2',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '16px 18px',
     border: '1px solid #fee2e2',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     cursor: 'pointer',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   iconCircleHot: {
     width: '42px',
@@ -1165,16 +1504,21 @@ const styles = {
   },
   middleRow: {
     display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
+    gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1fr)',
     gap: '14px',
-    marginBottom: '14px',
+    marginBottom: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   trendCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   sectionHeader: {
     display: 'flex',
@@ -1290,31 +1634,42 @@ const styles = {
   },
   bottomRow: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 1fr 1fr',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)',
     gap: '14px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   bottomTableCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   bottomProjectCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   bottomActivityCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '10px',
+    borderRadius: '12px',
     padding: '18px 20px',
     border: '1px solid #f1f5f9',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   viewAllLink: {
     background: 'none',

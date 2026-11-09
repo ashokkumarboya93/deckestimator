@@ -14,11 +14,17 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
+import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(2);

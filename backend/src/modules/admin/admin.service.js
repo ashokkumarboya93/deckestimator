@@ -27,6 +27,8 @@ const { EstimatorField, EstimatorDependency } = require('./estimatorConfig.model
 const { CatalogProduct, CatalogSubstrate, CatalogCoverageRate } = require('./catalogExtended.model');
 const PermissionsPolicy = require('./permissionsPolicy.model');
 const AuditLog = require('../../shared/models/auditLog.model');
+const UserRequest = require('../users/userRequest.model');
+const VerificationDocument = require('../contractors/verificationDocument.model');
 const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
 
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
@@ -97,6 +99,7 @@ async function getDashboardSummary(dateRange = '30d') {
     activeProjectsCount,
     totalEstimates,
     estimatesValueAgg,
+    completedRevenueAgg,
     leadStatusCounts,
     projectStatusCounts,
     hotLeadsList,
@@ -134,6 +137,12 @@ async function getDashboardSummary(dateRange = '30d') {
     Estimate.aggregate([
       { $match: { totalAmount: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]),
+    Project.aggregate([
+      { $match: { status: 'completed' } },
+      { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
+      { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
     ]),
     Lead.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -179,6 +188,7 @@ async function getDashboardSummary(dateRange = '30d') {
   ]);
 
   const estimatedValue = estimatesValueAgg?.[0]?.total ? Math.round(estimatesValueAgg[0].total) : 0;
+  const totalRevenue = completedRevenueAgg?.[0]?.total ? Math.round(completedRevenueAgg[0].total) : 0;
 
   // Real Dynamic Growth Helper (Compares Current Window vs Prior Window)
   function calcGrowth(current, prior) {
@@ -352,6 +362,7 @@ async function getDashboardSummary(dateRange = '30d') {
       activeProjects: projectStatuses.active,
       totalEstimates,
       estimatedValue,
+      totalRevenue,
       growth: dynamicGrowth,
     },
     leadOverview: {
@@ -569,12 +580,13 @@ async function getUserProfile(userId) {
   const isCust = (user.role || '').toLowerCase() === 'customer';
   const isCont = (user.role || '').toLowerCase() === 'contractor';
 
-  const [decks, estimates, profile, leads, activities] = await Promise.all([
+  const [decks, estimates, profile, leads, activities, documents] = await Promise.all([
     Deck.find({ ownerId: user._id }).sort({ createdAt: -1 }),
     Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }] }).populate('deckId').sort({ createdAt: -1 }),
     ContractorProfile.findOne({ userId: user._id }),
     Lead.find({ $or: [{ customerId: user._id }, { contractorId: user._id }, { assignedContractorId: user._id }] }).sort({ createdAt: -1 }),
     AuditLog.find({ performedBy: user._id }).sort({ createdAt: -1 }).limit(15),
+    VerificationDocument.find({ userId: user._id }).sort({ createdAt: -1 }),
   ]);
 
   const activeEstimatesCount = estimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length;
@@ -631,6 +643,7 @@ async function getUserProfile(userId) {
     projects: decks,
     estimates,
     recentActivities: activities,
+    verificationDocuments: documents,
   };
 }
 
@@ -723,9 +736,16 @@ async function updateUserStatus(adminUser, targetUserId, status, reason = '') {
   return user.toJSON();
 }
 
-async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative account deletion') {
+async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative account deletion', permanent = false) {
   const user = await User.findById(targetUserId).select('+passwordHash');
   if (!user) throw new NotFoundError('User not found.');
+
+  if (permanent) {
+    await User.findByIdAndDelete(targetUserId);
+    await ContractorProfile.deleteOne({ userId: targetUserId });
+    await logAdminAction(adminUser, 'USER_DELETED_PERMANENT', 'User', targetUserId, null, { reason });
+    return { success: true, message: 'Account permanently deleted from system.' };
+  }
 
   user.accountStatus = 'disabled';
   user.deletedAt = new Date();
@@ -741,6 +761,136 @@ async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative 
   await user.save();
   await logAdminAction(adminUser, 'USER_DELETED_SOFT', 'User', user._id, null, { deletedAt: user.deletedAt, reason });
   return { success: true, message: 'Account deactivated and scheduled for retention compliance.' };
+}
+
+// --------------------------------------------------------------------
+// User Appeals & Requests Management
+// --------------------------------------------------------------------
+
+async function listUserRequests({ page = 1, limit = 20, status = 'all', search = '' }) {
+  const query = {};
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+  if (search && search.trim()) {
+    const rx = new RegExp(search.trim(), 'i');
+    query.$or = [{ fullName: rx }, { email: rx }, { message: rx }];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const [requests, total, pendingCount, resolvedCount, rejectedCount] = await Promise.all([
+    UserRequest.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+    UserRequest.countDocuments(query),
+    UserRequest.countDocuments({ status: 'pending' }),
+    UserRequest.countDocuments({ status: 'resolved' }),
+    UserRequest.countDocuments({ status: 'rejected' }),
+  ]);
+
+  return {
+    data: requests,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)) || 1,
+    },
+    counts: {
+      pending: pendingCount,
+      resolved: resolvedCount,
+      rejected: rejectedCount,
+      total,
+    },
+  };
+}
+
+async function resolveUserRequest(adminUser, requestId, { action, adminNotes = '' }) {
+  const reqDoc = await UserRequest.findById(requestId);
+  if (!reqDoc) throw new NotFoundError('User request not found.');
+
+  if (action === 'approve' || action === 'unblock') {
+    reqDoc.status = 'resolved';
+    reqDoc.resolvedAt = new Date();
+    reqDoc.reviewedBy = adminUser.id || adminUser._id;
+    reqDoc.adminNotes = adminNotes || 'Account unblocked by administrator.';
+    await reqDoc.save();
+
+    // Reactivate the target user account
+    const user = await User.findById(reqDoc.userId);
+    if (user) {
+      user.accountStatus = 'active';
+      if (!user.moderationHistory) user.moderationHistory = [];
+      user.moderationHistory.push({
+        status: 'active',
+        reason: `Reactivation appeal approved by admin: ${adminNotes || 'Appeal approved'}`,
+        updatedBy: adminUser.id || adminUser._id,
+        updatedAt: new Date(),
+      });
+      await user.save();
+    }
+  } else if (action === 'reject') {
+    reqDoc.status = 'rejected';
+    reqDoc.resolvedAt = new Date();
+    reqDoc.reviewedBy = adminUser.id || adminUser._id;
+    reqDoc.adminNotes = adminNotes || 'Reactivation appeal rejected.';
+    await reqDoc.save();
+  }
+
+  await logAdminAction(adminUser, 'USER_REQUEST_RESOLVED', 'UserRequest', reqDoc._id, null, { action, adminNotes });
+  return reqDoc;
+}
+
+// --------------------------------------------------------------------
+// Contractor Uploaded Verification Documents
+// --------------------------------------------------------------------
+
+async function listContractorDocuments({ page = 1, limit = 50, status = 'all' }) {
+  const query = {};
+  if (status && status !== 'all') {
+    query.documentStatus = status;
+  }
+  const skip = (Number(page) - 1) * Number(limit);
+  const [docs, total, pendingCount, verifiedCount, rejectedCount] = await Promise.all([
+    VerificationDocument.find(query)
+      .populate('userId', 'fullName email phone')
+      .populate('contractorId', 'businessName licenseNumber verificationStatus')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    VerificationDocument.countDocuments(query),
+    VerificationDocument.countDocuments({ documentStatus: 'pending_review' }),
+    VerificationDocument.countDocuments({ documentStatus: 'verified' }),
+    VerificationDocument.countDocuments({ documentStatus: 'rejected' }),
+  ]);
+
+  return {
+    data: docs,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)) || 1,
+    },
+    counts: {
+      pending: pendingCount,
+      verified: verifiedCount,
+      rejected: rejectedCount,
+      total,
+    },
+  };
+}
+
+async function reviewContractorDocument(adminUser, docId, { status, notes = '' }) {
+  const doc = await VerificationDocument.findById(docId);
+  if (!doc) throw new NotFoundError('Verification document not found.');
+
+  doc.documentStatus = status; // 'verified' or 'rejected'
+  doc.reviewNotes = notes || '';
+  doc.reviewedBy = adminUser.id || adminUser._id;
+  doc.reviewedAt = new Date();
+  await doc.save();
+
+  await logAdminAction(adminUser, 'CONTRACTOR_DOC_REVIEWED', 'VerificationDocument', doc._id, null, { status, notes });
+  return doc;
 }
 
 // ====================================================================
@@ -2236,6 +2386,12 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       { $match: { totalAmount: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]),
+    Project.aggregate([
+      { $match: { status: 'completed' } },
+      { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
+      { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
+    ]),
     Project.countDocuments({ status: { $in: ['in_progress', 'IN_PROGRESS', 'active', 'ACTIVE'] } }),
     Project.countDocuments({ status: { $in: ['completed', 'COMPLETED'] } }),
     Project.countDocuments({ status: { $in: ['on_hold', 'ON_HOLD', 'pending'] } }),
@@ -2423,6 +2579,10 @@ module.exports = {
   exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
+  listUserRequests,
+  resolveUserRequest,
+  listContractorDocuments,
+  reviewContractorDocument,
 
   // 3. Verifications
   listVerifications,

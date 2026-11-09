@@ -10,7 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import DeckHomeLogo from './DeckHomeLogo';
+import mainLogo from '../../../assets/images/MainLodo.png';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -197,19 +197,38 @@ export default function AdminLayout() {
         }}
       >
         {/* Brand Header */}
-        <div style={styles.brandBox}>
-          <Link to="/admin/dashboard" style={styles.brandLink}>
-            <div style={styles.brandIconBox}>
-              <DeckHomeLogo size={24} color="#ffffff" strokeWidth={2.2} />
-            </div>
-            {isSidebarOpen && (
-              <div style={styles.brandTextWrap}>
-                <span style={styles.brandTitle}>DECK RESTORATION</span>
-                <span style={styles.brandSubtitle}>PLUS • ADMIN PORTAL</span>
-              </div>
-            )}
-          </Link>
-        </div>
+        {isSidebarOpen ? (
+          <div style={styles.brandBox}>
+            <Link to="/admin/dashboard" style={styles.brandLink}>
+              <img src={mainLogo} alt="Deck Restoration Plus" style={styles.sidebarLogo} />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              style={styles.sidebarToggleBtn}
+              title="Collapse sidebar"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div style={styles.brandBoxCollapsed}>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              style={styles.sidebarToggleBtnCollapsed}
+              title="Expand sidebar"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Navigation Items (Exact 11 Pages) */}
         <nav style={styles.navScroll}>
@@ -302,20 +321,6 @@ export default function AdminLayout() {
         {/* Top Navigation Bar */}
         <header style={styles.header}>
           <div style={styles.headerLeft}>
-            {/* Hamburger Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              style={styles.hamburgerBtn}
-              title={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            </button>
-
             <div>
               <div style={styles.breadcrumbCategory}>{meta.category}</div>
               <h1 style={styles.breadcrumbTitle}>{meta.title}</h1>
@@ -461,8 +466,12 @@ const styles = {
   container: {
     display: 'flex',
     minHeight: '100vh',
+    width: '100%',
+    maxWidth: '100vw',
+    overflowX: 'hidden',
     backgroundColor: '#f8fafc',
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    boxSizing: 'border-box',
   },
   sidebar: {
     position: 'fixed',
@@ -482,45 +491,56 @@ const styles = {
     height: '66px',
     display: 'flex',
     alignItems: 'center',
-    padding: '0 16px',
+    justifyContent: 'space-between',
+    padding: '0 12px 0 16px',
+    borderBottom: '1px solid #1e293b',
+    flexShrink: 0,
+  },
+  brandBoxCollapsed: {
+    height: '66px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderBottom: '1px solid #1e293b',
     flexShrink: 0,
   },
   brandLink: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
     textDecoration: 'none',
-    width: '100%',
+    overflow: 'hidden',
   },
-  brandIconBox: {
-    width: '36px',
+  sidebarLogo: {
     height: '36px',
-    borderRadius: '8px',
-    backgroundColor: '#1d4ed8',
+    maxWidth: '155px',
+    objectFit: 'contain',
+    display: 'block',
+  },
+  sidebarToggleBtn: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    borderRadius: '6px',
+    width: '30px',
+    height: '30px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    boxShadow: '0 2px 8px rgba(29, 78, 216, 0.4)',
+    cursor: 'pointer',
+    color: '#94a3b8',
+    transition: 'all 0.15s ease',
   },
-  brandTextWrap: {
+  sidebarToggleBtnCollapsed: {
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: '8px',
+    width: '38px',
+    height: '38px',
     display: 'flex',
-    flexDirection: 'column',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-  },
-  brandTitle: {
-    fontSize: '0.82rem',
-    fontWeight: '800',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
     color: '#ffffff',
-    letterSpacing: '0.8px',
-  },
-  brandSubtitle: {
-    fontSize: '0.64rem',
-    fontWeight: '700',
-    color: '#38bdf8',
-    letterSpacing: '0.5px',
+    transition: 'all 0.15s ease',
   },
   navScroll: {
     flex: 1,
@@ -578,6 +598,9 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
+    maxWidth: '100%',
+    overflowX: 'hidden',
+    boxSizing: 'border-box',
     transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   header: {
@@ -806,5 +829,8 @@ const styles = {
     flex: 1,
     minHeight: 'calc(100vh - 66px)',
     backgroundColor: '#f8fafc',
+    overflowX: 'hidden',
+    width: '100%',
+    boxSizing: 'border-box',
   },
 };

@@ -10,17 +10,18 @@
 // - Tab 5 (Progress): Deck project progress tracker with visual progress bars, update modal (slider, status, notes), history timeline, CSV/Excel export
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 
 const TABS = [
   { id: 'verifications', label: 'Verifications' },
+  { id: 'documents', label: 'Contractor Documents' },
   { id: 'customers', label: 'Customers' },
   { id: 'contractors', label: 'Contractors' },
-  { id: 'permissions', label: 'Permissions Matrix' },
-  { id: 'progress', label: 'Project Progress' },
 ];
 
 export default function AdminVerificationProgressPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('verifications');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,22 +31,20 @@ export default function AdminVerificationProgressPage() {
   const [verifications, setVerifications] = useState([]);
   const [verifCounts, setVerifCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [verifFilter, setVerifFilter] = useState('pending');
-  const [selectedVerif, setSelectedVerif] = useState(null);
   const [verifActionModal, setVerifActionModal] = useState({ open: false, type: '', item: null, reason: '' });
   const [verifHistoryModal, setVerifHistoryModal] = useState({ open: false, logs: [], contractorName: '' });
+
+  // Contractor Documents State (NEW)
+  const [contractorDocs, setContractorDocs] = useState([]);
+  const [docsCounts, setDocsCounts] = useState({ pending: 0, verified: 0, rejected: 0, total: 0 });
+  const [docsFilter, setDocsFilter] = useState('all');
+  const [viewingDocModal, setViewingDocModal] = useState(null);
+  const [docReviewModal, setDocReviewModal] = useState({ open: false, doc: null, action: '', notes: '' });
+  const [docSubmitting, setDocSubmitting] = useState(false);
 
   // Users Directory State (Customers & Contractors)
   const [customers, setCustomers] = useState([]);
   const [contractors, setContractors] = useState([]);
-
-  // Permissions Matrix State
-  const [permissions, setPermissions] = useState([]);
-  const [savingPermissions, setSavingPermissions] = useState(false);
-
-  // Projects Progress State
-  const [projects, setProjects] = useState([]);
-  const [progressModal, setProgressModal] = useState({ open: false, project: null, progress: 0, status: '', note: '' });
-  const [savingProgress, setSavingProgress] = useState(false);
 
   useEffect(() => {
     loadTabData(false);
@@ -64,7 +63,7 @@ export default function AdminVerificationProgressPage() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [activeTab, verifFilter]);
+  }, [activeTab, verifFilter, docsFilter]);
 
   const loadTabData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -74,23 +73,37 @@ export default function AdminVerificationProgressPage() {
         const res = await adminApi.getVerifications({ status: verifFilter !== 'all' ? verifFilter : undefined });
         setVerifications(res.data || []);
         if (res.counts) setVerifCounts(res.counts);
+      } else if (activeTab === 'documents') {
+        const res = await adminApi.getContractorDocuments({ status: docsFilter !== 'all' ? docsFilter : undefined });
+        const list = res.data?.data || res.data || [];
+        setContractorDocs(list);
+        if (res.counts || res.data?.counts) setDocsCounts(res.counts || res.data?.counts);
       } else if (activeTab === 'customers') {
         const res = await adminApi.getUsers({ role: 'customer', limit: 50 });
         setCustomers(res.data || []);
       } else if (activeTab === 'contractors') {
         const res = await adminApi.getUsers({ role: 'contractor', limit: 50 });
         setContractors(res.data || []);
-      } else if (activeTab === 'permissions') {
-        const res = await adminApi.getPermissions();
-        setPermissions(res.data || []);
-      } else if (activeTab === 'progress') {
-        const res = await adminApi.getProjects({ limit: 50 });
-        setProjects(res.data || []);
       }
     } catch (err) {
       setError(err?.message || 'Failed to load module data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // DOCUMENT REVIEW ACTIONS (Separate from profile approval, for discount tier verification)
+  const handleReviewDocument = async (docId, status, notes = '') => {
+    setDocSubmitting(true);
+    try {
+      await adminApi.reviewContractorDocument(docId, status, notes);
+      setSuccessMsg(`Document ${status === 'verified' ? 'approved' : 'rejected'} successfully.`);
+      setDocReviewModal({ open: false, doc: null, action: '', notes: '' });
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to update document status.');
+    } finally {
+      setDocSubmitting(false);
     }
   };
 
@@ -203,24 +216,11 @@ export default function AdminVerificationProgressPage() {
             <span style={styles.badgeRejected}>Rejected: {verifCounts.rejected || 0}</span>
           </div>
         )}
-        {activeTab === 'progress' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <a
-              href={adminApi.exportProjectsUrl('csv')}
-              target="_blank"
-              rel="noreferrer"
-              style={styles.exportBtn}
-            >
-              Export CSV
-            </a>
-            <a
-              href={adminApi.exportProjectsUrl('excel')}
-              target="_blank"
-              rel="noreferrer"
-              style={styles.exportBtnExcel}
-            >
-              Export Excel
-            </a>
+        {activeTab === 'documents' && (
+          <div style={styles.badgeGroup}>
+            <span style={styles.badgePending}>Pending Review: {docsCounts.pending || 0}</span>
+            <span style={styles.badgeApproved}>Verified: {docsCounts.verified || 0}</span>
+            <span style={styles.badgeRejected}>Rejected: {docsCounts.rejected || 0}</span>
           </div>
         )}
       </div>
@@ -425,6 +425,7 @@ export default function AdminVerificationProgressPage() {
                   <th style={styles.th}>Phone</th>
                   <th style={styles.th}>Status</th>
                   <th style={styles.th}>Joined Date</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -444,6 +445,16 @@ export default function AdminVerificationProgressPage() {
                       </span>
                     </td>
                     <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                        style={styles.actionBtnOutline}
+                        title="View complete user dossier"
+                      >
+                        View Profile
+                      </button>
+                    </td>
                   </tr>
                   );
                 })}
@@ -476,6 +487,7 @@ export default function AdminVerificationProgressPage() {
                   <th style={styles.th}>Discount Rate</th>
                   <th style={styles.th}>Completed Jobs</th>
                   <th style={styles.th}>Account Status</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -509,6 +521,16 @@ export default function AdminVerificationProgressPage() {
                         {contStatus.toUpperCase()}
                       </span>
                     </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                        style={styles.actionBtnOutline}
+                        title="View complete user dossier"
+                      >
+                        View Profile
+                      </button>
+                    </td>
                   </tr>
                   );
                 })}
@@ -519,160 +541,249 @@ export default function AdminVerificationProgressPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: PERMISSIONS MATRIX */}
+      {/* TAB 2: CONTRACTOR DOCUMENTS (Approval for discount verification) */}
       {/* ========================================================================= */}
-      {activeTab === 'permissions' && (
+      {activeTab === 'documents' && (
         <div style={styles.card}>
           <div style={styles.cardHeaderFlex}>
             <div>
-              <h3 style={styles.cardTitle}>Role-Based Access Control (RBAC) Matrix</h3>
+              <h3 style={styles.cardTitle}>Contractor Verification Documents</h3>
               <p style={styles.cardSub}>
-                Enforce granular capabilities across Admin, Contractor, and Customer platform roles.
+                Review uploaded licenses, insurance certificates, and commercial credentials to approve contractor discount eligibility.
               </p>
             </div>
-            <button
-              onClick={handleSavePermissions}
-              disabled={savingPermissions}
-              style={styles.primaryBtn}
-            >
-              {savingPermissions ? 'Saving Changes...' : 'Save Permissions'}
-            </button>
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={docsFilter}
+                onChange={(e) => setDocsFilter(e.target.value)}
+                style={styles.selectInput}
+              >
+                <option value="all">All Documents</option>
+                <option value="pending_review">Pending Review</option>
+                <option value="verified">Verified (Approved)</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
 
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Module / Capability</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Admin</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Contractor</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Customer</th>
+                  <th style={styles.th}>Document File</th>
+                  <th style={styles.th}>Contractor / Business</th>
+                  <th style={styles.th}>Category</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Uploaded Date</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {permissions.map((rule, idx) => (
-                  <tr key={rule.module} style={styles.tr}>
-                    <td style={styles.td}>
-                      <div style={{ fontWeight: '600', color: '#0f172a' }}>{rule.label || rule.module}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>Module: {rule.module}</div>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={rule.roles?.admin ?? true}
-                        onChange={() => handlePermissionToggle(idx, 'admin')}
-                        style={styles.checkbox}
-                      />
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={rule.roles?.contractor ?? false}
-                        onChange={() => handlePermissionToggle(idx, 'contractor')}
-                        style={styles.checkbox}
-                      />
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={rule.roles?.customer ?? false}
-                        onChange={() => handlePermissionToggle(idx, 'customer')}
-                        style={styles.checkbox}
-                      />
-                    </td>
+                {contractorDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
                   </tr>
-                ))}
+                ) : (
+                  contractorDocs.map((doc) => {
+                    const cont = doc.contractorId || {};
+                    const user = doc.userId || {};
+                    const docStatus = doc.documentStatus || 'pending_review';
+                    return (
+                      <tr key={doc._id} style={styles.tr}>
+                        <td style={styles.td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={styles.docFileIcon}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '700', color: '#0f172a' }}>{doc.originalFileName || 'document.pdf'}</div>
+                              <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                Size: {Math.round((doc.fileSize || 1024) / 1024)} KB • MIME: {doc.mimeType || 'application/pdf'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <strong>{cont.businessName || user.fullName || 'Contractor'}</strong>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            License: {cont.licenseNumber || 'N/A'} • {user.email || ''}
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={styles.docTypeBadge}>
+                            {(doc.documentType || 'DOCUMENT').replace(/_/g, ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{
+                            ...styles.statusPillSmall,
+                            backgroundColor: docStatus === 'verified' ? '#ecfdf5' : docStatus === 'rejected' ? '#fef2f2' : '#fffbeb',
+                            color: docStatus === 'verified' ? '#065f46' : docStatus === 'rejected' ? '#991b1b' : '#92400e',
+                          }}>
+                            {docStatus.replace(/_/g, ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>
+                            {new Date(doc.createdAt || doc.uploadedAt).toLocaleDateString()}
+                          </span>
+                        </td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <div style={styles.actionButtonGroup}>
+                            <button
+                              type="button"
+                              onClick={() => setViewingDocModal(doc)}
+                              style={styles.actionBtnOutline}
+                              title="Inspect document file"
+                            >
+                              View
+                            </button>
+                            {docStatus !== 'verified' && (
+                              <button
+                                type="button"
+                                disabled={docSubmitting}
+                                onClick={() => handleReviewDocument(doc._id, 'verified')}
+                                style={styles.actionBtnSuccess}
+                                title="Approve document to unlock contractor wholesale discounts"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {docStatus !== 'rejected' && (
+                              <button
+                                type="button"
+                                disabled={docSubmitting}
+                                onClick={() => setDocReviewModal({ open: true, doc, action: 'reject', notes: '' })}
+                                style={styles.actionBtnDanger}
+                                title="Reject document"
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 5: PROJECT PROGRESS */}
-      {/* ========================================================================= */}
-      {activeTab === 'progress' && (
-        <div style={styles.card}>
-          <div style={styles.cardHeaderFlex}>
-            <div>
-              <h3 style={styles.cardTitle}>Live Project Progress Tracker</h3>
-              <p style={styles.cardSub}>Oversee active deck restoration stages, completion percentages, and milestone logs.</p>
+      {/* CONTRACTOR DOCUMENT VIEWER MODAL */}
+      {viewingDocModal && (
+        <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
+          <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Document Inspection</h3>
+                <p style={styles.modalSub}>{viewingDocModal.originalFileName}</p>
+              </div>
+              <button onClick={() => setViewingDocModal(null)} style={styles.modalCloseBtn}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              <div style={styles.docInfoGrid}>
+                <div><strong>Contractor:</strong> {viewingDocModal.contractorId?.businessName || viewingDocModal.userId?.fullName || 'N/A'}</div>
+                <div><strong>Category:</strong> {(viewingDocModal.documentType || 'document').replace(/_/g, ' ').toUpperCase()}</div>
+                <div><strong>Status:</strong> {(viewingDocModal.documentStatus || 'pending').replace(/_/g, ' ').toUpperCase()}</div>
+                <div><strong>File Size:</strong> {Math.round((viewingDocModal.fileSize || 1024) / 1024)} KB</div>
+                <div><strong>Uploaded:</strong> {new Date(viewingDocModal.createdAt).toLocaleString()}</div>
+                <div><strong>Storage Key:</strong> {viewingDocModal.storageKey || 'N/A'}</div>
+              </div>
+
+              <div style={styles.docPreviewPlaceholder}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="1.5">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <p style={{ marginTop: '10px', fontSize: '14px', color: '#0f172a', fontWeight: '700' }}>
+                  {viewingDocModal.originalFileName}
+                </p>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
+                  Document verified for commercial wholesale discount authorization.
+                </p>
+              </div>
+
+              {viewingDocModal.reviewNotes && (
+                <div style={{ marginTop: '14px', padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#991b1b' }}>Review Notes:</span>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>{viewingDocModal.reviewNotes}</p>
+                </div>
+              )}
+
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  onClick={() => setViewingDocModal(null)}
+                  style={styles.modalBtnSecondary}
+                >
+                  Close Viewer
+                </button>
+                {viewingDocModal.documentStatus !== 'verified' && (
+                  <button
+                    type="button"
+                    disabled={docSubmitting}
+                    onClick={() => {
+                      handleReviewDocument(viewingDocModal._id, 'verified');
+                      setViewingDocModal(null);
+                    }}
+                    style={styles.actionBtnSuccessLg}
+                  >
+                    Approve Document
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {loading ? (
-            <div style={styles.loaderBox}>
-              <div style={styles.spinner} />
-              <span>Loading projects...</span>
+      {/* DOCUMENT REJECT REASON MODAL */}
+      {docReviewModal.open && docReviewModal.doc && (
+        <div style={styles.modalOverlay} onClick={() => setDocReviewModal({ open: false, doc: null, action: '', notes: '' })}>
+          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>Reject Verification Document</h3>
+            <p style={styles.modalSub}>
+              Specify why document {docReviewModal.doc.originalFileName} does not meet requirements.
+            </p>
+
+            <div style={{ marginTop: '14px' }}>
+              <label style={styles.inputLabel}>Reason / Notes for Contractor:</label>
+              <textarea
+                rows={3}
+                value={docReviewModal.notes}
+                onChange={(e) => setDocReviewModal((prev) => ({ ...prev, notes: e.target.value }))}
+                placeholder="e.g. Expired certificate, illegible scan, name mismatch..."
+                style={styles.modalTextarea}
+              />
             </div>
-          ) : projects.length === 0 ? (
-            <div style={styles.emptyBox}>
-              <p style={styles.emptyTitle}>No projects in progress</p>
-              <p style={styles.emptySub}>Projects will appear here once deck estimates are accepted.</p>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setDocReviewModal({ open: false, doc: null, action: '', notes: '' })}
+                style={styles.modalBtnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={docSubmitting}
+                onClick={() => handleReviewDocument(docReviewModal.doc._id, 'rejected', docReviewModal.notes)}
+                style={styles.actionBtnDangerLg}
+              >
+                {docSubmitting ? 'Saving...' : 'Confirm Rejection'}
+              </button>
             </div>
-          ) : (
-            <div style={styles.tableResponsive}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Project Title</th>
-                    <th style={styles.th}>Customer</th>
-                    <th style={styles.th}>Contractor</th>
-                    <th style={styles.th}>Progress (%)</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Updated</th>
-                    <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projects.map((proj) => (
-                    <tr key={proj._id} style={styles.tr}>
-                      <td style={styles.td}>
-                        <strong>{proj.title}</strong>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Deck: {proj.deckSpecs?.length || 0}' × {proj.deckSpecs?.width || 0}' ({proj.deckSpecs?.woodSpecies || 'Wood'})
-                        </div>
-                      </td>
-                      <td style={styles.td}>{proj.customerName || 'Customer'}</td>
-                      <td style={styles.td}>{proj.contractorName || 'Assigned Specialist'}</td>
-                      <td style={styles.td}>
-                        <div style={styles.progressContainer}>
-                          <div style={styles.progressTrack}>
-                            <div
-                              style={{
-                                ...styles.progressBar,
-                                width: `${proj.progress || 0}%`,
-                                backgroundColor: proj.progress === 100 ? '#10b981' : '#1d4ed8',
-                              }}
-                            />
-                          </div>
-                          <span style={styles.progressText}>{proj.progress || 0}%</span>
-                        </div>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={getProgressStatusBadge(proj.status)}>
-                          {(proj.status || 'IN_PROGRESS').toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ fontSize: '13px', color: '#64748b' }}>
-                          {new Date(proj.updatedAt || Date.now()).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleOpenProgressModal(proj)}
-                          style={styles.actionBtnOutline}
-                        >
-                          Update Progress
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -1344,5 +1455,67 @@ const styles = {
     fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
+  },
+  actionBtnSuccessLg: {
+    padding: '8px 18px',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  docFileIcon: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    backgroundColor: '#eff6ff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  docTypeBadge: {
+    display: 'inline-block',
+    padding: '3px 8px',
+    fontSize: '11px',
+    fontWeight: '700',
+    borderRadius: '4px',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    letterSpacing: '0.04em',
+  },
+  statusPillSmall: {
+    display: 'inline-block',
+    padding: '3px 9px',
+    fontSize: '11px',
+    fontWeight: '700',
+    borderRadius: '9999px',
+  },
+  emptyTd: {
+    padding: '32px 16px',
+    textAlign: 'center',
+    color: '#64748b',
+    fontSize: '13px',
+  },
+  docInfoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+    padding: '12px 16px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    fontSize: '12px',
+    color: '#334155',
+    marginBottom: '16px',
+  },
+  docPreviewPlaceholder: {
+    padding: '24px 16px',
+    backgroundColor: '#f0fdf4',
+    border: '1px dashed #86efac',
+    borderRadius: '8px',
+    textAlign: 'center',
   },
 };
