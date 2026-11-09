@@ -38,7 +38,7 @@ async function authenticate(req, res, next) {
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
     // Verify user exists and account status is active
-    const user = await User.findById(decoded.id).select('accountStatus role email');
+    const user = await User.findById(decoded.id).select('accountStatus role email fullName phone');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -73,6 +73,8 @@ async function authenticate(req, res, next) {
       id: user._id.toString(),
       role: user.role,
       email: user.email,
+      fullName: user.fullName || '',
+      phone: user.phone || '',
     };
 
     next();

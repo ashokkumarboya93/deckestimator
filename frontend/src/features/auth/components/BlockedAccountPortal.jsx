@@ -45,6 +45,7 @@ export default function BlockedAccountPortal({ user }) {
     setError(null);
     try {
       const res = await client.post('/users/unblock-request', {
+        fullName: user?.fullName || '',
         message: message.trim(),
         phone: phone.trim(),
       });

@@ -43,17 +43,25 @@ async function updateProfile(req, res, next) {
  */
 async function submitUnblockRequest(req, res, next) {
   try {
-    const { message, phone } = req.body;
+    const { message, phone, fullName } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Appeal message is required.' });
     }
 
+    const User = require('./users.model');
+    const userDoc = await User.findById(req.user.id || req.user._id);
+
+    const resolvedFullName = (fullName && fullName.trim()) || userDoc?.fullName || req.user?.fullName || 'User';
+    const resolvedEmail = userDoc?.email || req.user?.email || 'unknown@deckestimator.com';
+    const resolvedRole = userDoc?.role || req.user?.role || 'customer';
+    const resolvedPhone = (phone && phone.trim()) || userDoc?.phone || req.user?.phone || '';
+
     const request = await UserRequest.create({
-      userId: req.user.id || req.user._id,
-      fullName: req.user.fullName,
-      email: req.user.email,
-      phone: phone || req.user.phone || '',
-      role: req.user.role,
+      userId: userDoc?._id || req.user.id || req.user._id,
+      fullName: resolvedFullName,
+      email: resolvedEmail,
+      phone: resolvedPhone,
+      role: resolvedRole,
       requestType: 'unblock_account',
       message: message.trim(),
       status: 'pending',
