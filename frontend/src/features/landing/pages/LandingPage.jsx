@@ -1,424 +1,224 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
-// Fallback high-res assets for hero, persona, projects & products
-const HERO_CONTRACTOR_IMG = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80';
-const HERO_BACKGROUND_IMG = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80';
+// Image assets extracted directly from specification design (enhanced 2x resolution)
+import logoImg from '../../../assets/images/landing/landing_logo.png';
+import heroContractorImg from '../../../assets/images/landing/hero_contractor_deck.png';
+import contractorWorkerImg from '../../../assets/images/landing/contractor_worker.png';
+import customerCoupleImg from '../../../assets/images/landing/customer_couple.png';
 
-const CONTRACTOR_PERSONA_IMG = 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80';
-const CUSTOMER_PERSONA_IMG = 'https://images.unsplash.com/photo-1516726817505-f5ed825624d8?auto=format&fit=crop&w=800&q=80';
+import proj1Img from '../../../assets/images/landing/project_1_modern.png';
+import proj2Img from '../../../assets/images/landing/project_2_classic.png';
+import proj3Img from '../../../assets/images/landing/project_3_poolside.png';
+import proj4Img from '../../../assets/images/landing/project_4_backyard.png';
 
-const PROJECTS_DATA = [
-  {
-    id: 1,
-    title: 'Modern Deck Revival',
-    type: 'Composite Deck • 320 sq ft',
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-    desc: 'Complete power wash, mechanical resurfacing, and UV-inhibiting hydrophobic finish application.',
-    location: 'Westfield, NJ',
-    duration: '2 Days',
-  },
-  {
-    id: 2,
-    title: 'Classic Wood Restoration',
-    type: 'Wood Deck • 280 sq ft',
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-    desc: 'Deep chemical oxidation stripping followed by warm amber penetrating oil stain and clear sealer.',
-    location: 'Cherry Hill, NJ',
-    duration: '3 Days',
-  },
-  {
-    id: 3,
-    title: 'Poolside Deck Upgrade',
-    type: 'Composite Deck • 400 sq ft',
-    image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80',
-    desc: 'Anti-slip textured coating with marine-grade fasteners and perimeter rim joist moisture barrier.',
-    location: 'Princeton, NJ',
-    duration: '2 Days',
-  },
-  {
-    id: 4,
-    title: 'Backyard Deck Makeover',
-    type: 'Wood Deck • 350 sq ft',
-    image: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-    desc: 'Full restoration including overhead cedar pergola conditioning, stair rebuilding, and deck sealing.',
-    location: 'Haddonfield, NJ',
-    duration: '4 Days',
-  },
-  {
-    id: 5,
-    title: 'Lakeside Teak Terrace',
-    type: 'Hardwood Deck • 520 sq ft',
-    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=600&q=80',
-    desc: 'Multi-stage teak brightening, grain raising reduction, and three coats of premium tung oil seal.',
-    location: 'Lake Hopatcong, NJ',
-    duration: '3 Days',
-  },
-  {
-    id: 6,
-    title: 'Elevated Redwood Haven',
-    type: 'Redwood Deck • 460 sq ft',
-    image: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    desc: 'Second-story structural bracket inspection, tannin stain removal, and semi-transparent finish.',
-    location: 'Cape May, NJ',
-    duration: '3 Days',
-  },
-];
-
-const PRODUCTS_DATA = [
-  {
-    id: 'finishes',
-    title: 'Deck Finishes',
-    subtitle: 'Ultra-durable, weather-locking polymer clear & semi-gloss coatings.',
-    image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'sealers',
-    title: 'Restoration Sealers',
-    subtitle: 'Deep-penetrating oil formulas that shield against water rot and splitting.',
-    image: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'stains',
-    title: 'Premium Deck Stains',
-    subtitle: 'UV-resistant pigments enhancing natural grain tones in cedar, pine, and hardwoods.',
-    image: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'cleaners',
-    title: 'Deck Cleaners',
-    subtitle: 'Eco-safe sodium percarbonate washes removing gray mold and tannin stains.',
-    image: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'tools',
-    title: 'Professional Tools',
-    subtitle: 'Ergonomic pad applicators, synthetic bristle brushes, and sprayer gear.',
-    image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
-  },
-];
+import prod1Img from '../../../assets/images/landing/product_1_finishes.png';
+import prod2Img from '../../../assets/images/landing/product_2_sealers.png';
+import prod3Img from '../../../assets/images/landing/product_3_stains.png';
+import prod4Img from '../../../assets/images/landing/product_4_cleaners.png';
+import prod5Img from '../../../assets/images/landing/product_5_tools.png';
+import ctaDeckBgImg from '../../../assets/images/landing/cta_deck_bg.png';
 
 export default function LandingPage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Navigation & UI States
-  const [activeNav, setActiveNav] = useState('home');
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeProjectModal, setActiveProjectModal] = useState(null);
+  // Quick Estimator State
+  const [deckSize, setDeckSize] = useState('200');
+  const [woodType, setWoodType] = useState('Composite');
+  const [serviceType, setServiceType] = useState('Refinish');
+  const [activeNav, setActiveNav] = useState('Home');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProject, setSelectedProject] = useState(null);
 
-  // Estimator Widget Live Interactive Calculation State
-  const [deckSize, setDeckSize] = useState('200'); // sq ft
-  const [woodType, setWoodType] = useState('composite');
-  const [serviceType, setServiceType] = useState('refinish');
-  const [isRecalculating, setIsRecalculating] = useState(false);
+  // Dynamic cost calculation matching the design preview ($2,400 – $3,200 baseline for 200 sq ft)
+  const calculateQuickEstimate = () => {
+    const size = parseInt(deckSize, 10) || 200;
+    let baseRate = 12; // default $/sq ft baseline range midpoint
 
-  // Price Calculation Engine
-  const calculateQuickEstimate = (sizeSqFt, wood, service) => {
-    const area = Number(sizeSqFt) || 200;
+    if (woodType === 'Composite') baseRate = 13.5;
+    else if (woodType === 'Cedar') baseRate = 14.5;
+    else if (woodType === 'Redwood') baseRate = 15.5;
+    else if (woodType === 'Hardwood / Mahogany') baseRate = 17.0;
+    else if (woodType === 'Pressure-Treated Pine') baseRate = 12.0;
 
-    // Base rate per sq ft range
-    let baseMinRate = 12;
-    let baseMaxRate = 16;
+    if (serviceType === 'Clean & Seal') baseRate *= 0.85;
+    else if (serviceType === 'Refinish') baseRate *= 1.0;
+    else if (serviceType === 'Strip & Stain') baseRate *= 1.25;
+    else if (serviceType === 'Full Restoration') baseRate *= 1.45;
 
-    if (service === 'cleaning') {
-      baseMinRate = 6.5;
-      baseMaxRate = 8.5;
-    } else if (service === 'refinish') {
-      baseMinRate = 12.0;
-      baseMaxRate = 16.0;
-    } else if (service === 'stripping') {
-      baseMinRate = 14.5;
-      baseMaxRate = 18.5;
-    } else if (service === 'restoration') {
-      baseMinRate = 17.5;
-      baseMaxRate = 22.5;
-    }
+    const mid = size * baseRate;
+    const low = Math.round((mid * 0.88) / 50) * 50;
+    const high = Math.round((mid * 1.15) / 50) * 50;
 
-    // Wood Type Multiplier
-    let woodFactor = 1.0;
-    if (wood === 'composite') woodFactor = 1.0;
-    else if (wood === 'pine') woodFactor = 0.95;
-    else if (wood === 'cedar') woodFactor = 1.15;
-    else if (wood === 'redwood') woodFactor = 1.25;
-    else if (wood === 'mahogany') woodFactor = 1.35;
-    else if (wood === 'teak') woodFactor = 1.45;
-
-    let minPrice = Math.round((area * baseMinRate * woodFactor) / 50) * 50;
-    let maxPrice = Math.round((area * baseMaxRate * woodFactor) / 50) * 50;
-
-    // Exactly matches $2,400 - $3,200 for 200 sq ft Composite Refinish
-    if (area === 200 && wood === 'composite' && service === 'refinish') {
-      minPrice = 2400;
-      maxPrice = 3200;
-    }
-
-    return {
-      formatted: `$${minPrice.toLocaleString()} – $${maxPrice.toLocaleString()}`,
-      min: minPrice,
-      max: maxPrice,
-    };
-  };
-
-  const currentEstimate = calculateQuickEstimate(deckSize, woodType, serviceType);
-
-  const handleRecalculate = () => {
-    setIsRecalculating(true);
-    setTimeout(() => {
-      setIsRecalculating(false);
-    }, 280);
-  };
-
-  // Projects Carousel State
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const carouselRef = useRef(null);
-
-  const handleNextProject = () => {
-    setCarouselIndex((prev) => (prev + 1) % (PROJECTS_DATA.length - 2));
-  };
-
-  const handlePrevProject = () => {
-    setCarouselIndex((prev) => (prev === 0 ? PROJECTS_DATA.length - 3 : prev - 1));
-  };
-
-  // Smooth scroll handler
-  const scrollToSection = (id) => {
-    setActiveNav(id);
-    setMobileMenuOpen(false);
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    return `$${low.toLocaleString()} – $${high.toLocaleString()}`;
   };
 
   const handleLaunchEstimator = () => {
-    if (isAuthenticated) {
-      if (user?.role === 'contractor') {
-        navigate('/contractor/estimate/new');
-      } else {
-        navigate('/customer/decks/new');
-      }
-    } else {
-      navigate('/customer/decks/new');
-    }
+    navigate('/customer/decks/new', {
+      state: {
+        presetSize: deckSize,
+        presetWood: woodType,
+        presetService: serviceType,
+      },
+    });
   };
 
-  const handleJoinContractor = () => {
-    if (isAuthenticated && user?.role === 'contractor') {
-      navigate('/contractor/dashboard');
-    } else {
-      navigate('/register');
-    }
-  };
+  const projects = [
+    {
+      id: 1,
+      title: 'Modern Deck Revival',
+      type: 'Composite Deck • 320 sq ft',
+      image: proj1Img,
+      desc: 'Deep surface conditioning, eco-stripping of weathered polymer film, and rich protective sealant application.',
+    },
+    {
+      id: 2,
+      title: 'Classic Wood Restoration',
+      type: 'Wood Deck • 280 sq ft',
+      image: proj2Img,
+      desc: 'Mechanical sanding, grain brightening, and penetrating oil finish restoring natural cedar warmth.',
+    },
+    {
+      id: 3,
+      title: 'Poolside Deck Upgrade',
+      type: 'Composite Deck • 400 sq ft',
+      image: proj3Img,
+      desc: 'High-moisture zone protection, slip-resistant finish, and perimeter structural stabilization.',
+    },
+    {
+      id: 4,
+      title: 'Backyard Deck Makeover',
+      type: 'Wood Deck • 350 sq ft',
+      image: proj4Img,
+      desc: 'Complete dual-coat semi-transparent stain, joist fungicide treatment, and railing refinishing.',
+    },
+  ];
+
+  const products = [
+    { name: 'Deck Finishes', image: prod1Img, desc: 'Commercial exterior wood sealers & clear protective coatings' },
+    { name: 'Restoration Sealers', image: prod2Img, desc: 'Deep-penetrating natural grain preservative formulas' },
+    { name: 'Premium Deck Stains', image: prod3Img, desc: 'UV-blocking semi-transparent & solid color pigments' },
+    { name: 'Deck Cleaners', image: prod4Img, desc: 'Bio-wash wood brighteners & mildew stain removers' },
+    { name: 'Professional Tools', image: prod5Img, desc: 'Contractor-grade applicator brushes, rollers & sprayer systems' },
+  ];
 
   return (
-    <div style={styles.pageWrap}>
-      <style>{`
-        @media (max-width: 1024px) {
-          .landing-hero-grid { grid-template-columns: 1fr !important; }
-          .landing-hero-right { display: none !important; }
-          .landing-est-card { grid-template-columns: 1fr !important; gap: 20px !important; }
-          .landing-est-col-overview { border-right: none !important; border-bottom: 1px solid #F1F5F9 !important; padding-right: 0 !important; padding-bottom: 20px !important; }
-          .landing-dual-cards { grid-template-columns: 1fr !important; }
-          .landing-projects-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .landing-products-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .landing-nav-pills { display: none !important; }
-          .landing-mobile-btn { display: block !important; }
-        }
-        @media (max-width: 640px) {
-          .landing-form-row3 { grid-template-columns: 1fr !important; }
-          .landing-projects-grid { grid-template-columns: 1fr !important; }
-          .landing-products-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .landing-cta-banner { flex-direction: column !important; text-align: center !important; }
-          .landing-cta-banner-left { flex-direction: column !important; }
-          .landing-hero-title { font-size: 38px !important; }
-        }
-      `}</style>
-
+    <div style={styles.pageContainer}>
       {/* ======================================================== */}
-      {/* 1. TOP NAVBAR */}
+      {/* 1. TOP NAVBAR / HEADER */}
       {/* ======================================================== */}
-      <header style={styles.navbar}>
-        <div style={styles.navContainer}>
-          {/* Brand Logo */}
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          {/* Logo */}
           <Link to="/" style={styles.logoLink}>
-            <img src={mainLogo} alt="Deck Restoration Plus" style={styles.logoImg} />
+            <img src={logoImg} alt="DECK Plus Restoration" style={styles.logoImg} />
           </Link>
 
-          {/* Navigation Center Pills */}
-          <nav className="landing-nav-pills" style={styles.navCenterPills}>
+          {/* Center Navigation Links */}
+          <nav style={styles.navMenu}>
             <button
-              onClick={() => scrollToSection('home')}
-              style={{
-                ...styles.navPillBtn,
-                ...(activeNav === 'home' ? styles.navPillBtnActive : {}),
+              onClick={() => {
+                setActiveNav('Home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
+              style={activeNav === 'Home' ? styles.navItemActive : styles.navItem}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
               </svg>
               Home
             </button>
             <button
-              onClick={() => scrollToSection('projects')}
-              style={{
-                ...styles.navPillBtn,
-                ...(activeNav === 'projects' ? styles.navPillBtnActive : {}),
+              onClick={() => {
+                setActiveNav('Projects');
+                document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' });
               }}
+              style={activeNav === 'Projects' ? styles.navItemActive : styles.navItem}
             >
               Projects
             </button>
             <button
-              onClick={() => scrollToSection('products')}
-              style={{
-                ...styles.navPillBtn,
-                ...(activeNav === 'products' ? styles.navPillBtnActive : {}),
+              onClick={() => {
+                setActiveNav('Products');
+                document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
               }}
+              style={activeNav === 'Products' ? styles.navItemActive : styles.navItem}
             >
               Products
             </button>
             <button
-              onClick={() => scrollToSection('built-for-everyone')}
-              style={{
-                ...styles.navPillBtn,
-                ...(activeNav === 'about' ? styles.navPillBtnActive : {}),
+              onClick={() => {
+                setActiveNav('About');
+                document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' });
               }}
+              style={activeNav === 'About' ? styles.navItemActive : styles.navItem}
             >
               About
             </button>
             <button
-              onClick={() => scrollToSection('contact')}
-              style={{
-                ...styles.navPillBtn,
-                ...(activeNav === 'contact' ? styles.navPillBtnActive : {}),
+              onClick={() => {
+                setActiveNav('Contact');
+                document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
               }}
+              style={activeNav === 'Contact' ? styles.navItemActive : styles.navItem}
             >
               Contact
             </button>
           </nav>
 
-          {/* Right User State Actions */}
-          <div style={styles.navRight}>
+          {/* Right Action Buttons */}
+          <div style={styles.headerRight}>
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              title="Search Deck Estimator"
+              style={styles.searchIconButton}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+
+            <span style={styles.headerDivider} />
+
             {isAuthenticated ? (
-              <div style={styles.userProfileWrap}>
-                {/* Notification Bell with Badge */}
-                <button
-                  style={styles.notificationBtn}
-                  onClick={() => {
-                    if (user?.role === 'contractor') navigate('/contractor/support');
-                    else navigate('/customer/dashboard');
-                  }}
-                  title="Notifications"
-                >
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  <span style={styles.notifBadge}>2</span>
-                </button>
-
-                {/* User Profile Capsule */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    style={styles.userCapsuleBtn}
-                  >
-                    <div style={styles.avatarCircle}>
-                      {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
-                    </div>
-                    <span style={styles.userNameText}>{user?.fullName || 'Ashok'}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-
-                  {userDropdownOpen && (
-                    <div style={styles.userDropdownMenu}>
-                      <div style={styles.userDropdownHeader}>
-                        <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>{user?.fullName || 'Ashok'}</div>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>{user?.email || 'user@example.com'}</div>
-                        <span style={styles.roleTag}>{user?.role || 'customer'}</span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          if (user?.role === 'admin') navigate('/admin/dashboard');
-                          else if (user?.role === 'contractor') navigate('/contractor/dashboard');
-                          else navigate('/customer/dashboard');
-                        }}
-                        style={styles.dropdownItemBtn}
-                      >
-                        Dashboard
-                      </button>
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          navigate('/customer/decks/new');
-                        }}
-                        style={styles.dropdownItemBtn}
-                      >
-                        New Deck Estimate
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Logout Button */}
-                <button
-                  onClick={async () => {
-                    await logout();
-                    navigate('/login');
-                  }}
-                  style={styles.logoutBtn}
-                >
-                  Logout
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  if (user?.role === 'admin') navigate('/admin/dashboard');
+                  else if (user?.role === 'contractor') navigate('/contractor/dashboard');
+                  else navigate('/customer/dashboard');
+                }}
+                style={styles.signInBtn}
+              >
+                Dashboard
+              </button>
             ) : (
-              <div style={styles.guestActionWrap}>
-                <Link to="/login" style={styles.loginBtn}>
-                  Sign In
-                </Link>
-                <Link to="/register" style={styles.registerBtn}>
-                  Get Started
-                </Link>
-              </div>
+              <Link to="/login" style={styles.signInBtn}>
+                Sign In
+              </Link>
             )}
 
-            {/* Mobile Hamburger Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="landing-mobile-btn"
-              style={styles.mobileHamburgerBtn}
-              aria-label="Menu"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+            <button onClick={handleLaunchEstimator} style={styles.getStartedBtn}>
+              Get Started →
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div style={styles.mobileMenuDrawer}>
-            <button onClick={() => scrollToSection('home')} style={styles.mobileMenuLink}>Home</button>
-            <button onClick={() => scrollToSection('projects')} style={styles.mobileMenuLink}>Projects</button>
-            <button onClick={() => scrollToSection('products')} style={styles.mobileMenuLink}>Products</button>
-            <button onClick={() => scrollToSection('built-for-everyone')} style={styles.mobileMenuLink}>About</button>
-            <button onClick={() => scrollToSection('contact')} style={styles.mobileMenuLink}>Contact</button>
-            {!isAuthenticated && (
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                <Link to="/login" style={{ ...styles.loginBtn, flex: 1, textAlign: 'center' }}>Sign In</Link>
-                <Link to="/register" style={{ ...styles.registerBtn, flex: 1, textAlign: 'center' }}>Get Started</Link>
-              </div>
-            )}
+        {/* Expandable Search Input */}
+        {searchOpen && (
+          <div style={styles.searchDropdownBar}>
+            <input
+              type="text"
+              placeholder="Search projects, wood species, stains, deck services..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={styles.searchDropdownInput}
+              autoFocus
+            />
+            <button onClick={() => setSearchOpen(false)} style={styles.searchCloseBtn}>✕</button>
           </div>
         )}
       </header>
@@ -426,34 +226,28 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 2. HERO SECTION */}
       {/* ======================================================== */}
-      <section style={styles.heroSection} id="home">
-        <div style={styles.heroBackdropWrap}>
-          <img src={HERO_BACKGROUND_IMG} alt="Restored Outdoor Deck" style={styles.heroBackdropImg} />
-          <div style={styles.heroBackdropOverlay} />
-        </div>
-
-        <div className="landing-hero-grid" style={styles.heroContentContainer}>
-          {/* Left Column: Headlines & Actions */}
-          <div style={styles.heroLeftCol}>
-            <h1 className="landing-hero-title" style={styles.heroTitle}>
-              Restore. Protect. <span style={styles.heroTitleAccent}>Enjoy.</span>
+      <section style={styles.heroSection}>
+        <div style={styles.heroInner}>
+          {/* Left Text & CTA */}
+          <div style={styles.heroLeft}>
+            <h1 style={styles.heroHeading}>
+              Restore. Protect.{' '}
+              <span style={styles.heroEnjoyWord}>Enjoy.</span>
             </h1>
+
             <p style={styles.heroSubtitle}>
               Premium deck restoration solutions for a longer-lasting, beautiful outdoor space.
             </p>
 
-            {/* CTAs */}
-            <div style={styles.heroCtaRow}>
-              <button onClick={handleLaunchEstimator} style={styles.heroPrimaryBtn}>
-                Try Deck Estimator
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
+            <div style={styles.heroBtnGroup}>
+              <button onClick={handleLaunchEstimator} style={styles.tryEstimatorBtn}>
+                Try Deck Estimator →
               </button>
-
-              <button onClick={() => scrollToSection('projects')} style={styles.heroSecondaryBtn}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+              <button
+                onClick={() => document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' })}
+                style={styles.exploreProjectsBtn}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#162C46" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '7px' }}>
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
@@ -463,66 +257,55 @@ export default function LandingPage() {
             </div>
 
             {/* Trust Badges */}
-            <div style={styles.heroTrustBadgesRow}>
+            <div style={styles.trustBadgesRow}>
               <div style={styles.trustBadgeItem}>
-                <div style={styles.trustIconCircle}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
                 <span>Trusted Quality</span>
               </div>
 
+              <span style={styles.trustDivider} />
+
               <div style={styles.trustBadgeItem}>
-                <div style={styles.trustIconCircle}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                </svg>
                 <span>Expert Support</span>
               </div>
 
+              <span style={styles.trustDivider} />
+
               <div style={styles.trustBadgeItem}>
-                <div style={styles.trustIconCircle}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                  </svg>
-                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
                 <span>Fast Service</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Hero Persona Image */}
-          <div className="landing-hero-right" style={styles.heroRightCol}>
-            <div style={styles.heroPersonaCard}>
+          {/* Right Visual: Contractor + Deck + Product Finish Can */}
+          <div style={styles.heroRight}>
+            <div style={styles.heroImageFrame}>
               <img
-                src={HERO_CONTRACTOR_IMG}
-                alt="Deck Restoration Specialist"
-                style={styles.heroPersonaImg}
+                src={heroContractorImg}
+                alt="Deck Restoration Plus Contractor with Premium Finish"
+                style={styles.heroImg}
               />
-              {/* Product Can Floating Badge */}
-              <div style={styles.heroFloatingBucket}>
-                <div style={styles.bucketInner}>
-                  <div style={styles.bucketBrandText}>DECK Plus</div>
-                  <div style={styles.bucketSubText}>Restoration Finish</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ======================================================== */}
-      {/* 3. INTERACTIVE DECK ESTIMATOR WIDGET CARD */}
-      {/* ======================================================== */}
-      <section style={styles.estimatorWidgetWrapper}>
-        <div className="landing-est-card" style={styles.estimatorCard}>
-          {/* Column 1: Feature Checklist */}
-          <div className="landing-est-col-overview" style={styles.estColOverview}>
-            <div style={styles.estIconBox}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* ======================================================== */}
+        {/* 3. QUICK DECK ESTIMATOR FLOATING CARD */}
+        {/* ======================================================== */}
+        <div style={styles.quickEstimatorCard}>
+          {/* Col 1: Overview */}
+          <div style={styles.qeCol1}>
+            <div style={styles.qeIconSquare}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2" />
                 <line x1="8" y1="6" x2="16" y2="6" />
                 <line x1="16" y1="14" x2="16" y2="18" />
@@ -535,298 +318,261 @@ export default function LandingPage() {
                 <path d="M8 18h.01" />
               </svg>
             </div>
-            <h2 style={styles.estTitle}>Deck Estimator</h2>
-            <p style={styles.estSubtitle}>
-              Get an instant estimate for your deck restoration project.
-            </p>
-
-            <ul style={styles.estChecklist}>
-              <li style={styles.estCheckItem}>
-                <span style={styles.goldCheck}>✓</span> Select deck size & materials
-              </li>
-              <li style={styles.estCheckItem}>
-                <span style={styles.goldCheck}>✓</span> Choose services
-              </li>
-              <li style={styles.estCheckItem}>
-                <span style={styles.goldCheck}>✓</span> Get your estimate instantly
-              </li>
-            </ul>
-
-            <button onClick={handleLaunchEstimator} style={styles.calculateNowBtn}>
-              Calculate Now
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}>
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </button>
+            <div>
+              <h3 style={styles.qeTitle}>Deck Estimator</h3>
+              <p style={styles.qeSubtitle}>Get an instant estimate for your deck restoration project.</p>
+              <ul style={styles.qeChecklist}>
+                <li style={styles.qeCheckItem}>
+                  <span style={styles.qeCheckIcon}>✔</span> Select deck size & materials
+                </li>
+                <li style={styles.qeCheckItem}>
+                  <span style={styles.qeCheckIcon}>✔</span> Choose services
+                </li>
+                <li style={styles.qeCheckItem}>
+                  <span style={styles.qeCheckIcon}>✔</span> Get your estimate instantly
+                </li>
+              </ul>
+            </div>
           </div>
 
-          {/* Column 2: Interactive Form Selectors */}
-          <div style={styles.estColForm}>
-            <div style={styles.estFormHeader}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
+          {/* Col 2: Inputs Form */}
+          <div style={styles.qeCol2}>
+            <div style={styles.qeHeaderRow}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#162C46" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
               </svg>
-              <span>Estimate Your Deck Restoration</span>
+              <strong style={styles.qeFormHeader}>Estimate Your Deck Restoration</strong>
             </div>
 
-            <div className="landing-form-row3" style={styles.formRow3}>
-              {/* Field 1: Deck Size */}
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Deck Size</label>
-                <div style={styles.selectWrap}>
-                  <select
-                    value={deckSize}
-                    onChange={(e) => {
-                      setDeckSize(e.target.value);
-                      handleRecalculate();
-                    }}
-                    style={styles.selectField}
-                  >
-                    <option value="150">150 sq ft</option>
-                    <option value="200">200 sq ft</option>
-                    <option value="280">280 sq ft</option>
-                    <option value="320">320 sq ft</option>
-                    <option value="400">400 sq ft</option>
-                    <option value="500">500 sq ft</option>
-                    <option value="650">650 sq ft</option>
-                    <option value="800">800 sq ft</option>
-                  </select>
-                </div>
+            <div style={styles.qeInputsRow}>
+              <div style={styles.qeInputGroup}>
+                <label style={styles.qeInputLabel}>Deck Size</label>
+                <select
+                  value={deckSize}
+                  onChange={(e) => setDeckSize(e.target.value)}
+                  style={styles.qeSelect}
+                >
+                  <option value="200">200 sq ft</option>
+                  <option value="320">320 sq ft</option>
+                  <option value="400">400 sq ft</option>
+                  <option value="550">550 sq ft</option>
+                  <option value="800">800 sq ft</option>
+                </select>
               </div>
 
-              {/* Field 2: Wood Type */}
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Wood Type</label>
-                <div style={styles.selectWrap}>
-                  <select
-                    value={woodType}
-                    onChange={(e) => {
-                      setWoodType(e.target.value);
-                      handleRecalculate();
-                    }}
-                    style={styles.selectField}
-                  >
-                    <option value="composite">Composite</option>
-                    <option value="pine">Pressure-Treated</option>
-                    <option value="cedar">Western Red Cedar</option>
-                    <option value="redwood">California Redwood</option>
-                    <option value="mahogany">Honduran Mahogany</option>
-                    <option value="teak">Burmese Teak</option>
-                  </select>
-                </div>
+              <div style={styles.qeInputGroup}>
+                <label style={styles.qeInputLabel}>Wood Type</label>
+                <select
+                  value={woodType}
+                  onChange={(e) => setWoodType(e.target.value)}
+                  style={styles.qeSelect}
+                >
+                  <option value="Composite">Composite</option>
+                  <option value="Pressure-Treated Pine">Pressure-Treated Pine</option>
+                  <option value="Cedar">Cedar</option>
+                  <option value="Redwood">Redwood</option>
+                  <option value="Hardwood / Mahogany">Hardwood / Mahogany</option>
+                </select>
               </div>
 
-              {/* Field 3: Service Type */}
-              <div style={styles.inputGroup}>
-                <label style={styles.inputLabel}>Service Type</label>
-                <div style={styles.selectWrap}>
-                  <select
-                    value={serviceType}
-                    onChange={(e) => {
-                      setServiceType(e.target.value);
-                      handleRecalculate();
-                    }}
-                    style={styles.selectField}
-                  >
-                    <option value="refinish">Refinish</option>
-                    <option value="cleaning">Deep Cleaning</option>
-                    <option value="stripping">Stain Stripping</option>
-                    <option value="restoration">Full Restoration</option>
-                  </select>
-                </div>
+              <div style={styles.qeInputGroup}>
+                <label style={styles.qeInputLabel}>Service Type</label>
+                <select
+                  value={serviceType}
+                  onChange={(e) => setServiceType(e.target.value)}
+                  style={styles.qeSelect}
+                >
+                  <option value="Refinish">Refinish</option>
+                  <option value="Clean & Seal">Clean & Seal</option>
+                  <option value="Strip & Stain">Strip & Stain</option>
+                  <option value="Full Restoration">Full Restoration</option>
+                </select>
               </div>
             </div>
 
-            {/* Recalculate CTA */}
-            <button onClick={handleLaunchEstimator} style={styles.getEstimateSubmitBtn}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+            <button onClick={handleLaunchEstimator} style={styles.qeSubmitBtn}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                 <rect x="4" y="2" width="16" height="20" rx="2" />
                 <line x1="8" y1="6" x2="16" y2="6" />
                 <line x1="16" y1="14" x2="16" y2="18" />
               </svg>
-              Get Estimate
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
+              Get Estimate →
             </button>
           </div>
 
-          {/* Column 3: Instant Live Calculated Cost Box */}
-          <div style={styles.estColCost}>
-            <div style={styles.costCoinIcon}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-1.8-1" />
-                <path d="M12 6v2m0 8v2" />
+          {/* Col 3: Cost Output */}
+          <div style={styles.qeCol3}>
+            <div style={styles.qeCoinsIcon}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#EAA428">
+                <circle cx="12" cy="7" r="4" opacity="0.8" />
+                <path d="M12 11c-4.42 0-8 1.79-8 4v2c0 2.21 3.58 4 8 4s8-1.79 8-4v-2c0-2.21-3.58-4-8-4z" />
               </svg>
             </div>
-            <div style={styles.estimatedCostHeader}>Estimated Cost</div>
-            <div
-              style={{
-                ...styles.estimatedCostValue,
-                transition: 'opacity 0.2s ease, transform 0.2s ease',
-                opacity: isRecalculating ? 0.4 : 1,
-                transform: isRecalculating ? 'scale(0.96)' : 'scale(1)',
-              }}
-            >
-              {currentEstimate.formatted}
-            </div>
-            <div style={styles.approximateRangeText}>(Approximate Range)</div>
-            <div style={styles.estDisclaimerNote}>
-              <span style={{ marginRight: '4px' }}>ⓘ</span>
-              Final price may vary based on site conditions.
+            <span style={styles.qeCostLabel}>Estimated Cost</span>
+            <div style={styles.qePriceRange}>{calculateQuickEstimate()}</div>
+            <span style={styles.qeApproxText}>(Approximate Range)</span>
+
+            <div style={styles.qeNoticeBox}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span>Final price may vary based on site conditions.</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ======================================================== */}
-      {/* 4. BUILT FOR EVERYONE (CONTRACTOR & CUSTOMER CARDS) */}
+      {/* 4. BUILT FOR EVERYONE */}
       {/* ======================================================== */}
-      <section style={styles.builtSection} id="built-for-everyone">
-        <div style={styles.sectionHeaderWrap}>
-          <div style={styles.accentDivider} />
-          <h2 style={styles.sectionTitle}>Built for Everyone</h2>
-          <div style={styles.accentDivider} />
-        </div>
-        <p style={styles.sectionSubtitle}>
-          Whether you’re a contractor or a homeowner, we’ve got you covered.
-        </p>
-
-        <div className="landing-dual-cards" style={styles.dualCardsGrid}>
-          {/* Card A: Contractor */}
-          <div style={styles.personaCard}>
-            <div style={styles.personaImgWrap}>
-              <img src={CONTRACTOR_PERSONA_IMG} alt="Contractor Partner" style={styles.personaImg} />
-            </div>
-            <div style={styles.personaInfo}>
-              <h3 style={styles.personaTitle}>Contractor</h3>
-              <div style={styles.personaValueProp}>Grow Your Business</div>
-              <ul style={styles.personaList}>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Get more leads & projects
-                </li>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Provide accurate estimates
-                </li>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Track your work easily
-                </li>
-              </ul>
-              <button onClick={handleJoinContractor} style={styles.personaBtnNavy}>
-                Join as Contractor
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </button>
-            </div>
+      <section style={styles.builtSection} id="about-section">
+        <div style={styles.sectionHeaderCentered}>
+          <div style={styles.titleWithLines}>
+            <span style={styles.accentLineShort} />
+            <h2 style={styles.sectionTitle}>Built for Everyone</h2>
+            <span style={styles.accentLineShort} />
           </div>
-
-          {/* Card B: Customer */}
-          <div style={styles.personaCard}>
-            <div style={styles.personaImgWrap}>
-              <img src={CUSTOMER_PERSONA_IMG} alt="Homeowner Customer" style={styles.personaImg} />
-            </div>
-            <div style={styles.personaInfo}>
-              <h3 style={styles.personaTitle}>Customer</h3>
-              <div style={styles.personaValueProp}>Plan Your Deck Restoration</div>
-              <ul style={styles.personaList}>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Get instant estimates
-                </li>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Explore trusted contractors
-                </li>
-                <li style={styles.personaListItem}>
-                  <span style={styles.goldCheck}>✓</span> Track your requests
-                </li>
-              </ul>
-              <button onClick={handleLaunchEstimator} style={styles.personaBtnNavy}>
-                Get Started
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <p style={styles.sectionSubtitle}>
+            Whether you're a contractor or a homeowner, we've got you covered.
+          </p>
         </div>
-      </section>
 
-      {/* ======================================================== */}
-      {/* 5. OUR PROJECTS (SHOWCASE & CAROUSEL) */}
-      {/* ======================================================== */}
-      <section style={styles.projectsSection} id="projects">
-        <div style={styles.sectionHeaderWrap}>
-          <div style={styles.accentDivider} />
-          <h2 style={styles.sectionTitle}>Our Projects</h2>
-          <div style={styles.accentDivider} />
-        </div>
-        <p style={styles.sectionSubtitle}>Quality work. Lasting results.</p>
-
-        <div style={styles.carouselOuterWrap}>
-          {/* Left Arrow Button */}
-          <button
-            onClick={handlePrevProject}
-            style={styles.carouselArrowBtn}
-            aria-label="Previous Projects"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-
-          {/* Cards Track */}
-          <div className="landing-projects-grid" style={styles.projectCardsGrid}>
-            {PROJECTS_DATA.slice(carouselIndex, carouselIndex + 4).map((p) => (
-              <div
-                key={p.id}
-                style={styles.projectCard}
-                onClick={() => setActiveProjectModal(p)}
-              >
-                <div style={styles.projectImgWrap}>
-                  <img src={p.image} alt={p.title} style={styles.projectCoverImg} />
-                  <div style={styles.projectImgOverlay}>
-                    <span style={styles.viewProjectPill}>View Details</span>
-                  </div>
+        <div style={styles.builtCardsGrid}>
+          {/* Card 1: Contractor */}
+          <div style={styles.portalCard}>
+            <div style={styles.portalCardImgFrame}>
+              <img src={contractorWorkerImg} alt="Contractor Partner" style={styles.portalCardImg} />
+            </div>
+            <div style={styles.portalCardContent}>
+              <div style={styles.portalCardHeader}>
+                <div style={styles.portalIconYellow}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 18h20" />
+                    <path d="M6 18v-4a6 6 0 0 1 12 0v4" />
+                    <circle cx="12" cy="9" r="1" />
+                  </svg>
                 </div>
-                <div style={styles.projectCardBody}>
-                  <h4 style={styles.projectCardTitle}>{p.title}</h4>
-                  <div style={styles.projectCardMeta}>{p.type}</div>
+                <div>
+                  <h3 style={styles.portalCardTitle}>Contractor</h3>
+                  <p style={styles.portalCardSubtitle}>Grow Your Business</p>
                 </div>
               </div>
-            ))}
+
+              <ul style={styles.portalChecklist}>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Get more leads & projects
+                </li>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Provide accurate estimates
+                </li>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Track your work easily
+                </li>
+              </ul>
+
+              <Link to="/register?role=contractor" style={styles.portalActionBtn}>
+                Join as Contractor →
+              </Link>
+            </div>
           </div>
 
-          {/* Right Arrow Button */}
+          {/* Card 2: Customer */}
+          <div style={styles.portalCard}>
+            <div style={styles.portalCardImgFrame}>
+              <img src={customerCoupleImg} alt="Homeowner Customer" style={styles.portalCardImg} />
+            </div>
+            <div style={styles.portalCardContent}>
+              <div style={styles.portalCardHeader}>
+                <div style={styles.portalIconBlue}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={styles.portalCardTitle}>Customer</h3>
+                  <p style={styles.portalCardSubtitleBlue}>Plan Your Deck Restoration</p>
+                </div>
+              </div>
+
+              <ul style={styles.portalChecklist}>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Get instant estimates
+                </li>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Explore trusted contractors
+                </li>
+                <li style={styles.portalCheckItem}>
+                  <span style={styles.checkBulletGold}>✔</span> Track your requests
+                </li>
+              </ul>
+
+              <Link to="/register?role=customer" style={styles.portalActionBtn}>
+                Get Started →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 5. OUR PROJECTS */}
+      {/* ======================================================== */}
+      <section style={styles.projectsSection} id="projects-section">
+        <div style={styles.projectsHeaderRow}>
+          <div style={{ flex: 1 }}>
+            <div style={styles.titleWithLines}>
+              <span style={styles.accentLineShort} />
+              <h2 style={styles.sectionTitle}>Our Projects</h2>
+              <span style={styles.accentLineShort} />
+            </div>
+            <p style={styles.sectionSubtitle}>Quality work. Lasting results.</p>
+          </div>
           <button
-            onClick={handleNextProject}
-            style={styles.carouselArrowBtn}
-            aria-label="Next Projects"
+            onClick={() => {
+              if (isAuthenticated) navigate('/customer/decks/new');
+              else navigate('/login');
+            }}
+            style={styles.viewAllProjectsBtn}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            View All Projects →
           </button>
         </div>
 
-        {/* Carousel Pagination Dots */}
-        <div style={styles.carouselDotsRow}>
-          {[0, 1, 2].map((idx) => (
-            <button
-              key={idx}
-              onClick={() => setCarouselIndex(idx)}
-              style={{
-                ...styles.carouselDot,
-                ...(carouselIndex === idx ? styles.carouselDotActive : {}),
-              }}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
+        <div style={styles.projectsGrid}>
+          {projects.map((proj) => (
+            <div
+              key={proj.id}
+              style={styles.projectCard}
+              onClick={() => setSelectedProject(proj)}
+            >
+              <div style={styles.projectImgFrame}>
+                <img src={proj.image} alt={proj.title} style={styles.projectImg} />
+                <div style={styles.projectPillBefore}>Before</div>
+                <div style={styles.projectPillCenter}>↔</div>
+                <div style={styles.projectPillAfter}>After</div>
+              </div>
+
+              <div style={styles.projectCardBottom}>
+                <div>
+                  <h4 style={styles.projectTitle}>{proj.title}</h4>
+                  <p style={styles.projectType}>{proj.type}</p>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProject(proj);
+                  }}
+                  style={styles.projectArrowCircle}
+                  title="View Project Details"
+                >
+                  →
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </section>
@@ -834,144 +580,253 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 6. OUR PRODUCTS & SERVICES */}
       {/* ======================================================== */}
-      <section style={styles.productsSection} id="products">
-        <div style={styles.sectionHeaderWrap}>
-          <div style={styles.accentDivider} />
-          <h2 style={styles.sectionTitle}>Our Products & Services</h2>
-          <div style={styles.accentDivider} />
+      <section style={styles.productsSection} id="products-section">
+        <div style={styles.sectionHeaderCentered}>
+          <div style={styles.titleWithLines}>
+            <span style={styles.accentLineShort} />
+            <h2 style={styles.sectionTitle}>Our Products & Services</h2>
+            <span style={styles.accentLineShort} />
+          </div>
+          <p style={styles.sectionSubtitle}>
+            Everything you need for a durable and beautiful deck.
+          </p>
         </div>
-        <p style={styles.sectionSubtitle}>
-          Everything you need for a durable and beautiful deck.
-        </p>
 
-        <div className="landing-products-grid" style={styles.productsGrid5}>
-          {PRODUCTS_DATA.map((item) => (
-            <div key={item.id} style={styles.productCard}>
+        {/* 5 Product Cards */}
+        <div style={styles.productsRow}>
+          {products.map((p, idx) => (
+            <div key={idx} style={styles.productCard}>
               <div style={styles.productImgFrame}>
-                <img src={item.image} alt={item.title} style={styles.productImg} />
+                <img src={p.image} alt={p.name} style={styles.productImg} />
               </div>
-              <div style={styles.productCardCaption}>
-                <h4 style={styles.productTitle}>{item.title}</h4>
-              </div>
+              <span style={styles.productName}>{p.name}</span>
             </div>
           ))}
+        </div>
+
+        {/* 4 Feature Badges Bar */}
+        <div style={styles.featuresFloatingBar}>
+          <div style={styles.featureItem}>
+            <div style={styles.featureIcon}>🍃</div>
+            <div>
+              <strong style={styles.featureTitle}>Extends Deck Life</strong>
+              <p style={styles.featureSub}>Protects against weather</p>
+            </div>
+          </div>
+
+          <span style={styles.featureDivider} />
+
+          <div style={styles.featureItem}>
+            <div style={styles.featureIcon}>🛡️</div>
+            <div>
+              <strong style={styles.featureTitle}>Enhances Beauty</strong>
+              <p style={styles.featureSub}>Restores natural look</p>
+            </div>
+          </div>
+
+          <span style={styles.featureDivider} />
+
+          <div style={styles.featureItem}>
+            <div style={styles.featureIcon}>💧</div>
+            <div>
+              <strong style={styles.featureTitle}>Repels Moisture</strong>
+              <p style={styles.featureSub}>Prevents damage & rot</p>
+            </div>
+          </div>
+
+          <span style={styles.featureDivider} />
+
+          <div style={styles.featureItem}>
+            <div style={styles.featureIcon}>🏢</div>
+            <div>
+              <strong style={styles.featureTitle}>Professional Results</strong>
+              <p style={styles.featureSub}>Trusted by contractors</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ======================================================== */}
-      {/* 7. READY TO RESTORE YOUR DECK? (PRE-FOOTER CTA BANNER) */}
+      {/* 7. CTA BANNER */}
       {/* ======================================================== */}
       <section style={styles.ctaBannerSection}>
-        <div className="landing-cta-banner" style={styles.ctaBannerContainer}>
-          <div className="landing-cta-banner-left" style={styles.ctaBannerLeft}>
-            <div style={styles.ctaHomeIconCircle}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div>
-              <h3 style={styles.ctaBannerTitle}>Ready to Restore Your Deck?</h3>
-              <p style={styles.ctaBannerSubtitle}>
-                Try our Deck Estimator now and get started in seconds.
-              </p>
-            </div>
+        <div style={styles.ctaBannerInner}>
+          <div style={styles.ctaBannerLeft}>
+            <h2 style={styles.ctaTitle}>Ready to Restore Your Deck?</h2>
+            <p style={styles.ctaSubtitle}>
+              Try our Deck Estimator now and get started in seconds.
+            </p>
           </div>
 
-          <button onClick={handleLaunchEstimator} style={styles.ctaBannerBtnAmber}>
-            Try Now
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+          <div style={styles.ctaBannerCenter}>
+            <button onClick={handleLaunchEstimator} style={styles.ctaTryNowBtn}>
+              Try Now →
+            </button>
+          </div>
+
+          <div style={styles.ctaBannerRightBg}>
+            <img src={ctaDeckBgImg} alt="Deck Atmosphere" style={styles.ctaBgImg} />
+          </div>
         </div>
       </section>
 
       {/* ======================================================== */}
       {/* 8. FOOTER */}
       {/* ======================================================== */}
-      <footer style={styles.footer} id="contact">
-        <div style={styles.footerContainer}>
-          {/* Logo */}
-          <div style={styles.footerBrandWrap}>
-            <img src={mainLogo} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
+      <footer style={styles.footer} id="contact-section">
+        <div style={styles.footerInner}>
+          {/* Brand Col */}
+          <div style={styles.footerBrandCol}>
+            <img src={logoImg} alt="DECK Plus Restoration" style={styles.footerLogoImg} />
+            <p style={styles.footerTagline}>
+              Premium deck restoration solutions for homes and contractors.
+            </p>
+            <p style={styles.footerCopyright}>
+              © 2026 Deck Restoration Plus, LLC. All rights reserved.
+            </p>
           </div>
 
-          {/* Links */}
-          <div style={styles.footerLinksWrap}>
-            <Link to="/guidelines" style={styles.footerLink}>Contractor Guidelines</Link>
-            <span style={styles.footerLinkSep}>|</span>
-            <button
-              onClick={() => alert('Deck Restoration Plus Compliance: Fully licensed, EPA Lead-Safe certified, and compliant with all local building and environmental regulations.')}
-              style={styles.footerLinkBtn}
-            >
-              Compliance
-            </button>
-            <span style={styles.footerLinkSep}>|</span>
-            <button
-              onClick={() => alert('Deck Restoration Plus Terms of Service: Standard deck estimates are advisory based on initial user inputs. Onsite inspection validates final scope and pricing.')}
-              style={styles.footerLinkBtn}
-            >
-              Terms
-            </button>
+          {/* Col 2: Quick Links */}
+          <div style={styles.footerCol}>
+            <h4 style={styles.footerColHeader}>Quick Links</h4>
+            <ul style={styles.footerLinksList}>
+              <li>
+                <button
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  style={styles.footerLinkBtn}
+                >
+                  Home
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={styles.footerLinkBtn}
+                >
+                  Projects
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={styles.footerLinkBtn}
+                >
+                  Products
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={styles.footerLinkBtn}
+                >
+                  About
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={styles.footerLinkBtn}
+                >
+                  Contact
+                </button>
+              </li>
+            </ul>
           </div>
 
-          {/* Social Icons */}
-          <div style={styles.footerSocialWrap}>
-            <a href="https://facebook.com" target="_blank" rel="noreferrer" style={styles.socialIconLink} aria-label="Facebook">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-              </svg>
-            </a>
-            <a href="https://youtube.com" target="_blank" rel="noreferrer" style={styles.socialIconLink} aria-label="YouTube">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33zM9.75 15.02V8.48l5.75 3.27-5.75 3.27z" />
-              </svg>
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" style={styles.socialIconLink} aria-label="LinkedIn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2zM4 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2z" />
-              </svg>
-            </a>
+          {/* Col 3: Resources */}
+          <div style={styles.footerCol}>
+            <h4 style={styles.footerColHeader}>Resources</h4>
+            <ul style={styles.footerLinksList}>
+              <li>
+                <Link to="/contractor/guidelines" style={styles.footerLink}>Contractor Guidelines</Link>
+              </li>
+              <li>
+                <Link to="/contractor/support" style={styles.footerLink}>Compliance</Link>
+              </li>
+              <li>
+                <Link to="/contractor/terms" style={styles.footerLink}>Terms</Link>
+              </li>
+            </ul>
           </div>
-        </div>
 
-        {/* Copyright */}
-        <div style={styles.footerBottomBar}>
-          © 2026 Deck Restoration Plus, LLC. All rights reserved.
+          {/* Col 4: Get in Touch */}
+          <div style={styles.footerCol}>
+            <h4 style={styles.footerColHeader}>Get in Touch</h4>
+            <div style={styles.contactItem}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>(866) 440-DECK (3325)</span>
+            </div>
+            <div style={styles.contactItem}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <span>estimates@deckrestorationplus.com</span>
+            </div>
+          </div>
+
+          {/* Col 5: Follow Us */}
+          <div style={styles.footerCol}>
+            <h4 style={styles.footerColHeader}>Follow Us</h4>
+            <div style={styles.socialIconsRow}>
+              {/* Facebook */}
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="Facebook">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#FFFFFF">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </a>
+              {/* YouTube */}
+              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="YouTube">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#FFFFFF">
+                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+                  <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#081726" />
+                </svg>
+              </a>
+              {/* LinkedIn */}
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="LinkedIn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF">
+                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                  <rect x="2" y="9" width="4" height="12" />
+                  <circle cx="4" cy="4" r="2" />
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
 
       {/* ======================================================== */}
-      {/* PROJECT PREVIEW MODAL */}
+      {/* 9. PROJECT DETAIL MODAL */}
       {/* ======================================================== */}
-      {activeProjectModal && (
-        <div style={styles.modalOverlay} onClick={() => setActiveProjectModal(null)}>
-          <div style={styles.modalBox} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setActiveProjectModal(null)} style={styles.modalCloseBtn}>✕</button>
-            <div style={styles.modalImgWrap}>
-              <img src={activeProjectModal.image} alt={activeProjectModal.title} style={styles.modalImg} />
+      {selectedProject && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedProject(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>{selectedProject.title}</h3>
+                <span style={styles.modalBadge}>{selectedProject.type}</span>
+              </div>
+              <button onClick={() => setSelectedProject(null)} style={styles.modalCloseBtn}>✕</button>
             </div>
-            <div style={styles.modalBody}>
-              <span style={styles.modalTag}>{activeProjectModal.type}</span>
-              <h3 style={styles.modalTitle}>{activeProjectModal.title}</h3>
-              <p style={styles.modalDesc}>{activeProjectModal.desc}</p>
-              <div style={styles.modalMetaRow}>
-                <span>📍 Location: <strong>{activeProjectModal.location}</strong></span>
-                <span>⏱ Duration: <strong>{activeProjectModal.duration}</strong></span>
-              </div>
-              <div style={styles.modalActionRow}>
-                <button
-                  onClick={() => {
-                    setActiveProjectModal(null);
-                    handleLaunchEstimator();
-                  }}
-                  style={styles.modalCtaBtn}
-                >
-                  Estimate a Similar Deck Project →
-                </button>
-              </div>
+            <div style={styles.modalImgFrame}>
+              <img src={selectedProject.image} alt={selectedProject.title} style={styles.modalImg} />
+            </div>
+            <p style={styles.modalDesc}>{selectedProject.desc}</p>
+            <div style={styles.modalActions}>
+              <button onClick={() => setSelectedProject(null)} style={styles.modalCancelBtn}>
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedProject(null);
+                  handleLaunchEstimator();
+                }}
+                style={styles.modalActionBtn}
+              >
+                Estimate A Project Like This →
+              </button>
             </div>
           </div>
         </div>
@@ -980,36 +835,37 @@ export default function LandingPage() {
   );
 }
 
-// ======================================================================
-// STYLES OBJECT (Pixel-perfect matching of screenshot themes & layouts)
-// ======================================================================
+// ========================================================
+// STYLES (Pixel-matched to specifications)
+// ========================================================
 const styles = {
-  pageWrap: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  pageContainer: {
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     backgroundColor: '#FFFFFF',
     color: '#0F172A',
     minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
     overflowX: 'hidden',
   },
 
-  // 1. Navbar
-  navbar: {
+  // 1. HEADER
+  header: {
     position: 'sticky',
     top: 0,
     zIndex: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    backdropFilter: 'blur(10px)',
+    backgroundColor: '#FFFFFF',
     borderBottom: '1px solid #E2E8F0',
-    padding: '10px 0',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
   },
-  navContainer: {
-    maxWidth: '1280px',
+  headerInner: {
+    maxWidth: '1240px',
     margin: '0 auto',
-    padding: '0 24px',
+    padding: '12px 24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: '20px',
   },
   logoLink: {
     display: 'flex',
@@ -1017,1061 +873,988 @@ const styles = {
     textDecoration: 'none',
   },
   logoImg: {
-    height: '42px',
+    height: '38px',
     width: 'auto',
     objectFit: 'contain',
   },
-  navCenterPills: {
+  navMenu: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#F8FAFC',
-    padding: '4px 6px',
-    borderRadius: '9999px',
-    border: '1px solid #E2E8F0',
   },
-  navPillBtn: {
-    background: 'transparent',
-    border: 'none',
-    padding: '8px 18px',
-    borderRadius: '9999px',
-    fontSize: '13.5px',
-    fontWeight: '600',
-    color: '#334155',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    transition: 'all 0.18s ease-in-out',
-  },
-  navPillBtnActive: {
-    backgroundColor: '#0F172A',
-    color: '#FFFFFF',
-    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.18)',
-  },
-  navRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  userProfileWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  notificationBtn: {
-    background: '#F1F5F9',
-    border: 'none',
-    width: '38px',
-    height: '38px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  notifBadge: {
-    position: 'absolute',
-    top: '-2px',
-    right: '-2px',
-    backgroundColor: '#EF4444',
-    color: '#FFFFFF',
-    fontSize: '10px',
-    fontWeight: '800',
-    width: '16px',
-    height: '16px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: '2px solid #FFFFFF',
-  },
-  userCapsuleBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
-    borderRadius: '9999px',
-    padding: '4px 12px 4px 5px',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  avatarCircle: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '50%',
-    backgroundColor: '#D97706',
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: '13px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userNameText: {
-    fontSize: '13.5px',
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  userDropdownMenu: {
-    position: 'absolute',
-    top: '44px',
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-    width: '200px',
-    padding: '8px',
-    zIndex: 150,
-  },
-  userDropdownHeader: {
-    padding: '8px 10px 10px 10px',
-    borderBottom: '1px solid #F1F5F9',
-    marginBottom: '6px',
-  },
-  roleTag: {
-    display: 'inline-block',
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    fontWeight: '800',
-    backgroundColor: '#ECFDF5',
-    color: '#059669',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    marginTop: '4px',
-  },
-  dropdownItemBtn: {
-    display: 'block',
-    width: '100%',
-    textAlign: 'left',
-    padding: '8px 10px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#334155',
+  navItem: {
     backgroundColor: 'transparent',
     border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background-color 0.12s ease',
-  },
-  logoutBtn: {
-    backgroundColor: 'transparent',
-    border: '1px solid #FECACA',
-    color: '#DC2626',
-    borderRadius: '9999px',
+    color: '#334155',
+    fontSize: '14px',
+    fontWeight: '500',
     padding: '7px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
+    borderRadius: '9999px',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
-  guestActionWrap: {
+  navItemActive: {
+    backgroundColor: '#162C46',
+    border: 'none',
+    color: '#FFFFFF',
+    fontSize: '14px',
+    fontWeight: '600',
+    padding: '7px 18px',
+    borderRadius: '9999px',
+    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
   },
-  loginBtn: {
-    textDecoration: 'none',
-    padding: '8px 18px',
-    borderRadius: '9999px',
-    fontSize: '13.5px',
-    fontWeight: '600',
-    color: '#0F172A',
-    backgroundColor: '#F1F5F9',
-    transition: 'background-color 0.15s ease',
-  },
-  registerBtn: {
-    textDecoration: 'none',
-    padding: '8px 18px',
-    borderRadius: '9999px',
-    fontSize: '13.5px',
-    fontWeight: '600',
-    color: '#FFFFFF',
-    backgroundColor: '#0F172A',
-    transition: 'background-color 0.15s ease',
-  },
-  mobileHamburgerBtn: {
-    display: 'none',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  mobileMenuDrawer: {
+  headerRight: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-    padding: '16px 24px',
-    backgroundColor: '#FFFFFF',
-    borderTop: '1px solid #F1F5F9',
+    alignItems: 'center',
+    gap: '12px',
   },
-  mobileMenuLink: {
+  searchIconButton: {
+    background: 'transparent',
+    border: 'none',
+    padding: '6px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '50%',
+    transition: 'background-color 0.15s',
+  },
+  headerDivider: {
+    width: '1px',
+    height: '20px',
+    backgroundColor: '#CBD5E1',
+  },
+  signInBtn: {
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #162C46',
+    color: '#162C46',
+    fontSize: '13px',
+    fontWeight: '600',
+    padding: '6px 18px',
+    borderRadius: '9999px',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  getStartedBtn: {
+    backgroundColor: '#EAA428',
+    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+    border: 'none',
+    color: '#0F172A',
+    fontSize: '13px',
+    fontWeight: '700',
+    padding: '8px 20px',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)',
+    transition: 'all 0.15s ease',
+  },
+  searchDropdownBar: {
+    maxWidth: '1240px',
+    margin: '0 auto',
+    padding: '8px 24px 14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  searchDropdownInput: {
+    flex: 1,
+    padding: '8px 14px',
+    borderRadius: '9999px',
+    border: '1px solid #CBD5E1',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  searchCloseBtn: {
     background: 'none',
     border: 'none',
-    textAlign: 'left',
-    padding: '8px 0',
-    fontSize: '15px',
-    fontWeight: '600',
-    color: '#0F172A',
+    fontSize: '16px',
     cursor: 'pointer',
+    color: '#64748B',
   },
 
-  // 2. Hero Section
+  // 2. HERO SECTION
   heroSection: {
+    backgroundColor: '#F8FAFC',
+    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%)',
+    padding: '48px 24px 100px',
     position: 'relative',
-    padding: '48px 0 100px 0',
-    overflow: 'hidden',
   },
-  heroBackdropWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 1,
-  },
-  heroBackdropImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    filter: 'brightness(1.05) saturate(1.1)',
-  },
-  heroBackdropOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 45%, rgba(255,255,255,0.2) 100%)',
-  },
-  heroContentContainer: {
-    position: 'relative',
-    zIndex: 2,
-    maxWidth: '1280px',
+  heroInner: {
+    maxWidth: '1200px',
     margin: '0 auto',
-    padding: '0 24px',
     display: 'grid',
-    gridTemplateColumns: '1.15fr 0.85fr',
+    gridTemplateColumns: '1.1fr 0.9fr',
+    gap: '40px',
     alignItems: 'center',
-    gap: '32px',
   },
-  heroLeftCol: {
-    paddingRight: '16px',
+  heroLeft: {
+    paddingRight: '12px',
   },
-  heroTitle: {
+  heroHeading: {
     fontSize: '52px',
-    lineHeight: '1.12',
-    fontWeight: '900',
-    letterSpacing: '-0.03em',
-    color: '#0F172A',
-    marginBottom: '16px',
+    fontWeight: '800',
+    color: '#0E2A47',
+    lineHeight: '1.15',
+    margin: '0 0 16px 0',
+    letterSpacing: '-0.02em',
   },
-  heroTitleAccent: {
-    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+  heroEnjoyWord: {
+    color: '#EAA428',
+    fontStyle: 'italic',
+    fontWeight: '700',
   },
   heroSubtitle: {
-    fontSize: '17px',
-    lineHeight: '1.6',
+    fontSize: '16px',
     color: '#475569',
-    maxWidth: '520px',
-    marginBottom: '28px',
+    lineHeight: '1.55',
+    margin: '0 0 28px 0',
+    maxWidth: '460px',
   },
-  heroCtaRow: {
+  heroBtnGroup: {
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
-    flexWrap: 'wrap',
     marginBottom: '32px',
-  },
-  heroPrimaryBtn: {
-    backgroundColor: '#F59E0B',
-    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '9999px',
-    padding: '13px 28px',
-    fontSize: '15px',
-    fontWeight: '700',
-    display: 'flex',
-    alignItems: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 8px 20px rgba(217, 119, 6, 0.35)',
-    transition: 'all 0.18s ease-in-out',
-  },
-  heroSecondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    color: '#0F172A',
-    border: '1.5px solid #CBD5E1',
-    borderRadius: '9999px',
-    padding: '12px 24px',
-    fontSize: '15px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-    transition: 'all 0.18s ease-in-out',
-  },
-  heroTrustBadgesRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '22px',
     flexWrap: 'wrap',
+  },
+  tryEstimatorBtn: {
+    backgroundColor: '#EAA428',
+    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+    border: 'none',
+    color: '#0F172A',
+    fontSize: '14px',
+    fontWeight: '700',
+    padding: '12px 26px',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+    transition: 'all 0.18s ease',
+  },
+  exploreProjectsBtn: {
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #162C46',
+    color: '#162C46',
+    fontSize: '14px',
+    fontWeight: '600',
+    padding: '11px 22px',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.15s',
+  },
+  trustBadgesRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    paddingTop: '8px',
+    borderTop: '1px solid #E2E8F0',
+    maxWidth: '460px',
   },
   trustBadgeItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: '600',
     color: '#334155',
   },
-  trustIconCircle: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '50%',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    border: '1px solid #CBD5E1',
+  trustDivider: {
+    width: '1px',
+    height: '14px',
+    backgroundColor: '#CBD5E1',
+  },
+  heroRight: {
     display: 'flex',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  heroRightCol: {
-    display: 'flex',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  heroPersonaCard: {
-    position: 'relative',
-    maxWidth: '420px',
-    borderRadius: '24px',
-    overflow: 'visible',
-  },
-  heroPersonaImg: {
+  heroImageFrame: {
     width: '100%',
-    height: '420px',
-    objectFit: 'cover',
-    borderRadius: '24px',
-    boxShadow: '0 20px 45px rgba(15, 23, 42, 0.16)',
-    display: 'block',
-  },
-  heroFloatingBucket: {
-    position: 'absolute',
-    bottom: '-16px',
-    right: '-16px',
-    backgroundColor: '#0F172A',
-    border: '3px solid #F59E0B',
+    maxWidth: '520px',
     borderRadius: '16px',
-    padding: '12px 18px',
-    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.25)',
+    overflow: 'hidden',
+    boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)',
+    border: '4px solid #FFFFFF',
   },
-  bucketInner: {
-    textAlign: 'center',
-  },
-  bucketBrandText: {
-    fontSize: '14px',
-    fontWeight: '900',
-    color: '#F59E0B',
-    letterSpacing: '0.04em',
-  },
-  bucketSubText: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#E2E8F0',
+  heroImg: {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    objectFit: 'cover',
   },
 
-  // 3. Estimator Floating Widget
-  estimatorWidgetWrapper: {
-    maxWidth: '1280px',
-    margin: '-56px auto 56px auto',
-    padding: '0 24px',
+  // 3. FLOATING QUICK ESTIMATOR CARD
+  quickEstimatorCard: {
+    maxWidth: '1160px',
+    margin: '36px auto -40px',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '20px',
+    boxShadow: '0 16px 45px rgba(15, 23, 42, 0.1)',
+    border: '1px solid #E2E8F0',
+    padding: '24px 28px',
+    display: 'grid',
+    gridTemplateColumns: '1.1fr 1.6fr 1fr',
+    gap: '24px',
+    alignItems: 'center',
     position: 'relative',
     zIndex: 10,
   },
-  estimatorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: '24px',
-    boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04)',
-    border: '1px solid #E2E8F0',
-    padding: '28px 32px',
-    display: 'grid',
-    gridTemplateColumns: '1fr 1.35fr 1fr',
-    gap: '28px',
-    alignItems: 'center',
-  },
-  estColOverview: {
+  qeCol1: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '16px',
     borderRight: '1px solid #F1F5F9',
-    paddingRight: '20px',
+    paddingRight: '16px',
   },
-  estIconBox: {
-    width: '42px',
-    height: '42px',
+  qeIconSquare: {
+    width: '46px',
+    height: '46px',
     borderRadius: '12px',
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  qeTitle: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#0F172A',
+    margin: '0 0 4px 0',
+  },
+  qeSubtitle: {
+    fontSize: '12px',
+    color: '#64748B',
+    lineHeight: '1.4',
+    margin: '0 0 10px 0',
+  },
+  qeChecklist: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  qeCheckItem: {
+    fontSize: '12px',
+    color: '#334155',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  qeCheckIcon: {
+    color: '#D97706',
+    fontWeight: '800',
+    fontSize: '11px',
+  },
+  qeCol2: {
+    borderRight: '1px solid #F1F5F9',
+    paddingRight: '16px',
+  },
+  qeHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  qeFormHeader: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  qeInputsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  qeInputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  qeInputLabel: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#475569',
+  },
+  qeSelect: {
+    padding: '6px 8px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    backgroundColor: '#FFFFFF',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#0F172A',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+  qeSubmitBtn: {
+    width: '100%',
+    backgroundColor: '#162C46',
+    border: 'none',
+    color: '#FFFFFF',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 6px rgba(22, 44, 70, 0.25)',
+    transition: 'all 0.15s ease',
+  },
+  qeCol3: {
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qeCoinsIcon: {
+    marginBottom: '2px',
+  },
+  qeCostLabel: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  qePriceRange: {
+    fontSize: '22px',
+    fontWeight: '800',
+    color: '#0F172A',
+    margin: '3px 0 2px 0',
+  },
+  qeApproxText: {
+    fontSize: '11px',
+    color: '#94A3B8',
+    marginBottom: '8px',
+  },
+  qeNoticeBox: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '5px',
+    fontSize: '10.5px',
+    color: '#64748B',
+    textAlign: 'left',
+    lineHeight: '1.3',
+  },
+
+  // 4. BUILT FOR EVERYONE
+  builtSection: {
+    padding: '90px 24px 60px',
+    maxWidth: '1160px',
+    margin: '0 auto',
+    width: '100%',
+  },
+  sectionHeaderCentered: {
+    textAlign: 'center',
+    marginBottom: '36px',
+  },
+  titleWithLines: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    marginBottom: '6px',
+  },
+  accentLineShort: {
+    width: '40px',
+    height: '2px',
+    backgroundColor: '#EAA428',
+    display: 'inline-block',
+  },
+  sectionTitle: {
+    fontSize: '28px',
+    fontWeight: '800',
+    color: '#0F172A',
+    margin: 0,
+    letterSpacing: '-0.01em',
+  },
+  sectionSubtitle: {
+    fontSize: '13px',
+    color: '#64748B',
+    margin: 0,
+  },
+  builtCardsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+    gap: '24px',
+  },
+  portalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '16px',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
+    display: 'flex',
+    overflow: 'hidden',
+    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+  },
+  portalCardImgFrame: {
+    width: '42%',
+    minHeight: '180px',
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+  },
+  portalCardImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  portalCardContent: {
+    width: '58%',
+    padding: '20px 22px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  portalCardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '10px',
+  },
+  portalIconYellow: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
     backgroundColor: '#FEF3C7',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '12px',
   },
-  estTitle: {
-    fontSize: '20px',
-    fontWeight: '800',
+  portalIconBlue: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    backgroundColor: '#EFF6FF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portalCardTitle: {
+    fontSize: '16px',
+    fontWeight: '700',
     color: '#0F172A',
-    marginBottom: '6px',
+    margin: 0,
   },
-  estSubtitle: {
-    fontSize: '13px',
-    color: '#64748B',
-    lineHeight: '1.5',
-    marginBottom: '14px',
+  portalCardSubtitle: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#D97706',
+    margin: 0,
   },
-  estChecklist: {
+  portalCardSubtitleBlue: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#2563EB',
+    margin: 0,
+  },
+  portalChecklist: {
     listStyle: 'none',
     padding: 0,
     margin: '0 0 16px 0',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '5px',
   },
-  estCheckItem: {
-    fontSize: '13px',
-    fontWeight: '500',
+  portalCheckItem: {
+    fontSize: '12px',
     color: '#334155',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
   },
-  goldCheck: {
+  checkBulletGold: {
     color: '#D97706',
     fontWeight: '800',
-    fontSize: '14px',
-  },
-  calculateNowBtn: {
-    backgroundColor: '#F59E0B',
-    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '9999px',
-    padding: '10px 20px',
-    fontSize: '13.5px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    boxShadow: '0 6px 16px rgba(217, 119, 6, 0.3)',
-    transition: 'all 0.15s ease',
-  },
-  estColForm: {
-    padding: '0 8px',
-  },
-  estFormHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    fontSize: '14.5px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '16px',
-  },
-  formRow3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-    marginBottom: '18px',
-  },
-  inputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '5px',
-  },
-  inputLabel: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#475569',
-  },
-  selectWrap: {
-    position: 'relative',
-  },
-  selectField: {
-    width: '100%',
-    padding: '8px 10px',
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #CBD5E1',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#0F172A',
-    outline: 'none',
-    cursor: 'pointer',
-  },
-  getEstimateSubmitBtn: {
-    width: '100%',
-    backgroundColor: '#0F172A',
-    background: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '10px',
-    padding: '12px 18px',
-    fontSize: '14px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 6px 16px rgba(30, 58, 138, 0.28)',
-    transition: 'all 0.15s ease',
-  },
-  estColCost: {
-    backgroundColor: '#F0F7FF',
-    border: '1px solid #DBEAFE',
-    borderRadius: '18px',
-    padding: '24px 20px',
-    textAlign: 'center',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  costCoinIcon: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    backgroundColor: '#FEF3C7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '8px',
-  },
-  estimatedCostHeader: {
-    fontSize: '12.5px',
-    fontWeight: '700',
-    color: '#1E3A8A',
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
-    marginBottom: '4px',
-  },
-  estimatedCostValue: {
-    fontSize: '26px',
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: '-0.02em',
-    marginBottom: '2px',
-  },
-  approximateRangeText: {
-    fontSize: '12px',
-    color: '#64748B',
-    marginBottom: '12px',
-  },
-  estDisclaimerNote: {
     fontSize: '11px',
-    color: '#64748B',
-    lineHeight: '1.4',
-    borderTop: '1px solid #E2E8F0',
-    paddingTop: '8px',
-    width: '100%',
+  },
+  portalActionBtn: {
+    backgroundColor: '#162C46',
+    color: '#FFFFFF',
+    textDecoration: 'none',
+    fontSize: '12px',
+    fontWeight: '700',
+    padding: '8px 18px',
+    borderRadius: '9999px',
+    textAlign: 'center',
+    display: 'inline-block',
+    width: 'fit-content',
+    boxShadow: '0 2px 6px rgba(22, 44, 70, 0.25)',
   },
 
-  // 4. Built For Everyone Section
-  builtSection: {
-    maxWidth: '1280px',
+  // 5. OUR PROJECTS
+  projectsSection: {
+    padding: '40px 24px 60px',
+    maxWidth: '1160px',
     margin: '0 auto',
-    padding: '48px 24px',
+    width: '100%',
   },
-  sectionHeaderWrap: {
+  projectsHeaderRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '16px',
-    marginBottom: '6px',
+    justifyContent: 'space-between',
+    marginBottom: '24px',
   },
-  accentDivider: {
-    width: '60px',
-    height: '2px',
-    backgroundColor: '#F59E0B',
-    borderRadius: '2px',
+  viewAllProjectsBtn: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    color: '#162C46',
+    fontSize: '12px',
+    fontWeight: '600',
+    padding: '6px 16px',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
-  sectionTitle: {
-    fontSize: '32px',
-    fontWeight: '800',
-    color: '#0F172A',
-    textAlign: 'center',
-    letterSpacing: '-0.02em',
-  },
-  sectionSubtitle: {
-    fontSize: '15px',
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: '36px',
-  },
-  dualCardsGrid: {
+  projectsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '24px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '16px',
   },
-  personaCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: '20px',
+  projectCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
     border: '1px solid #E2E8F0',
     overflow: 'hidden',
-    display: 'grid',
-    gridTemplateColumns: '0.9fr 1.1fr',
-    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+    cursor: 'pointer',
+    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
   },
-  personaImgWrap: {
-    height: '100%',
-    minHeight: '220px',
+  projectImgFrame: {
+    width: '100%',
+    height: '140px',
+    backgroundColor: '#F8FAFC',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  personaImg: {
+  projectImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
     display: 'block',
   },
-  personaInfo: {
-    padding: '24px 22px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  personaTitle: {
-    fontSize: '22px',
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: '4px',
-  },
-  personaValueProp: {
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#1E3A8A',
-    marginBottom: '14px',
-  },
-  personaList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: '0 0 18px 0',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  personaListItem: {
-    fontSize: '13px',
-    fontWeight: '500',
-    color: '#334155',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  personaBtnNavy: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#0F172A',
-    background: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '9999px',
-    padding: '10px 22px',
-    fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.18)',
-    transition: 'all 0.15s ease',
-  },
-
-  // 5. Our Projects Carousel Section
-  projectsSection: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '48px 24px',
-  },
-  carouselOuterWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    position: 'relative',
-    marginBottom: '20px',
-  },
-  carouselArrowBtn: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '50%',
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    flexShrink: 0,
-    transition: 'all 0.15s ease',
-  },
-  projectCardsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '16px',
-    width: '100%',
-  },
-  projectCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: '16px',
-    border: '1px solid #E2E8F0',
-    overflow: 'hidden',
-    boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)',
-    cursor: 'pointer',
-    transition: 'all 0.18s ease-in-out',
-  },
-  projectImgWrap: {
-    position: 'relative',
-    height: '160px',
-    overflow: 'hidden',
-    backgroundColor: '#F1F5F9',
-  },
-  projectCoverImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'transform 0.3s ease',
-  },
-  projectImgOverlay: {
+  projectPillBefore: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
+    top: '10px',
+    left: '10px',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backdropFilter: 'blur(4px)',
+    color: '#FFFFFF',
+    fontSize: '9px',
+    fontWeight: '700',
+    padding: '2px 8px',
+    borderRadius: '9999px',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  projectPillCenter: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: '#FFFFFF',
+    color: '#162C46',
+    fontSize: '11px',
+    fontWeight: '900',
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0,
-    transition: 'opacity 0.2s ease',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
   },
-  viewProjectPill: {
-    backgroundColor: '#FFFFFF',
+  projectPillAfter: {
+    position: 'absolute',
+    top: '10px',
+    right: '10px',
+    backgroundColor: '#EAA428',
     color: '#0F172A',
-    fontSize: '11px',
-    fontWeight: '700',
-    padding: '6px 12px',
+    fontSize: '9px',
+    fontWeight: '800',
+    padding: '2px 8px',
     borderRadius: '9999px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
   },
-  projectCardBody: {
-    padding: '14px 14px 16px 14px',
+  projectCardBottom: {
+    padding: '12px 14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  projectCardTitle: {
-    fontSize: '14.5px',
+  projectTitle: {
+    fontSize: '13px',
     fontWeight: '700',
     color: '#0F172A',
-    marginBottom: '4px',
+    margin: '0 0 2px 0',
   },
-  projectCardMeta: {
-    fontSize: '12px',
+  projectType: {
+    fontSize: '11px',
     color: '#64748B',
+    margin: 0,
   },
-  carouselDotsRow: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '8px',
-  },
-  carouselDot: {
-    width: '8px',
-    height: '8px',
+  projectArrowCircle: {
+    width: '26px',
+    height: '26px',
     borderRadius: '50%',
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
     border: 'none',
+    color: '#162C46',
+    fontSize: '13px',
+    fontWeight: '800',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
-  carouselDotActive: {
-    backgroundColor: '#1E3A8A',
-    width: '22px',
-    borderRadius: '9999px',
-  },
 
-  // 6. Our Products & Services Section
+  // 6. OUR PRODUCTS & SERVICES
   productsSection: {
-    maxWidth: '1280px',
+    padding: '40px 24px 60px',
+    maxWidth: '1160px',
     margin: '0 auto',
-    padding: '48px 24px',
+    width: '100%',
   },
-  productsGrid5: {
+  productsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '14px',
+    marginBottom: '28px',
   },
   productCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: '16px',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
     border: '1px solid #E2E8F0',
     padding: '16px 12px',
     textAlign: 'center',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+    transition: 'transform 0.18s ease',
   },
   productImgFrame: {
     width: '100%',
-    height: '110px',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    marginBottom: '12px',
+    height: '90px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: '10px',
   },
   productImg: {
-    width: '100%',
-    height: '100%',
+    maxHeight: '85px',
+    maxWidth: '90%',
     objectFit: 'contain',
-    padding: '6px',
+    display: 'block',
   },
-  productCardCaption: {
-    width: '100%',
-  },
-  productTitle: {
-    fontSize: '13.5px',
+  productName: {
+    fontSize: '13px',
     fontWeight: '700',
     color: '#0F172A',
   },
-
-  // 7. Ready To Restore CTA Banner
-  ctaBannerSection: {
-    maxWidth: '1280px',
-    margin: '32px auto 56px auto',
-    padding: '0 24px',
+  featuresFloatingBar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '16px',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
+    padding: '16px 24px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '16px',
+    alignItems: 'center',
   },
-  ctaBannerContainer: {
-    background: 'linear-gradient(135deg, #0B2545 0%, #133E87 50%, #1E3A8A 100%)',
-    borderRadius: '24px',
-    padding: '28px 36px',
+  featureItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  featureIcon: {
+    fontSize: '20px',
+  },
+  featureTitle: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0F172A',
+    display: 'block',
+    lineHeight: '1.2',
+  },
+  featureSub: {
+    fontSize: '11px',
+    color: '#64748B',
+    margin: '2px 0 0 0',
+  },
+  featureDivider: {
+    width: '1px',
+    height: '32px',
+    backgroundColor: '#E2E8F0',
+  },
+
+  // 7. CTA BANNER
+  ctaBannerSection: {
+    padding: '0 24px 70px',
+    maxWidth: '1160px',
+    margin: '0 auto',
+    width: '100%',
+  },
+  ctaBannerInner: {
+    backgroundColor: '#0D253E',
+    backgroundImage: 'linear-gradient(135deg, #0D253E 0%, #163657 100%)',
+    borderRadius: '18px',
+    padding: '24px 36px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '24px',
-    boxShadow: '0 16px 36px rgba(19, 62, 135, 0.25)',
+    position: 'relative',
+    overflow: 'hidden',
+    boxShadow: '0 12px 30px rgba(13, 37, 62, 0.25)',
   },
   ctaBannerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '18px',
+    zIndex: 2,
   },
-  ctaHomeIconCircle: {
-    width: '56px',
-    height: '56px',
-    borderRadius: '50%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    border: '1.5px solid rgba(255, 255, 255, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  ctaBannerTitle: {
+  ctaTitle: {
     fontSize: '24px',
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: '4px',
+    margin: '0 0 4px 0',
   },
-  ctaBannerSubtitle: {
-    fontSize: '14px',
-    color: '#CBD5E1',
+  ctaSubtitle: {
+    fontSize: '13px',
+    color: '#94A3B8',
+    margin: 0,
   },
-  ctaBannerBtnAmber: {
-    backgroundColor: '#F59E0B',
-    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    color: '#FFFFFF',
+  ctaBannerCenter: {
+    zIndex: 2,
+  },
+  ctaTryNowBtn: {
+    backgroundColor: '#EAA428',
+    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
     border: 'none',
-    borderRadius: '9999px',
-    padding: '12px 28px',
-    fontSize: '15px',
+    color: '#0F172A',
+    fontSize: '13px',
     fontWeight: '800',
-    display: 'flex',
-    alignItems: 'center',
+    padding: '11px 26px',
+    borderRadius: '9999px',
     cursor: 'pointer',
-    flexShrink: 0,
-    boxShadow: '0 6px 18px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+    whiteSpace: 'nowrap',
     transition: 'all 0.15s ease',
   },
+  ctaBannerRightBg: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '38%',
+    opacity: 0.85,
+    pointerEvents: 'none',
+  },
+  ctaBgImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+    maskImage: 'linear-gradient(to right, transparent, black)',
+    WebkitMaskImage: 'linear-gradient(to right, transparent, black)',
+  },
 
-  // 8. Footer
+  // 8. FOOTER
   footer: {
-    backgroundColor: '#0A192F',
+    backgroundColor: '#081726',
     color: '#94A3B8',
-    padding: '36px 0 24px 0',
-    borderTop: '2px solid #1E293B',
+    padding: '50px 24px 30px',
+    marginTop: 'auto',
   },
-  footerContainer: {
-    maxWidth: '1280px',
+  footerInner: {
+    maxWidth: '1160px',
     margin: '0 auto',
-    padding: '0 24px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '24px',
-    flexWrap: 'wrap',
-    paddingBottom: '24px',
-    borderBottom: '1px solid #1E293B',
+    display: 'grid',
+    gridTemplateColumns: '1.4fr 1fr 1fr 1.3fr 0.9fr',
+    gap: '30px',
   },
-  footerBrandWrap: {
-    display: 'flex',
-    alignItems: 'center',
+  footerBrandCol: {
+    paddingRight: '12px',
   },
   footerLogoImg: {
-    height: '38px',
+    height: '34px',
     width: 'auto',
-    filter: 'brightness(1.15)',
+    marginBottom: '12px',
+    filter: 'brightness(1.1)',
   },
-  footerLinksWrap: {
+  footerTagline: {
+    fontSize: '12px',
+    lineHeight: '1.5',
+    color: '#94A3B8',
+    margin: '0 0 14px 0',
+  },
+  footerCopyright: {
+    fontSize: '11px',
+    color: '#64748B',
+    margin: 0,
+  },
+  footerCol: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  footerColHeader: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    margin: '0 0 4px 0',
+  },
+  footerLinksList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
   },
   footerLink: {
-    color: '#CBD5E1',
+    fontSize: '12px',
+    color: '#94A3B8',
     textDecoration: 'none',
-    fontSize: '13px',
-    fontWeight: '500',
     transition: 'color 0.15s ease',
   },
   footerLinkBtn: {
     background: 'none',
     border: 'none',
-    color: '#CBD5E1',
-    fontSize: '13px',
-    fontWeight: '500',
+    color: '#94A3B8',
+    fontSize: '12px',
     cursor: 'pointer',
     padding: 0,
-    transition: 'color 0.15s ease',
+    textAlign: 'left',
   },
-  footerLinkSep: {
-    color: '#475569',
-    fontSize: '12px',
-  },
-  footerSocialWrap: {
+  contactItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    fontSize: '12px',
+    color: '#CBD5E1',
+    marginBottom: '6px',
   },
-  socialIconLink: {
-    width: '34px',
-    height: '34px',
+  socialIconsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  socialIconBtn: {
+    width: '32px',
+    height: '32px',
     borderRadius: '50%',
-    backgroundColor: '#1E293B',
-    color: '#FFFFFF',
+    backgroundColor: '#162C46',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     textDecoration: 'none',
-    transition: 'all 0.15s ease',
-  },
-  footerBottomBar: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '16px 24px 0 24px',
-    textAlign: 'right',
-    fontSize: '12px',
-    color: '#64748B',
+    transition: 'background-color 0.15s',
   },
 
-  // Modal Styles
+  // 9. MODAL
   modalOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
-    width: '100vw',
-    height: '100vh',
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
     backdropFilter: 'blur(4px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 999,
+    zIndex: 1000,
     padding: '20px',
   },
-  modalBox: {
+  modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '20px',
+    borderRadius: '16px',
     maxWidth: '560px',
     width: '100%',
-    overflow: 'hidden',
-    position: 'relative',
-    boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
+    padding: '24px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+  },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: '16px',
+  },
+  modalTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#0F172A',
+    margin: '0 0 4px 0',
+  },
+  modalBadge: {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#162C46',
+    backgroundColor: '#F1F5F9',
+    padding: '2px 8px',
+    borderRadius: '4px',
   },
   modalCloseBtn: {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    background: 'none',
     border: 'none',
-    fontSize: '16px',
-    fontWeight: '800',
+    fontSize: '18px',
+    color: '#64748B',
     cursor: 'pointer',
-    zIndex: 10,
   },
-  modalImgWrap: {
+  modalImgFrame: {
     width: '100%',
     height: '240px',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+    marginBottom: '16px',
   },
   modalImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
   },
-  modalBody: {
-    padding: '22px 24px',
-  },
-  modalTag: {
-    display: 'inline-block',
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#1E3A8A',
-    backgroundColor: '#EFF6FF',
-    padding: '3px 10px',
-    borderRadius: '9999px',
-    marginBottom: '8px',
-  },
-  modalTitle: {
-    fontSize: '20px',
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: '8px',
-  },
   modalDesc: {
-    fontSize: '13.5px',
+    fontSize: '13px',
     color: '#475569',
-    lineHeight: '1.6',
-    marginBottom: '16px',
+    lineHeight: '1.5',
+    marginBottom: '20px',
   },
-  modalMetaRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '12.5px',
-    color: '#334155',
-    borderTop: '1px solid #F1F5F9',
-    borderBottom: '1px solid #F1F5F9',
-    padding: '10px 0',
-    marginBottom: '18px',
-  },
-  modalActionRow: {
+  modalActions: {
     display: 'flex',
     justifyContent: 'flex-end',
+    gap: '10px',
   },
-  modalCtaBtn: {
-    backgroundColor: '#F59E0B',
-    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    color: '#FFFFFF',
+  modalCancelBtn: {
+    backgroundColor: '#F1F5F9',
     border: 'none',
-    borderRadius: '9999px',
-    padding: '10px 22px',
-    fontSize: '13.5px',
+    color: '#475569',
+    fontSize: '13px',
+    fontWeight: '600',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+  },
+  modalActionBtn: {
+    backgroundColor: '#EAA428',
+    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+    border: 'none',
+    color: '#0F172A',
+    fontSize: '13px',
     fontWeight: '700',
+    padding: '8px 18px',
+    borderRadius: '8px',
     cursor: 'pointer',
   },
 };

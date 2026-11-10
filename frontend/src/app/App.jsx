@@ -19,7 +19,7 @@ function App() {
   const isContractorRoute = location.pathname.startsWith('/contractor');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
-  const isLandingRoute = location.pathname === '/' || location.pathname === '/home';
+  const isLandingRoute = location.pathname === '/' || location.pathname === '/landing';
 
   // Dedicated Portal Experience for Customer, Contractor, Admin, Auth, and Landing routes
   if (isCustomerRoute || isContractorRoute || isAdminRoute || isAuthRoute || isLandingRoute) {
