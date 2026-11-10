@@ -283,16 +283,22 @@ const styles = {
   },
   header: {
     marginBottom: '26px',
+    textAlign: 'center',
   },
   logoWrap: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: '20px',
+    width: '100%',
   },
   logoImg: {
-    maxHeight: '52px',
+    maxHeight: '75px',
+    maxWidth: '260px',
     width: 'auto',
     objectFit: 'contain',
+    display: 'block',
+    margin: '0 auto',
   },
   title: {
     fontSize: '24px',
@@ -344,6 +350,9 @@ const styles = {
   fieldGroup: {
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
   },
   labelRow: {
     display: 'flex',
@@ -364,6 +373,9 @@ const styles = {
     borderRadius: '12px',
     padding: '0 14px',
     height: '48px',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
     transition: 'all 0.15s ease',
   },
   inputIcon: {
@@ -372,6 +384,9 @@ const styles = {
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
     border: 'none',
     background: 'transparent',
     outline: 'none',

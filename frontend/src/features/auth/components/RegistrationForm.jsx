@@ -46,19 +46,16 @@ export function RegistrationForm() {
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
-  // Password rules checklist
+  // Password rules checklist — requires at least 1 Caps and at least 1 Number
   const passwordCheck = useMemo(() => {
     const p = formData.password || '';
     return {
-      length: p.length >= 8,
       upper: /[A-Z]/.test(p),
-      lower: /[a-z]/.test(p),
       number: /[0-9]/.test(p),
-      special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p),
     };
   }, [formData.password]);
 
-  const isPasswordValid = Object.values(passwordCheck).every(Boolean);
+  const isPasswordValid = Boolean(passwordCheck.upper && passwordCheck.number);
 
   const errors = useMemo(() => {
     const errs = {};
@@ -89,7 +86,15 @@ export function RegistrationForm() {
     }
 
     if (touched.password && !isPasswordValid) {
-      errs.password = 'Password does not meet all security requirements.';
+      if (!formData.password) {
+        errs.password = 'Password is required.';
+      } else if (!passwordCheck.upper && !passwordCheck.number) {
+        errs.password = 'Password requires at least one uppercase letter (Caps) and at least one number.';
+      } else if (!passwordCheck.upper) {
+        errs.password = 'Password requires at least one uppercase letter (Caps).';
+      } else {
+        errs.password = 'Password requires at least one number.';
+      }
     }
 
     if (touched.confirmPassword) {
@@ -385,8 +390,8 @@ export function RegistrationForm() {
               {errors.businessName && <p style={styles.fieldErrorText}>{errors.businessName}</p>}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={styles.fieldGroup}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
                 <label style={styles.label}>License Number *</label>
                 <div
                   style={{
@@ -411,7 +416,7 @@ export function RegistrationForm() {
                 {errors.licenseNumber && <p style={styles.fieldErrorText}>{errors.licenseNumber}</p>}
               </div>
 
-              <div style={styles.fieldGroup}>
+              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
                 <label style={styles.label}>Jurisdiction / State</label>
                 <div style={styles.inputWrap}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
@@ -483,22 +488,15 @@ export function RegistrationForm() {
             </button>
           </div>
 
-          {/* Real-time Checklist */}
+          {/* Real-time Checklist: Only 1 Caps and 1 Number required */}
           <div style={styles.passwordRulesBox}>
-            <span style={{ color: passwordCheck.length ? '#16a34a' : '#94a3b8' }}>
-              {passwordCheck.length ? '✓' : '○'} 8+ chars
+            <span style={{ color: passwordCheck.upper ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '800' }}>{passwordCheck.upper ? '✓' : '○'}</span>
+              <span>At least 1 Uppercase (Caps)</span>
             </span>
-            <span style={{ color: passwordCheck.upper ? '#16a34a' : '#94a3b8' }}>
-              {passwordCheck.upper ? '✓' : '○'} Uppercase
-            </span>
-            <span style={{ color: passwordCheck.lower ? '#16a34a' : '#94a3b8' }}>
-              {passwordCheck.lower ? '✓' : '○'} Lowercase
-            </span>
-            <span style={{ color: passwordCheck.number ? '#16a34a' : '#94a3b8' }}>
-              {passwordCheck.number ? '✓' : '○'} Number
-            </span>
-            <span style={{ color: passwordCheck.special ? '#16a34a' : '#94a3b8' }}>
-              {passwordCheck.special ? '✓' : '○'} Special char
+            <span style={{ color: passwordCheck.number ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '800' }}>{passwordCheck.number ? '✓' : '○'}</span>
+              <span>At least 1 Number</span>
             </span>
           </div>
         </div>
@@ -617,17 +615,23 @@ const styles = {
     borderBottomRightRadius: '24px',
   },
   header: {
-    marginBottom: '20px',
+    marginBottom: '22px',
+    textAlign: 'center',
   },
   logoWrap: {
     display: 'flex',
     alignItems: 'center',
-    marginBottom: '16px',
+    justifyContent: 'center',
+    marginBottom: '18px',
+    width: '100%',
   },
   logoImg: {
-    maxHeight: '50px',
+    maxHeight: '75px',
+    maxWidth: '260px',
     width: 'auto',
     objectFit: 'contain',
+    display: 'block',
+    margin: '0 auto',
   },
   title: {
     fontSize: '23px',
@@ -645,13 +649,15 @@ const styles = {
   },
   roleTabsWrap: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '10px',
     marginBottom: '20px',
     backgroundColor: '#F8FAFC',
     padding: '5px',
     borderRadius: '14px',
     border: '1px solid #E2E8F0',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   roleTab: {
     padding: '10px 12px',
@@ -679,10 +685,13 @@ const styles = {
     backgroundColor: '#F8FAFC',
     border: '1px solid #E2E8F0',
     borderRadius: '14px',
-    padding: '14px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
+    width: '100%',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   contractorSectionHeader: {
     display: 'flex',
@@ -730,6 +739,9 @@ const styles = {
   fieldGroup: {
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
   },
   labelRow: {
     display: 'flex',
@@ -748,8 +760,11 @@ const styles = {
     backgroundColor: '#F0F6FF',
     border: '1px solid #D0E1F9',
     borderRadius: '12px',
-    padding: '0 13px',
+    padding: '0 12px',
     height: '46px',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
     transition: 'all 0.15s ease',
   },
   inputIcon: {
@@ -758,6 +773,9 @@ const styles = {
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
     border: 'none',
     background: 'transparent',
     outline: 'none',
