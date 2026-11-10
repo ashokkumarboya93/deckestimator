@@ -243,7 +243,7 @@ export default function ContractorVerificationRequestPage() {
     }
   }
 
-  const currentStatus = profile?.verificationStatus || contractorProfile?.verificationStatus || 'draft';
+  const currentStatus = (profile?.verificationStatus || contractorProfile?.verificationStatus || user?.verificationStatus || 'pending').toLowerCase();
   const isPending = currentStatus === 'pending' || currentStatus === 'under_review';
   const isRejected = currentStatus === 'rejected';
   const isApproved = currentStatus === 'approved';
@@ -820,6 +820,7 @@ const styles = {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
+    boxSizing: 'border-box',
   },
   content: {
     maxWidth: '1000px',
@@ -834,7 +835,10 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '70vh',
+    minHeight: 'calc(100vh - 65px - 260px)',
+    width: '100%',
+    padding: '40px 20px',
+    boxSizing: 'border-box',
   },
   spinner: {
     width: '36px',

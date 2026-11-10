@@ -47,6 +47,15 @@ export default function AdminUserManagementPage() {
     fetchUsers();
   }, [activeTab, statusFilter, page]);
 
+  // Live auto-filter search while typing (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchUsers();
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -84,12 +93,6 @@ export default function AdminUserManagementPage() {
     }
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setPage(1);
-    fetchUsers();
-  };
-
   const handleOpenStatusAction = (user, type) => {
     setActionModal({ open: true, type, user, reason: '' });
   };
@@ -117,9 +120,14 @@ export default function AdminUserManagementPage() {
     }
   };
 
-  const openUserProfile = (user) => {
-    setSelectedUser(user);
-    setIsProfileModalOpen(true);
+  const openUserProfile = (u) => {
+    const userId = u?._id || u?.id;
+    if (userId) {
+      navigate(`/admin/users/${userId}`);
+    } else {
+      setSelectedUser(u);
+      setIsProfileModalOpen(true);
+    }
   };
 
   const handleResolveRequest = async (requestId, action) => {
@@ -200,6 +208,105 @@ export default function AdminUserManagementPage() {
         })}
       </div>
 
+      {/* Universal Auto-Search, Filter & Refresh Bar (Rendered for ALL Tabs) */}
+      <div style={styles.filterBar}>
+        <div style={{ ...styles.searchBox, flex: 1, maxWidth: '480px' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            placeholder={
+              activeTab === 'requests'
+                ? "Search appeal requests by name, email, or message..."
+                : activeTab === 'activity'
+                ? "Search audit logs by name, email, or action..."
+                : activeTab === 'customer'
+                ? "Search customers by name, email, or phone..."
+                : activeTab === 'contractor'
+                ? "Search contractors by company, license, or name..."
+                : "Search all users by name, email, phone, or company..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ ...styles.searchInput, width: '100%' }}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 4px', fontSize: '14px', lineHeight: 1 }}
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <div style={styles.filterRight}>
+          <label style={styles.filterLabel}>Status:</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            style={styles.selectInput}
+          >
+            {activeTab === 'requests' ? (
+              <>
+                <option value="all">All Appeal Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="resolved">Resolved</option>
+                <option value="rejected">Rejected</option>
+              </>
+            ) : activeTab === 'activity' ? (
+              <>
+                <option value="all">All Moderation Actions</option>
+                <option value="active">Active Transitions</option>
+                <option value="blocked">Blocked Actions</option>
+                <option value="pending">Pending Verifications</option>
+                <option value="inactive">Inactive</option>
+              </>
+            ) : (
+              <>
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="blocked">Blocked</option>
+                <option value="inactive">Inactive</option>
+              </>
+            )}
+          </select>
+
+          <button
+            type="button"
+            onClick={fetchUsers}
+            disabled={loading}
+            style={styles.refreshBtn}
+            title="Refresh list from database"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
       {/* Requests Tab View */}
       {activeTab === 'requests' ? (
         <div style={styles.card}>
@@ -209,22 +316,6 @@ export default function AdminUserManagementPage() {
               <p style={styles.cardSub}>
                 Blocked customers and contractors who have submitted requests to the Deck Restoration Plus Team.
               </p>
-            </div>
-            <div style={styles.filterRight}>
-              <label style={styles.filterLabel}>Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                style={styles.selectInput}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="resolved">Resolved</option>
-                <option value="rejected">Rejected</option>
-              </select>
             </div>
           </div>
 
@@ -312,66 +403,49 @@ export default function AdminUserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.flatMap((u) => (u.moderationHistory || []).map((m, i) => ({ ...m, user: u, key: `${u._id}-${i}` }))).length === 0 ? (
-                  <tr>
-                    <td colSpan="5" style={styles.emptyTd}>No recorded moderation activities found.</td>
-                  </tr>
-                ) : (
-                  users.flatMap((u) => (u.moderationHistory || []).map((m, i) => (
-                    <tr key={`${u._id}-${i}`} style={styles.tr}>
+                {(() => {
+                  const activityRows = users.flatMap((u) => (u.moderationHistory || []).map((m, i) => ({ ...m, user: u, key: `${u._id}-${i}` })))
+                    .filter((act) => {
+                      if (statusFilter !== 'all' && (act.newStatus || '').toLowerCase() !== statusFilter.toLowerCase()) {
+                        return false;
+                      }
+                      if (searchTerm.trim()) {
+                        const q = searchTerm.toLowerCase();
+                        const userName = (act.user?.fullName || act.user?.name || '').toLowerCase();
+                        const userEmail = (act.user?.email || '').toLowerCase();
+                        const action = (act.newStatus || '').toLowerCase();
+                        const reason = (act.reason || '').toLowerCase();
+                        return userName.includes(q) || userEmail.includes(q) || action.includes(q) || reason.includes(q);
+                      }
+                      return true;
+                    });
+
+                  if (activityRows.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan="5" style={styles.emptyTd}>No recorded moderation activities found matching filters.</td>
+                      </tr>
+                    );
+                  }
+
+                  return activityRows.map((m) => (
+                    <tr key={m.key} style={styles.tr}>
                       <td style={styles.td}>{new Date(m.changedAt || Date.now()).toLocaleString()}</td>
-                      <td style={styles.td}><strong>{u.name}</strong> ({u.email})</td>
+                      <td style={styles.td}><strong>{m.user.name || m.user.fullName}</strong> ({m.user.email})</td>
                       <td style={styles.td}>
-                        <span style={getStatusBadgeStyle(m.newStatus)}>{m.newStatus?.toUpperCase()}</span>
+                        <span style={getStatusBadgeStyle(m.newStatus)}>{(m.newStatus || '').toUpperCase()}</span>
                       </td>
                       <td style={styles.td}>{m.reason || 'Standard system action'}</td>
                       <td style={styles.td}>{m.changedBy || 'Admin System'}</td>
                     </tr>
-                  )))
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
         </div>
       ) : (
         <>
-          {/* Controls Bar: Search & Status Filter */}
-          <div style={styles.filterBar}>
-            <form onSubmit={handleSearchSubmit} style={styles.searchForm}>
-              <div style={styles.searchBox}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search by name, email, or company..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={styles.searchInput}
-                />
-              </div>
-              <button type="submit" style={styles.searchBtn}>Search</button>
-            </form>
-
-            <div style={styles.filterRight}>
-              <label style={styles.filterLabel}>Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                style={styles.selectInput}
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="blocked">Blocked</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
 
           {/* User Table */}
           <div style={styles.card}>
@@ -952,6 +1026,21 @@ const styles = {
     fontSize: '13px',
     color: '#0f172a',
     outline: 'none',
+  },
+  refreshBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '40px',
+    padding: '0 14px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   card: {
     backgroundColor: '#ffffff',

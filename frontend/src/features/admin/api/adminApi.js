@@ -266,7 +266,7 @@ export const adminApi = {
     return `http://localhost:5000/api/v1/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
   },
 
-  // 13. Admin Profile
+  // 13. Admin Profile & Hierarchy
   getProfile: async () => {
     const res = await client.get('/admin/profile');
     return res.data;
@@ -277,6 +277,18 @@ export const adminApi = {
   },
   changePassword: async (payload) => {
     const res = await client.post('/admin/profile/change-password', payload);
+    return res.data;
+  },
+  getHierarchy: async () => {
+    const res = await client.get('/admin/hierarchy');
+    return res.data;
+  },
+  createChildAdmin: async (payload) => {
+    const res = await client.post('/admin/child-admins', payload);
+    return res.data;
+  },
+  deleteChildAdmin: async (adminId) => {
+    const res = await client.delete(`/admin/child-admins/${adminId}`);
     return res.data;
   },
 };

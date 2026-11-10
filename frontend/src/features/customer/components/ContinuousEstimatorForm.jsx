@@ -2786,111 +2786,107 @@ export default function ContinuousEstimatorForm({
                   </div>
                 </div>
               ) : (
-                /* CONTRACTOR VIEW: Full Operational Breakdown */
-                <div style={styles.contractorBreakdownBox}>
-                  <div style={styles.resultContentRow}>
-                    <div style={styles.resultTotalBox}>
-                      <span style={styles.resultTotalSub}>Contractor Quoted Total</span>
+                /* CONTRACTOR VIEW: Full Operational Estimation Summary (Matches customer box styling & full width) */
+                <div style={styles.customerTotalBox}>
+                  <span style={styles.customerTotalSub}>Contractor Quoted Total</span>
 
-                      {(() => {
-                        const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
-                        const contractorMinJobAmt = officialEstimate.minJobAmount || 2500;
-                        const activeBase = applyMinJobPrice ? Math.max(pureBase, contractorMinJobAmt) : pureBase;
-                        const discountedAmt = Math.max(0, Math.round(activeBase * (1 - contractorDiscountPercent / 100)));
-                        const wholesaleSavings = Math.round(activeBase * (contractorDiscountPercent / 100));
+                  {(() => {
+                    const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
+                    const contractorMinJobAmt = officialEstimate.minJobAmount || 2500;
+                    const activeBase = applyMinJobPrice ? Math.max(pureBase, contractorMinJobAmt) : pureBase;
+                    const discountedAmt = Math.max(0, Math.round(activeBase * (1 - contractorDiscountPercent / 100)));
+                    const wholesaleSavings = Math.round(activeBase * (contractorDiscountPercent / 100));
 
-                        return (
-                          <>
-                            {applyContractorDiscount ? (
-                              <div style={{ margin: '6px 0 8px 0' }}>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                                  <span style={styles.strikePrice}>
-                                    ${activeBase.toLocaleString()}
-                                  </span>
-                                  <strong style={{ ...styles.resultTotalAmt, color: '#15803D' }}>
-                                    ${discountedAmt.toLocaleString()}
-                                  </strong>
-                                  <span style={styles.discountBadgePill}>
-                                    ✓ {contractorDiscountPercent}% Contractor Discount Applied
-                                  </span>
-                                </div>
-                                <span style={styles.discountSavingsSubtext}>
-                                  Wholesale Savings: ${wholesaleSavings.toLocaleString()} deducted via active tier
-                                </span>
-                              </div>
-                            ) : (
-                              <div style={{ margin: '6px 0 8px 0' }}>
-                                <strong style={{ ...styles.resultTotalAmt, color: '#0F2C59' }}>
-                                  ${activeBase.toLocaleString()}
-                                </strong>
-                                <span style={styles.discountSavingsSubtext}>
-                                  Standard retail rate (Wholesale discount unchecked)
-                                </span>
-                              </div>
-                            )}
+                    return (
+                      <>
+                        {applyContractorDiscount ? (
+                          <div style={{ margin: '8px 0 10px 0', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                              <span style={styles.strikePrice}>
+                                ${activeBase.toLocaleString()}
+                              </span>
+                              <strong style={{ ...styles.customerTotalAmt, color: '#15803D', margin: 0 }}>
+                                ${discountedAmt.toLocaleString()}
+                              </strong>
+                              <span style={styles.discountBadgePill}>
+                                ✓ {contractorDiscountPercent}% Contractor Discount Applied
+                              </span>
+                            </div>
+                            <span style={{ ...styles.discountSavingsSubtext, display: 'block', marginTop: '6px' }}>
+                              Wholesale Savings: ${wholesaleSavings.toLocaleString()} deducted via active tier
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ margin: '8px 0 10px 0', textAlign: 'center' }}>
+                            <strong style={{ ...styles.customerTotalAmt, color: '#034EA2', margin: 0 }}>
+                              ${activeBase.toLocaleString()}
+                            </strong>
+                            <span style={{ ...styles.discountSavingsSubtext, display: 'block', marginTop: '6px' }}>
+                              Standard retail rate (Wholesale discount unchecked)
+                            </span>
+                          </div>
+                        )}
 
-                            {/* Interactive Contractor Wholesale Discount Checkbox (Default Checked) */}
-                            <label style={styles.contractorDiscountCheckboxLabel}>
+                        {/* Interactive Contractor Wholesale Discount Checkbox */}
+                        <label style={{ ...styles.contractorDiscountCheckboxLabel, margin: '8px 0 12px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={applyContractorDiscount}
+                            onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
+                            style={styles.contractorDiscountCheckboxInput}
+                          />
+                          <span style={styles.contractorDiscountCheckboxText}>
+                            Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
+                          </span>
+                        </label>
+
+                        <span style={{ ...styles.resultRangeNotice, marginBottom: '14px' }}>
+                          Calculated Range: $
+                          {applyContractorDiscount
+                            ? Math.round((officialEstimate.rawLow || Math.round(activeBase * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                            : (officialEstimate.rawLow || Math.round(activeBase * 0.9)).toLocaleString()}{' '}
+                          – $
+                          {applyContractorDiscount
+                            ? Math.round((officialEstimate.rawHigh || Math.round(activeBase * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                            : (officialEstimate.rawHigh || Math.round(activeBase * 1.15)).toLocaleString()}
+                        </span>
+
+                        {/* CONTRACTOR IMPORTANT NOTE: Minimum Job Price */}
+                        <div style={styles.customerMinJobNoticeBox}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
+                            <strong style={{ color: '#0369A1', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                              Important Note — Minimum Job Price:
+                            </strong>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#0C4A6E', lineHeight: 1.45 }}>
+                              Standard mobilization minimum is <strong>${contractorMinJobAmt.toLocaleString()}</strong>.
+                              By default, this estimate shows the pure calculated price (${pureBase.toLocaleString()}) without minimum job price applied.
+                            </p>
+                            <label style={{ ...styles.minJobCheckboxLabel, backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }}>
                               <input
                                 type="checkbox"
-                                checked={applyContractorDiscount}
-                                onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
-                                style={styles.contractorDiscountCheckboxInput}
+                                checked={applyMinJobPrice}
+                                onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
+                                style={{ ...styles.minJobCheckboxInput, accentColor: '#0284C7' }}
                               />
-                              <span style={styles.contractorDiscountCheckboxText}>
-                                Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
+                              <span style={{ ...styles.minJobCheckboxText, color: '#0369A1' }}>
+                                Apply standard minimum job mobilization price (${contractorMinJobAmt.toLocaleString()})
                               </span>
                             </label>
-
-                            <span style={styles.resultRangeNotice}>
-                              Calculated Range: $
-                              {applyContractorDiscount
-                                ? Math.round((officialEstimate.rawLow || Math.round(activeBase * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                                : (officialEstimate.rawLow || Math.round(activeBase * 0.9)).toLocaleString()}{' '}
-                              – $
-                              {applyContractorDiscount
-                                ? Math.round((officialEstimate.rawHigh || Math.round(activeBase * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                                : (officialEstimate.rawHigh || Math.round(activeBase * 1.15)).toLocaleString()}
-                            </span>
-
-                            {/* CONTRACTOR IMPORTANT NOTE: Minimum Job Price with interactive checkbox (default unchecked) */}
-                            <div style={styles.contractorMinNoticeBox}>
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" y2="12" />
-                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                              </svg>
-                              <div style={{ flex: 1, textAlign: 'left' }}>
-                                <strong style={{ color: '#0369A1', fontSize: '12.5px', display: 'block', marginBottom: '3px' }}>
-                                  Important Note — Minimum Job Price:
-                                </strong>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#0C4A6E', lineHeight: 1.45 }}>
-                                  Standard mobilization minimum is <strong>${contractorMinJobAmt.toLocaleString()}</strong>.
-                                  By default, this estimate shows the pure calculated price (${pureBase.toLocaleString()}) without minimum job price applied.
-                                </p>
-                                <label style={styles.contractorMinJobCheckboxLabel}>
-                                  <input
-                                    type="checkbox"
-                                    checked={applyMinJobPrice}
-                                    onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
-                                    style={styles.minJobCheckboxInput}
-                                  />
-                                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0369A1' }}>
-                                    Apply standard minimum job mobilization price (${contractorMinJobAmt.toLocaleString()})
-                                  </span>
-                                </label>
-                                {applyMinJobPrice && (
-                                  <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#0284C7', fontWeight: '600' }}>
-                                    ✓ Minimum job mobilization price applied (${activeBase.toLocaleString()}). Uncheck to return to pure calculated price.
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                            {applyMinJobPrice && (
+                              <span style={{ display: 'block', marginTop: '6px', fontSize: '11px', color: '#0284C7', fontWeight: '600' }}>
+                                ✓ Minimum job mobilization price applied (${activeBase.toLocaleString()}). Uncheck to return to pure calculated price.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 

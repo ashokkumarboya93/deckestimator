@@ -7,6 +7,7 @@ const ContractorProfile = require('./contractorProfile.model');
 const VerificationDocument = require('./verificationDocument.model');
 const VerificationHistory = require('./verificationHistory.model');
 const User = require('../users/users.model');
+require('../catalogs/service.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const storageProvider = require('../files/storageProvider');
 const {

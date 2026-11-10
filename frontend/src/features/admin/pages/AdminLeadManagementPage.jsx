@@ -28,7 +28,7 @@ import { adminApi } from '../api/adminApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 
 const TABS = [
-  { id: 'hot', label: '🔥 Hot Priority Requests' },
+  { id: 'hot', label: 'Hot Priority Requests' },
   { id: 'customer', label: 'Customer Leads' },
   { id: 'contractor', label: 'Contractor Leads' },
   { id: 'all', label: 'All Leads & History' },
@@ -64,6 +64,29 @@ export default function AdminLeadManagementPage() {
   const [loadingDossier, setLoadingDossier] = useState(false);
   const [dossierError, setDossierError] = useState(null);
   const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [acceptingLead, setAcceptingLead] = useState(false);
+  const [acceptSuccessNotice, setAcceptSuccessNotice] = useState(null);
+
+  const handleAcceptLeadRequest = async (lead) => {
+    if (!lead) return;
+    setAcceptingLead(true);
+    setAcceptSuccessNotice(null);
+    try {
+      const estId = lead.estimateId || lead.estimateSnapshot?.estimateId || leadDossier?.estimateDetails?.estimateId || lead._id;
+      await adminApi.updateProjectProgress(estId, {
+        stage: 'in_progress',
+        status: 'in_progress',
+        note: `Admin accepted lead booking request for ${lead.name || 'Client'}. Project status transitioned to IN PROGRESS.`,
+      });
+      setAcceptSuccessNotice('✓ Lead booking request accepted! Project status transitioned to IN PROGRESS.');
+      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'in_progress' } : null);
+      fetchLeads(false);
+    } catch (err) {
+      alert(`Notice: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setAcceptingLead(false);
+    }
+  };
 
   useEffect(() => {
     fetchLeads(1);
@@ -394,7 +417,7 @@ export default function AdminLeadManagementPage() {
                             <div style={styles.personEmail}>{l.email}</div>
                             <div style={styles.personPhone}>{l.phone || '—'}</div>
                             {l.businessName && (
-                              <div style={styles.personCompany}>🏢 {l.businessName}</div>
+                              <div style={styles.personCompany}>{l.businessName}</div>
                             )}
                           </div>
                         </div>
@@ -420,7 +443,7 @@ export default function AdminLeadManagementPage() {
                         </div>
                         {l.estimatedValue > 0 && (
                           <div style={styles.estimatedValueBadge}>
-                            💰 Estimated: ${Number(l.estimatedValue).toLocaleString()}
+                            Estimated: ${Number(l.estimatedValue).toLocaleString()}
                           </div>
                         )}
                       </td>
@@ -429,7 +452,7 @@ export default function AdminLeadManagementPage() {
                       <td style={styles.td}>
                         {isHot ? (
                           <span style={styles.hotPill}>
-                            🔥 HOT PRIORITY
+                            HOT PRIORITY
                           </span>
                         ) : (
                           <span style={styles.standardPill}>Standard</span>
@@ -607,7 +630,7 @@ export default function AdminLeadManagementPage() {
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Lead Priority</span>
                         <span style={selectedLead.isHot ? styles.bannerValHot : styles.bannerValStandard}>
-                          {selectedLead.isHot ? '🔥 HOT PRIORITY' : 'Standard'}
+                          {selectedLead.isHot ? 'HOT PRIORITY' : 'Standard'}
                         </span>
                       </div>
                       <div style={styles.bannerItem}>
@@ -842,9 +865,16 @@ export default function AdminLeadManagementPage() {
                 )}
               </div>
 
+              {/* Accept Success Notice */}
+              {acceptSuccessNotice && (
+                <div style={{ padding: '10px 16px', backgroundColor: '#ECFDF5', color: '#15803D', borderTop: '1px solid #A7F3D0', fontWeight: '700', fontSize: '13px' }}>
+                  {acceptSuccessNotice}
+                </div>
+              )}
+
               {/* Modal Footer */}
               <div style={styles.modalFooter}>
-                <div style={{ display: 'flex', gap: '8px', marginRight: 'auto' }}>
+                <div style={{ display: 'flex', gap: '8px', marginRight: 'auto', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => downloadEstimatePdf(combinedLead, custMeta)}
@@ -861,13 +891,48 @@ export default function AdminLeadManagementPage() {
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  style={styles.btnCloseModal}
-                >
-                  Close Dossier
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {/* Accept Request Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptLeadRequest(selectedLead)}
+                    disabled={acceptingLead || selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress'}
+                    style={{
+                      padding: '9px 18px',
+                      backgroundColor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? '#166534' : '#15803D',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
+                    }}
+                    title="Accept booking request and move to IN PROGRESS"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>
+                      {acceptingLead
+                        ? 'Accepting...'
+                        : (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress')
+                        ? '✓ Request Accepted (IN PROGRESS)'
+                        : 'Accept Request (Start In Progress)'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    style={styles.btnCloseModal}
+                  >
+                    Close Dossier
+                  </button>
+                </div>
               </div>
             </div>
           </div>

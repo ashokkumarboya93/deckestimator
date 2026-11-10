@@ -27,6 +27,12 @@ export default function AdminVerificationProgressPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
+  // Search & Filtering
+  const [searchTerm, setSearchTerm] = useState('');
+  const [customerStatusFilter, setCustomerStatusFilter] = useState('all');
+  const [contractorStatusFilter, setContractorStatusFilter] = useState('all');
+  const [viewContractorModal, setViewContractorModal] = useState(null);
+
   // Verifications State
   const [verifications, setVerifications] = useState([]);
   const [verifCounts, setVerifCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
@@ -203,6 +209,61 @@ export default function AdminVerificationProgressPage() {
     }
   };
 
+  const filteredVerifications = verifications.filter((item) => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      item.contractorName?.toLowerCase().includes(q) ||
+      item.contractorEmail?.toLowerCase().includes(q) ||
+      item.companyName?.toLowerCase().includes(q) ||
+      item.licenseNumber?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredDocs = contractorDocs.filter((doc) => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    const cont = doc.contractorId || {};
+    const user = doc.userId || {};
+    return (
+      doc.originalFileName?.toLowerCase().includes(q) ||
+      doc.documentType?.toLowerCase().includes(q) ||
+      cont.businessName?.toLowerCase().includes(q) ||
+      cont.licenseNumber?.toLowerCase().includes(q) ||
+      user.fullName?.toLowerCase().includes(q) ||
+      user.email?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredCustomers = customers.filter((c) => {
+    const custName = c.fullName || c.name || '';
+    const custStatus = (c.accountStatus || c.status || 'ACTIVE').toLowerCase();
+    const matchesStatus = customerStatusFilter === 'all' || custStatus === customerStatusFilter.toLowerCase();
+    if (!matchesStatus) return false;
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      custName.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.phone?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredContractors = contractors.filter((c) => {
+    const contName = c.fullName || c.name || '';
+    const contStatus = (c.accountStatus || c.status || 'ACTIVE').toLowerCase();
+    const matchesStatus = contractorStatusFilter === 'all' || contStatus === contractorStatusFilter.toLowerCase();
+    if (!matchesStatus) return false;
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      contName.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.contractorProfile?.companyName?.toLowerCase().includes(q) ||
+      c.contractorProfile?.licenseNumber?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div style={styles.container}>
       {/* Page Header */}
@@ -278,21 +339,76 @@ export default function AdminVerificationProgressPage() {
       {/* ========================================================================= */}
       {activeTab === 'verifications' && (
         <div>
-          <div style={styles.filterBar}>
-            <div style={styles.filterPills}>
-              {['pending', 'approved', 'rejected', 'all'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setVerifFilter(filter)}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <input
+                  type="text"
+                  placeholder="Search contractor, company, license..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    ...styles.filterPill,
-                    ...(verifFilter === filter ? styles.filterPillActive : {}),
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    boxSizing: 'border-box'
                   }}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </button>
-              ))}
+                />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
+                  >✕</button>
+                )}
+              </div>
+
+              <div style={styles.filterPills}>
+                {['pending', 'approved', 'rejected', 'all'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setVerifFilter(filter)}
+                    style={{
+                      ...styles.filterPill,
+                      ...(verifFilter === filter ? styles.filterPillActive : {}),
+                    }}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <button
+              onClick={() => loadTabData(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F2C59',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+              title="Refresh verification list"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Refresh
+            </button>
           </div>
 
           <div style={styles.card}>
@@ -301,13 +417,13 @@ export default function AdminVerificationProgressPage() {
                 <div style={styles.spinner} />
                 <span>Loading verification applications...</span>
               </div>
-            ) : verifications.length === 0 ? (
+            ) : filteredVerifications.length === 0 ? (
               <div style={styles.emptyBox}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <p style={styles.emptyTitle}>No verification applications in this queue</p>
-                <p style={styles.emptySub}>All contractor submissions have been processed.</p>
+                <p style={styles.emptyTitle}>No verification applications match your search</p>
+                <p style={styles.emptySub}>Try adjusting your search criteria or filter options.</p>
               </div>
             ) : (
               <div style={styles.tableResponsive}>
@@ -323,7 +439,7 @@ export default function AdminVerificationProgressPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {verifications.map((item) => (
+                    {filteredVerifications.map((item) => (
                       <tr key={item._id} style={styles.tr}>
                         <td style={styles.td}>
                           <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.contractorName || 'Contractor'}</div>
@@ -366,36 +482,46 @@ export default function AdminVerificationProgressPage() {
                           </button>
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          {item.status === 'pending' ? (
-                            <div style={styles.actionButtonGroup}>
+                          <div style={styles.actionButtonGroup}>
+                            <button
+                              type="button"
+                              onClick={() => setViewContractorModal(item)}
+                              style={styles.actionBtnOutline}
+                              title="View contractor submission details and location"
+                            >
+                              View
+                            </button>
+                            {item.status === 'pending' ? (
+                              <>
+                                <button
+                                  onClick={() => handleApproveVerification(item)}
+                                  style={styles.actionBtnSuccess}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleOpenRejectModal(item)}
+                                  style={styles.actionBtnDanger}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : item.status === 'rejected' ? (
                               <button
                                 onClick={() => handleApproveVerification(item)}
                                 style={styles.actionBtnSuccess}
                               >
-                                Approve
+                                Re-Approve
                               </button>
+                            ) : (
                               <button
                                 onClick={() => handleOpenRejectModal(item)}
-                                style={styles.actionBtnDanger}
+                                style={styles.actionBtnOutline}
                               >
-                                Reject
+                                Revoke
                               </button>
-                            </div>
-                          ) : item.status === 'rejected' ? (
-                            <button
-                              onClick={() => handleApproveVerification(item)}
-                              style={styles.actionBtnSuccess}
-                            >
-                              Re-Approve
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleOpenRejectModal(item)}
-                              style={styles.actionBtnOutline}
-                            >
-                              Revoke
-                            </button>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -417,7 +543,85 @@ export default function AdminVerificationProgressPage() {
               <h3 style={styles.cardTitle}>Customer Accounts Directory</h3>
               <p style={styles.cardSub}>Overview of registered homeowners, estimates generated, and active projects.</p>
             </div>
-            <span style={styles.countBadge}>{customers.length} Customers</span>
+            <span style={styles.countBadge}>{filteredCustomers.length} Customers</span>
+          </div>
+
+          {/* Search, Filter & Refresh Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <input
+                  type="text"
+                  placeholder="Search customer name, email, phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
+                  >✕</button>
+                )}
+              </div>
+
+              <select
+                value={customerStatusFilter}
+                onChange={(e) => setCustomerStatusFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">All Customer Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => loadTabData(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F2C59',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+              title="Refresh customer directory"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Refresh
+            </button>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -433,35 +637,41 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {customers.map((c) => {
-                  const custName = c.fullName || c.name || 'Customer';
-                  const custStatus = c.accountStatus || c.status || 'ACTIVE';
-                  return (
-                  <tr key={c._id || c.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <strong>{custName}</strong>
-                    </td>
-                    <td style={styles.td}>{c.email}</td>
-                    <td style={styles.td}>{c.phone || '—'}</td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(custStatus)}>
-                        {custStatus.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                        style={styles.actionBtnOutline}
-                        title="View complete user dossier"
-                      >
-                        View Profile
-                      </button>
-                    </td>
+                {filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={styles.emptyTd}>No customers found matching this search or filter.</td>
                   </tr>
-                  );
-                })}
+                ) : (
+                  filteredCustomers.map((c) => {
+                    const custName = c.fullName || c.name || 'Customer';
+                    const custStatus = c.accountStatus || c.status || 'ACTIVE';
+                    return (
+                    <tr key={c._id || c.id} style={styles.tr}>
+                      <td style={styles.td}>
+                        <strong>{custName}</strong>
+                      </td>
+                      <td style={styles.td}>{c.email}</td>
+                      <td style={styles.td}>{c.phone || '—'}</td>
+                      <td style={styles.td}>
+                        <span style={getVerifStatusBadge(custStatus)}>
+                          {custStatus.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
+                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                          style={styles.actionBtnOutline}
+                          title="View complete user dossier"
+                        >
+                          View Profile
+                        </button>
+                      </td>
+                    </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -478,7 +688,85 @@ export default function AdminVerificationProgressPage() {
               <h3 style={styles.cardTitle}>Verified Contractor Roster</h3>
               <p style={styles.cardSub}>Status of verified contractors, licensed specialists, and active projects.</p>
             </div>
-            <span style={styles.countBadge}>{contractors.length} Contractors</span>
+            <span style={styles.countBadge}>{filteredContractors.length} Contractors</span>
+          </div>
+
+          {/* Search, Filter & Refresh Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <input
+                  type="text"
+                  placeholder="Search contractor, company, license..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
+                  >✕</button>
+                )}
+              </div>
+
+              <select
+                value={contractorStatusFilter}
+                onChange={(e) => setContractorStatusFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">All Contractor Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => loadTabData(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F2C59',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+              title="Refresh contractor roster"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Refresh
+            </button>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -495,49 +783,55 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {contractors.map((c) => {
-                  const contName = c.fullName || c.name || 'Contractor';
-                  const contStatus = c.accountStatus || c.status || 'ACTIVE';
-                  return (
-                  <tr key={c._id || c.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <strong>{contName}</strong>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
-                    </td>
-                    <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
-                        {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
-                        {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{ fontWeight: '600', color: '#0f172a' }}>
-                        {c.contractorProfile?.completedProjectsCount || 0}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(contStatus)}>
-                        {contStatus.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                        style={styles.actionBtnOutline}
-                        title="View complete user dossier"
-                      >
-                        View Profile
-                      </button>
-                    </td>
+                {filteredContractors.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={styles.emptyTd}>No contractors found matching this search or filter.</td>
                   </tr>
-                  );
-                })}
+                ) : (
+                  filteredContractors.map((c) => {
+                    const contName = c.fullName || c.name || 'Contractor';
+                    const contStatus = c.accountStatus || c.status || 'ACTIVE';
+                    return (
+                    <tr key={c._id || c.id} style={styles.tr}>
+                      <td style={styles.td}>
+                        <strong>{contName}</strong>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
+                      </td>
+                      <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
+                      <td style={styles.td}>
+                        <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
+                          {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
+                          {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{ fontWeight: '600', color: '#0f172a' }}>
+                          {c.contractorProfile?.completedProjectsCount || 0}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={getVerifStatusBadge(contStatus)}>
+                          {contStatus.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                          style={styles.actionBtnOutline}
+                          title="View complete user dossier"
+                        >
+                          View Profile
+                        </button>
+                      </td>
+                    </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -556,19 +850,79 @@ export default function AdminVerificationProgressPage() {
                 Review uploaded licenses, insurance certificates, and commercial credentials to approve contractor discount eligibility.
               </p>
             </div>
-            <div style={styles.filterRight}>
-              <label style={styles.filterLabel}>Status:</label>
-              <select
-                value={docsFilter}
-                onChange={(e) => setDocsFilter(e.target.value)}
-                style={styles.selectInput}
-              >
-                <option value="all">All Documents</option>
-                <option value="pending_review">Pending Review</option>
-                <option value="verified">Verified (Approved)</option>
-                <option value="rejected">Rejected</option>
-              </select>
+            <span style={styles.countBadge}>{filteredDocs.length} Documents</span>
+          </div>
+
+          {/* Search, Filter & Refresh Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <input
+                  type="text"
+                  placeholder="Search file, contractor, license..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
+                  >✕</button>
+                )}
+              </div>
+
+              <div style={styles.filterRight}>
+                <label style={styles.filterLabel}>Status:</label>
+                <select
+                  value={docsFilter}
+                  onChange={(e) => setDocsFilter(e.target.value)}
+                  style={styles.selectInput}
+                >
+                  <option value="all">All Documents</option>
+                  <option value="pending_review">Pending Review</option>
+                  <option value="verified">Verified (Approved)</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
             </div>
+
+            <button
+              onClick={() => loadTabData(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#0F2C59',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+              title="Refresh documents list"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Refresh
+            </button>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -584,12 +938,12 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {contractorDocs.length === 0 ? (
+                {filteredDocs.length === 0 ? (
                   <tr>
                     <td colSpan="6" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
                   </tr>
                 ) : (
-                  contractorDocs.map((doc) => {
+                  filteredDocs.map((doc) => {
                     const cont = doc.contractorId || {};
                     const user = doc.userId || {};
                     const docStatus = doc.documentStatus || 'pending_review';
@@ -680,13 +1034,13 @@ export default function AdminVerificationProgressPage() {
         </div>
       )}
 
-      {/* CONTRACTOR DOCUMENT VIEWER MODAL */}
+      {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH LIVE PREVIEW */}
       {viewingDocModal && (
         <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...styles.modalContent, maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={styles.modalTitle}>Document Inspection</h3>
+                <h3 style={styles.modalTitle}>Document Live Inspection</h3>
                 <p style={styles.modalSub}>{viewingDocModal.originalFileName}</p>
               </div>
               <button onClick={() => setViewingDocModal(null)} style={styles.modalCloseBtn}>✕</button>
@@ -698,22 +1052,60 @@ export default function AdminVerificationProgressPage() {
                 <div><strong>Status:</strong> {(viewingDocModal.documentStatus || 'pending').replace(/_/g, ' ').toUpperCase()}</div>
                 <div><strong>File Size:</strong> {Math.round((viewingDocModal.fileSize || 1024) / 1024)} KB</div>
                 <div><strong>Uploaded:</strong> {new Date(viewingDocModal.createdAt).toLocaleString()}</div>
-                <div><strong>Storage Key:</strong> {viewingDocModal.storageKey || 'N/A'}</div>
+                <div><strong>Storage:</strong> MongoDB Secure Vault</div>
               </div>
 
-              <div style={styles.docPreviewPlaceholder}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="1.5">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                </svg>
-                <p style={{ marginTop: '10px', fontSize: '14px', color: '#0f172a', fontWeight: '700' }}>
-                  {viewingDocModal.originalFileName}
-                </p>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
-                  Document verified for commercial wholesale discount authorization.
-                </p>
+              {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
+              <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                {(() => {
+                  const docUrl = `/api/v1/contractors/documents/${viewingDocModal._id}/file`;
+                  const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
+                  const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
+
+                  if (isImg) {
+                    return (
+                      <img
+                        src={docUrl}
+                        alt={viewingDocModal.originalFileName}
+                        style={{ maxWidth: '100%', maxHeight: '440px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                      />
+                    );
+                  }
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={docUrl}
+                        title={viewingDocModal.originalFileName}
+                        style={{ width: '100%', height: '440px', border: 'none', borderRadius: '6px' }}
+                      />
+                    );
+                  }
+                  return (
+                    <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+                      <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#0F172A' }}>
+                        {viewingDocModal.originalFileName}
+                      </p>
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#1E3A63', color: '#FFFFFF', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
+                      >
+                        Open File in Viewer &rarr;
+                      </a>
+                    </div>
+                  );
+                })()}
+                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <a
+                    href={`/api/v1/contractors/documents/${viewingDocModal._id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '12px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
+                  >
+                    Open Document in New Tab &rarr;
+                  </a>
+                </div>
               </div>
 
               {viewingDocModal.reviewNotes && (
@@ -741,8 +1133,109 @@ export default function AdminVerificationProgressPage() {
                     }}
                     style={styles.actionBtnSuccessLg}
                   >
-                    Approve Document
+                    ✓ Approve Document
                   </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTRACTOR DETAILS, DATE & LOCATION POPUP MODAL */}
+      {viewContractorModal && (
+        <div style={styles.modalOverlay} onClick={() => setViewContractorModal(null)}>
+          <div style={{ ...styles.modalContent, maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Contractor Verification Details</h3>
+                <p style={styles.modalSub}>
+                  Submission received on {new Date(viewContractorModal.submittedAt || viewContractorModal.createdAt || Date.now()).toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setViewContractorModal(null)} style={styles.modalCloseBtn}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Contractor Name</span>
+                  <strong style={{ fontSize: '14px', color: '#0F172A' }}>{viewContractorModal.contractorName || 'Contractor'}</strong>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Email Address</span>
+                  <span style={{ fontSize: '13px', color: '#334155' }}>{viewContractorModal.contractorEmail || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Company / Business</span>
+                  <strong style={{ fontSize: '14px', color: '#1E3A63' }}>{viewContractorModal.companyName || viewContractorModal.businessName || 'Independent Pro'}</strong>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>License Number</span>
+                  <span style={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: '#0F172A' }}>
+                    {viewContractorModal.licenseNumber || 'Verified ID'}
+                    {viewContractorModal.licenseJurisdiction ? ` (${viewContractorModal.licenseJurisdiction})` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Phone</span>
+                  <span style={{ fontSize: '13px', color: '#334155' }}>{viewContractorModal.businessPhone || viewContractorModal.phone || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Verification Status</span>
+                  <span style={getVerifStatusBadge(viewContractorModal.status)}>
+                    {(viewContractorModal.status || 'PENDING').toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    Operating Location &amp; Headquarters
+                  </span>
+                  <div style={{ fontSize: '13px', color: '#0F172A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span>
+                      {viewContractorModal.location?.street ? `${viewContractorModal.location.street}, ` : ''}
+                      {viewContractorModal.location?.city || viewContractorModal.businessAddress?.city || 'Shamong'}, {' '}
+                      {viewContractorModal.location?.state || viewContractorModal.businessAddress?.state || 'NJ'}, {' '}
+                      {viewContractorModal.location?.zipCode || viewContractorModal.businessAddress?.zipCode || '08088'}, USA
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...styles.modalFooter, marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewContractorModal(null)}
+                  style={styles.modalBtnSecondary}
+                >
+                  Close
+                </button>
+                {viewContractorModal.status === 'pending' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleOpenRejectModal(viewContractorModal);
+                        setViewContractorModal(null);
+                      }}
+                      style={styles.actionBtnDanger}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleApproveVerification(viewContractorModal);
+                        setViewContractorModal(null);
+                      }}
+                      style={styles.actionBtnSuccess}
+                    >
+                      ✓ Approve Contractor
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
