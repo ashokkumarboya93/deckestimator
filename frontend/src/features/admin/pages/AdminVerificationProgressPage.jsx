@@ -209,61 +209,6 @@ export default function AdminVerificationProgressPage() {
     }
   };
 
-  const filteredVerifications = verifications.filter((item) => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      item.contractorName?.toLowerCase().includes(q) ||
-      item.contractorEmail?.toLowerCase().includes(q) ||
-      item.companyName?.toLowerCase().includes(q) ||
-      item.licenseNumber?.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredDocs = contractorDocs.filter((doc) => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    const cont = doc.contractorId || {};
-    const user = doc.userId || {};
-    return (
-      doc.originalFileName?.toLowerCase().includes(q) ||
-      doc.documentType?.toLowerCase().includes(q) ||
-      cont.businessName?.toLowerCase().includes(q) ||
-      cont.licenseNumber?.toLowerCase().includes(q) ||
-      user.fullName?.toLowerCase().includes(q) ||
-      user.email?.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredCustomers = customers.filter((c) => {
-    const custName = c.fullName || c.name || '';
-    const custStatus = (c.accountStatus || c.status || 'ACTIVE').toLowerCase();
-    const matchesStatus = customerStatusFilter === 'all' || custStatus === customerStatusFilter.toLowerCase();
-    if (!matchesStatus) return false;
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      custName.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.phone?.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredContractors = contractors.filter((c) => {
-    const contName = c.fullName || c.name || '';
-    const contStatus = (c.accountStatus || c.status || 'ACTIVE').toLowerCase();
-    const matchesStatus = contractorStatusFilter === 'all' || contStatus === contractorStatusFilter.toLowerCase();
-    if (!matchesStatus) return false;
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      contName.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.contractorProfile?.companyName?.toLowerCase().includes(q) ||
-      c.contractorProfile?.licenseNumber?.toLowerCase().includes(q)
-    );
-  });
-
   return (
     <div style={styles.container}>
       {/* Page Header */}
@@ -339,76 +284,21 @@ export default function AdminVerificationProgressPage() {
       {/* ========================================================================= */}
       {activeTab === 'verifications' && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <input
-                  type="text"
-                  placeholder="Search contractor, company, license..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+          <div style={styles.filterBar}>
+            <div style={styles.filterPills}>
+              {['pending', 'approved', 'rejected', 'all'].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setVerifFilter(filter)}
                   style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 34px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    backgroundColor: '#FFFFFF',
-                    boxSizing: 'border-box'
+                    ...styles.filterPill,
+                    ...(verifFilter === filter ? styles.filterPillActive : {}),
                   }}
-                />
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
-                  >✕</button>
-                )}
-              </div>
-
-              <div style={styles.filterPills}>
-                {['pending', 'approved', 'rejected', 'all'].map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setVerifFilter(filter)}
-                    style={{
-                      ...styles.filterPill,
-                      ...(verifFilter === filter ? styles.filterPillActive : {}),
-                    }}
-                  >
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  </button>
-                ))}
-              </div>
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
             </div>
-
-            <button
-              onClick={() => loadTabData(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                backgroundColor: '#F8FAFC',
-                color: '#0F2C59',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-              title="Refresh verification list"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Refresh
-            </button>
           </div>
 
           <div style={styles.card}>
@@ -417,13 +307,13 @@ export default function AdminVerificationProgressPage() {
                 <div style={styles.spinner} />
                 <span>Loading verification applications...</span>
               </div>
-            ) : filteredVerifications.length === 0 ? (
+            ) : verifications.length === 0 ? (
               <div style={styles.emptyBox}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <p style={styles.emptyTitle}>No verification applications match your search</p>
-                <p style={styles.emptySub}>Try adjusting your search criteria or filter options.</p>
+                <p style={styles.emptyTitle}>No verification applications in this queue</p>
+                <p style={styles.emptySub}>All contractor submissions have been processed.</p>
               </div>
             ) : (
               <div style={styles.tableResponsive}>
@@ -439,7 +329,7 @@ export default function AdminVerificationProgressPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredVerifications.map((item) => (
+                    {verifications.map((item) => (
                       <tr key={item._id} style={styles.tr}>
                         <td style={styles.td}>
                           <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.contractorName || 'Contractor'}</div>
@@ -543,85 +433,7 @@ export default function AdminVerificationProgressPage() {
               <h3 style={styles.cardTitle}>Customer Accounts Directory</h3>
               <p style={styles.cardSub}>Overview of registered homeowners, estimates generated, and active projects.</p>
             </div>
-            <span style={styles.countBadge}>{filteredCustomers.length} Customers</span>
-          </div>
-
-          {/* Search, Filter & Refresh Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <input
-                  type="text"
-                  placeholder="Search customer name, email, phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 34px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    backgroundColor: '#FFFFFF',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
-                  >✕</button>
-                )}
-              </div>
-
-              <select
-                value={customerStatusFilter}
-                onChange={(e) => setCustomerStatusFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#334155',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">All Customer Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => loadTabData(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                backgroundColor: '#F8FAFC',
-                color: '#0F2C59',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-              title="Refresh customer directory"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Refresh
-            </button>
+            <span style={styles.countBadge}>{customers.length} Customers</span>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -637,41 +449,35 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={styles.emptyTd}>No customers found matching this search or filter.</td>
+                {customers.map((c) => {
+                  const custName = c.fullName || c.name || 'Customer';
+                  const custStatus = c.accountStatus || c.status || 'ACTIVE';
+                  return (
+                  <tr key={c._id || c.id} style={styles.tr}>
+                    <td style={styles.td}>
+                      <strong>{custName}</strong>
+                    </td>
+                    <td style={styles.td}>{c.email}</td>
+                    <td style={styles.td}>{c.phone || '—'}</td>
+                    <td style={styles.td}>
+                      <span style={getVerifStatusBadge(custStatus)}>
+                        {custStatus.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                        style={styles.actionBtnOutline}
+                        title="View complete user dossier"
+                      >
+                        View Profile
+                      </button>
+                    </td>
                   </tr>
-                ) : (
-                  filteredCustomers.map((c) => {
-                    const custName = c.fullName || c.name || 'Customer';
-                    const custStatus = c.accountStatus || c.status || 'ACTIVE';
-                    return (
-                    <tr key={c._id || c.id} style={styles.tr}>
-                      <td style={styles.td}>
-                        <strong>{custName}</strong>
-                      </td>
-                      <td style={styles.td}>{c.email}</td>
-                      <td style={styles.td}>{c.phone || '—'}</td>
-                      <td style={styles.td}>
-                        <span style={getVerifStatusBadge(custStatus)}>
-                          {custStatus.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                          style={styles.actionBtnOutline}
-                          title="View complete user dossier"
-                        >
-                          View Profile
-                        </button>
-                      </td>
-                    </tr>
-                    );
-                  })
-                )}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -688,85 +494,7 @@ export default function AdminVerificationProgressPage() {
               <h3 style={styles.cardTitle}>Verified Contractor Roster</h3>
               <p style={styles.cardSub}>Status of verified contractors, licensed specialists, and active projects.</p>
             </div>
-            <span style={styles.countBadge}>{filteredContractors.length} Contractors</span>
-          </div>
-
-          {/* Search, Filter & Refresh Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <input
-                  type="text"
-                  placeholder="Search contractor, company, license..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 34px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    backgroundColor: '#FFFFFF',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
-                  >✕</button>
-                )}
-              </div>
-
-              <select
-                value={contractorStatusFilter}
-                onChange={(e) => setContractorStatusFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#334155',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">All Contractor Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => loadTabData(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                backgroundColor: '#F8FAFC',
-                color: '#0F2C59',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-              title="Refresh contractor roster"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Refresh
-            </button>
+            <span style={styles.countBadge}>{contractors.length} Contractors</span>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -783,55 +511,49 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredContractors.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={styles.emptyTd}>No contractors found matching this search or filter.</td>
+                {contractors.map((c) => {
+                  const contName = c.fullName || c.name || 'Contractor';
+                  const contStatus = c.accountStatus || c.status || 'ACTIVE';
+                  return (
+                  <tr key={c._id || c.id} style={styles.tr}>
+                    <td style={styles.td}>
+                      <strong>{contName}</strong>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
+                    </td>
+                    <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
+                    <td style={styles.td}>
+                      <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
+                        {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
+                        {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ fontWeight: '600', color: '#0f172a' }}>
+                        {c.contractorProfile?.completedProjectsCount || 0}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={getVerifStatusBadge(contStatus)}>
+                        {contStatus.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
+                        style={styles.actionBtnOutline}
+                        title="View complete user dossier"
+                      >
+                        View Profile
+                      </button>
+                    </td>
                   </tr>
-                ) : (
-                  filteredContractors.map((c) => {
-                    const contName = c.fullName || c.name || 'Contractor';
-                    const contStatus = c.accountStatus || c.status || 'ACTIVE';
-                    return (
-                    <tr key={c._id || c.id} style={styles.tr}>
-                      <td style={styles.td}>
-                        <strong>{contName}</strong>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
-                      </td>
-                      <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
-                      <td style={styles.td}>
-                        <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
-                          {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
-                          {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={{ fontWeight: '600', color: '#0f172a' }}>
-                          {c.contractorProfile?.completedProjectsCount || 0}
-                        </span>
-                      </td>
-                      <td style={styles.td}>
-                        <span style={getVerifStatusBadge(contStatus)}>
-                          {contStatus.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                          style={styles.actionBtnOutline}
-                          title="View complete user dossier"
-                        >
-                          View Profile
-                        </button>
-                      </td>
-                    </tr>
-                    );
-                  })
-                )}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -850,79 +572,19 @@ export default function AdminVerificationProgressPage() {
                 Review uploaded licenses, insurance certificates, and commercial credentials to approve contractor discount eligibility.
               </p>
             </div>
-            <span style={styles.countBadge}>{filteredDocs.length} Documents</span>
-          </div>
-
-          {/* Search, Filter & Refresh Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <input
-                  type="text"
-                  placeholder="Search file, contractor, license..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 34px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    backgroundColor: '#FFFFFF',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '13px' }}
-                  >✕</button>
-                )}
-              </div>
-
-              <div style={styles.filterRight}>
-                <label style={styles.filterLabel}>Status:</label>
-                <select
-                  value={docsFilter}
-                  onChange={(e) => setDocsFilter(e.target.value)}
-                  style={styles.selectInput}
-                >
-                  <option value="all">All Documents</option>
-                  <option value="pending_review">Pending Review</option>
-                  <option value="verified">Verified (Approved)</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={docsFilter}
+                onChange={(e) => setDocsFilter(e.target.value)}
+                style={styles.selectInput}
+              >
+                <option value="all">All Documents</option>
+                <option value="pending_review">Pending Review</option>
+                <option value="verified">Verified (Approved)</option>
+                <option value="rejected">Rejected</option>
+              </select>
             </div>
-
-            <button
-              onClick={() => loadTabData(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                backgroundColor: '#F8FAFC',
-                color: '#0F2C59',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-              title="Refresh documents list"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Refresh
-            </button>
           </div>
 
           <div style={styles.tableResponsive}>
@@ -938,12 +600,12 @@ export default function AdminVerificationProgressPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredDocs.length === 0 ? (
+                {contractorDocs.length === 0 ? (
                   <tr>
                     <td colSpan="6" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
                   </tr>
                 ) : (
-                  filteredDocs.map((doc) => {
+                  contractorDocs.map((doc) => {
                     const cont = doc.contractorId || {};
                     const user = doc.userId || {};
                     const docStatus = doc.documentStatus || 'pending_review';

@@ -1273,91 +1273,9 @@ export default function AdminPricingDiscountsPage() {
           </div>
 
           {/* Individual Contractor Directory with Custom Overrides */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '28px', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F2C59', margin: 0 }}>
-              Registered Contractors & Custom Overrides ({discountData?.contractors?.length || 0})
-            </h3>
-            
-            {/* Search, Filter & Refresh Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', width: '260px' }}>
-                <input
-                  type="text"
-                  placeholder="Search contractor, company..."
-                  value={contractorSearch}
-                  onChange={(e) => setContractorSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px 8px 32px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#64748B"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </div>
-
-              <select
-                value={contractorTierFilter}
-                onChange={(e) => setContractorTierFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#334155',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">All Verification Tiers</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-
-              <button
-                onClick={loadAllData}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#F8FAFC',
-                  color: '#0F2C59',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s'
-                }}
-                title="Refresh contractor discounts"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-          </div>
+          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F2C59', marginTop: '28px', marginBottom: '12px' }}>
+            Registered Contractors & Custom Overrides ({discountData?.contractors?.length || 0})
+          </h3>
 
           <table style={styles.dataTable}>
             <thead>
@@ -1367,129 +1285,64 @@ export default function AdminPricingDiscountsPage() {
                 <th style={styles.tableTh}>Verification Tier</th>
                 <th style={styles.tableTh}>Completed Projects</th>
                 <th style={styles.tableTh}>Effective Trade Discount</th>
-                <th style={{ ...styles.tableTh, textAlign: 'right' }}>Tune Custom % & Actions</th>
+                <th style={{ ...styles.tableTh, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {(discountData?.contractors || [])
-                .filter((contractor) => {
-                  const q = contractorSearch.trim().toLowerCase();
-                  const matchesSearch =
-                    !q ||
-                    contractor.fullName?.toLowerCase().includes(q) ||
-                    contractor.businessName?.toLowerCase().includes(q) ||
-                    contractor.email?.toLowerCase().includes(q);
-                  const status = (contractor.verificationStatus || 'approved').toLowerCase();
-                  const matchesTier =
-                    contractorTierFilter === 'all' || status === contractorTierFilter.toLowerCase();
-                  return matchesSearch && matchesTier;
-                })
-                .map((contractor) => {
-                  const contractorId = contractor._id || contractor.id;
-                  const effective = contractor.customDiscount !== undefined ? contractor.customDiscount : defaultDiscountVal;
-                  const hasCustom = contractor.customDiscount !== undefined;
-                  const currentInputVal = editingContractorDiscounts[contractorId] !== undefined ? editingContractorDiscounts[contractorId] : effective;
-
-                  return (
-                    <tr key={contractorId} style={styles.tableRow}>
-                      <td style={styles.tableTd}>
-                        <strong>{contractor.fullName}</strong>
-                        <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>
-                          {contractor.businessName || 'Independent Pro'}
-                        </span>
-                      </td>
-                      <td style={styles.tableTd}>
-                        <span style={{ fontSize: '13px', color: '#334155' }}>{contractor.email}</span>
-                      </td>
-                      <td style={styles.tableTd}>
-                        <span style={styles.verifiedTierPill}>
-                          ✓ {contractor.verificationStatus || 'APPROVED'}
-                        </span>
-                      </td>
-                      <td style={styles.tableTd}>
-                        <strong style={{ color: '#034EA2' }}>{contractor.completedJobsCount || 0} jobs</strong>
-                      </td>
-                      <td style={styles.tableTd}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              ...styles.discountRatePill,
-                              backgroundColor: hasCustom ? '#FEF3C7' : '#DCFCE7',
-                              color: hasCustom ? '#92400E' : '#15803D',
-                              borderColor: hasCustom ? '#FCD34D' : '#86EFAC',
-                            }}
-                          >
-                            {effective}% {hasCustom ? '(Custom)' : '(Default)'}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ ...styles.tableTd, textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <input
-                              type="number"
-                              min="0"
-                              max="50"
-                              value={currentInputVal}
-                              onChange={(e) => setEditingContractorDiscounts(prev => ({ ...prev, [contractorId]: e.target.value }))}
-                              style={{
-                                width: '60px',
-                                padding: '5px 6px',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                fontSize: '13px',
-                                fontWeight: '700',
-                                textAlign: 'center',
-                                outline: 'none'
-                              }}
-                            />
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748B' }}>%</span>
-                          </div>
-
-                          <button
-                            onClick={() => handleSaveInlineContractorDiscount(contractorId)}
-                            disabled={savingContractorId === contractorId}
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              border: 'none',
-                              backgroundColor: '#15803D',
-                              color: '#FFFFFF',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              opacity: savingContractorId === contractorId ? 0.7 : 1
-                            }}
-                            title="Save custom discount to MongoDB"
-                          >
-                            {savingContractorId === contractorId ? 'Saving...' : '✓ Save'}
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedContractor(contractor);
-                              setContractorCustomDiscount(effective);
-                              setOverrideReason('');
-                            }}
-                            style={{
-                              ...styles.editActionBtn,
-                              padding: '5px 8px',
-                              fontSize: '11px',
-                              border: '1px solid #E2E8F0',
-                              backgroundColor: '#F8FAFC'
-                            }}
-                            title="Open detailed reason dialog"
-                          >
-                            Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+              {(discountData?.contractors || []).map((contractor) => {
+                const effective = contractor.customDiscount !== undefined ? contractor.customDiscount : defaultDiscountVal;
+                const hasCustom = contractor.customDiscount !== undefined;
+                return (
+                  <tr key={contractor._id || contractor.id} style={styles.tableRow}>
+                    <td style={styles.tableTd}>
+                      <strong>{contractor.fullName}</strong>
+                      <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>
+                        {contractor.businessName || 'Independent Pro'}
+                      </span>
+                    </td>
+                    <td style={styles.tableTd}>
+                      <span style={{ fontSize: '13px', color: '#334155' }}>{contractor.email}</span>
+                    </td>
+                    <td style={styles.tableTd}>
+                      <span style={styles.verifiedTierPill}>
+                        ✓ {contractor.verificationStatus || 'APPROVED'}
+                      </span>
+                    </td>
+                    <td style={styles.tableTd}>
+                      <strong style={{ color: '#034EA2' }}>{contractor.completedJobsCount || 0} jobs</strong>
+                    </td>
+                    <td style={styles.tableTd}>
+                      <span
+                        style={{
+                          ...styles.discountRatePill,
+                          backgroundColor: hasCustom ? '#FEF3C7' : '#DCFCE7',
+                          color: hasCustom ? '#92400E' : '#15803D',
+                          borderColor: hasCustom ? '#FCD34D' : '#86EFAC',
+                        }}
+                      >
+                        {effective}% {hasCustom ? '(Custom Override)' : '(Default Platform)'}
+                      </span>
+                    </td>
+                    <td style={{ ...styles.tableTd, textAlign: 'right' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedContractor(contractor);
+                          setContractorCustomDiscount(effective);
+                          setOverrideReason('');
+                        }}
+                        style={styles.editActionBtn}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                          <circle cx="12" cy="12" r="10" />
+                          <circle cx="12" cy="12" r="6" />
+                          <circle cx="12" cy="12" r="2" />
+                        </svg>
+                        Set Custom %
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
