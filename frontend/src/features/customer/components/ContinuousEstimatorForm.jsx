@@ -283,7 +283,7 @@ const WOOD_SPECIES = [
   {
     id: 'trex',
     name: 'Composite Trex',
-    img: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.trex.main,
     laborPct: '−55% credit (clean only)',
     desc: 'Engineered synthetic polymer core. No chemical strippers or stains.',
   },
@@ -320,32 +320,32 @@ const EXISTING_COATINGS = [
   {
     id: 'none',
     label: 'Bare Wood / No Coating',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.none.main,
   },
   {
     id: 'sealer',
     label: 'Clear Sealer',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.sealer.main,
   },
   {
     id: 'transparent_stain',
     label: 'Transparent Stain',
-    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.transparent_stain.main,
   },
   {
     id: 'semi_transparent',
     label: 'Semi-Transparent Stain',
-    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.semi_transparent.main,
   },
   {
     id: 'solid_stain',
     label: 'Solid Color Stain',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.solid_stain.main,
   },
   {
     id: 'paint',
     label: 'Exterior Paint',
-    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.paint.main,
   },
 ];
 
@@ -353,55 +353,55 @@ const SERVICES_LIST = [
   {
     id: 'cleaning',
     name: 'Deck Cleaning (Deep Cleaning)',
-    img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.cleaning.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'stripping',
     name: 'Deck Stripping (Stain Stripping)',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.stripping.main,
     rate: '50 sqft/hr',
   },
   {
     id: 'sanding',
     name: 'Deck Sanding (Floor & Railing)',
-    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.sanding.main,
     rate: '60 sqft/hr',
   },
   {
     id: 'staining',
     name: 'Deck Staining (Conditioning)',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.staining.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'sealing',
     name: 'Deck Sealing (Clear Sealing)',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.sealing.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'repairs',
     name: 'Deck Board Repair / Replacement',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.repairs.main,
     rate: 'Contractor Quoted',
   },
   {
     id: 'wood_brightening',
     name: 'Wood Brightening',
-    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.wood_brightening.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'waterproofing',
     name: 'Waterproofing Barrier',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.waterproofing.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'no_coating',
     name: 'No Coating / Natural Bare Finish',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.no_coating.main,
     rate: 'Starts @ $2.50/sqft',
   },
 ];
@@ -539,11 +539,7 @@ const REFERENCE_SPECS = {
     title: 'Composite & Capped Trex',
     category: 'Synthetic Substrate',
     desc: 'Engineered synthetic polymer core. Chemically washed with bio-safe detergents without heavy mechanical sanding or film-forming stains.',
-    images: [
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.trex.references,
   },
 
   // --- SECTION 2: COMPONENTS ---
@@ -620,6 +616,100 @@ const REFERENCE_SPECS = {
     category: 'Site Elevation',
     desc: 'Elevated over 12 feet above grade or rooftop deck setup. Requires specialized staging, safety harnesses, and heavy-duty scaffolding protocols.',
     images: ESTIMATOR_IMAGES.elevations.roof.references,
+  },
+
+  // --- SECTION 5: COATINGS & FINISHES ---
+  coating_none: {
+    title: 'Bare Wood / No Coating',
+    category: 'Surface Coating',
+    desc: 'Unfinished natural timber with raw cellulose exposed. Ideal canvas for penetrating conditioning oils and protective sealers.',
+    images: ESTIMATOR_IMAGES.coatings.none.references,
+  },
+  coating_sealer: {
+    title: 'Clear Protective Sealer',
+    category: 'Surface Coating',
+    desc: 'Transparent waterproofing barrier preserving wood grain aesthetics without altering natural timber coloration.',
+    images: ESTIMATOR_IMAGES.coatings.sealer.references,
+  },
+  coating_transparent_stain: {
+    title: 'Transparent Wood Stain',
+    category: 'Surface Coating',
+    desc: 'Lightly pigmented translucent formula enhancing natural grain patterns while imparting mild UV shielding.',
+    images: ESTIMATOR_IMAGES.coatings.transparent_stain.references,
+  },
+  coating_semi_transparent: {
+    title: 'Semi-Transparent Stain',
+    category: 'Surface Coating',
+    desc: 'Richly pigmented stain providing balanced color enrichment while allowing underlying timber grain and texture to shine through.',
+    images: ESTIMATOR_IMAGES.coatings.semi_transparent.references,
+  },
+  coating_solid_stain: {
+    title: 'Solid Color Deck Stain',
+    category: 'Surface Coating',
+    desc: 'Opaque protective film masking wood color variations, delivering maximum solar UV protection and weather shielding.',
+    images: ESTIMATOR_IMAGES.coatings.solid_stain.references,
+  },
+  coating_paint: {
+    title: 'Exterior Deck Paint',
+    category: 'Surface Coating',
+    desc: 'Heavy-duty acrylic exterior coating creating a solid protective shell over high-traffic decking and railing components.',
+    images: ESTIMATOR_IMAGES.coatings.paint.references,
+  },
+
+  // --- SECTION 6: RESTORATION SERVICES ---
+  service_cleaning: {
+    title: 'Deck Deep Cleaning & Wash',
+    category: 'Restoration Service',
+    desc: 'Eco-safe chemical brightening and deep power wash eliminating surface dirt, algae, environmental grime, and oxidized fibers.',
+    images: ESTIMATOR_IMAGES.services.cleaning.references,
+  },
+  service_stripping: {
+    title: 'Stain & Coating Stripping',
+    category: 'Restoration Service',
+    desc: 'Commercial-grade emulsifier application lifting deteriorated old stains, sealers, and failing previous finishes down to raw wood.',
+    images: ESTIMATOR_IMAGES.services.stripping.references,
+  },
+  service_sanding: {
+    title: 'Mechanical Floor & Railing Sanding',
+    category: 'Restoration Service',
+    desc: 'Precision orbital and drum sanding removing surface splinters, leveling mill glaze, and opening wood pores for superior stain penetration.',
+    images: ESTIMATOR_IMAGES.services.sanding.references,
+  },
+  service_staining: {
+    title: 'Deck Conditioning & Staining',
+    category: 'Restoration Service',
+    desc: 'Deep-penetrating oil and conditioning application shielding against sun fade, water pooling, and thermal drying cycles.',
+    images: ESTIMATOR_IMAGES.services.staining.references,
+  },
+  service_sealing: {
+    title: 'Clear Protective Sealing',
+    category: 'Restoration Service',
+    desc: 'High-solids clear silicone/alkyd sealing barrier locking out ambient moisture, rainwater, and mold colonization.',
+    images: ESTIMATOR_IMAGES.services.sealing.references,
+  },
+  service_repairs: {
+    title: 'Board Repair & Replacement',
+    category: 'Restoration Service',
+    desc: 'Targeted extraction of decayed, warped, or split timber planks and fastening of new architectural-grade matching boards.',
+    images: ESTIMATOR_IMAGES.services.repairs.references,
+  },
+  service_wood_brightening: {
+    title: 'Chemical Wood Brightening',
+    category: 'Restoration Service',
+    desc: 'Acidic pH-balancing wash following chemical stripping to neutralize wood tannins and restore brilliant natural wood highlights.',
+    images: ESTIMATOR_IMAGES.services.wood_brightening.references,
+  },
+  service_waterproofing: {
+    title: 'Hydrophobic Waterproofing Barrier',
+    category: 'Restoration Service',
+    desc: 'Commercial-grade water repellant preventing capillary moisture intrusion into end-grains and joist connections.',
+    images: ESTIMATOR_IMAGES.services.waterproofing.references,
+  },
+  service_no_coating: {
+    title: 'Natural Bare Finish Treatment',
+    category: 'Restoration Service',
+    desc: 'Thorough chemical wash, brightening, and biological sanitization leaving wood naturally clean without synthetic topcoats.',
+    images: ESTIMATOR_IMAGES.services.no_coating.references,
   },
 
   // --- SECTION 7: DECK PHYSICAL CONDITIONS ---
@@ -2197,7 +2287,13 @@ export default function ContinuousEstimatorForm({
                 return (
                   <div
                     key={ec.id}
-                    onClick={() => setExistingCoating(ec.id)}
+                    onClick={() => {
+                      setExistingCoating(ec.id);
+                      if (REFERENCE_SPECS['coating_' + ec.id]) {
+                        setActiveRefKey('coating_' + ec.id);
+                        setRefImageIdx(0);
+                      }
+                    }}
                     style={{
                       ...styles.imageSelectCard,
                       borderColor: isSelected ? '#10B981' : '#E2E8F0',
