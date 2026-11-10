@@ -49,8 +49,7 @@ function normalizeShape(val) {
   const s = String(val).toLowerCase().trim();
   if (s.includes('square')) return 'square';
   if (s.includes('l_shape') || s.includes('l-shape') || s.includes('l_shaped') || s === 'l') return 'l_shaped';
-  if (s.includes('multi')) return 'multi_level';
-  if (s.includes('custom')) return 'custom';
+  if (s.includes('custom') || s.includes('multi')) return 'custom';
   if (s.includes('rect')) return 'rectangle';
   return '';
 }
@@ -155,12 +154,6 @@ const SHAPES = [
     img: ESTIMATOR_IMAGES.shapes.l_shaped.main,
     isDiagram: true,
     desc: 'Wraps exterior corners, dual dining and lounge zones.',
-  },
-  {
-    id: 'multi_level',
-    label: 'Multi-Level',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
-    desc: 'Stepped transition tiers accommodating slope grades.',
   },
   {
     id: 'custom',
@@ -497,16 +490,6 @@ const REFERENCE_SPECS = {
     isDiagram: true,
     desc: 'Wraps exterior architectural corners to form distinct dining and lounging zones. Features multi-directional framing transitions and optimized traffic flow.',
     images: ESTIMATOR_IMAGES.shapes.l_shaped.references,
-  },
-  shape_multi_level: {
-    title: 'Multi-Level Stepped Deck',
-    category: 'Perimeter Geometry',
-    desc: 'Tiered elevation platforms accommodating yard slopes. Connected by wide steps with dedicated structural support for upper and lower living tiers.',
-    images: [
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-    ],
   },
   shape_custom: {
     title: 'Bespoke Architectural Footprint',
@@ -1893,8 +1876,8 @@ export default function ContinuousEstimatorForm({
               </div>
             </div>
 
-            {/* Shape Image Cards Grid */}
-            <div style={styles.imageCardsGrid5}>
+            {/* Shape Image Cards Grid (4 Shapes) */}
+            <div style={styles.imageCardsGrid4}>
               {SHAPES.map((s) => {
                 const isSelected = shape === s.id;
                 return (
