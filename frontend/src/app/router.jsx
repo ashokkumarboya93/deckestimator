@@ -147,6 +147,10 @@ const router = createBrowserRouter([
             element: <CustomerEstimatesPage />,
           },
           {
+            path: 'projects',
+            element: <CustomerEstimatesPage />,
+          },
+          {
             path: 'estimates/:estimateId',
             element: <EstimateDetailPage />,
           },

@@ -13,6 +13,7 @@ const MaterialServiceCompatibility = require('../catalogs/materialServiceCompati
 const DiscountPolicy = require('../discounts/discountPolicy.model');
 const DiscountAssignment = require('../discounts/discountAssignment.model');
 const pricingService = require('../pricing/pricing.service');
+const PricingConfiguration = require('../pricing/pricingConfiguration.model');
 const pricingEngine = require('../pricing/pricingEngine');
 const AuditLog = require('../../shared/models/auditLog.model');
 const Lead = require('../leads/lead.model');
@@ -434,9 +435,10 @@ async function createEstimate(data, user, ipAddress) {
     estimateName: estimateName || `${deck.projectName || 'Deck'} Estimate`,
     estimateType,
     deckId: deck._id,
-    ownerId: deck.ownerId,
+    ownerId: deck.ownerId || user.id || user._id,
     createdBy: user.id || user._id,
-    createdFor: deck.ownerId,
+    createdFor: deck.ownerId || user.id || user._id,
+    customerId: deck.ownerId || user.id || user._id,
     deckDetails,
     selectedMaterials: selectedMaterialsItems,
     selectedServices: selectedServicesItems,
@@ -477,11 +479,18 @@ async function getEstimates(query = {}, user) {
 
   // Access isolation
   if (user.role === ROLES.CUSTOMER) {
-    filter.ownerId = user.id || user._id;
-  } else if (user.role === ROLES.CONTRACTOR) {
+    const userId = user.id || user._id;
     filter.$or = [
-      { createdBy: user.id || user._id },
-      { ownerId: user.id || user._id },
+      { ownerId: userId },
+      { createdBy: userId },
+      { createdFor: userId },
+      { customerId: userId },
+    ];
+  } else if (user.role === ROLES.CONTRACTOR) {
+    const userId = user.id || user._id;
+    filter.$or = [
+      { createdBy: userId },
+      { ownerId: userId },
     ];
   }
 

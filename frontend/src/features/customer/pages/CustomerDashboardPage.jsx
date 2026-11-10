@@ -48,6 +48,9 @@ export default function CustomerDashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
+    const handleSaved = () => loadDashboardData();
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, [loadDashboardData]);
 
   // Real-time KPI Calculations strictly mapped to user data:

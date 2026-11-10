@@ -1557,7 +1557,13 @@ export default function ContinuousEstimatorForm({
       const activeEstId = extractValidObjectId(est?._id || est?.id || targetEstimateId);
       if (activeEstId) setActiveSavedEstimateId(activeEstId);
       setSaveSuccessNotice(true);
-      setTimeout(() => setSaveSuccessNotice(false), 3000);
+      setTimeout(() => setSaveSuccessNotice(false), 3500);
+
+      try {
+        window.dispatchEvent(new CustomEvent('estimation_saved', { detail: est }));
+      } catch {
+        // Safe dispatch
+      }
 
       if (est) {
         const snap = est.pricingSnapshot || {};
@@ -1582,13 +1588,13 @@ export default function ContinuousEstimatorForm({
           minJobApplies,
           minJobAmount: minJobFloor,
           deckId: activeDeckId,
-          estimateId: extractValidObjectId(est._id || est.id || cleanEstimateId),
-          discountBreakdown: est.discountBreakdown || null,
+          estimateId: extractValidObjectId(est?._id || est?.id || activeEstId),
+          discountBreakdown: est?.discountBreakdown || null,
         }));
       }
     } catch (persistErr) {
       console.warn('[Backend Persistence Note]:', persistErr.message);
-      // User's calculated final price remains fully visible and intact
+      setSubmitError(persistErr.message || 'Failed to save estimate to server.');
     } finally {
       setSubmitting(false);
     }

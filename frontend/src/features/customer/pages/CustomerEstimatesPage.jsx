@@ -90,6 +90,9 @@ export default function CustomerEstimatesPage() {
 
   useEffect(() => {
     fetchEstimates();
+    const handleSaved = () => fetchEstimates(true);
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, [fetchEstimates]);
 
   // Toast notification auto-dismiss
