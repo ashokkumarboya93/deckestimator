@@ -411,7 +411,7 @@ export default function ContractorLayout() {
         style={{
           ...styles.mainWrapper,
           marginLeft: '68px',
-          ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
+          minHeight: '100vh',
         }}
       >
         {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
@@ -463,6 +463,8 @@ export default function ContractorLayout() {
                     ? 'Commissions & Earnings'
                     : currentPath.includes('/discounts')
                     ? 'Partner Discounts'
+                    : currentPath.includes('/profile') || currentPath.includes('/settings')
+                    ? 'Profile & Business Settings'
                     : 'Contractor Portal'}
                 </h1>
               </div>
@@ -849,6 +851,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
+    minHeight: '100vh',
     transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   topHeader: {
@@ -1091,6 +1094,9 @@ const styles = {
   mainContent: {
     flex: 1,
     minWidth: 0,
+    minHeight: 'calc(100vh - 65px - 260px)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalOverlay: {
     position: 'fixed',

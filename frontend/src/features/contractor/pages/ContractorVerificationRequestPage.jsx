@@ -261,47 +261,8 @@ export default function ContractorVerificationRequestPage() {
 
   return (
     <div style={styles.page}>
-      {/* Top Navbar */}
-      <header style={styles.navbar}>
-        <div style={styles.navLeft}>
-          <img
-            src={mainLogo}
-            alt="Deck Restoration Plus"
-            style={{ height: '42px', width: 'auto', objectFit: 'contain', marginRight: '14px' }}
-          />
-          <span style={styles.navDivider}>/</span>
-          <span style={styles.navPortalTitle}>Contractor Verification &amp; Approval Portal</span>
-        </div>
-
-        <div style={styles.navRight}>
-          <div style={styles.userBadge}>
-            <div style={styles.avatar}>
-              {(user?.fullName || profile?.businessName || 'C').charAt(0).toUpperCase()}
-            </div>
-            <div style={styles.userInfo}>
-              <span style={styles.userName}>{user?.fullName || 'Contractor'}</span>
-              <span style={styles.userOrg}>{profile?.businessName || user?.email}</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            style={styles.logoutBtn}
-            title="Sign out of account"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Sign Out
-          </button>
-        </div>
-      </header>
-
       {/* Main Container */}
-      <main style={styles.content}>
+      <div style={styles.content}>
         {/* Alerts */}
         {error && (
           <div style={styles.errorAlert}>
@@ -845,102 +806,28 @@ export default function ContractorVerificationRequestPage() {
             </form>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
 
 const styles = {
   page: {
-    minHeight: '100vh',
+    minHeight: 'calc(100vh - 65px - 260px)',
     backgroundColor: '#f8fafc',
     color: '#0f172a',
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-  },
-  navbar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: '64px',
-    padding: '0 32px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
-  },
-  navLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  brandBadge: {
-    fontSize: '20px',
-    fontWeight: '800',
-    letterSpacing: '-0.5px',
-  },
-  navDivider: {
-    color: '#cbd5e1',
-    fontSize: '18px',
-  },
-  navPortalTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#334155',
-  },
-  navRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  userBadge: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  avatar: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: '700',
-    fontSize: '14px',
-  },
-  userInfo: {
+    width: '100%',
     display: 'flex',
     flexDirection: 'column',
   },
-  userName: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#0f172a',
-    lineHeight: 1.2,
-  },
-  userOrg: {
-    fontSize: '11px',
-    color: '#64748b',
-  },
-  logoutBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '7px 12px',
-    backgroundColor: '#ffffff',
-    color: '#475569',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
   content: {
-    maxWidth: '920px',
-    margin: '32px auto',
-    padding: '0 20px',
+    maxWidth: '1000px',
+    margin: '0 auto',
+    padding: '24px 20px 40px',
+    width: '100%',
+    boxSizing: 'border-box',
+    flex: 1,
   },
   centerContainer: {
     display: 'flex',
