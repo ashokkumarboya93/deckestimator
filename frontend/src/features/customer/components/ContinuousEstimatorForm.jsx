@@ -167,7 +167,7 @@ const COMPONENTS = [
   {
     id: 'railings',
     label: 'Perimeter Railings',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.railings.main,
     field: 'railingSqft',
     prompt: 'Railing Surface (sq ft)',
     unit: 'sq ft',
@@ -176,7 +176,7 @@ const COMPONENTS = [
   {
     id: 'stairs',
     label: 'Stair Steps',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.stairs.main,
     field: 'stairSteps',
     prompt: 'Number of Steps (Count)',
     unit: 'steps',
@@ -547,19 +547,13 @@ const REFERENCE_SPECS = {
     title: 'Perimeter Railings & Balusters',
     category: 'Architectural Component',
     desc: 'Handrails, posts, and vertical spindles. Restored using hand-brushing and spray techniques to coat intricate angles and spindle crevices.',
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.railings.references,
   },
   comp_stairs: {
     title: 'Stair Treads, Risers & Stringers',
     category: 'Architectural Component',
     desc: 'High foot-traffic transition steps. Tread surfaces receive traction-conscious deep penetrating finishes to prevent slipping while protecting wood.',
-    images: [
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.stairs.references,
   },
   comp_pergola: {
     title: 'Overhead Pergola Framing',

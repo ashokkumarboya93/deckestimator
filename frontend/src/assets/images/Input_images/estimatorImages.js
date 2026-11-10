@@ -25,6 +25,16 @@ import custom02 from './section1/Custom/5.Custom02.jpg';
 import custom03 from './section1/Custom/5.Custom03.jpg';
 
 // --- SECTION 2: ARCHITECTURAL COMPONENTS ---
+import railingsMain from './section2/Perimeter Railing/perimeter Railing_Main.jpg';
+import railings01 from './section2/Perimeter Railing/perimeter Railing01.jpg';
+import railings02 from './section2/Perimeter Railing/perimeter Railing02.jpg';
+import railings03 from './section2/Perimeter Railing/perimeter Railing03.jpg';
+
+import stairsMain from './section2/Stair steps/stair steps_Main.jpg';
+import stairs01 from './section2/Stair steps/stair steps01.jpg';
+import stairs02 from './section2/Stair steps/stair steps02.jpg';
+import stairs03 from './section2/Stair steps/stair steps03.jpg';
+
 import pergolaMain from './section2/1.Pergola_Main.jpg';
 import pergola01 from './section2/1.Pergola01.jpg';
 import pergola02 from './section2/1.Pergola02.jpg';
@@ -263,6 +273,14 @@ export const ESTIMATOR_IMAGES = {
 
   // Section 2: Architectural Components
   components: {
+    railings: {
+      main: railingsMain,
+      references: [railings01, railings02, railings03],
+    },
+    stairs: {
+      main: stairsMain,
+      references: [stairs01, stairs02, stairs03],
+    },
     pergola: {
       main: pergolaMain,
       references: [pergola01, pergola02, pergola03],
