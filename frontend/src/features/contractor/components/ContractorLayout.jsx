@@ -13,7 +13,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
-import mainLogo from '../../../assets/images/Main_Logo_v2.png';
+import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
@@ -200,8 +200,8 @@ export default function ContractorLayout() {
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '46px',
-                  maxWidth: '195px',
+                  height: '52px',
+                  maxWidth: '210px',
                   objectFit: 'contain',
                 }}
               />
@@ -213,7 +213,7 @@ export default function ContractorLayout() {
                 alt="Deck Restoration Plus"
                 style={{
                   height: '38px',
-                  width: '38px',
+                  maxWidth: '46px',
                   objectFit: 'contain',
                 }}
               />

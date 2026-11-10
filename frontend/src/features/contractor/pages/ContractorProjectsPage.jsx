@@ -328,7 +328,8 @@ export default function ContractorProjectsPage() {
       );
       setSuccessToast(`Enquiry submitted for ${est.deckDetails?.projectName || 'Project'}! Added to Admin Leads as HOT priority.`);
     } catch (err) {
-      alert(`Enquiry error: ${err.message}`);
+      const errMsg = err.response?.data?.message || err.message || 'An error occurred while submitting enquiry.';
+      alert(`Enquiry notice: ${errMsg}`);
     } finally {
       setConvertingId(null);
     }

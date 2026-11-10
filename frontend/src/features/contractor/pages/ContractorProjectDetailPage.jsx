@@ -95,7 +95,8 @@ export default function ContractorProjectDetailPage() {
       setActionNotice('✓ Successfully converted! Project marked as REQUESTED and dispatched to Admin Leads as HOT priority.');
       setEstimate((prev) => ({ ...prev, estimateStatus: 'REQUESTED', status: 'REQUESTED' }));
     } catch (err) {
-      alert(`Conversion note: ${err.message}`);
+      const errMsg = err.response?.data?.message || err.message || 'An error occurred while converting estimate to booking.';
+      alert(`Conversion notice: ${errMsg}`);
     } finally {
       setConverting(false);
     }

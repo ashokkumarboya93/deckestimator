@@ -925,7 +925,7 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 2. Create or sync a Hot Priority Lead
   const isContractor = user.role === ROLES.CONTRACTOR;
-  const leadNum = `LD-${estimate.estimateReference || Date.now().toString().slice(-4)}`;
+  const leadNum = `LD-${estimate.estimateNumber || estimate.estimateReference || Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
   let lead = await Lead.findOne({ estimateId: estimate._id });
   if (!lead) {
@@ -982,11 +982,12 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 3. Create or update Project record
   let project = await Project.findOne({ estimateId: estimate._id });
+  const effectiveCustomerId = !isContractor ? user._id : (estimate.createdFor || estimate.ownerId || estimate.createdBy || user._id);
   if (!project) {
     project = new Project({
-      projectId: estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
+      projectId: estimate.estimateNumber || estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
       projectName: estimate.deckDetails?.projectName || 'Deck Restoration Project',
-      customerId: !isContractor ? user._id : estimate.userId,
+      customerId: effectiveCustomerId,
       contractorId: isContractor ? user._id : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
@@ -998,6 +999,9 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   } else {
     project.status = 'pending';
     project.progress = 30;
+    if (!project.customerId) {
+      project.customerId = effectiveCustomerId;
+    }
     await project.save();
   }
 
