@@ -91,10 +91,10 @@ const DEFAULT_PRICING_CONFIG = {
     composite: { label: 'Composite Trex', pct: -0.55, servicesAllowed: ['cleaning', 'pressure_washing'] },
   },
   access: {
-    ground: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
-    ground_level: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
-    standard_ground: { pct: 0, fixedHours: 0, hint: '0-2 ft' },
-    low: { pct: 0.15, fixedHours: 4, hint: '2-4 ft' },
+    ground: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
+    ground_level: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
+    standard_ground: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
+    low: { pct: 0, fixedHours: 0, hint: '0-4 ft' },
     first: { pct: 0.15, fixedHours: 4, hint: '4-8 ft' },
     first_story: { pct: 0.15, fixedHours: 4, hint: '4-8 ft' },
     second: { pct: 0.35, fixedHours: 8, hint: '8-12 ft' },
@@ -141,8 +141,7 @@ function normKey(str) {
  */
 function mapHeightFeetToAccessKey(heightFt) {
   const h = Number(heightFt);
-  if (isNaN(h) || h <= 2) return 'ground';
-  if (h <= 4) return 'low';
+  if (isNaN(h) || h <= 4) return 'ground';
   if (h <= 8) return 'first';
   if (h <= 12) return 'second';
   return 'roof';

@@ -241,10 +241,6 @@ export const ESTIMATOR_IMAGES = {
       main: groundMain,
       references: [ground01, ground02, ground03],
     },
-    low: {
-      main: lowElevationMain,
-      references: [lowElevation01, lowElevation02, lowElevation03],
-    },
     first: {
       main: firstStoryMain,
       references: [firstStory01, firstStory02, firstStory03],
@@ -252,6 +248,18 @@ export const ESTIMATOR_IMAGES = {
     second: {
       main: secondStoryMain,
       references: [secondStory01, secondStory02, secondStory03],
+    },
+    roof: {
+      main: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
+      references: [
+        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=800&q=80',
+      ],
+    },
+    low: {
+      main: groundMain,
+      references: [ground01, ground02, ground03],
     },
   },
 

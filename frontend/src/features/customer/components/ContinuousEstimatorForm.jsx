@@ -71,8 +71,7 @@ function normalizeWood(val) {
 function normalizeElevation(val) {
   if (!val) return '';
   const h = String(val).toLowerCase().trim();
-  if (h.includes('ground') || h === '0-2' || h === '0_2') return 'ground';
-  if (h.includes('low') || h === '2-4' || h === '2_4') return 'low';
+  if (h.includes('ground') || h.includes('low') || h === '0-4' || h === '0_4' || h === '0-2' || h === '0_2' || h === '2-4' || h === '2_4') return 'ground';
   if (h.includes('second') || h === '8-12' || h === '8_12') return 'second';
   if (h.includes('roof') || h.includes('staging') || h.includes('12')) return 'roof';
   if (h.includes('first') || h === '4-8' || h === '4_8') return 'first';
@@ -294,14 +293,8 @@ const ELEVATIONS = [
   {
     id: 'ground',
     label: 'Ground Level',
-    range: '0–2 ft elevation',
+    range: '0–4 ft elevation',
     img: ESTIMATOR_IMAGES.elevations.ground.main,
-  },
-  {
-    id: 'low',
-    label: 'Low Elevation',
-    range: '2–4 ft elevation',
-    img: ESTIMATOR_IMAGES.elevations.low.main,
   },
   {
     id: 'first',
@@ -319,7 +312,7 @@ const ELEVATIONS = [
     id: 'roof',
     label: 'Roof / Staging',
     range: 'Over 12 ft elevation',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.elevations.roof.main,
   },
 ];
 
@@ -607,14 +600,8 @@ const REFERENCE_SPECS = {
   elev_ground: {
     title: 'Ground Level Deck Platform',
     category: 'Site Elevation',
-    desc: 'Elevated 0–2 feet above grade with close ground clearance. Inspection focuses on perimeter rim ventilation, splash back from turf sprinklers, and early damp detection.',
+    desc: 'Elevated 0–4 feet above grade with close ground clearance. Inspection focuses on perimeter rim ventilation, splash back from turf sprinklers, and early damp detection.',
     images: ESTIMATOR_IMAGES.elevations.ground.references,
-  },
-  elev_low: {
-    title: 'Low Elevation Structure',
-    category: 'Site Elevation',
-    desc: 'Elevated 2–4 feet above grade. Short perimeter step-downs, unobstructed side airflow, and comfortable working access around the full outer skirting.',
-    images: ESTIMATOR_IMAGES.elevations.low.references,
   },
   elev_first: {
     title: 'First Story Elevation',
@@ -627,6 +614,12 @@ const REFERENCE_SPECS = {
     category: 'Site Elevation',
     desc: 'Elevated 8–12 feet above grade over walkout basements. Supported on tall heavy-duty columns with underside joist exposure and staging needs.',
     images: ESTIMATOR_IMAGES.elevations.second.references,
+  },
+  elev_roof: {
+    title: 'Roof / Staging Elevation',
+    category: 'Site Elevation',
+    desc: 'Elevated over 12 feet above grade or rooftop deck setup. Requires specialized staging, safety harnesses, and heavy-duty scaffolding protocols.',
+    images: ESTIMATOR_IMAGES.elevations.roof.references,
   },
 
   // --- SECTION 7: DECK PHYSICAL CONDITIONS ---
@@ -2124,7 +2117,7 @@ export default function ContinuousEstimatorForm({
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid5}>
+            <div style={styles.imageCardsGrid4}>
               {ELEVATIONS.map((el) => {
                 const isSelected = height === el.id;
                 return (
@@ -2181,7 +2174,7 @@ export default function ContinuousEstimatorForm({
                 style={{ ...styles.textInput, maxWidth: '140px', padding: '6px 10px', fontSize: '13px' }}
               />
               <span style={{ fontSize: '12px', color: '#64748B' }}>
-                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 2 ? 'Ground (0–2 ft)' : Number(exactHeightFt) <= 4 ? 'Low (2–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / High (Over 12 ft)'}` : 'Defaults to selected card tier above'}
+                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 4 ? 'Ground Level (0–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / Staging (Over 12 ft)'}` : 'Defaults to selected card tier above'}
               </span>
             </div>
           </section>
