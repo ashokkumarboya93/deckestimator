@@ -1121,6 +1121,7 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     Estimate.find(query)
       .populate('ownerId', 'fullName email phone role')
       .populate('createdBy', 'fullName email phone role')
+      .populate('deckId')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
@@ -1177,6 +1178,13 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
         area: e.deckDetails?.areaSqFt || 400,
         woodSpecies: e.deckDetails?.woodSpecies || 'Pressure Treated Pine',
       },
+      photos: e.deckId?.photos || e.deckDetails?.photos || [],
+      propertyAddress: e.deckId?.propertyAddress || e.deckDetails?.propertyAddress || null,
+      structureDetails: e.deckId?.structureDetails || e.deckDetails?.structureDetails || null,
+      surfaceDetails: e.deckId?.surfaceDetails || e.deckDetails?.surfaceDetails || null,
+      visibleConditions: e.deckId?.visibleConditions || e.conditionFlags || [],
+      services: e.services || e.pricingSnapshot?.services || [],
+      notes: e.deckId?.additionalNotes || e.notes || '',
       estimateData: e,
     };
   });
@@ -1433,7 +1441,7 @@ async function listLeads({
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
-      .populate('deckId', 'name dimensions area surfaceMaterial conditionLevel')
+      .populate('deckId')
       .populate('estimateId', 'estimateReference totalCost totalAmount calculationDetails status deckDetails rawCalculatorInputs pricingBreakdown')
       .sort(sortOption)
       .skip(skip)
@@ -1535,6 +1543,12 @@ async function listLeads({
       estimateSnapshot: l.estimateSnapshot,
       deckId: l.deckId,
       estimateId: l.estimateId,
+      photos: l.deckId?.photos || l.deckSnapshot?.photos || [],
+      propertyAddress: l.deckId?.propertyAddress || l.deckSnapshot?.propertyAddress || null,
+      structureDetails: l.deckId?.structureDetails || l.deckSnapshot?.structureDetails || null,
+      surfaceDetails: l.deckId?.surfaceDetails || l.deckSnapshot?.surfaceDetails || null,
+      visibleConditions: l.deckId?.visibleConditions || l.deckSnapshot?.visibleConditions || [],
+      services: l.estimateId?.calculationDetails?.services || l.deckSnapshot?.services || [],
     };
   });
 
@@ -1664,6 +1678,12 @@ async function getLeadDetails(leadId) {
       })),
     } : null,
     estimateDetails: lead.estimateId || null,
+    deckDetails: lead.deckId || lead.deckSnapshot || null,
+    photos: lead.deckId?.photos || lead.deckSnapshot?.photos || [],
+    propertyAddress: lead.deckId?.propertyAddress || lead.deckSnapshot?.propertyAddress || null,
+    structureDetails: lead.deckId?.structureDetails || lead.deckSnapshot?.structureDetails || null,
+    surfaceDetails: lead.deckId?.surfaceDetails || lead.deckSnapshot?.surfaceDetails || null,
+    visibleConditions: lead.deckId?.visibleConditions || lead.deckSnapshot?.visibleConditions || [],
   };
 }
 

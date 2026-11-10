@@ -19,7 +19,7 @@ import lShape01 from './section1/L-Shape/3.L-Shape01.jpg';
 import lShape02 from './section1/L-Shape/3.L-Shape_02.jpg';
 import lShape03 from './section1/L-Shape/3.L-Shape03.jpg';
 
-import customMain from './section1/Custom/5.Custom_Main.png';
+import customMain from '../Round Wooden Deck with Wicker Seating.png';
 import custom01 from './section1/Custom/5.Custom01.jpg';
 import custom02 from './section1/Custom/5.Custom02.jpg';
 import custom03 from './section1/Custom/5.Custom03.jpg';

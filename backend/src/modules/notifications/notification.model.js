@@ -56,6 +56,10 @@ const notificationSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    readBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
     sentBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

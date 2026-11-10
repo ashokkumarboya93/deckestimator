@@ -8,9 +8,10 @@
 // - Zero emojis; clean SVG line icons throughout
 // - Dynamic top navigation with breadcrumbs, notifications dropdown, user avatar, and logout
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { getMyNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notificationsApi';
 import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
@@ -27,7 +28,8 @@ export default function CustomerLayout() {
   }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(2);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -35,6 +37,52 @@ export default function CustomerLayout() {
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+
+  // Real-time synchronization of notifications from MongoDB
+  const fetchRealNotifications = useCallback(async () => {
+    try {
+      const data = await getMyNotifications({ limit: 15 });
+      setNotifications(data?.notifications || []);
+      setUnreadNotifications(data?.unreadCount || 0);
+    } catch {
+      // Fallback silently without breaking UI
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 20000);
+    window.addEventListener('focus', fetchRealNotifications);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchRealNotifications);
+    };
+  }, [fetchRealNotifications]);
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadNotifications(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {
+      setUnreadNotifications(0);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead && notif._id) {
+      try {
+        await markNotificationRead(notif._id);
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+        );
+        setUnreadNotifications((prev) => Math.max(0, prev - 1));
+      } catch {
+        // Continue navigation
+      }
+    }
+    setShowNotifications(false);
+  };
 
   // Sync project name updates from active estimator
   useEffect(() => {
@@ -136,8 +184,8 @@ export default function CustomerLayout() {
                 src={mainLogoDeck}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '36px',
-                  maxWidth: '190px',
+                  height: '52px',
+                  maxWidth: '215px',
                   objectFit: 'contain',
                 }}
               />
@@ -283,14 +331,14 @@ export default function CustomerLayout() {
                     src={mainLogoV2}
                     alt="Deck Restoration Plus"
                     style={{
-                      height: '38px',
-                      maxWidth: '200px',
+                      height: '50px',
+                      maxWidth: '240px',
                       objectFit: 'contain',
                     }}
                   />
                 </Link>
               ) : (
-                <div style={{ height: '38px', width: '200px', visibility: 'hidden' }} />
+                <div style={{ height: '50px', width: '240px', visibility: 'hidden' }} />
               )
             ) : isEstimatorPage ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -397,31 +445,58 @@ export default function CustomerLayout() {
                 <div style={styles.notifDropdown}>
                   <div style={styles.dropdownHeader}>
                     <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
-                      Notifications
+                      Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setUnreadNotifications(0)}
-                      style={styles.textBtn}
-                    >
-                      Clear all
-                    </button>
+                    {unreadNotifications > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllNotifications}
+                        style={styles.textBtn}
+                      >
+                        Mark all read
+                      </button>
+                    )}
                   </div>
                   <div style={styles.notifList}>
-                    <div style={styles.notifItem} onClick={() => setShowNotifications(false)}>
-                      <div style={styles.notifDot} />
-                      <div>
-                        <p style={styles.notifTitle}>Estimate Ready for Review</p>
-                        <p style={styles.notifTime}>Your latest deck restoration quote is prepared.</p>
+                    {notifications && notifications.length > 0 ? (
+                      notifications.map((n) => (
+                        <div
+                          key={n._id || n.id}
+                          style={{
+                            ...styles.notifItem,
+                            backgroundColor: n.isRead ? 'transparent' : '#F0F9FF',
+                          }}
+                          onClick={() => handleNotificationClick(n)}
+                        >
+                          <div
+                            style={{
+                              ...styles.notifDot,
+                              backgroundColor: n.isRead ? '#94A3B8' : '#0284C7',
+                            }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <p style={{ ...styles.notifTitle, fontWeight: n.isRead ? '600' : '800' }}>
+                                {n.title}
+                              </p>
+                              {n.category && (
+                                <span style={{ fontSize: '9px', fontWeight: '700', color: '#0284C7', textTransform: 'uppercase' }}>
+                                  {n.category}
+                                </span>
+                              )}
+                            </div>
+                            <p style={styles.notifTime}>{n.message}</p>
+                            <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                              {n.createdAt ? new Date(n.createdAt).toLocaleDateString() : 'Recent'}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                        No new notifications
                       </div>
-                    </div>
-                    <div style={styles.notifItem} onClick={() => setShowNotifications(false)}>
-                      <div style={styles.notifDot} />
-                      <div>
-                        <p style={styles.notifTitle}>Verified Contractors Available</p>
-                        <p style={styles.notifTime}>Local certified deck pros are ready to service your area.</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
