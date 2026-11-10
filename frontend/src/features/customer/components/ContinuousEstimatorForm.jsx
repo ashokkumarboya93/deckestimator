@@ -2890,73 +2890,7 @@ export default function ContinuousEstimatorForm({
                         );
                       })()}
                     </div>
-
-                    <div style={styles.resultSpecsBox}>
-                      <div style={styles.specLine}>
-                        <span>Billable Surface Area ($A$):</span>
-                        <strong>{officialEstimate.billableArea.toLocaleString()} sq ft</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Rate Card Lookup:</span>
-                        <strong>Prep: {officialEstimate.prep} • Finish: {officialEstimate.finish}</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Unit Rate:</span>
-                        <strong>${officialEstimate.rate.toFixed(2)} / sq ft</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Labor Adjustment:</span>
-                        <strong>${officialEstimate.labourAdj.toLocaleString()} ({officialEstimate.baseHours}h base)</strong>
-                      </div>
-                      {officialEstimate.travelFee > 0 && (
-                        <div style={styles.specLine}>
-                          <span>Travel Mobilization:</span>
-                          <strong>${officialEstimate.travelFee}</strong>
-                        </div>
-                      )}
-                      <div style={styles.specLine}>
-                        <span>Workflow Status:</span>
-                        <strong style={{ color: officialEstimate.hasRepairs ? '#B91C1C' : officialEstimate.needsPhotoReview ? '#D97706' : '#15803D' }}>
-                          {officialEstimate.status}
-                        </strong>
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Dedicated Repair Estimate Line Item with Overlap Preventions */}
-                  {officialEstimate.repairEstimate && officialEstimate.repairEstimate.repairTotal > 0 && (
-                    <div style={styles.repairEstimateBox}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div>
-                          <strong style={{ color: '#034EA2', fontSize: '13px' }}>Structural Repair Estimate (Separate Line)</strong>
-                          <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>Deduplicated using client overlap-prevention rules</span>
-                        </div>
-                        <strong style={{ color: '#034EA2', fontSize: '15px' }}>
-                          +${officialEstimate.repairEstimate.repairTotal.toLocaleString()}
-                        </strong>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {officialEstimate.repairEstimate.lineItems.map((li, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
-                            <span>• {li.item} {li.count ? `(${li.count})` : ''}</span>
-                            <strong>${li.totalCost.toLocaleString()}</strong>
-                          </div>
-                        ))}
-                      </div>
-
-                      {officialEstimate.repairEstimate.overlapDeductions.length > 0 && (
-                        <div style={styles.overlapBanner}>
-                          <strong>Overlap Deduplications Applied:</strong>
-                          {officialEstimate.repairEstimate.overlapDeductions.map((od, idx) => (
-                            <div key={idx} style={{ marginTop: '2px' }}>
-                              • {od.note || od.rule} {od.saving ? `(Avoided double charge: $${od.saving})` : ''}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 

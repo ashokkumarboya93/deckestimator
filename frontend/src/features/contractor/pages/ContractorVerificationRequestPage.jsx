@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { getErrorMessage } from '../../../api/apiErrors';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export default function ContractorVerificationRequestPage() {
   const navigate = useNavigate();
@@ -206,6 +207,18 @@ export default function ContractorVerificationRequestPage() {
     }
   }
 
+  // Delete Document
+  async function handleDeleteDoc(docId) {
+    if (!window.confirm('Are you sure you want to remove this verification document?')) return;
+    try {
+      await contractorLeadApi.deleteDocument(docId);
+      setDocuments((prev) => prev.filter((d) => (d.id || d._id) !== docId));
+      setSuccessMessage('✓ Document removed successfully.');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }
+
   // Real-time Status Refresh
   async function handleRefreshStatus() {
     setLoading(true);
@@ -251,12 +264,13 @@ export default function ContractorVerificationRequestPage() {
       {/* Top Navbar */}
       <header style={styles.navbar}>
         <div style={styles.navLeft}>
-          <div style={styles.brandBadge}>
-            <span style={{ fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>DECK</span>
-            <span style={{ fontWeight: '800', color: '#1d4ed8' }}> PRO</span>
-          </div>
+          <img
+            src={mainLogo}
+            alt="Deck Restoration Plus"
+            style={{ height: '42px', width: 'auto', objectFit: 'contain', marginRight: '14px' }}
+          />
           <span style={styles.navDivider}>/</span>
-          <span style={styles.navPortalTitle}>Contractor Verification Portal</span>
+          <span style={styles.navPortalTitle}>Contractor Verification &amp; Approval Portal</span>
         </div>
 
         <div style={styles.navRight}>
@@ -367,9 +381,9 @@ export default function ContractorVerificationRequestPage() {
                 </div>
               </div>
 
-              <h1 style={styles.heroTitle}>Your Verification Request is Under Review</h1>
+              <h1 style={styles.heroTitle}>Waiting for Administrative Approval</h1>
               <p style={styles.heroSubtitle}>
-                Deck Pro requires all contractor accounts to be verified before unlocking project bidding, leads dispatch, and estimating tools. An administrator has received your business details and will review your credentials shortly.
+                Your contractor account registration has been submitted and is currently waiting for administrator verification and activation. An administrator has received your business details and will review your credentials shortly. You can refresh this page at any time to check approval status.
               </p>
 
               {/* Application Details Summary */}
@@ -419,9 +433,14 @@ export default function ContractorVerificationRequestPage() {
 
             {/* Uploaded Documents List & Supplemental Upload */}
             <div style={styles.card}>
-              <h3 style={styles.cardHeading}>Verification Documents ({documents.length})</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <h3 style={styles.cardHeading}>Upload Verification Documents for Higher Wholesale Discounts (Optional)</h3>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#15803D', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '4px', border: '1px solid #BBF7D0' }}>
+                  ★ Qualify for 15%–25% Wholesale Margin
+                </span>
+              </div>
               <p style={styles.cardSubtext}>
-                Official documentation submitted with your application. You may optionally upload additional certificates or proof of insurance while awaiting review.
+                Document upload is <strong>completely optional</strong> to activate your contractor account. However, verified contractors who submit licensing, liability insurance, or tax registration qualify for our highest wholesale material discounts and priority dispatch.
               </p>
 
               {documents.length > 0 ? (
@@ -433,7 +452,7 @@ export default function ContractorVerificationRequestPage() {
                         <th style={styles.th}>Category</th>
                         <th style={styles.th}>Status</th>
                         <th style={styles.th}>Uploaded On</th>
-                        <th style={styles.th}>Action</th>
+                        <th style={{ ...styles.th, textAlign: 'center' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -444,7 +463,7 @@ export default function ContractorVerificationRequestPage() {
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                               <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
-                            {doc.originalFileName}
+                            {doc.originalFileName || doc.fileName}
                           </td>
                           <td style={styles.td}>{doc.documentType?.replace(/_/g, ' ').toUpperCase() || 'LICENSE'}</td>
                           <td style={styles.td}>
@@ -453,17 +472,35 @@ export default function ContractorVerificationRequestPage() {
                             </span>
                           </td>
                           <td style={styles.td}>
-                            {new Date(doc.createdAt).toLocaleDateString()}
+                            {new Date(doc.createdAt || Date.now()).toLocaleDateString()}
                           </td>
-                          <td style={styles.td}>
-                            <a
-                              href={`/api/v1/contractors/documents/${doc.id || doc._id}/file`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={styles.viewLink}
-                            >
-                              View File &rarr;
-                            </a>
+                          <td style={{ ...styles.td, textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                              <a
+                                href={`/api/v1/contractors/documents/${doc.id || doc._id}/file`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={styles.viewLink}
+                              >
+                                View File &rarr;
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDoc(doc.id || doc._id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#DC2626',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  padding: '2px 6px',
+                                }}
+                                title="Remove this document"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -473,18 +510,18 @@ export default function ContractorVerificationRequestPage() {
               ) : (
                 <div style={styles.emptyDocsBox}>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                    No verification documents uploaded yet. Document upload was optional during registration.
+                    No verification documents uploaded yet. You can attach documents below for higher discount tier consideration.
                   </p>
                 </div>
               )}
 
               {/* Supplemental Document Upload Form (Optional) */}
               <div style={styles.supplementalSection}>
-                <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
-                  Upload Additional Document (Optional)
+                <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                  Attach Verification Document (Optional)
                 </h4>
                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '14px' }}>
-                  If requested by administrators or if you wish to attach supplemental licensing or insurance:
+                  Select a document category and upload your PDF or image to submit for tier discount review:
                 </p>
 
                 <form onSubmit={handleUploadSupplementalDoc} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -493,9 +530,9 @@ export default function ContractorVerificationRequestPage() {
                     onChange={(e) => setExtraDocCategory(e.target.value)}
                     style={styles.selectSmall}
                   >
-                    <option value="contractor_license">Contractor License</option>
-                    <option value="insurance_certificate">Insurance Certificate</option>
-                    <option value="business_registration">Business Registration</option>
+                    <option value="contractor_license">Contractor Trade License</option>
+                    <option value="insurance_certificate">Proof of General Liability Insurance</option>
+                    <option value="business_registration">Business Registration / W-9 Certificate</option>
                   </select>
 
                   <input
@@ -510,7 +547,7 @@ export default function ContractorVerificationRequestPage() {
                     disabled={uploadingExtra || !extraDocFile}
                     style={styles.secondaryBtn}
                   >
-                    {uploadingExtra ? 'Uploading...' : 'Upload Document'}
+                    {uploadingExtra ? 'Uploading...' : 'Upload for Discount Review'}
                   </button>
                 </form>
               </div>

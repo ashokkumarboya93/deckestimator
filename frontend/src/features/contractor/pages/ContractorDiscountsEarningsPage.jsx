@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { contractorCommissionApi } from '../api/contractorCommissionApi';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { getEstimates } from '../../customer/api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 // High-fidelity Money Bag SVG illustration for the right side of the banner
@@ -125,6 +126,7 @@ export default function ContractorDiscountsEarningsPage() {
   // Real Database state
   const [discounts, setDiscounts] = useState([]);
   const [effectiveDiscountRate, setEffectiveDiscountRate] = useState(10);
+  const [totalWholesaleSavings, setTotalWholesaleSavings] = useState(0);
   const [commissions, setCommissions] = useState([]);
   const [summary, setSummary] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -153,11 +155,12 @@ export default function ContractorDiscountsEarningsPage() {
   async function loadAllData() {
     setLoading(true);
     try {
-      const [discRes, commRes, sumRes, profRes] = await Promise.allSettled([
+      const [discRes, commRes, sumRes, profRes, estRes] = await Promise.allSettled([
         contractorDiscountApi.getEligibleDiscounts(),
         contractorCommissionApi.getMyCommissions(),
         contractorCommissionApi.getCommissionSummary(),
         contractorLeadApi.getProfile(),
+        getEstimates({ limit: 100 }),
       ]);
 
       // 1. Discount policies & rate
@@ -196,6 +199,19 @@ export default function ContractorDiscountsEarningsPage() {
         if (pData?.businessName) {
           setReqBusinessName(pData.businessName);
         }
+      }
+
+      // 5. Estimated Wholesale Savings
+      if (estRes.status === 'fulfilled' && estRes.value?.estimates) {
+        let savings = 0;
+        estRes.value.estimates.forEach((e) => {
+          if (e.discountBreakdown?.applied && e.discountBreakdown?.discountAmount) {
+            savings += Number(e.discountBreakdown.discountAmount);
+          } else if (e.discountBreakdown?.originalTotal && e.totalAmount && e.discountBreakdown.originalTotal > e.totalAmount) {
+            savings += (Number(e.discountBreakdown.originalTotal) - Number(e.totalAmount));
+          }
+        });
+        setTotalWholesaleSavings(savings);
       }
     } catch (e) {
       console.warn('Error loading discounts & earnings real data:', e);
@@ -406,26 +422,22 @@ export default function ContractorDiscountsEarningsPage() {
             </div>
           </div>
           <div style={styles.kpiValue}>{effectiveDiscountRate}% OFF</div>
-          <div style={styles.kpiSub}>
-            {effectiveDiscountRate >= 20 ? 'DRP Elite Partner wholesale tier' : effectiveDiscountRate >= 15 ? 'Verified Pro wholesale tier' : 'Standard Partner wholesale pricing'}
-          </div>
         </div>
 
-        {/* Card 2: Active Policies */}
+        {/* Card 2: Estimated Wholesale Savings (Replaces Active Policies) */}
         <div style={{ ...styles.kpiCard, borderTop: '4px solid #0284C7', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)' }}>
           <div style={styles.kpiTopRow}>
-            <span style={styles.kpiLabel}>Active Policies</span>
+            <span style={styles.kpiLabel}>Estimated Wholesale Savings</span>
             <div style={{ ...styles.kpiIconBox, backgroundColor: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
           </div>
-          <div style={styles.kpiValue}>{displayDiscounts.length} Active</div>
-          <div style={styles.kpiSub}>Applied automatically on estimates</div>
+          <div style={{ ...styles.kpiValue, color: '#0284C7' }}>
+            ${totalWholesaleSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
         </div>
 
         {/* Card 3: Total Earned Commissions (Real MongoDB Data) */}
@@ -442,7 +454,6 @@ export default function ContractorDiscountsEarningsPage() {
           <div style={{ ...styles.kpiValue, color: '#15803D' }}>
             ${realTotalEarned.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div style={styles.kpiSub}>Lifetime earnings through DRP network</div>
         </div>
 
         {/* Card 4: Payable Balance (Real MongoDB Data) */}
@@ -459,7 +470,6 @@ export default function ContractorDiscountsEarningsPage() {
           <div style={{ ...styles.kpiValue, color: '#C2671A' }}>
             ${realPayableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div style={styles.kpiSub}>Direct ACH release on Friday</div>
         </div>
       </div>
 
@@ -1339,8 +1349,9 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1.5px solid #CBD5E1',
     borderRadius: '9999px',
-    padding: '7px 14px',
-    minWidth: '260px',
+    padding: '8px 16px',
+    minWidth: '380px',
+    flex: '1 1 380px',
   },
   pillSearchInput: {
     border: 'none',
@@ -1644,9 +1655,11 @@ const styles = {
     backgroundColor: '#F8FAFC',
     border: '1.5px solid #CBD5E1',
     borderRadius: '9999px',
-    padding: '8px 14px',
+    padding: '8px 16px',
     width: '100%',
-    maxWidth: '360px',
+    minWidth: '380px',
+    flex: '1 1 380px',
+    maxWidth: '560px',
   },
 
   // Badges & Actions

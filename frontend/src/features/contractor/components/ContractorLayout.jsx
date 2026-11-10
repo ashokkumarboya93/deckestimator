@@ -13,7 +13,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
-import mainLogo from '../../../assets/images/MainLodo.png';
+import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 
@@ -195,25 +195,28 @@ export default function ContractorLayout() {
         {/* Brand Header */}
         <div style={styles.brandBox}>
           {isSidebarHovered ? (
-            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%', padding: '0 4px' }}>
               <img
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '36px',
-                  maxWidth: '185px',
+                  height: '46px',
+                  maxWidth: '195px',
                   objectFit: 'contain',
                 }}
               />
             </Link>
           ) : (
             <Link to="/contractor/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
-              <div style={styles.brandLogoIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              </div>
+              <img
+                src={mainLogo}
+                alt="Deck Restoration Plus"
+                style={{
+                  height: '38px',
+                  width: '38px',
+                  objectFit: 'contain',
+                }}
+              />
             </Link>
           )}
         </div>
@@ -867,9 +870,10 @@ const styles = {
     gap: '12px',
   },
   headerTitle: {
-    fontSize: '1.15rem',
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: '1.35rem',
+    fontWeight: '800',
+    color: '#1E3A63',
+    letterSpacing: '-0.3px',
     margin: 0,
   },
   outlinedBackBtn: {

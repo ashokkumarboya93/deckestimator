@@ -44,6 +44,11 @@ export default function CustomerEstimatesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
+
   // Modals & Action Menus
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirmEst, setDeleteConfirmEst] = useState(null);
@@ -268,12 +273,68 @@ export default function CustomerEstimatesPage() {
     try {
       await deleteEstimate(id);
       setEstimates((prev) => prev.filter((e) => (e._id || e.id) !== id));
+      setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
       setSuccessToast(`Estimate record "${deleteConfirmEst.deckDetails?.projectName || deleteConfirmEst.estimateName || 'Project'}" deleted.`);
       setDeleteConfirmEst(null);
     } catch (err) {
       alert(`Failed to delete estimate: ${err.message}`);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Multi-select handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredEstimates.map((est) => est._id || est.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const isAllSelected =
+    filteredEstimates.length > 0 &&
+    filteredEstimates.every((est) => selectedIds.includes(est._id || est.id));
+  const isPartiallySelected =
+    selectedIds.length > 0 && !isAllSelected;
+
+  // Batch Export PDF
+  const handleBatchExportPdf = async () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    for (const est of selectedEsts) {
+      await downloadEstimatePdf(est, user);
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    setSuccessToast(`Exported ${selectedEsts.length} official PDF estimates.`);
+  };
+
+  // Batch Export Excel / CSV
+  const handleBatchExportExcel = () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    selectedEsts.forEach((est) => downloadEstimateExcel(est, user));
+    setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
+  };
+
+  // Batch Delete
+  const handleConfirmBatchDelete = async () => {
+    setBatchDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
+      setSuccessToast(`Successfully deleted ${selectedIds.length} estimates.`);
+      setSelectedIds([]);
+      setShowBatchDeleteModal(false);
+    } catch (err) {
+      alert(`Could not delete selected items: ${err.message}`);
+    } finally {
+      setBatchDeleting(false);
     }
   };
 
@@ -661,6 +722,64 @@ export default function CustomerEstimatesPage() {
         </div>
       )}
 
+      {/* BULK ACTIONS BAR (When estimates selected) */}
+      {selectedIds.length > 0 && (
+        <div style={styles.bulkActionBar}>
+          <div style={styles.bulkLeft}>
+            <span style={styles.bulkCountBadge}>
+              {selectedIds.length} {selectedIds.length === 1 ? 'estimate' : 'estimates'} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={styles.bulkDeselectBtn}
+            >
+              Deselect All
+            </button>
+          </div>
+          <div style={styles.bulkRight}>
+            <button
+              type="button"
+              onClick={handleBatchExportPdf}
+              style={styles.bulkActionBtn}
+              title="Download official PDF reports for all selected estimates"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Batch Export PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBatchExportExcel}
+              style={styles.bulkActionBtn}
+              title="Download Excel dossiers for all selected estimates"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              <span>Batch Export Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBatchDeleteModal(true)}
+              style={styles.bulkDeleteBtn}
+              title="Delete all selected estimates from database"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>Batch Delete</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. ESTIMATES LIST TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
@@ -697,6 +816,18 @@ export default function CustomerEstimatesPage() {
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeadRow}>
+                  <th style={{ ...styles.tableHeadCell, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleSelectAll}
+                      style={styles.checkboxInput}
+                      aria-label="Select all estimates"
+                    />
+                  </th>
                   <th style={styles.tableHeadCell}>Project Name</th>
                   <th style={styles.tableHeadCell}>Deck Size</th>
                   <th style={styles.tableHeadCell}>Labour &amp; Materials</th>
@@ -709,6 +840,7 @@ export default function CustomerEstimatesPage() {
               <tbody>
                 {filteredEstimates.map((est, idx) => {
                   const estId = est._id || est.id;
+                  const isRowSelected = selectedIds.includes(estId);
                   const thumb = DEFAULT_THUMBS[idx % DEFAULT_THUMBS.length];
                   const projName = est.deckDetails?.projectName || est.estimateName || 'Deck Restoration Project';
                   const refNumber = est.estimateNumber || estId;
@@ -719,7 +851,24 @@ export default function CustomerEstimatesPage() {
                   const isMenuOpen = openMenuId === estId;
 
                   return (
-                    <tr key={estId} style={styles.tableBodyRow}>
+                    <tr
+                      key={estId}
+                      style={{
+                        ...styles.tableBodyRow,
+                        backgroundColor: isRowSelected ? '#F0F9FF' : 'transparent',
+                      }}
+                    >
+                      {/* Selection Checkbox */}
+                      <td style={{ ...styles.tableCell, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={() => handleSelectOne(estId)}
+                          style={styles.checkboxInput}
+                          aria-label={`Select ${projName}`}
+                        />
+                      </td>
+
                       {/* 1. Project Name: Title TOP (Large), Reference Name BELOW (Small) */}
                       <td style={styles.tableCell}>
                         <div style={styles.refProjectWrap}>
@@ -1248,6 +1397,45 @@ export default function CustomerEstimatesPage() {
           </div>
         </div>
       )}
+
+      {/* 7. BATCH DELETE CONFIRMATION MODAL */}
+      {showBatchDeleteModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowBatchDeleteModal(false)}>
+          <div style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.deleteIconWrap}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <h3 style={styles.deleteModalTitle}>Delete {selectedIds.length} Selected Estimates?</h3>
+            <p style={styles.deleteModalDesc}>
+              Are you sure you want to permanently delete these <strong>{selectedIds.length} estimates</strong>? This action cannot be undone and will permanently delete them from your account.
+            </p>
+
+            <div style={styles.deleteModalBtnRow}>
+              <button
+                type="button"
+                onClick={() => setShowBatchDeleteModal(false)}
+                style={styles.modalCancelBtn}
+                disabled={batchDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBatchDelete}
+                style={styles.modalConfirmDeleteBtn}
+                disabled={batchDeleting}
+              >
+                {batchDeleting ? 'Deleting...' : 'Delete Selected Estimates'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1261,6 +1449,85 @@ const styles = {
     margin: '0 auto',
     padding: '16px 24px 60px 24px',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+
+  checkboxInput: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#1E3A63',
+    margin: 0,
+    verticalAlign: 'middle',
+  },
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E3A63',
+    color: '#FFFFFF',
+    padding: '12px 20px',
+    borderRadius: '10px',
+    marginBottom: '16px',
+    boxShadow: '0 4px 14px rgba(30, 58, 99, 0.22)',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  bulkLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkCountBadge: {
+    fontSize: '13px',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    padding: '4px 10px',
+    borderRadius: '999px',
+    letterSpacing: '0.2px',
+  },
+  bulkDeselectBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#93C5FD',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    padding: '2px 4px',
+  },
+  bulkRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkActionBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#1E3A63',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 
   // 1. Hero Banner
