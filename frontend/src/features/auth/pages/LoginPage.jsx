@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { LoginForm } from '../components/LoginForm';
-import mainLogo from '../../../assets/images/Main_Logo_v2.png';
+import heroLogo from '../../../assets/images/MainLodo.png';
 
 export default function LoginPage() {
   return (
@@ -39,7 +39,7 @@ export default function LoginPage() {
           {/* Logo on Right Hero Column */}
           <div style={styles.heroLogoWrap}>
             <img
-              src={mainLogo}
+              src={heroLogo}
               alt="Deck Restoration Plus"
               style={styles.heroLogoImg}
             />
@@ -149,13 +149,15 @@ const styles = {
     maxWidth: '540px',
   },
   heroLogoWrap: {
-    marginBottom: '12px',
+    marginBottom: '18px',
+    display: 'inline-block',
   },
   heroLogoImg: {
-    maxHeight: '52px',
+    maxHeight: '70px',
+    maxWidth: '280px',
     width: 'auto',
     objectFit: 'contain',
-    filter: 'brightness(1.08)',
+    filter: 'drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45))',
   },
   orangeBar: {
     width: '46px',

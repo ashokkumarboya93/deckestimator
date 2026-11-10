@@ -25,9 +25,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
+import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 
 const TABS = [
-  { id: 'hot', label: '🔥 Hot Priority Requests' },
+  { id: 'hot', label: 'Hot Priority Requests' },
   { id: 'customer', label: 'Customer Leads' },
   { id: 'contractor', label: 'Contractor Leads' },
   { id: 'all', label: 'All Leads & History' },
@@ -62,6 +63,30 @@ export default function AdminLeadManagementPage() {
   const [leadDossier, setLeadDossier] = useState(null);
   const [loadingDossier, setLoadingDossier] = useState(false);
   const [dossierError, setDossierError] = useState(null);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [acceptingLead, setAcceptingLead] = useState(false);
+  const [acceptSuccessNotice, setAcceptSuccessNotice] = useState(null);
+
+  const handleAcceptLeadRequest = async (lead) => {
+    if (!lead) return;
+    setAcceptingLead(true);
+    setAcceptSuccessNotice(null);
+    try {
+      const estId = lead.estimateId || lead.estimateSnapshot?.estimateId || leadDossier?.estimateDetails?.estimateId || lead._id;
+      await adminApi.updateProjectProgress(estId, {
+        stage: 'in_progress',
+        status: 'in_progress',
+        note: `Admin accepted lead booking request for ${lead.name || 'Client'}. Project status transitioned to IN PROGRESS.`,
+      });
+      setAcceptSuccessNotice('✓ Lead booking request accepted! Project status transitioned to IN PROGRESS.');
+      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'in_progress' } : null);
+      fetchLeads(false);
+    } catch (err) {
+      alert(`Notice: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setAcceptingLead(false);
+    }
+  };
 
   useEffect(() => {
     fetchLeads(1);
@@ -392,7 +417,7 @@ export default function AdminLeadManagementPage() {
                             <div style={styles.personEmail}>{l.email}</div>
                             <div style={styles.personPhone}>{l.phone || '—'}</div>
                             {l.businessName && (
-                              <div style={styles.personCompany}>🏢 {l.businessName}</div>
+                              <div style={styles.personCompany}>{l.businessName}</div>
                             )}
                           </div>
                         </div>
@@ -418,7 +443,7 @@ export default function AdminLeadManagementPage() {
                         </div>
                         {l.estimatedValue > 0 && (
                           <div style={styles.estimatedValueBadge}>
-                            💰 Estimated: ${Number(l.estimatedValue).toLocaleString()}
+                            Estimated: ${Number(l.estimatedValue).toLocaleString()}
                           </div>
                         )}
                       </td>
@@ -427,7 +452,7 @@ export default function AdminLeadManagementPage() {
                       <td style={styles.td}>
                         {isHot ? (
                           <span style={styles.hotPill}>
-                            🔥 HOT PRIORITY
+                            HOT PRIORITY
                           </span>
                         ) : (
                           <span style={styles.standardPill}>Standard</span>
@@ -507,211 +532,471 @@ export default function AdminLeadManagementPage() {
         )}
       </div>
 
-      {/* 5. View Details Large Dossier Modal */}
-      {selectedLead && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalBoxLarge}>
-            {/* Modal Header */}
-            <div style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
-                  {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
+      {/* 5. View Details Large Dossier Modal (Expanded Comprehensive Report Preview) */}
+      {selectedLead && (() => {
+        const leadPhotos = selectedLead.photos?.length
+          ? selectedLead.photos
+          : leadDossier?.photos?.length
+          ? leadDossier.photos
+          : leadDossier?.deckDetails?.photos || [];
+
+        const combinedLead = {
+          ...selectedLead,
+          ...leadDossier?.lead,
+          photos: leadPhotos,
+          propertyAddress: selectedLead.propertyAddress || leadDossier?.propertyAddress || leadDossier?.deckDetails?.propertyAddress,
+          structureDetails: selectedLead.structureDetails || leadDossier?.structureDetails || leadDossier?.deckDetails?.structureDetails,
+          surfaceDetails: selectedLead.surfaceDetails || leadDossier?.surfaceDetails || leadDossier?.deckDetails?.surfaceDetails,
+          visibleConditions: selectedLead.visibleConditions || leadDossier?.visibleConditions || leadDossier?.deckDetails?.visibleConditions || [],
+          services: selectedLead.services || leadDossier?.services || leadDossier?.estimateDetails?.calculationDetails?.services || [],
+          totalAmount: selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500,
+          deckDetails: leadDossier?.deckDetails || selectedLead.deckSnapshot || {},
+          estimateDetails: leadDossier?.estimateDetails || selectedLead.estimateSnapshot || {},
+        };
+
+        const custMeta = {
+          fullName: selectedLead.name,
+          email: selectedLead.email,
+          phone: selectedLead.phone,
+          location: selectedLead.location,
+        };
+
+        return (
+          <div style={styles.modalOverlay}>
+            <div style={{ ...styles.modalBoxLarge, maxWidth: '960px', width: '95vw', maxHeight: '92vh' }}>
+              {/* Modal Header */}
+              <div style={styles.modalHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
+                    {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={styles.modalTitle}>{selectedLead.name}</h3>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#e2e8f0', fontWeight: '700', color: '#1e293b' }}>
+                        Lead #{selectedLead.leadNumber || selectedLead.leadId}
+                      </span>
+                    </div>
+                    <p style={styles.modalSub}>
+                      {(selectedLead.userType || 'Customer').toUpperCase()} • Contact Date: {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()} • {selectedLead.location || 'New Jersey'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={styles.modalTitle}>{selectedLead.name}</h3>
-                  <p style={styles.modalSub}>
-                    Lead #{selectedLead.leadNumber || selectedLead.leadId} • {(selectedLead.userType || 'Customer').toUpperCase()} • {selectedLead.location || 'New Jersey'}
-                  </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => downloadEstimatePdf(combinedLead, custMeta)}
+                    style={styles.modalBtnExportPdf}
+                    title="Download Official PDF Report"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <span>Export PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadEstimateExcel(combinedLead, custMeta)}
+                    style={styles.modalBtnExportExcel}
+                    title="Export Data as Excel / CSV"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="8" y1="13" x2="16" y2="17" />
+                      <line x1="16" y1="13" x2="8" y2="17" />
+                    </svg>
+                    <span>Export Excel</span>
+                  </button>
+                  <button onClick={handleCloseModal} style={styles.closeBtn}>✕</button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <a
-                  href={`http://localhost:5000/api/v1/admin/leads/${selectedLead._id || selectedLead.id}/export?format=csv`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={styles.modalExportSmallBtn}
-                >
-                  Export CSV
-                </a>
-                <button onClick={handleCloseModal} style={styles.closeBtn}>✕</button>
-              </div>
-            </div>
 
-            {/* Modal Body */}
-            <div style={styles.modalBody}>
-              {loadingDossier ? (
-                <div style={styles.loaderBox}>
-                  <div style={styles.spinner} />
-                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Loading dossier details...</span>
-                </div>
-              ) : (
-                <div style={styles.modalContentGrid}>
-                  {/* Top Highlights Banner */}
-                  <div style={styles.modalBanner}>
-                    <div style={styles.bannerItem}>
-                      <span style={styles.bannerLabel}>Lead Priority</span>
-                      <span style={selectedLead.isHot ? styles.bannerValHot : styles.bannerValStandard}>
-                        {selectedLead.isHot ? '🔥 HOT PRIORITY' : 'Standard'}
-                      </span>
-                    </div>
-                    <div style={styles.bannerItem}>
-                      <span style={styles.bannerLabel}>Type & Source</span>
-                      <span style={styles.bannerVal}>
-                        {selectedLead.isEstimationService ? 'Estimation Service' : (selectedLead.contactSource || 'Direct Inquiry')}
-                      </span>
-                    </div>
-                    <div style={styles.bannerItem}>
-                      <span style={styles.bannerLabel}>Estimated Value</span>
-                      <span style={styles.bannerValAmount}>
-                        ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div style={styles.bannerItem}>
-                      <span style={styles.bannerLabel}>Contact Timestamp</span>
-                      <span style={styles.bannerVal}>
-                        {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
-                      </span>
-                    </div>
+              {/* Modal Body */}
+              <div style={styles.modalBody}>
+                {loadingDossier ? (
+                  <div style={styles.loaderBox}>
+                    <div style={styles.spinner} />
+                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Loading dossier details...</span>
                   </div>
-
-                  {/* Requested Message Section */}
-                  <div style={styles.dossierSectionCard}>
-                    <h4 style={styles.dossierSectionTitle}>📨 Requested Message & Inquiry Details</h4>
-                    <div style={styles.inquiryMessageBox}>
-                      <p style={styles.inquiryMessageText}>
-                        "{selectedLead.requestedMessage || selectedLead.enquiry?.message || leadDossier?.lead?.enquiry?.message || 'No specific inquiry note provided.'}"
-                      </p>
-                      {selectedLead.enquiry?.subject && (
-                        <div style={{ marginTop: 8, fontSize: '12px', color: '#64748b' }}>
-                          <strong>Subject:</strong> {selectedLead.enquiry.subject}
-                        </div>
-                      )}
-                      {selectedLead.enquiry?.preferredContactMethod && (
-                        <div style={{ marginTop: 4, fontSize: '12px', color: '#64748b' }}>
-                          <strong>Preferred Method:</strong> {selectedLead.enquiry.preferredContactMethod} • <strong>Time:</strong> {selectedLead.enquiry.preferredContactTime || 'Anytime'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Two Column Grid: Contact Info & Estimation Specifications */}
-                  <div style={styles.twoColGrid}>
-                    {/* Personal & Contact Profile */}
-                    <div style={styles.dossierSectionCard}>
-                      <h4 style={styles.dossierSectionTitle}>👤 Contact & Account Profile</h4>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Full Name:</span>
-                        <span style={styles.dossierVal}>{selectedLead.name}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Email Address:</span>
-                        <span style={styles.dossierVal}>{selectedLead.email}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Phone Number:</span>
-                        <span style={styles.dossierVal}>{selectedLead.phone || '—'}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>User Role:</span>
-                        <span style={styles.dossierVal}>{(selectedLead.userType || 'Customer').toUpperCase()}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Account Status:</span>
-                        <span style={styles.dossierVal}>
-                          <span style={styles.activeStatusPill}>{leadDossier?.user?.accountStatus || 'Active'}</span>
+                ) : (
+                  <div style={styles.modalContentGrid}>
+                    {/* Top Highlights Banner */}
+                    <div style={styles.modalBanner}>
+                      <div style={styles.bannerItem}>
+                        <span style={styles.bannerLabel}>Lead Priority</span>
+                        <span style={selectedLead.isHot ? styles.bannerValHot : styles.bannerValStandard}>
+                          {selectedLead.isHot ? 'HOT PRIORITY' : 'Standard'}
                         </span>
                       </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Location:</span>
-                        <span style={styles.dossierVal}>{selectedLead.location || 'New Jersey'}</span>
+                      <div style={styles.bannerItem}>
+                        <span style={styles.bannerLabel}>Type & Source</span>
+                        <span style={styles.bannerVal}>
+                          {selectedLead.isEstimationService ? 'Estimation Service' : (selectedLead.contactSource || 'Direct Inquiry')}
+                        </span>
+                      </div>
+                      <div style={styles.bannerItem}>
+                        <span style={styles.bannerLabel}>Estimated Value</span>
+                        <span style={styles.bannerValAmount}>
+                          ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500).toLocaleString()}
+                        </span>
+                      </div>
+                      <div style={styles.bannerItem}>
+                        <span style={styles.bannerLabel}>Contact Timestamp</span>
+                        <span style={styles.bannerVal}>
+                          {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Estimation Specifications & Section Inputs */}
+                    {/* Requested Message Section */}
                     <div style={styles.dossierSectionCard}>
-                      <h4 style={styles.dossierSectionTitle}>📐 Estimation Specifications & Section Inputs</h4>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Deck Dimensions:</span>
-                        <span style={styles.dossierVal}>{selectedLead.deckDimensions || '400 sq ft'}</span>
+                      <h4 style={styles.dossierSectionTitle}>📨 Requested Message & Inquiry Details</h4>
+                      <div style={styles.inquiryMessageBox}>
+                        <p style={styles.inquiryMessageText}>
+                          "{selectedLead.requestedMessage || selectedLead.enquiry?.message || leadDossier?.lead?.enquiry?.message || 'Inquiry initiated via online deck restoration estimator.'}"
+                        </p>
+                        {selectedLead.enquiry?.subject && (
+                          <div style={{ marginTop: 8, fontSize: '12px', color: '#64748b' }}>
+                            <strong>Subject:</strong> {selectedLead.enquiry.subject}
+                          </div>
+                        )}
+                        {selectedLead.enquiry?.preferredContactMethod && (
+                          <div style={{ marginTop: 4, fontSize: '12px', color: '#64748b' }}>
+                            <strong>Preferred Method:</strong> {selectedLead.enquiry.preferredContactMethod} • <strong>Time:</strong> {selectedLead.enquiry.preferredContactTime || 'Anytime'}
+                          </div>
+                        )}
                       </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Wood Species:</span>
-                        <span style={styles.dossierVal}>{selectedLead.woodSpecies || 'Pressure Treated Pine'}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Surface Area:</span>
-                        <span style={styles.dossierVal}>{selectedLead.deckArea ? `${selectedLead.deckArea} sq ft` : '400 sq ft'}</span>
-                      </div>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Selected Inputs:</span>
-                        <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Standard Deck Restoration'}</span>
-                      </div>
-                      {leadDossier?.estimateDetails?.pricingBreakdown && (
-                        <div style={styles.breakdownBox}>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: 4 }}>
-                            Pricing Breakdown:
+                    </div>
+
+                    {/* Two Column Grid: Contact Info & Estimation Specifications */}
+                    <div style={styles.twoColGrid}>
+                      {/* Personal & Contact Profile */}
+                      <div style={styles.dossierSectionCard}>
+                        <h4 style={styles.dossierSectionTitle}>👤 Contact & Account Profile</h4>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Full Name:</span>
+                          <span style={styles.dossierVal}>{selectedLead.name}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Email Address:</span>
+                          <span style={styles.dossierVal}>{selectedLead.email}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Phone Number:</span>
+                          <span style={styles.dossierVal}>{selectedLead.phone || '—'}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>User Role:</span>
+                          <span style={styles.dossierVal}>{(selectedLead.userType || 'Customer').toUpperCase()}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Account Status:</span>
+                          <span style={styles.dossierVal}>
+                            <span style={styles.activeStatusPill}>{leadDossier?.user?.accountStatus || 'Active'}</span>
                           </span>
-                          <div style={styles.breakdownRow}>
-                            <span>Base Labor & Materials:</span>
-                            <span>${Number(leadDossier.estimateDetails.pricingBreakdown.basePrice || 0).toLocaleString()}</span>
-                          </div>
-                          {leadDossier.estimateDetails.pricingBreakdown.woodMultiplier && (
-                            <div style={styles.breakdownRow}>
-                              <span>Wood Multiplier:</span>
-                              <span>+{Math.round((leadDossier.estimateDetails.pricingBreakdown.woodMultiplier - 1) * 100)}%</span>
-                            </div>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Property Location:</span>
+                          <span style={styles.dossierVal}>
+                            {combinedLead.propertyAddress?.street
+                              ? `${combinedLead.propertyAddress.street}, ${combinedLead.propertyAddress.city || ''} ${combinedLead.propertyAddress.state || ''}`
+                              : (selectedLead.location || 'New Jersey')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Estimation Specifications & Section Inputs */}
+                      <div style={styles.dossierSectionCard}>
+                        <h4 style={styles.dossierSectionTitle}>📐 Estimation Specifications & Blueprint</h4>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Deck Dimensions:</span>
+                          <span style={styles.dossierVal}>{selectedLead.deckDimensions || '20 x 20 ft'}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Wood Species:</span>
+                          <span style={styles.dossierVal}>{selectedLead.woodSpecies || 'Pressure Treated Pine'}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Surface Area:</span>
+                          <span style={styles.dossierVal}>{selectedLead.deckArea ? `${selectedLead.deckArea} sq ft` : '400 sq ft'}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Elevation:</span>
+                          <span style={styles.dossierVal}>{(combinedLead.structureDetails?.height || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase()}</span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Selected Services:</span>
+                          <span style={styles.dossierVal}>
+                            {combinedLead.services?.length ? combinedLead.services.join(', ') : 'Cleaning & Sealing'}
+                          </span>
+                        </div>
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Inputs Summary:</span>
+                          <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Full Deck Restoration'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 8: UPLOADED INSPECTION PHOTOS GALLERY */}
+                    <div style={styles.dossierSectionCard}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                            📸 Section 8 — Uploaded Deck Photos ({leadPhotos.length})
+                          </h4>
+                          {leadPhotos.length > 0 && (
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#dcfce7', color: '#166534', fontWeight: '700' }}>
+                              User Uploaded
+                            </span>
                           )}
-                          <div style={{ ...styles.breakdownRow, fontWeight: 700, borderTop: '1px solid #cbd5e1', paddingTop: 4, marginTop: 4 }}>
-                            <span>Total Estimated:</span>
-                            <span style={{ color: '#047857' }}>${Number(leadDossier.estimateDetails.totalAmount || 0).toLocaleString()}</span>
-                          </div>
+                        </div>
+                        <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                          Click any photo to enlarge
+                        </span>
+                      </div>
+
+                      {leadPhotos.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
+                          {leadPhotos.map((photo, idx) => {
+                            const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.data || '');
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => setPreviewPhoto(photoUrl)}
+                                style={{
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '10px',
+                                  overflow: 'hidden',
+                                  backgroundColor: '#f8fafc',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(-2px)';
+                                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'none';
+                                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                                }}
+                              >
+                                <div style={{ width: '100%', height: '125px', overflow: 'hidden', position: 'relative', backgroundColor: '#0f172a' }}>
+                                  <img
+                                    src={photoUrl}
+                                    alt={`Deck Inspection ${idx + 1}`}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                  <div style={{ position: 'absolute', bottom: 4, right: 6, backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                    🔍 Click to zoom
+                                  </div>
+                                </div>
+                                <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span>Photo #{idx + 1}</span>
+                                  <span style={{ fontSize: '10px', color: '#94a3b8' }}>Inspection</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" style={{ margin: '0 auto 6px' }}>
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                            No inspection photos uploaded for this lead inquiry.
+                          </p>
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Activity & History */}
-                  <div style={styles.dossierSectionCard}>
-                    <h4 style={styles.dossierSectionTitle}>⏱️ User History & Activity</h4>
-                    <div style={styles.historyList}>
-                      <div style={styles.historyItem}>
-                        <span style={styles.historyDot} />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
-                            Reach-out Inquiry Raised
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
+                    {/* Financial Breakdown & Pricing Snapshot */}
+                    <div style={styles.dossierSectionCard}>
+                      <h4 style={styles.dossierSectionTitle}>💰 Financial Breakdown & Pricing</h4>
+                      <div style={styles.dossierItem}>
+                        <span style={styles.dossierLabel}>Minimum Job Dispatch Price:</span>
+                        <span style={styles.dossierVal}>$2,500.00</span>
+                      </div>
+                      <div style={{ ...styles.dossierItem, borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', marginTop: '6px' }}>
+                        <span style={{ ...styles.dossierLabel, fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>Guaranteed Estimate Total:</span>
+                        <span style={{ ...styles.dossierVal, fontSize: '18px', fontWeight: '900', color: '#047857' }}>
+                          ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Activity & History */}
+                    <div style={styles.dossierSectionCard}>
+                      <h4 style={styles.dossierSectionTitle}>⏱️ User History & Activity</h4>
+                      <div style={styles.historyList}>
+                        <div style={styles.historyItem}>
+                          <span style={styles.historyDot} />
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
+                              Reach-out Inquiry Raised
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div style={styles.historyItem}>
-                        <span style={{ ...styles.historyDot, backgroundColor: '#10b981' }} />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
-                            Account Registration & Estimator Access
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {new Date(leadDossier?.user?.createdAt || selectedLead.createdAt || Date.now()).toLocaleDateString()}
+                        <div style={styles.historyItem}>
+                          <span style={{ ...styles.historyDot, backgroundColor: '#10b981' }} />
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
+                              Account Registration & Estimator Access
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              {new Date(leadDossier?.user?.createdAt || selectedLead.createdAt || Date.now()).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Accept Success Notice */}
+              {acceptSuccessNotice && (
+                <div style={{ padding: '10px 16px', backgroundColor: '#ECFDF5', color: '#15803D', borderTop: '1px solid #A7F3D0', fontWeight: '700', fontSize: '13px' }}>
+                  {acceptSuccessNotice}
                 </div>
               )}
-            </div>
 
-            {/* Modal Footer */}
-            <div style={styles.modalFooter}>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                style={styles.btnCloseModal}
-              >
-                Close Dossier
-              </button>
+              {/* Modal Footer */}
+              <div style={styles.modalFooter}>
+                <div style={{ display: 'flex', gap: '8px', marginRight: 'auto', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => downloadEstimatePdf(combinedLead, custMeta)}
+                    style={styles.modalBtnExportPdf}
+                  >
+                    Download PDF Report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadEstimateExcel(combinedLead, custMeta)}
+                    style={styles.modalBtnExportExcel}
+                  >
+                    Download Excel
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {/* Accept Request Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleAcceptLeadRequest(selectedLead)}
+                    disabled={acceptingLead || selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress'}
+                    style={{
+                      padding: '9px 18px',
+                      backgroundColor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? '#166534' : '#15803D',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
+                    }}
+                    title="Accept booking request and move to IN PROGRESS"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>
+                      {acceptingLead
+                        ? 'Accepting...'
+                        : (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress')
+                        ? '✓ Request Accepted (IN PROGRESS)'
+                        : 'Accept Request (Start In Progress)'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    style={styles.btnCloseModal}
+                  >
+                    Close Dossier
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
+        );
+      })()}
+
+      {/* Full Photo Lightbox Modal */}
+      {previewPhoto && (
+        <div
+          onClick={() => setPreviewPhoto(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.88)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              backgroundColor: '#000',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <button
+              onClick={() => setPreviewPhoto(null)}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                fontSize: '18px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0f172a',
+                zIndex: 10,
+              }}
+            >
+              ✕
+            </button>
+            <img
+              src={previewPhoto}
+              alt="Deck Inspection Enlarged"
+              style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', display: 'block' }}
+            />
           </div>
         </div>
       )}
@@ -1457,5 +1742,33 @@ const styles = {
     fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
+  },
+  modalBtnExportPdf: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    borderRadius: '7px',
+    backgroundColor: '#fee2e2',
+    color: '#991b1b',
+    border: '1px solid #fca5a5',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  modalBtnExportExcel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    borderRadius: '7px',
+    backgroundColor: '#ecfdf5',
+    color: '#065f46',
+    border: '1px solid #a7f3d0',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 };

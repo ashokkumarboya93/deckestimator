@@ -14,7 +14,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getEstimates, deleteEstimate } from '../../customer/api/estimatesApi';
+import { getEstimates, deleteEstimate, requestProjectEstimate } from '../../customer/api/estimatesApi';
+import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
 
 export default function ContractorProjectsPage() {
@@ -31,22 +32,39 @@ export default function ContractorProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
+
   // Modals & Action Menus
   const [deleteConfirmEst, setDeleteConfirmEst] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
+  const [activeMenuEst, setActiveMenuEst] = useState(null);
+  const [convertingId, setConvertingId] = useState(null);
 
   const menuRef = useRef(null);
 
-  // Close 3-dots menu on click outside
+  // Close 3-dots menu on click outside or scroll
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setOpenMenuId(null);
+        setActiveMenuEst(null);
       }
     }
+    function handleScroll() {
+      setOpenMenuId(null);
+      setActiveMenuEst(null);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, []);
 
   // Fetch contractor projects & estimates from backend
@@ -67,6 +85,9 @@ export default function ContractorProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+    const handleSaved = () => fetchProjects(true);
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, [fetchProjects]);
 
   // Toast notification auto-dismiss
@@ -222,12 +243,95 @@ export default function ContractorProjectsPage() {
     try {
       await deleteEstimate(targetId);
       setEstimates((prev) => prev.filter((item) => (item._id || item.id) !== targetId));
+      setSelectedIds((prev) => prev.filter((id) => id !== targetId));
       setSuccessToast(`Project "${deleteConfirmEst.deckDetails?.projectName || 'Estimate'}" deleted successfully.`);
       setDeleteConfirmEst(null);
     } catch (err) {
       alert(err.message || 'Failed to delete estimate record.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Multi-select handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredEstimates.map((est) => est._id || est.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const isAllSelected =
+    filteredEstimates.length > 0 &&
+    filteredEstimates.every((est) => selectedIds.includes(est._id || est.id));
+  const isPartiallySelected =
+    selectedIds.length > 0 && !isAllSelected;
+
+  // Batch Export PDF
+  const handleBatchExportPdf = async () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    for (const est of selectedEsts) {
+      await downloadEstimatePdf(est, user);
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    setSuccessToast(`Exported ${selectedEsts.length} official PDF estimates.`);
+  };
+
+  // Batch Export Excel / CSV
+  const handleBatchExportExcel = () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    selectedEsts.forEach((est) => downloadEstimateExcel(est, user));
+    setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
+  };
+
+  // Batch Delete
+  const handleConfirmBatchDelete = async () => {
+    setBatchDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
+      setSuccessToast(`Successfully deleted ${selectedIds.length} projects.`);
+      setSelectedIds([]);
+      setShowBatchDeleteModal(false);
+    } catch (err) {
+      alert(`Could not delete selected items: ${err.message}`);
+    } finally {
+      setBatchDeleting(false);
+    }
+  };
+
+  // Request Enquiry / Convert to Booking
+  const handleRequestEnquiry = async (est) => {
+    setOpenMenuId(null);
+    setActiveMenuEst(null);
+    const estId = est._id || est.id;
+    setConvertingId(estId);
+    try {
+      await requestProjectEstimate(estId, {
+        subject: `Contractor Project Booking: ${est.deckDetails?.projectName || est.estimateName || 'Deck Project'}`,
+        message: `Contractor requested booking and administrative dispatch for project ${est.estimateNumber || estId} (${getExactPrice(est)}).`,
+      });
+      setEstimates((prev) =>
+        prev.map((item) =>
+          (item._id || item.id) === estId
+            ? { ...item, estimateStatus: 'REQUESTED', status: 'REQUESTED' }
+            : item
+        )
+      );
+      setSuccessToast(`Enquiry submitted for ${est.deckDetails?.projectName || 'Project'}! Added to Admin Leads as HOT priority.`);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'An error occurred while submitting enquiry.';
+      alert(`Enquiry notice: ${errMsg}`);
+    } finally {
+      setConvertingId(null);
     }
   };
 
@@ -399,34 +503,30 @@ export default function ContractorProjectsPage() {
     `;
   };
 
-  // Trigger Dedicated Print Template
-  const handlePrint = (est) => {
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const printWindow = window.open('', '_blank', 'width=900,height=950');
-    if (printWindow) {
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 350);
+  // Trigger Dedicated Print Template (Direct PDF download without browser print dialog)
+  const handlePrint = async (est) => {
+    try {
+      await downloadEstimatePdf(est, user);
+      setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+    } catch (err) {
+      alert(`Could not download PDF report: ${err.message}`);
     }
   };
 
   // Trigger Dedicated Export Template
-  const handleExport = (est) => {
+  const handleExport = async (est, format = 'pdf') => {
     setOpenMenuId(null);
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Contractor_Project_${est.estimateNumber || est._id || 'Record'}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setSuccessToast(`Estimate template exported for ${est.estimateNumber || 'Project'}.`);
+    try {
+      if (format === 'excel') {
+        downloadEstimateExcel(est, user);
+        setSuccessToast(`Estimate Excel dossier downloaded for ${est.estimateNumber || 'Project'}.`);
+      } else {
+        await downloadEstimatePdf(est, user);
+        setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+      }
+    } catch (err) {
+      alert(`Export error: ${err.message}`);
+    }
   };
 
   return (
@@ -604,6 +704,64 @@ export default function ContractorProjectsPage() {
         </div>
       )}
 
+      {/* BULK ACTIONS BAR (When projects selected) */}
+      {selectedIds.length > 0 && (
+        <div style={styles.bulkActionBar}>
+          <div style={styles.bulkLeft}>
+            <span style={styles.bulkCountBadge}>
+              {selectedIds.length} {selectedIds.length === 1 ? 'project' : 'projects'} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={styles.bulkDeselectBtn}
+            >
+              Deselect All
+            </button>
+          </div>
+          <div style={styles.bulkRight}>
+            <button
+              type="button"
+              onClick={handleBatchExportPdf}
+              style={styles.bulkActionBtn}
+              title="Download official PDF reports for all selected projects"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Batch Export PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBatchExportExcel}
+              style={styles.bulkActionBtn}
+              title="Download Excel dossiers for all selected projects"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              <span>Batch Export Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBatchDeleteModal(true)}
+              style={styles.bulkDeleteBtn}
+              title="Delete all selected projects from database"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>Batch Delete</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. PROJECTS & ESTIMATES TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
@@ -637,6 +795,18 @@ export default function ContractorProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeaderRow}>
+                  <th style={{ ...styles.th, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleSelectAll}
+                      style={styles.checkboxInput}
+                      aria-label="Select all projects"
+                    />
+                  </th>
                   <th style={styles.th}>Project Name</th>
                   <th style={styles.th}>Deck Size</th>
                   <th style={styles.th}>Labour &amp; Materials</th>
@@ -648,8 +818,10 @@ export default function ContractorProjectsPage() {
               </thead>
               <tbody>
                 {filteredEstimates.map((est) => {
+                  const estId = est._id || est.id;
+                  const isRowSelected = selectedIds.includes(estId);
                   const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Restoration';
-                  const refName = est.estimateNumber || `DP-${(est._id || est.id || '').substring(0, 8).toUpperCase()}`;
+                  const refName = est.estimateNumber || `DP-${(estId || '').substring(0, 8).toUpperCase()}`;
                   const exactPrice = getExactPrice(est);
                   const area = getDeckArea(est);
                   const dims = getDeckDimensions(est);
@@ -657,10 +829,27 @@ export default function ContractorProjectsPage() {
                   const statusObj = resolveStatusBadge(est.estimateStatus || est.status);
                   const fullDate = formatFullDate(est.createdAt);
                   const deckId = est.deckId?._id || est.deckId || est.deckDetails?.deckId;
-                  const isMenuOpen = openMenuId === (est._id || est.id);
+                  const isMenuOpen = openMenuId === estId;
 
                   return (
-                    <tr key={est._id || est.id} style={styles.tableRow}>
+                    <tr
+                      key={estId}
+                      style={{
+                        ...styles.tableRow,
+                        backgroundColor: isRowSelected ? '#F0F9FF' : 'transparent',
+                      }}
+                    >
+                      {/* Selection Checkbox */}
+                      <td style={{ ...styles.td, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={() => handleSelectOne(estId)}
+                          style={styles.checkboxInput}
+                          aria-label={`Select ${projName}`}
+                        />
+                      </td>
+
                       {/* Project Name & Reference */}
                       <td style={styles.td}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -733,7 +922,7 @@ export default function ContractorProjectsPage() {
                           {/* 1. View Button: Redirects to Dedicated Full Project View Page */}
                           <button
                             type="button"
-                            onClick={() => navigate(`/contractor/projects/${est._id || est.id}`)}
+                            onClick={() => navigate(`/contractor/projects/${estId}`)}
                             style={styles.actionViewBtn}
                             title="Inspect complete technical scope on dedicated page"
                           >
@@ -759,76 +948,33 @@ export default function ContractorProjectsPage() {
                             <span>Print</span>
                           </button>
 
-                          {/* 3. Three Dots Dropdown Menu */}
-                          <div style={{ position: 'relative' }} ref={isMenuOpen ? menuRef : null}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(isMenuOpen ? null : (est._id || est.id));
-                              }}
-                              style={styles.actionDotsBtn}
-                              title="More options"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="1.5" />
-                                <circle cx="19" cy="12" r="1.5" />
-                                <circle cx="5" cy="12" r="1.5" />
-                              </svg>
-                            </button>
-
-                            {isMenuOpen && (
-                              <div style={styles.dotsMenuDropdown}>
-                                {/* Edit: Redirects directly to Estimator with pre-populated specs */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    navigate(`/contractor/decks/new?estimateId=${est._id || est.id}${deckId ? `&deckId=${deckId}` : ''}`);
-                                  }}
-                                  style={styles.menuItem}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                  <span>Edit in Estimator</span>
-                                </button>
-
-                                {/* Export */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleExport(est)}
-                                  style={styles.menuItem}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                  </svg>
-                                  <span>Export Document</span>
-                                </button>
-
-                                <div style={styles.menuDivider} />
-
-                                {/* Delete */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    setDeleteConfirmEst(est);
-                                  }}
-                                  style={{ ...styles.menuItem, color: '#DC2626' }}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                  </svg>
-                                  <span>Delete Project</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          {/* 3. Three Dots Button (Coordinates tracked for fixed non-clipping menu) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (openMenuId === estId) {
+                                setOpenMenuId(null);
+                                setActiveMenuEst(null);
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setMenuCoords({
+                                  top: rect.bottom + 6,
+                                  left: Math.max(10, rect.right - 220),
+                                });
+                                setActiveMenuEst(est);
+                                setOpenMenuId(estId);
+                              }
+                            }}
+                            style={styles.actionDotsBtn}
+                            title="More options"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="1.5" />
+                              <circle cx="19" cy="12" r="1.5" />
+                              <circle cx="5" cy="12" r="1.5" />
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -839,6 +985,150 @@ export default function ContractorProjectsPage() {
           </div>
         )}
       </div>
+
+      {/* Floating Non-Clipping 3-Dots Dropdown Menu (Fixed in Viewport) */}
+      {openMenuId && activeMenuEst && (
+        <div
+          ref={menuRef}
+          style={{
+            position: 'fixed',
+            top: `${menuCoords.top}px`,
+            left: `${menuCoords.left}px`,
+            zIndex: 999999,
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #E2E8F0',
+            width: '220px',
+            padding: '6px',
+          }}
+        >
+          {/* Request Enquiry / Convert to Booking */}
+          <button
+            type="button"
+            onClick={() => handleRequestEnquiry(activeMenuEst)}
+            disabled={convertingId === (activeMenuEst._id || activeMenuEst.id)}
+            style={styles.menuItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            <span>{convertingId === (activeMenuEst._id || activeMenuEst.id) ? 'Submitting...' : 'Request Enquiry'}</span>
+          </button>
+
+          {/* Edit in Estimator */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenuId(null);
+              const targetId = activeMenuEst._id || activeMenuEst.id;
+              setActiveMenuEst(null);
+              navigate(`/contractor/decks/new?estimateId=${targetId}`);
+            }}
+            style={styles.menuItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>Edit in Estimator</span>
+          </button>
+
+          {/* Export PDF */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenuId(null);
+              const est = activeMenuEst;
+              setActiveMenuEst(null);
+              handleExport(est, 'pdf');
+            }}
+            style={styles.menuItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export PDF</span>
+          </button>
+
+          {/* Export Excel */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenuId(null);
+              const est = activeMenuEst;
+              setActiveMenuEst(null);
+              handleExport(est, 'excel');
+            }}
+            style={styles.menuItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+            <span>Export Excel</span>
+          </button>
+
+          <div style={styles.menuDivider} />
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenuId(null);
+              const estToDelete = activeMenuEst;
+              setActiveMenuEst(null);
+              setDeleteConfirmEst(estToDelete);
+            }}
+            style={{ ...styles.menuItem, color: '#DC2626' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            <span>Delete Project</span>
+          </button>
+        </div>
+      )}
+
+      {/* BATCH DELETE CONFIRMATION MODAL */}
+      {showBatchDeleteModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowBatchDeleteModal(false)}>
+          <div style={styles.deleteModalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.deleteIconCircle}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </div>
+            <h3 style={styles.deleteTitle}>Delete {selectedIds.length} Selected Projects?</h3>
+            <p style={styles.deleteText}>
+              Are you sure you want to permanently delete these <strong>{selectedIds.length} projects</strong>? This will permanently remove the estimates and blueprints from the database.
+            </p>
+            <div style={styles.deleteActionsRow}>
+              <button
+                type="button"
+                onClick={() => setShowBatchDeleteModal(false)}
+                style={styles.deleteCancelBtn}
+                disabled={batchDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBatchDelete}
+                style={styles.deleteConfirmBtn}
+                disabled={batchDeleting}
+              >
+                {batchDeleting ? 'Deleting...' : 'Delete Selected Projects'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* 5. DELETE CONFIRMATION MODAL                             */}
@@ -1010,9 +1300,87 @@ const styles = {
   },
   searchWrap: {
     position: 'relative',
-    width: '340px',
-    maxWidth: '100%',
-    flexShrink: 0,
+    minWidth: '380px',
+    flex: '1 1 380px',
+    maxWidth: '560px',
+  },
+  checkboxInput: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#1E3A63',
+    margin: 0,
+    verticalAlign: 'middle',
+  },
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E3A63',
+    color: '#FFFFFF',
+    padding: '12px 20px',
+    borderRadius: '10px',
+    marginBottom: '16px',
+    boxShadow: '0 4px 14px rgba(30, 58, 99, 0.22)',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  bulkLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkCountBadge: {
+    fontSize: '13px',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    padding: '4px 10px',
+    borderRadius: '999px',
+    letterSpacing: '0.2px',
+  },
+  bulkDeselectBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#93C5FD',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    padding: '2px 4px',
+  },
+  bulkRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkActionBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#1E3A63',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   searchIcon: {
     position: 'absolute',

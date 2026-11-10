@@ -149,6 +149,10 @@ export default function AdminPricingDiscountsPage() {
   const [defaultDiscountVal, setDefaultDiscountVal] = useState(10);
   const [defaultReason, setDefaultReason] = useState('');
   const [savingDefaultDiscount, setSavingDefaultDiscount] = useState(false);
+  const [contractorSearch, setContractorSearch] = useState('');
+  const [contractorTierFilter, setContractorTierFilter] = useState('all');
+  const [editingContractorDiscounts, setEditingContractorDiscounts] = useState({});
+  const [savingContractorId, setSavingContractorId] = useState(null);
 
   // Contractor Override Modal State
   const [selectedContractor, setSelectedContractor] = useState(null);
@@ -413,6 +417,44 @@ export default function AdminPricingDiscountsPage() {
       setError(err?.message || 'Failed to update contractor custom discount.');
     } finally {
       setSavingOverride(false);
+    }
+  };
+
+  const handleSaveInlineContractorDiscount = async (contractorId) => {
+    const rawVal = editingContractorDiscounts[contractorId];
+    if (rawVal === undefined || rawVal === '') {
+      alert('Please enter a discount percentage.');
+      return;
+    }
+    const discountVal = Number(rawVal);
+    if (isNaN(discountVal) || discountVal < 0 || discountVal > 50) {
+      alert('Discount rate must be between 0% and 50%.');
+      return;
+    }
+    setSavingContractorId(contractorId);
+    try {
+      await adminApi.setContractorDiscount(
+        contractorId,
+        discountVal,
+        'Admin tuned individual contractor trade discount'
+      );
+      setSuccessMsg(`✓ Contractor discount saved to ${discountVal}% in database.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+      setDiscountData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          contractors: (prev.contractors || []).map((c) =>
+            ((c._id || c.id) === contractorId)
+              ? { ...c, customDiscount: discountVal }
+              : c
+          ),
+        };
+      });
+    } catch (err) {
+      alert(`Error updating contractor discount: ${err?.message || 'Failed to save'}`);
+    } finally {
+      setSavingContractorId(null);
     }
   };
 

@@ -842,14 +842,20 @@ async function submitReachOutEnquiry(user, payload = {}) {
     cp = await ContractorProfile.findOne({ userId: user.id || user._id });
   }
 
-  // Check if an existing open lead exists for this user
+  // Check if an existing open lead exists for this user and estimate
   const query = isContractor
     ? { contractorId: user.id || user._id, status: { $ne: 'closed' } }
     : { customerId: user.id || user._id, status: { $ne: 'closed' } };
 
+  if (payload.estimateId) {
+    query.estimateId = payload.estimateId;
+  }
+
   let lead = await Lead.findOne(query).sort({ createdAt: -1 });
 
   if (lead) {
+    if (payload.deckId) lead.deckId = payload.deckId;
+    if (payload.estimateId) lead.estimateId = payload.estimateId;
     lead.contactCount = (lead.contactCount || 1) + 1;
     lead.latestContactDate = new Date();
     lead.contactSource = source;

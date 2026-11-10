@@ -7,9 +7,10 @@
 // - Deep Navy theme (#0a1628, #1d4ed8 active, #ffffff text)
 // - Top bar with hamburger toggle, title/breadcrumb, search, notifications, profile pill, and logout
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
 export default function AdminLayout() {
@@ -19,11 +20,76 @@ export default function AdminLayout() {
 
   // Sidebar always open by default, can toggle closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingVerifications, setPendingVerifications] = useState(0);
   const [hotLeadsCount, setHotLeadsCount] = useState(0);
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Real-time synchronization of notifications from MongoDB
+  const fetchRealNotifications = useCallback(async () => {
+    try {
+      const data = await getMyNotifications({ limit: 15 });
+      setNotifications(data?.notifications || []);
+      setUnreadNotifications(data?.unreadCount || 0);
+    } catch {
+      // Fallback silently
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 20000);
+    window.addEventListener('focus', fetchRealNotifications);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchRealNotifications);
+    };
+  }, [fetchRealNotifications]);
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadNotifications(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {
+      setUnreadNotifications(0);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead && notif._id) {
+      try {
+        await markNotificationRead(notif._id);
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+        );
+        setUnreadNotifications((prev) => Math.max(0, prev - 1));
+      } catch {
+        // Continue
+      }
+    }
+    setShowNotifications(false);
+  };
+
+  // Click-outside listener
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const currentPath = location.pathname;
 
@@ -328,64 +394,8 @@ export default function AdminLayout() {
           </div>
 
           <div style={styles.headerRight}>
-            {/* Notifications Button */}
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
-                style={styles.notifBtn}
-                title="System Notifications"
-              >
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {unreadNotifications > 0 && (
-                  <span style={styles.notifDot}>{unreadNotifications}</span>
-                )}
-              </button>
-
-              {showNotifications && (
-                <div style={styles.notifDropdown}>
-                  <div style={styles.notifHeader}>
-                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>Notifications</span>
-                    <button
-                      type="button"
-                      onClick={() => setUnreadNotifications(0)}
-                      style={styles.clearBtn}
-                    >
-                      Mark all read
-                    </button>
-                  </div>
-                  <div style={styles.notifList}>
-                    <div style={styles.notifItem}>
-                      <span style={styles.notifItemDot} />
-                      <div>
-                        <p style={styles.notifItemTitle}>New contractor registration pending verification</p>
-                        <span style={styles.notifItemTime}>10 minutes ago</span>
-                      </div>
-                    </div>
-                    <div style={styles.notifItem}>
-                      <span style={styles.notifItemDot} />
-                      <div>
-                        <p style={styles.notifItemTitle}>Hot priority lead received via Contact Us</p>
-                        <span style={styles.notifItemTime}>2 hours ago</span>
-                      </div>
-                    </div>
-                    <div style={styles.notifItem}>
-                      <span style={{ ...styles.notifItemDot, backgroundColor: '#94a3b8' }} />
-                      <div>
-                        <p style={styles.notifItemTitle}>Project PRJ-102 updated to 60% progress</p>
-                        <span style={styles.notifItemTime}>Yesterday</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Admin Profile Dropdown Pill */}
-            <div style={{ position: 'relative' }}>
+            <div ref={profileRef} style={{ position: 'relative' }}>
               <button
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}

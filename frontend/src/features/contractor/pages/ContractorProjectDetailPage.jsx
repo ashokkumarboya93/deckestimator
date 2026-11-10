@@ -11,9 +11,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { getEstimateById, deleteEstimate, updateEstimateStatus } from '../../customer/api/estimatesApi';
-import { leadApi } from '../../customer/api/leadApi';
+import { getEstimateById, deleteEstimate, updateEstimateStatus, requestProjectEstimate } from '../../customer/api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
 
 export default function ContractorProjectDetailPage() {
   const { projectId, estimateId } = useParams();
@@ -86,97 +86,42 @@ export default function ContractorProjectDetailPage() {
     if (!estimate || converting || converted) return;
     setConverting(true);
     try {
-      await leadApi.submitReachOut({
-        deckId: estimate.deckId?._id || estimate.deckId || estimate.deckDetails?.deckId,
-        estimateId: estimate._id || estimate.id,
-        contactSource: 'Contractor Portal Conversion',
+      await requestProjectEstimate(estimate._id || estimate.id, {
         subject: `Contractor Project Booking: ${estimate.deckDetails?.projectName || estimate.estimateName || 'Deck Restoration'}`,
-        message: `Contractor converted estimate ${estimate.estimateNumber} for deck size ${estimate.deckDetails?.areaSqFt || 400} sq ft. Total price: ${fmt(estimate.totalAmount)}. Marked as In Review for client dispatch.`,
+        message: `Contractor converted estimate ${estimate.estimateNumber || ''} for deck size ${estimate.deckDetails?.areaSqFt || 400} sq ft. Total price: ${fmt(estimate.totalAmount)}. Marked as REQUESTED for administrative booking.`,
       });
 
-      // Update status in database
-      await updateEstimateStatus(estimate._id || estimate.id, 'IN_REVIEW', 'Contractor converted estimate to active booking');
-
       setConverted(true);
-      setActionNotice('✓ Successfully converted! Project marked as In Review and dispatched for client booking.');
-      setEstimate((prev) => ({ ...prev, estimateStatus: 'IN_REVIEW', status: 'IN_REVIEW' }));
+      setActionNotice('✓ Successfully converted! Project marked as REQUESTED and dispatched to Admin Leads as HOT priority.');
+      setEstimate((prev) => ({ ...prev, estimateStatus: 'REQUESTED', status: 'REQUESTED' }));
     } catch (err) {
-      alert(`Conversion note: ${err.message}`);
+      const errMsg = err.response?.data?.message || err.message || 'An error occurred while converting estimate to booking.';
+      alert(`Conversion notice: ${errMsg}`);
     } finally {
       setConverting(false);
     }
   };
 
-  // Trigger Official Export Document
-  const handleExport = () => {
+  // Trigger Official PDF Report Download
+  const handleExportPdf = async () => {
     if (!estimate) return;
-    const snap = estimate.pricingSnapshot || {};
-    const deck = estimate.deckDetails || {};
-    const projName = deck.projectName || estimate.estimateName || 'Custom Deck Restoration';
-    const estNumber = estimate.estimateNumber || `DP-${(estimate._id || estimate.id || '').substring(0, 8).toUpperCase()}`;
-    const floorArea = deck.areaSqFt || snap.A || 400;
-    const wood = (deck.surfaceMaterial || snap.wood || 'Pressure Treated Pine').replace(/_/g, ' ').toUpperCase();
-    const elevation = (deck.deckType || snap.elevation || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase();
-    const exactPrice = fmt(estimate.totalAmount || snap.calculatedTotal || 2500);
+    try {
+      await downloadEstimatePdf(estimate, user);
+      setActionNotice(`✓ Official estimate PDF downloaded for ${estimate.estimateNumber || 'Project'}`);
+    } catch (err) {
+      alert(`Could not download PDF report: ${err.message}`);
+    }
+  };
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Deck Restoration Plus - Official Technical Estimate (${estNumber})</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-          body { font-family: 'Inter', sans-serif; color: #0F172A; padding: 40px; background: #FFF; line-height: 1.5; }
-          .header { border-bottom: 2px solid #1E3A63; padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; }
-          .title { font-size: 22px; font-weight: 900; color: #1E3A63; margin: 0; }
-          .sub { font-size: 11px; font-weight: 700; color: #E08131; letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-          .box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
-          .price-box { background: #F0F6FF; border: 2px solid #1E3A63; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0; }
-          .price-amt { font-size: 36px; font-weight: 900; color: #15803D; margin: 6px 0; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <h1 class="title">DECK RESTORATION PLUS</h1>
-            <div class="sub">Certified Contractor Technical Estimate Specification</div>
-          </div>
-          <div style="text-align: right;">
-            <strong>${estNumber}</strong><br>
-            <span style="font-size: 12px; color: #64748B;">Date: ${formatDate(estimate.createdAt)}</span>
-          </div>
-        </div>
-
-        <div class="box">
-          <h3 style="margin: 0 0 8px 0; color: #1E3A63;">${projName}</h3>
-          <div>Billable Area: <strong>${floorArea} sq ft</strong> &bull; Wood: <strong>${wood}</strong> &bull; Elevation: <strong>${elevation}</strong></div>
-        </div>
-
-        <div class="price-box">
-          <span style="font-size: 12px; font-weight: 700; color: #1E3A63; text-transform: uppercase; letter-spacing: 0.5px;">Contractor Quoted Guaranteed Price</span>
-          <div class="price-amt">${exactPrice}</div>
-          <span style="font-size: 12px; color: #475569;">Includes professional labor, certified penetrating finish, and mobilization standards</span>
-        </div>
-
-        <div style="margin-top: 30px; font-size: 11px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 16px;">
-          Deck Restoration Plus National Headquarters &bull; 152 Indian Mills Road, Shamong, NJ 08088 &bull; Phone: (856) 678-3325
-        </div>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Project_${estNumber}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setActionNotice(`✓ Project document exported for ${estNumber}`);
+  // Trigger Official Excel / CSV Dossier Download
+  const handleExportExcel = () => {
+    if (!estimate) return;
+    try {
+      downloadEstimateExcel(estimate, user);
+      setActionNotice(`✓ Official Excel dossier downloaded for ${estimate.estimateNumber || 'Project'}`);
+    } catch (err) {
+      alert(`Could not download Excel dossier: ${err.message}`);
+    }
   };
 
   // Delete Project from Database
@@ -244,6 +189,7 @@ export default function ContractorProjectDetailPage() {
   const finalPrice = isDiscountApplied ? (estimate.totalAmount || (rawTotal - discountAmount)) : rawTotal;
 
   const deckId = estimate.deckId?._id || estimate.deckId || deck.deckId;
+  const uploadedPhotos = getEstimatePhotos(estimate);
 
   return (
     <div style={styles.page}>
@@ -327,7 +273,7 @@ export default function ContractorProjectDetailPage() {
           </p>
         </div>
 
-        {/* Primary Action Buttons: Edit | Export | Delete */}
+        {/* Primary Action Buttons: Inquiry | Edit | Export PDF | Export Excel | Print | Delete */}
         <div style={styles.heroRightActions}>
           {/* Conversion / Inquiry Button (Green) */}
           <button
@@ -346,7 +292,7 @@ export default function ContractorProjectDetailPage() {
             <span>{converting ? 'Submitting...' : converted ? '✓ In Review / Converted' : 'Inquiry / Convert to Booking'}</span>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {/* 1. Edit in Estimator Button */}
             <button
               type="button"
@@ -360,25 +306,55 @@ export default function ContractorProjectDetailPage() {
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
-              <span>Edit in Estimator</span>
+              <span>Edit</span>
             </button>
 
-            {/* 2. Export Button */}
+            {/* 2. Export PDF Button */}
             <button
               type="button"
-              onClick={handleExport}
-              style={styles.actionBtnTeal}
-              title="Download official technical estimate document"
+              onClick={handleExportPdf}
+              style={styles.actionBtnNavy}
+              title="Download official branded PDF report"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              <span>Export</span>
+              <span>Export PDF</span>
             </button>
 
-            {/* 3. Delete Button */}
+            {/* 3. Export Excel Button */}
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              style={styles.actionBtnTeal}
+              title="Download Excel spreadsheet dossier"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              <span>Export Excel</span>
+            </button>
+
+            {/* 4. Print Button */}
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              style={styles.actionBtnWhite}
+              title="Download print-ready official estimate"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              <span>Print</span>
+            </button>
+
+            {/* 5. Delete Button */}
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
@@ -659,7 +635,7 @@ export default function ContractorProjectDetailPage() {
               </svg>
             </div>
             <div>
-              <h3 style={styles.specCardTitle}>Section 08: Property Location &amp; Notes</h3>
+              <h3 style={styles.specCardTitle}>Section 08: Property Location &amp; Dispatch Notes</h3>
               <span style={styles.specCardSub}>Job site dispatch address and scope instructions</span>
             </div>
           </div>
@@ -670,9 +646,78 @@ export default function ContractorProjectDetailPage() {
                 {deck.location?.street || deck.propertyAddress?.street || '152 Indian Mills Road, Shamong, NJ 08088'}
               </strong>
             </div>
+            <div style={styles.specRow}>
+              <span>Municipality:</span>
+              <strong>
+                {deck.location?.city || deck.propertyAddress?.city || 'Shamong'}, {deck.location?.state || deck.propertyAddress?.state || 'NJ'} {deck.location?.zipCode || deck.propertyAddress?.zipCode || '08088'}
+              </strong>
+            </div>
             {estimate.notes && (
               <div style={{ marginTop: '6px', fontSize: '12px', color: '#475569', backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '6px' }}>
-                <strong>Notes:</strong> {estimate.notes}
+                <strong>Scope Notes:</strong> {estimate.notes}
+              </div>
+            )}
+            {estimate.customerFacingStatus?.note && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#1E3A63', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '8px 12px', borderRadius: '6px' }}>
+                <strong>Latest Admin Dispatch Update:</strong> {estimate.customerFacingStatus.note}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 9: Uploaded Inspection Photos Gallery */}
+        <div style={{ ...styles.specCard, gridColumn: '1 / -1' }}>
+          <div style={styles.specCardHeader}>
+            <div style={styles.specCardIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </div>
+            <div>
+              <h3 style={styles.specCardTitle}>Inspection Photos &amp; Site Media ({uploadedPhotos.length})</h3>
+              <span style={styles.specCardSub}>Visual deck documentation uploaded during project setup</span>
+            </div>
+          </div>
+          <div style={{ padding: '14px 18px' }}>
+            {uploadedPhotos.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '8px', color: '#64748B', fontSize: '13px' }}>
+                No site photos were uploaded for this estimate. Photos uploaded in Section 8 appear here and in downloaded PDF dossiers.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' }}>
+                {uploadedPhotos.map((photo, pIdx) => {
+                  const src = photo.dataUrl || photo.url || photo.src;
+                  return (
+                    <div
+                      key={photo.id || pIdx}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: '#0F172A',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                      }}
+                    >
+                      <img
+                        src={src}
+                        alt={photo.name || `Site Photo ${pIdx + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '140px',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+                      <div style={{ padding: '6px 8px', backgroundColor: '#FFFFFF', borderTop: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {photo.category || photo.name || `Photo #${pIdx + 1}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -931,6 +976,20 @@ const styles = {
     backgroundColor: '#FFFFFF',
     color: '#0D9488',
     border: '1.5px solid #0D9488',
+    borderRadius: '8px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  actionBtnWhite: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
+    backgroundColor: '#FFFFFF',
+    color: '#1E3A63',
+    border: '1.5px solid #CBD5E1',
     borderRadius: '8px',
     fontSize: '12.5px',
     fontWeight: '700',

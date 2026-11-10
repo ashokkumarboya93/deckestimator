@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Auth Validation Schemas
 // =============================================
 
@@ -18,10 +18,17 @@ const registerSchema = {
       'string.empty': 'Email is required',
       'string.email': 'Please enter a valid email address',
     }),
-    password: Joi.string().min(8).max(128).required().messages({
-      'string.empty': 'Password is required',
-      'string.min': 'Password must be at least 8 characters long',
-    }),
+    password: Joi.string()
+      .min(2)
+      .max(128)
+      .pattern(/[A-Z]/, 'uppercase')
+      .pattern(/[0-9]/, 'number')
+      .required()
+      .messages({
+        'string.empty': 'Password is required',
+        'string.pattern.name': 'Password must contain at least one uppercase letter (Caps) and at least one number',
+        'string.pattern.base': 'Password must contain at least one uppercase letter (Caps) and at least one number',
+      }),
     role: Joi.string()
       .valid(...publicRoles)
       .default(ROLES.CUSTOMER)

@@ -39,6 +39,9 @@ export default function ContractorDashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
+    const handleSaved = () => loadDashboardData();
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, []);
 
   async function loadDashboardData() {
@@ -115,9 +118,8 @@ export default function ContractorDashboardPage() {
 
   return (
     <div style={styles.dashboardContainer}>
-      {/* 1. HERO BANNER WITH DECK BACKGROUND, BORDER, AND QUICK ACTIONS ON BANNER */}
-      <div style={{ ...styles.heroBanner, backgroundImage: `url(${bannerBg})` }}>
-        <div style={styles.heroOverlay} />
+      {/* 1. HERO BANNER WITH DECK BACKGROUND, REFINED OVERLAY, STICKER BADGE & CLEAN 2 ACTIONS */}
+      <div style={{ ...styles.heroBanner, backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.92) 58%, rgba(30, 58, 99, 0.50) 100%), url(${bannerBg})` }}>
         <div style={styles.heroContent}>
           {/* Top Row: Verified Contractor Badge ONLY */}
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
@@ -127,82 +129,60 @@ export default function ContractorDashboardPage() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <span>Verified Contractor</span>
+              <span>Verified Contractor Partner</span>
             </div>
           </div>
 
           <h1 style={styles.heroHeading}>Welcome Back, {contractorName}!</h1>
-          <p style={styles.heroSub}>
-            Manage your deck projects, customer estimates, wholesale material discounts, and business earnings—all in one place.
-          </p>
 
-          {/* Quick Actions in a single row on the banner */}
-          <div style={styles.bannerQuickActionsBox}>
-            <div style={styles.bannerQuickActionsTitle}>QUICK ACTIONS</div>
-            <div style={styles.bannerBtnRow}>
-              {/* Button 1: New Deck Project */}
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/decks/new')}
-                style={styles.bannerActionBtn}
-                title="Start a new deck project"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                <span>New Deck Project</span>
-              </button>
+          {/* Clean Quick Actions in a single row on the banner: Only Create Estimation & All Projects */}
+          <div style={styles.bannerBtnRow}>
+            {/* Button 1: + Create Estimation (Wood-colored outlined design) */}
+            <button
+              type="button"
+              onClick={() => navigate('/contractor/decks/new')}
+              style={styles.woodOutlineBtn}
+              title="Launch calculation engine for a new project"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2" />
+                <line x1="12" y1="10" x2="12" y2="16" />
+                <line x1="9" y1="13" x2="15" y2="13" />
+              </svg>
+              <span>+ Create Estimation</span>
+            </button>
 
-              {/* Button 2: View All Projects */}
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/projects')}
-                style={styles.bannerActionBtn}
-                title="View your projects & estimates"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                </svg>
-                <span>View All Projects</span>
-              </button>
+            {/* Button 2: All Projects (Wood-colored outlined design) */}
+            <button
+              type="button"
+              onClick={() => navigate('/contractor/projects')}
+              style={styles.woodOutlineSecondaryBtn}
+              title="View all projects & estimations records"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>All Projects</span>
+            </button>
+          </div>
+        </div>
 
-              {/* Button 3: Create Estimate */}
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/decks/new')}
-                style={styles.bannerActionBtn}
-                title="Launch calculation engine"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="2" width="16" height="20" rx="2" />
-                  <line x1="8" y1="6" x2="16" y2="6" />
-                  <line x1="16" y1="14" x2="16" y2="18" />
-                  <path d="M16 10h.01" />
-                  <path d="M12 10h.01" />
-                  <path d="M8 10h.01" />
-                  <path d="M12 14h.01" />
-                  <path d="M8 14h.01" />
-                  <path d="M12 18h.01" />
-                  <path d="M8 18h.01" />
-                </svg>
-                <span>Create Estimate</span>
-              </button>
-
-              {/* Button 4: Upload Documents */}
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/profile')}
-                style={styles.bannerActionBtn}
-                title="Upload license & insurance documents"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <polyline points="9 12 11 14 15 10" />
-                </svg>
-                <span>Upload Documents</span>
-              </button>
+        {/* Decorative Right-Side Sticker Badge (Matching Customer Portal Banner) */}
+        <div style={styles.bannerStickerWrap}>
+          <div style={styles.bannerSticker}>
+            <div style={styles.stickerIconBox}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A63', textTransform: 'uppercase' }}>
+                Wholesale Partner
+              </div>
+              <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600' }}>
+                Priority Dispatch &amp; Margin
+              </div>
             </div>
           </div>
         </div>
@@ -737,6 +717,9 @@ const styles = {
     backgroundPosition: 'center',
     overflow: 'hidden',
     boxShadow: '0 4px 16px rgba(30, 58, 99, 0.12)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   heroOverlay: {
     position: 'absolute',
@@ -752,6 +735,37 @@ const styles = {
     zIndex: 2,
     padding: '26px 30px',
     color: '#FFFFFF',
+    flex: 1,
+  },
+  bannerStickerWrap: {
+    position: 'relative',
+    zIndex: 2,
+    paddingRight: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerSticker: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(8px)',
+    border: '1.5px solid #E08131',
+    borderRadius: '12px',
+    padding: '12px 18px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18)',
+  },
+  stickerIconBox: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    backgroundColor: '#FFFBEB',
+    border: '1px solid #FDE68A',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   verifiedBadge: {
     display: 'inline-flex',
@@ -776,48 +790,44 @@ const styles = {
     justifyContent: 'center',
   },
   heroHeading: {
-    margin: '0 0 6px 0',
-    fontSize: '24px',
+    margin: '0 0 16px 0',
+    fontSize: '25px',
     fontWeight: '800',
     letterSpacing: '-0.3px',
     color: '#FFFFFF',
   },
-  heroSub: {
-    margin: '0 0 18px 0',
-    fontSize: '13px',
-    lineHeight: 1.5,
-    color: '#CBD5E1',
-    maxWidth: '780px',
-  },
-  bannerQuickActionsBox: {
-    borderTop: '1px solid rgba(255, 255, 255, 0.18)',
-    paddingTop: '14px',
-  },
-  bannerQuickActionsTitle: {
-    fontSize: '10.5px',
-    fontWeight: '800',
-    letterSpacing: '0.6px',
-    color: '#93C5FD',
-    marginBottom: '8px',
-    textTransform: 'uppercase',
-  },
   bannerBtnRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '9px',
+    gap: '12px',
     flexWrap: 'wrap',
   },
-  bannerActionBtn: {
+  woodOutlineBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '7px',
-    padding: '6px 13px',
-    borderRadius: '7px',
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    border: '1px solid rgba(255, 255, 255, 0.28)',
+    gap: '8px',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: '#E08131',
+    border: '1.5px solid #E08131',
     color: '#FFFFFF',
-    fontSize: '12px',
-    fontWeight: '600',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(224, 129, 49, 0.35)',
+    transition: 'all 0.15s ease',
+  },
+  woodOutlineSecondaryBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    border: '1.5px solid rgba(224, 129, 49, 0.75)',
+    color: '#FFEDD5',
+    fontSize: '13px',
+    fontWeight: '700',
     cursor: 'pointer',
     backdropFilter: 'blur(4px)',
     transition: 'all 0.15s ease',
@@ -1240,8 +1250,8 @@ const styles = {
   },
   contactGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-    gap: '14px',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '16px',
   },
   contactItemBox: {
     backgroundColor: '#FFFFFF',

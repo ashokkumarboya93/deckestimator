@@ -18,32 +18,10 @@ function buildQuery(params = {}) {
 
 export async function createEstimate(payload) {
   const mapped = {
-    deckId: payload.deckId,
-    estimateName: payload.estimateName || '',
+    ...payload,
     materialIds: payload.materialIds || (payload.selectedMaterials || []).map((m) => m.materialId || m),
     serviceIds: payload.serviceIds || (payload.selectedServices || []).map((s) => s.serviceId || s),
-    selectedMaterials: payload.selectedMaterials,
-    selectedServices: payload.selectedServices,
-    numberOfCoats: payload.numberOfCoats,
     notes: payload.notes || '',
-    // Client pricing fields
-    floorArea: payload.floorArea,
-    floorProductionRate: payload.floorProductionRate,
-    woodSpecies: payload.woodSpecies,
-    accessType: payload.accessType,
-    coatingType: payload.coatingType,
-    coatingConfidence: payload.coatingConfidence,
-    conditionFlags: payload.conditionFlags,
-    railingLength: payload.railingLength,
-    railingStyle: payload.railingStyle,
-    stairCount: payload.stairCount,
-    fasciaLength: payload.fasciaLength,
-    pergolaLength: payload.pergolaLength,
-    sidingArea: payload.sidingArea,
-    includeJoists: payload.includeJoists,
-    billingRate: payload.billingRate,
-    customPrices: payload.customPrices,
-    isCoatingIncomplete: payload.isCoatingIncomplete,
   };
   const res = await apiClient(ENDPOINTS.ESTIMATES.BASE, {
     method: 'POST',

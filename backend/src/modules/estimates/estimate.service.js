@@ -13,6 +13,7 @@ const MaterialServiceCompatibility = require('../catalogs/materialServiceCompati
 const DiscountPolicy = require('../discounts/discountPolicy.model');
 const DiscountAssignment = require('../discounts/discountAssignment.model');
 const pricingService = require('../pricing/pricing.service');
+const PricingConfiguration = require('../pricing/pricingConfiguration.model');
 const pricingEngine = require('../pricing/pricingEngine');
 const AuditLog = require('../../shared/models/auditLog.model');
 const Lead = require('../leads/lead.model');
@@ -230,7 +231,7 @@ async function createEstimate(data, user, ipAddress) {
       };
     }
 
-    const applyMinJob = Boolean(data.applyMinJobPrice || payload.applyMinJobPrice);
+    const applyMinJob = Boolean(data.applyMinJobPrice);
     const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
     const minJobThreshold = clientCalc.minJob || 2500;
     const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
@@ -434,9 +435,10 @@ async function createEstimate(data, user, ipAddress) {
     estimateName: estimateName || `${deck.projectName || 'Deck'} Estimate`,
     estimateType,
     deckId: deck._id,
-    ownerId: deck.ownerId,
+    ownerId: deck.ownerId || user.id || user._id,
     createdBy: user.id || user._id,
-    createdFor: deck.ownerId,
+    createdFor: deck.ownerId || user.id || user._id,
+    customerId: deck.ownerId || user.id || user._id,
     deckDetails,
     selectedMaterials: selectedMaterialsItems,
     selectedServices: selectedServicesItems,
@@ -477,11 +479,20 @@ async function getEstimates(query = {}, user) {
 
   // Access isolation
   if (user.role === ROLES.CUSTOMER) {
-    filter.ownerId = user.id || user._id;
-  } else if (user.role === ROLES.CONTRACTOR) {
+    const userId = user.id || user._id;
     filter.$or = [
-      { createdBy: user.id || user._id },
-      { ownerId: user.id || user._id },
+      { ownerId: userId },
+      { createdBy: userId },
+      { createdFor: userId },
+      { customerId: userId },
+    ];
+  } else if (user.role === ROLES.CONTRACTOR) {
+    const userId = user.id || user._id;
+    filter.$or = [
+      { createdBy: userId },
+      { ownerId: userId },
+      { createdFor: userId },
+      { customerId: userId },
     ];
   }
 
@@ -779,6 +790,12 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
     visibleConditions: specData.conditions,
   };
 
+  const incomingPhotos = payload.photos || payload.uploadedPhotos;
+  if (Array.isArray(incomingPhotos) && incomingPhotos.length > 0) {
+    estimate.deckDetails.photos = incomingPhotos;
+    estimate.photos = incomingPhotos;
+  }
+
   const applyMinJob = payload.applyMinJobPrice !== undefined
     ? Boolean(payload.applyMinJobPrice)
     : Boolean(estimate.pricingSnapshot?.applyMinJobPrice);
@@ -856,19 +873,23 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   // Keep underlying Deck in sync if present
   if (estimate.deckId) {
     try {
+      const deckSyncData = {
+        projectName: payload.estimateName || estimate.estimateName,
+        'dimensions.length': specData.length,
+        'dimensions.width': specData.width,
+        'dimensions.area': floorVal,
+        deckShape: specData.deckShape,
+        'structureDetails.height': specData.accessType,
+        'structureDetails.components': specData.components,
+        'surfaceDetails.woodSpecies': specData.woodSpecies,
+        'surfaceDetails.coatingStatus': specData.existingCoating,
+        visibleConditions: specData.conditions,
+      };
+      if (Array.isArray(incomingPhotos) && incomingPhotos.length > 0) {
+        deckSyncData.photos = incomingPhotos;
+      }
       await Deck.findByIdAndUpdate(estimate.deckId, {
-        $set: {
-          projectName: payload.estimateName || estimate.estimateName,
-          'dimensions.length': specData.length,
-          'dimensions.width': specData.width,
-          'dimensions.area': floorVal,
-          deckShape: specData.deckShape,
-          'structureDetails.height': specData.accessType,
-          'structureDetails.components': specData.components,
-          'surfaceDetails.woodSpecies': specData.woodSpecies,
-          'surfaceDetails.coatingStatus': specData.existingCoating,
-          visibleConditions: specData.conditions,
-        },
+        $set: deckSyncData,
       });
     } catch (deckSyncErr) {
       console.warn('[Deck Sync Warning]:', deckSyncErr.message);
@@ -904,7 +925,7 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 2. Create or sync a Hot Priority Lead
   const isContractor = user.role === ROLES.CONTRACTOR;
-  const leadNum = `LD-${estimate.estimateReference || Date.now().toString().slice(-4)}`;
+  const leadNum = `LD-${estimate.estimateNumber || estimate.estimateReference || Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
   let lead = await Lead.findOne({ estimateId: estimate._id });
   if (!lead) {
@@ -961,11 +982,12 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 3. Create or update Project record
   let project = await Project.findOne({ estimateId: estimate._id });
+  const effectiveCustomerId = !isContractor ? user._id : (estimate.createdFor || estimate.ownerId || estimate.createdBy || user._id);
   if (!project) {
     project = new Project({
-      projectId: estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
+      projectId: estimate.estimateNumber || estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
       projectName: estimate.deckDetails?.projectName || 'Deck Restoration Project',
-      customerId: !isContractor ? user._id : estimate.userId,
+      customerId: effectiveCustomerId,
       contractorId: isContractor ? user._id : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
@@ -977,6 +999,9 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   } else {
     project.status = 'pending';
     project.progress = 30;
+    if (!project.customerId) {
+      project.customerId = effectiveCustomerId;
+    }
     await project.save();
   }
 

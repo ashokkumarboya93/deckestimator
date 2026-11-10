@@ -27,6 +27,12 @@ export default function AdminVerificationProgressPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
+  // Search & Filtering
+  const [searchTerm, setSearchTerm] = useState('');
+  const [customerStatusFilter, setCustomerStatusFilter] = useState('all');
+  const [contractorStatusFilter, setContractorStatusFilter] = useState('all');
+  const [viewContractorModal, setViewContractorModal] = useState(null);
+
   // Verifications State
   const [verifications, setVerifications] = useState([]);
   const [verifCounts, setVerifCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
@@ -366,36 +372,46 @@ export default function AdminVerificationProgressPage() {
                           </button>
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          {item.status === 'pending' ? (
-                            <div style={styles.actionButtonGroup}>
+                          <div style={styles.actionButtonGroup}>
+                            <button
+                              type="button"
+                              onClick={() => setViewContractorModal(item)}
+                              style={styles.actionBtnOutline}
+                              title="View contractor submission details and location"
+                            >
+                              View
+                            </button>
+                            {item.status === 'pending' ? (
+                              <>
+                                <button
+                                  onClick={() => handleApproveVerification(item)}
+                                  style={styles.actionBtnSuccess}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleOpenRejectModal(item)}
+                                  style={styles.actionBtnDanger}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : item.status === 'rejected' ? (
                               <button
                                 onClick={() => handleApproveVerification(item)}
                                 style={styles.actionBtnSuccess}
                               >
-                                Approve
+                                Re-Approve
                               </button>
+                            ) : (
                               <button
                                 onClick={() => handleOpenRejectModal(item)}
-                                style={styles.actionBtnDanger}
+                                style={styles.actionBtnOutline}
                               >
-                                Reject
+                                Revoke
                               </button>
-                            </div>
-                          ) : item.status === 'rejected' ? (
-                            <button
-                              onClick={() => handleApproveVerification(item)}
-                              style={styles.actionBtnSuccess}
-                            >
-                              Re-Approve
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleOpenRejectModal(item)}
-                              style={styles.actionBtnOutline}
-                            >
-                              Revoke
-                            </button>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -680,13 +696,13 @@ export default function AdminVerificationProgressPage() {
         </div>
       )}
 
-      {/* CONTRACTOR DOCUMENT VIEWER MODAL */}
+      {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH LIVE PREVIEW */}
       {viewingDocModal && (
         <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...styles.modalContent, maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={styles.modalTitle}>Document Inspection</h3>
+                <h3 style={styles.modalTitle}>Document Live Inspection</h3>
                 <p style={styles.modalSub}>{viewingDocModal.originalFileName}</p>
               </div>
               <button onClick={() => setViewingDocModal(null)} style={styles.modalCloseBtn}>✕</button>
@@ -698,22 +714,60 @@ export default function AdminVerificationProgressPage() {
                 <div><strong>Status:</strong> {(viewingDocModal.documentStatus || 'pending').replace(/_/g, ' ').toUpperCase()}</div>
                 <div><strong>File Size:</strong> {Math.round((viewingDocModal.fileSize || 1024) / 1024)} KB</div>
                 <div><strong>Uploaded:</strong> {new Date(viewingDocModal.createdAt).toLocaleString()}</div>
-                <div><strong>Storage Key:</strong> {viewingDocModal.storageKey || 'N/A'}</div>
+                <div><strong>Storage:</strong> MongoDB Secure Vault</div>
               </div>
 
-              <div style={styles.docPreviewPlaceholder}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="1.5">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                </svg>
-                <p style={{ marginTop: '10px', fontSize: '14px', color: '#0f172a', fontWeight: '700' }}>
-                  {viewingDocModal.originalFileName}
-                </p>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0 0' }}>
-                  Document verified for commercial wholesale discount authorization.
-                </p>
+              {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
+              <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                {(() => {
+                  const docUrl = `/api/v1/contractors/documents/${viewingDocModal._id}/file`;
+                  const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
+                  const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
+
+                  if (isImg) {
+                    return (
+                      <img
+                        src={docUrl}
+                        alt={viewingDocModal.originalFileName}
+                        style={{ maxWidth: '100%', maxHeight: '440px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                      />
+                    );
+                  }
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={docUrl}
+                        title={viewingDocModal.originalFileName}
+                        style={{ width: '100%', height: '440px', border: 'none', borderRadius: '6px' }}
+                      />
+                    );
+                  }
+                  return (
+                    <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+                      <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#0F172A' }}>
+                        {viewingDocModal.originalFileName}
+                      </p>
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#1E3A63', color: '#FFFFFF', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
+                      >
+                        Open File in Viewer &rarr;
+                      </a>
+                    </div>
+                  );
+                })()}
+                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <a
+                    href={`/api/v1/contractors/documents/${viewingDocModal._id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '12px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
+                  >
+                    Open Document in New Tab &rarr;
+                  </a>
+                </div>
               </div>
 
               {viewingDocModal.reviewNotes && (
@@ -741,8 +795,109 @@ export default function AdminVerificationProgressPage() {
                     }}
                     style={styles.actionBtnSuccessLg}
                   >
-                    Approve Document
+                    ✓ Approve Document
                   </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTRACTOR DETAILS, DATE & LOCATION POPUP MODAL */}
+      {viewContractorModal && (
+        <div style={styles.modalOverlay} onClick={() => setViewContractorModal(null)}>
+          <div style={{ ...styles.modalContent, maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Contractor Verification Details</h3>
+                <p style={styles.modalSub}>
+                  Submission received on {new Date(viewContractorModal.submittedAt || viewContractorModal.createdAt || Date.now()).toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setViewContractorModal(null)} style={styles.modalCloseBtn}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Contractor Name</span>
+                  <strong style={{ fontSize: '14px', color: '#0F172A' }}>{viewContractorModal.contractorName || 'Contractor'}</strong>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Email Address</span>
+                  <span style={{ fontSize: '13px', color: '#334155' }}>{viewContractorModal.contractorEmail || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Company / Business</span>
+                  <strong style={{ fontSize: '14px', color: '#1E3A63' }}>{viewContractorModal.companyName || viewContractorModal.businessName || 'Independent Pro'}</strong>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>License Number</span>
+                  <span style={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: '#0F172A' }}>
+                    {viewContractorModal.licenseNumber || 'Verified ID'}
+                    {viewContractorModal.licenseJurisdiction ? ` (${viewContractorModal.licenseJurisdiction})` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Phone</span>
+                  <span style={{ fontSize: '13px', color: '#334155' }}>{viewContractorModal.businessPhone || viewContractorModal.phone || 'N/A'}</span>
+                </div>
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Verification Status</span>
+                  <span style={getVerifStatusBadge(viewContractorModal.status)}>
+                    {(viewContractorModal.status || 'PENDING').toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    Operating Location &amp; Headquarters
+                  </span>
+                  <div style={{ fontSize: '13px', color: '#0F172A', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span>
+                      {viewContractorModal.location?.street ? `${viewContractorModal.location.street}, ` : ''}
+                      {viewContractorModal.location?.city || viewContractorModal.businessAddress?.city || 'Shamong'}, {' '}
+                      {viewContractorModal.location?.state || viewContractorModal.businessAddress?.state || 'NJ'}, {' '}
+                      {viewContractorModal.location?.zipCode || viewContractorModal.businessAddress?.zipCode || '08088'}, USA
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...styles.modalFooter, marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewContractorModal(null)}
+                  style={styles.modalBtnSecondary}
+                >
+                  Close
+                </button>
+                {viewContractorModal.status === 'pending' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleOpenRejectModal(viewContractorModal);
+                        setViewContractorModal(null);
+                      }}
+                      style={styles.actionBtnDanger}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleApproveVerification(viewContractorModal);
+                        setViewContractorModal(null);
+                      }}
+                      style={styles.actionBtnSuccess}
+                    >
+                      ✓ Approve Contractor
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

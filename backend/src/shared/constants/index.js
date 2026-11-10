@@ -74,6 +74,7 @@ const LEAD_STATUS = Object.freeze({
 /** Lead sources */
 const LEAD_SOURCE = Object.freeze({
   CUSTOMER_ESTIMATOR: 'customer_estimator',
+  CONTRACTOR_PORTAL: 'contractor_portal',
   ESTIMATE_ENQUIRY: 'estimate_enquiry',
   CONTACT_FORM: 'contact_form',
   ADMIN_CREATED: 'admin_created',

@@ -571,6 +571,33 @@ async function changeAdminPassword(req, res, next) {
   }
 }
 
+async function getAdminHierarchy(req, res, next) {
+  try {
+    const hierarchy = await adminService.getAdminHierarchy(req.user);
+    res.status(200).json({ success: true, data: hierarchy });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createChildAdmin(req, res, next) {
+  try {
+    const result = await adminService.createChildAdmin(req.user, req.body);
+    res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteChildAdmin(req, res, next) {
+  try {
+    const result = await adminService.deleteChildAdmin(req.user, req.params.id);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardSummary,
   getBusinessActivityTrend,
@@ -630,4 +657,7 @@ module.exports = {
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,
+  getAdminHierarchy,
+  createChildAdmin,
+  deleteChildAdmin,
 };

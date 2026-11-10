@@ -147,6 +147,10 @@ const router = createBrowserRouter([
             element: <CustomerEstimatesPage />,
           },
           {
+            path: 'projects',
+            element: <CustomerEstimatesPage />,
+          },
+          {
             path: 'estimates/:estimateId',
             element: <EstimateDetailPage />,
           },
@@ -218,11 +222,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'profile',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorProfilePage />
-              </RequireApprovedContractor>
-            ),
+            element: <ContractorProfilePage />,
           },
           {
             path: 'decks/:deckId',
@@ -271,11 +271,11 @@ const router = createBrowserRouter([
           },
           {
             path: 'verification',
-            element: <Navigate to="/contractor/profile" replace />,
+            element: <ContractorVerificationRequestPage />,
           },
           {
             path: 'verification-request',
-            element: <Navigate to="/contractor/profile" replace />,
+            element: <ContractorVerificationRequestPage />,
           },
           {
             path: 'settings',

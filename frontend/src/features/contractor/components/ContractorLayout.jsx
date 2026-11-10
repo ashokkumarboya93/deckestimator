@@ -8,10 +8,11 @@
 // - Dynamic top navigation with breadcrumbs, notifications, search, profile, and logout
 // - Help & Guide modal for contractor self-service
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
@@ -27,14 +28,79 @@ export default function ContractorLayout() {
   }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [leadsCount, setLeadsCount] = useState(6);
+  const [leadsCount, setLeadsCount] = useState(0);
   const [projectName, setProjectName] = useState('');
   const [contractorProfile, setContractorProfile] = useState(null);
   const [signoutHover, setSignoutHover] = useState(false);
+  const notifRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Real-time synchronization of notifications from MongoDB
+  const fetchRealNotifications = useCallback(async () => {
+    try {
+      const data = await getMyNotifications({ limit: 15 });
+      setNotifications(data?.notifications || []);
+      setUnreadNotifications(data?.unreadCount || 0);
+    } catch {
+      // Fallback silently
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 20000);
+    window.addEventListener('focus', fetchRealNotifications);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchRealNotifications);
+    };
+  }, [fetchRealNotifications]);
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadNotifications(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {
+      setUnreadNotifications(0);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead && notif._id) {
+      try {
+        await markNotificationRead(notif._id);
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+        );
+        setUnreadNotifications((prev) => Math.max(0, prev - 1));
+      } catch {
+        // Continue
+      }
+    }
+    setShowNotifications(false);
+  };
+
+  // Click-outside listener
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Sync contractor profile data
   useEffect(() => {
@@ -129,25 +195,28 @@ export default function ContractorLayout() {
         {/* Brand Header */}
         <div style={styles.brandBox}>
           {isSidebarHovered ? (
-            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%', padding: '0 4px' }}>
               <img
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '36px',
-                  maxWidth: '185px',
+                  height: '52px',
+                  maxWidth: '210px',
                   objectFit: 'contain',
                 }}
               />
             </Link>
           ) : (
             <Link to="/contractor/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
-              <div style={styles.brandLogoIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              </div>
+              <img
+                src={mainLogo}
+                alt="Deck Restoration Plus"
+                style={{
+                  height: '38px',
+                  maxWidth: '46px',
+                  objectFit: 'contain',
+                }}
+              />
             </Link>
           )}
         </div>
@@ -342,7 +411,7 @@ export default function ContractorLayout() {
         style={{
           ...styles.mainWrapper,
           marginLeft: '68px',
-          ...(isEstimatorPage ? { minHeight: '100vh' } : {}),
+          minHeight: '100vh',
         }}
       >
         {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
@@ -394,6 +463,8 @@ export default function ContractorLayout() {
                     ? 'Commissions & Earnings'
                     : currentPath.includes('/discounts')
                     ? 'Partner Discounts'
+                    : currentPath.includes('/profile') || currentPath.includes('/settings')
+                    ? 'Profile & Business Settings'
                     : 'Contractor Portal'}
                 </h1>
               </div>
@@ -442,13 +513,10 @@ export default function ContractorLayout() {
             </Link>
 
             {/* Notification Bell */}
-            <div style={{ position: 'relative' }}>
+            <div ref={notifRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => {
-                  setShowNotifications(!showNotifications);
-                  setUnreadNotifications(0);
-                }}
+                onClick={() => setShowNotifications(!showNotifications)}
                 style={styles.iconBtn}
                 title="Notifications"
               >
@@ -463,16 +531,62 @@ export default function ContractorLayout() {
 
               {showNotifications && (
                 <div style={styles.notifDropdown}>
-                  <div style={styles.notifHeader}>Recent Notifications</div>
-                  <div style={styles.notifItem}>New lead assigned: Riverside Deck Restoration</div>
-                  <div style={styles.notifItem}>Document verified: Contractor License LIC-TX-2026-99</div>
-                  <div style={styles.notifItem}>Commission payable: COM-1007 ($486.00)</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid #F1F5F9' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0F172A' }}>
+                      Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
+                    </div>
+                    {unreadNotifications > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllNotifications}
+                        style={{ background: 'none', border: 'none', color: '#034EA2', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                        No new notifications
+                      </div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif._id || notif.id}
+                          onClick={() => handleNotificationClick(notif)}
+                          style={{
+                            padding: '10px 14px',
+                            borderBottom: '1px solid #F8FAFC',
+                            backgroundColor: notif.isRead ? '#FFFFFF' : '#F0F7FF',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = notif.isRead ? '#FFFFFF' : '#F0F7FF'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: notif.isRead ? '#334155' : '#034EA2' }}>
+                              {notif.title || 'Platform Notification'}
+                            </span>
+                            <span style={{ fontSize: '10px', color: '#94A3B8' }}>
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '11.5px', color: '#64748B', lineHeight: '1.4' }}>
+                            {notif.message}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Profile Dropdown Pill */}
-            <div style={{ position: 'relative' }}>
+            <div ref={profileRef} style={{ position: 'relative' }}>
               <div
                 style={styles.profilePill}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -737,6 +851,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
+    minHeight: '100vh',
     transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   topHeader: {
@@ -758,9 +873,10 @@ const styles = {
     gap: '12px',
   },
   headerTitle: {
-    fontSize: '1.15rem',
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: '1.35rem',
+    fontWeight: '800',
+    color: '#1E3A63',
+    letterSpacing: '-0.3px',
     margin: 0,
   },
   outlinedBackBtn: {
@@ -978,6 +1094,9 @@ const styles = {
   mainContent: {
     flex: 1,
     minWidth: 0,
+    minHeight: 'calc(100vh - 65px - 260px)',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalOverlay: {
     position: 'fixed',

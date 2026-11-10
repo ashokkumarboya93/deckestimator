@@ -7,6 +7,7 @@ const ContractorProfile = require('./contractorProfile.model');
 const VerificationDocument = require('./verificationDocument.model');
 const VerificationHistory = require('./verificationHistory.model');
 const User = require('../users/users.model');
+require('../catalogs/service.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const storageProvider = require('../files/storageProvider');
 const {
@@ -282,6 +283,38 @@ async function getDocumentFilePath(documentId, requestingUser) {
     mimeType: doc.mimeType,
     originalFileName: doc.originalFileName,
   };
+}
+
+/**
+ * Delete a verification document.
+ */
+async function deleteDocument(documentId, requestingUser) {
+  const doc = await VerificationDocument.findById(documentId);
+  if (!doc) {
+    const error = new Error('Verification document not found.');
+    error.statusCode = 404;
+    error.code = 'DOCUMENT_NOT_FOUND';
+    throw error;
+  }
+
+  if (
+    requestingUser.role !== ROLES.ADMIN &&
+    doc.userId.toString() !== requestingUser.id
+  ) {
+    const error = new Error('Unauthorized to delete this document.');
+    error.statusCode = 403;
+    error.code = 'FORBIDDEN';
+    throw error;
+  }
+
+  try {
+    await storageProvider.deleteFile(doc.storageKey, 'contractor-documents');
+  } catch (err) {
+    console.warn('[Document Storage Delete Warning]:', err.message);
+  }
+
+  await VerificationDocument.findByIdAndDelete(documentId);
+  return { success: true, message: 'Document deleted successfully.' };
 }
 
 /**
@@ -584,6 +617,7 @@ module.exports = {
   uploadDocument,
   getDocuments,
   getDocumentFilePath,
+  deleteDocument,
   listContractorsForAdmin,
   getContractorDetailsForAdmin,
   reviewContractor,

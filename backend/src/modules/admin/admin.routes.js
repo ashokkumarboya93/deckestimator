@@ -121,9 +121,12 @@ router.put('/permissions', adminController.savePermissionsMatrix);
 router.get('/reports/export', adminController.exportReports);
 router.get('/reports', adminController.getReportsAnalytics);
 
-// 13. Admin Profile
+// 13. Admin Profile & Hierarchy
 router.get('/profile', adminController.getAdminProfile);
 router.put('/profile', adminController.updateAdminProfile);
 router.post('/profile/change-password', adminController.changeAdminPassword);
+router.get('/hierarchy', adminController.getAdminHierarchy);
+router.post('/child-admins', adminController.createChildAdmin);
+router.delete('/child-admins/:id', adminController.deleteChildAdmin);
 
 module.exports = router;

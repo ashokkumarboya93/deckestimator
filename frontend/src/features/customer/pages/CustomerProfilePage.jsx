@@ -171,7 +171,7 @@ export default function CustomerProfilePage() {
 
   return (
     <div style={styles.container}>
-      {/* Page Title & Breadcrumb Header */}
+      {/* Page Title & Breadcrumb Header with Top Save Button */}
       <div style={styles.pageHeader}>
         <div>
           <h1 style={styles.headingTitle}>Profile Settings</h1>
@@ -179,6 +179,20 @@ export default function CustomerProfilePage() {
             Manage your personal profile, contact information, and default property address.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={handleSaveProfile}
+          disabled={saving}
+          style={styles.topSaveBtn}
+          title="Save profile changes"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg>
+          <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+        </button>
       </div>
 
       {/* Notifications */}
@@ -449,7 +463,27 @@ const styles = {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   pageHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
     marginBottom: '16px',
+    flexWrap: 'wrap',
+  },
+  topSaveBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '9px 18px',
+    backgroundColor: '#034EA2',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(3, 78, 162, 0.25)',
+    transition: 'all 0.16s ease',
   },
   headingTitle: {
     fontSize: '22px',

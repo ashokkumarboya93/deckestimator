@@ -303,42 +303,26 @@ export default function AdminSettingsPage() {
                 />
               </div>
             </div>
-
-            {/* Logo Preview & Custom URL */}
-            <div style={{ marginTop: '24px', padding: '18px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: '#0f172a' }}>Platform Logo & Brand Symbol</h4>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
-                Current system logo is the official vector Deck + Home illustration. You can provide an image URL or keep the default vector emblem.
-              </p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ width: '64px', height: '64px', backgroundColor: '#0a1628', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {settings.platformLogoUrl ? (
-                    <img src={settings.platformLogoUrl} alt="Logo" style={{ maxWidth: '48px', maxHeight: '48px', objectFit: 'contain' }} />
-                  ) : (
-                    <DeckHomeLogo size={36} color="#ffffff" strokeWidth={2.2} />
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={styles.inputLabel}>Custom Logo Image URL (Optional)</label>
-                  <input
-                    type="text"
-                    value={settings.platformLogoUrl || ''}
-                    onChange={(e) => setSettings({ ...settings, platformLogoUrl: e.target.value })}
-                    style={styles.input}
-                    placeholder="https://example.com/logo.png (Leave empty to use vector Deck + Home emblem)"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         ) : activeTab === 'contact' ? (
           /* TAB 2: CONTACT, WHATSAPP & CHANNELS */
           <div>
-            <h3 style={styles.cardSectionTitle}>Customer & Contractor Contact Channels</h3>
-            <p style={styles.cardSectionSub}>
-              Direct communication channels displayed across customer quote headers, contact modals, and contractor outreach.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={styles.cardSectionTitle}>Customer & Contractor Contact Channels</h3>
+                <p style={styles.cardSectionSub}>
+                  Direct communication channels displayed across customer quote headers, contact modals, and contractor outreach. Saved changes sync live across Customer and Contractor portals.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={saving}
+                style={{ ...styles.btnPrimary, backgroundColor: '#15803D' }}
+              >
+                {saving ? 'Saving Channels...' : '✓ Save Contact Channels'}
+              </button>
+            </div>
 
             <div style={styles.formGrid}>
               <div style={styles.formGroup}>
@@ -411,6 +395,17 @@ export default function AdminSettingsPage() {
                 style={styles.textarea}
                 placeholder="1452 Boardwalk Ave, Cherry Hill, NJ 08002"
               />
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={saving}
+                style={{ ...styles.btnPrimary, backgroundColor: '#15803D' }}
+              >
+                {saving ? 'Saving...' : '✓ Save Contact Channels to Database'}
+              </button>
             </div>
           </div>
         ) : activeTab === 'notifications' ? (

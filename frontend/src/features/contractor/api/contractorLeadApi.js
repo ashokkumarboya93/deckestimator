@@ -33,6 +33,11 @@ export const contractorLeadApi = {
     return res.data;
   },
 
+  deleteDocument: async (documentId) => {
+    const res = await client.delete(`/contractors/documents/${documentId}`);
+    return res.data;
+  },
+
   getAssignedLeads: async (params = {}) => {
     const res = await client.get(ENDPOINTS.LEADS.CONTRACTOR_INBOX, { params });
     return res.data;

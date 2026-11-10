@@ -19,12 +19,22 @@ import lShape01 from './section1/L-Shape/3.L-Shape01.jpg';
 import lShape02 from './section1/L-Shape/3.L-Shape_02.jpg';
 import lShape03 from './section1/L-Shape/3.L-Shape03.jpg';
 
-import customMain from './section1/Custom/5.Custom_Main.png';
+import customMain from '../Round Wooden Deck with Wicker Seating.png';
 import custom01 from './section1/Custom/5.Custom01.jpg';
 import custom02 from './section1/Custom/5.Custom02.jpg';
 import custom03 from './section1/Custom/5.Custom03.jpg';
 
 // --- SECTION 2: ARCHITECTURAL COMPONENTS ---
+import railingsMain from './section2/Perimeter Railing/perimeter Railing_Main.jpg';
+import railings01 from './section2/Perimeter Railing/perimeter Railing01.jpg';
+import railings02 from './section2/Perimeter Railing/perimeter Railing02.jpg';
+import railings03 from './section2/Perimeter Railing/perimeter Railing03.jpg';
+
+import stairsMain from './section2/Stair steps/stair steps_Main.jpg';
+import stairs01 from './section2/Stair steps/stair steps01.jpg';
+import stairs02 from './section2/Stair steps/stair steps02.jpg';
+import stairs03 from './section2/Stair steps/stair steps03.jpg';
+
 import pergolaMain from './section2/1.Pergola_Main.jpg';
 import pergola01 from './section2/1.Pergola01.jpg';
 import pergola02 from './section2/1.Pergola02.jpg';
@@ -60,6 +70,11 @@ import redwoodMain from './section3/California-Redwood/Redwood_Main.jpg';
 import redwood01 from './section3/California-Redwood/Redwood01.jpg';
 import redwood02 from './section3/California-Redwood/Redwood02.jpg';
 import redwood03 from './section3/California-Redwood/Redwood03.jpg';
+
+import compositeMain from './section3/Composite-trex/Composite-trex_Main.jpg';
+import composite01 from './section3/Composite-trex/Composite-trex01.jpg';
+import composite02 from './section3/Composite-trex/Composite-trex02.jpg';
+import composite03 from './section3/Composite-trex/Composite-trex03.jpg';
 
 import mahoganyMain from './section3/Honduran-Mahogany/Mahogany_Main.jpg';
 import mahogany01 from './section3/Honduran-Mahogany/Mahogany01.jpg';
@@ -107,6 +122,88 @@ import secondStory01 from './section4/Second-Story/Second-Story01.jpg';
 import secondStory02 from './section4/Second-Story/Second-Story02.jpg';
 import secondStory03 from './section4/Second-Story/Second-Story03.jpg';
 
+import roofMain from './section4/Roof Staging/Roof Staging_Main.jpg';
+import roof01 from './section4/Roof Staging/Roof Staging01.jpg';
+import roof02 from './section4/Roof Staging/Roof Staging02.jpg';
+import roof03 from './section4/Roof Staging/Roof Staging03.jpg';
+
+// --- SECTION 5: EXISTING DECK FINISH & COATING ---
+import bareWoodMain from './section5/Bare Wood/Bare wood_Main.jpg';
+import bareWood01 from './section5/Bare Wood/Bare Wood01.jpg';
+import bareWood02 from './section5/Bare Wood/Bare Wood02.jpg';
+import bareWood03 from './section5/Bare Wood/Bare Wood03.jpg';
+
+import clearSealerMain from './section5/Clear sealer/Clear sealer.jpg';
+import clearSealer01 from './section5/Clear sealer/Clear sealer01.webp';
+import clearSealer02 from './section5/Clear sealer/Clear Sealer02.jpeg';
+import clearSealer03 from './section5/Clear sealer/Clear sealer03.jpg';
+
+import transparentStainMain from './section5/Transparent Stain/Transparent_Main.jpg';
+import transparentStain01 from './section5/Transparent Stain/Transparent01.jpg';
+import transparentStain02 from './section5/Transparent Stain/Transparent02.jpg';
+import transparentStain03 from './section5/Transparent Stain/Transparent03.jpg';
+
+import semiTransparentMain from './section5/Semi-Transparent Stain/Semi Transparent_Main.jpg';
+import semiTransparent01 from './section5/Semi-Transparent Stain/Semi transparent01.jpg';
+import semiTransparent02 from './section5/Semi-Transparent Stain/Semi Transparent02.jpg';
+import semiTransparent03 from './section5/Semi-Transparent Stain/Semi Transparent03.jpg';
+
+import solidStainMain from './section5/Solid color stain/Solid Color stain_Main.jpg';
+import solidStain01 from './section5/Solid color stain/Solid Color stain01.jpg';
+import solidStain02 from './section5/Solid color stain/Solid Color stain02.jpg';
+import solidStain03 from './section5/Solid color stain/Solid Color stain03.jpg';
+
+import exteriorPaintMain from './section5/Exterior Paint/Exterior Paint_Main.jpg';
+import exteriorPaint01 from './section5/Exterior Paint/Exterior Paint01.jpg';
+import exteriorPaint02 from './section5/Exterior Paint/Exterior Paint02.webp';
+import exteriorPaint03 from './section5/Exterior Paint/Exterior paint03.jpg';
+
+// --- SECTION 6: RESTORATION SCOPE OF WORK (SERVICES) ---
+import cleaningMain from './section6/Deep Cleaning/Deep Cleaning_Main.jpg';
+import cleaning01 from './section6/Deep Cleaning/Deep Cleaning01.jpg';
+import cleaning02 from './section6/Deep Cleaning/Deep Cleaning02.jpg';
+import cleaning03 from './section6/Deep Cleaning/Deep Cleaning03.jpg';
+
+import strippingMain from './section6/Deck Stripping (Stain Stripping)/Deck Stripping_main.jpg';
+import stripping01 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping01.jpg';
+import stripping02 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping02.jpg';
+import stripping03 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping03.jpg';
+
+import sandingMain from './section6/Deck Sanding (Floor & Railing)/Deck Sanding_Main.jpg';
+import sanding01 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding01.jpg';
+import sanding02 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding02.jpg';
+import sanding03 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding03.jpg';
+
+import stainingMain from './section6/Deck Staining (Conditioning)/Deck Staining_Main.jpg';
+import staining01 from './section6/Deck Staining (Conditioning)/Deck Staining01.jpg';
+import staining02 from './section6/Deck Staining (Conditioning)/Deck Staining02.jpg';
+import staining03 from './section6/Deck Staining (Conditioning)/Deck Staining03.jpg';
+
+import sealingMain from './section6/Deck Sealing (Clear Sealing)/Deck Sealing_Main.jpg';
+import sealing01 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing01.jpg';
+import sealing02 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing02.jpg';
+import sealing03 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing03.jpg';
+
+import repairMain from './section6/Deck Board Repair or Replacement/Deck Board Repair_Main.jpg';
+import repair01 from './section6/Deck Board Repair or Replacement/Deck Board Repair01.jpg';
+import repair02 from './section6/Deck Board Repair or Replacement/Deck Board Repair02.jpg';
+import repair03 from './section6/Deck Board Repair or Replacement/Deck Board Repair03.jpg';
+
+import brighteningMain from './section6/Wood Brightening/Wood Brightening_Main.jpg';
+import brightening01 from './section6/Wood Brightening/Wood Brightening01.jpg';
+import brightening02 from './section6/Wood Brightening/Wood Brightening02.jpg';
+import brightening03 from './section6/Wood Brightening/Wood Brightening03.jpg';
+
+import waterproofingMain from './section6/Waterproofing Barrier/Waterproofing Barrier_Main.jpg';
+import waterproofing01 from './section6/Waterproofing Barrier/Waterproofing Barrier01.jpg';
+import waterproofing02 from './section6/Waterproofing Barrier/Waterproofing Barrier02.jpg';
+import waterproofing03 from './section6/Waterproofing Barrier/Waterproofing Barrier03.jpg';
+
+import noCoatingMain from './section6/No Coating  Natural Bare Finish/No coating_Main.jpg';
+import noCoating01 from './section6/No Coating  Natural Bare Finish/No coating01.jpg';
+import noCoating02 from './section6/No Coating  Natural Bare Finish/No coating02.jpg';
+import noCoating03 from './section6/No Coating  Natural Bare Finish/No coating03.jpg';
+
 // --- SECTION 7: DECK PHYSICAL CONDITION ---
 import goodConditionMain from './section7/1.Good-Condition/Good-Condition_Main.jpg';
 import goodCondition01 from './section7/1.Good-Condition/Good-Condition01.jpg';
@@ -153,37 +250,44 @@ import looseDeck01 from './section7/9.Loose Deck Boards/Loose Deck01.jpg';
 import looseDeck02 from './section7/9.Loose Deck Boards/Loose Deck02.jpg';
 import looseDeck03 from './section7/9.Loose Deck Boards/Loose Deck03.jpg';
 
-// Structured Export Object
 export const ESTIMATOR_IMAGES = {
-  // Section 1: Shapes
+  // Section 1: Deck Footprint & Dimensions
   shapes: {
     rectangle: {
       main: rectangleMain,
-      isDiagram: true,
       references: [rectangle01, rectangle02, rectangle03],
     },
     square: {
       main: squareMain,
-      isDiagram: true,
       references: [square01, square02, square03],
     },
     l_shaped: {
       main: lShapeMain,
-      isDiagram: true,
       references: [lShape01, lShape02, lShape03],
     },
     custom: {
       main: customMain,
-      isDiagram: true,
       references: [custom01, custom02, custom03],
     },
   },
 
   // Section 2: Architectural Components
   components: {
+    railings: {
+      main: railingsMain,
+      references: [railings01, railings02, railings03],
+    },
+    stairs: {
+      main: stairsMain,
+      references: [stairs01, stairs02, stairs03],
+    },
     pergola: {
       main: pergolaMain,
       references: [pergola01, pergola02, pergola03],
+    },
+    fencing: {
+      main: fencingMain,
+      references: [fencing01, fencing02, fencing03],
     },
     privacy_wall: {
       main: fencingMain,
@@ -233,6 +337,14 @@ export const ESTIMATOR_IMAGES = {
       main: cedarMain,
       references: [cedar01, cedar02, cedar03],
     },
+    trex: {
+      main: compositeMain,
+      references: [composite01, composite02, composite03],
+    },
+    composite: {
+      main: compositeMain,
+      references: [composite01, composite02, composite03],
+    },
   },
 
   // Section 4: Site Accessibility & Elevation
@@ -250,16 +362,80 @@ export const ESTIMATOR_IMAGES = {
       references: [secondStory01, secondStory02, secondStory03],
     },
     roof: {
-      main: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-      references: [
-        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=800&q=80',
-      ],
+      main: roofMain,
+      references: [roof01, roof02, roof03],
     },
     low: {
-      main: groundMain,
-      references: [ground01, ground02, ground03],
+      main: lowElevationMain,
+      references: [lowElevation01, lowElevation02, lowElevation03],
+    },
+  },
+
+  // Section 5: Existing Deck Finish & Coating
+  coatings: {
+    none: {
+      main: bareWoodMain,
+      references: [bareWood01, bareWood02, bareWood03],
+    },
+    sealer: {
+      main: clearSealerMain,
+      references: [clearSealer01, clearSealer02, clearSealer03],
+    },
+    transparent_stain: {
+      main: transparentStainMain,
+      references: [transparentStain01, transparentStain02, transparentStain03],
+    },
+    semi_transparent: {
+      main: semiTransparentMain,
+      references: [semiTransparent01, semiTransparent02, semiTransparent03],
+    },
+    solid_stain: {
+      main: solidStainMain,
+      references: [solidStain01, solidStain02, solidStain03],
+    },
+    paint: {
+      main: exteriorPaintMain,
+      references: [exteriorPaint01, exteriorPaint02, exteriorPaint03],
+    },
+  },
+
+  // Section 6: Restoration Scope of Work (Services)
+  services: {
+    cleaning: {
+      main: cleaningMain,
+      references: [cleaning01, cleaning02, cleaning03],
+    },
+    stripping: {
+      main: strippingMain,
+      references: [stripping01, stripping02, stripping03],
+    },
+    sanding: {
+      main: sandingMain,
+      references: [sanding01, sanding02, sanding03],
+    },
+    staining: {
+      main: stainingMain,
+      references: [staining01, staining02, staining03],
+    },
+    sealing: {
+      main: sealingMain,
+      references: [sealing01, sealing02, sealing03],
+    },
+    repairs: {
+      main: repairMain,
+      references: [repair01, repair02, repair03],
+    },
+    wood_brightening: {
+      main: brighteningMain,
+      references: [brightening01, brightening02, brightening03],
+    },
+    waterproofing: {
+      main: waterproofingMain,
+      references: [waterproofing01, waterproofing02, waterproofing03],
+    },
+    no_coating: {
+      main: noCoatingMain,
+      references: [noCoating01, noCoating02, noCoating03],
     },
   },
 
@@ -305,4 +481,3 @@ export const ESTIMATOR_IMAGES = {
 };
 
 export default ESTIMATOR_IMAGES;
-

@@ -112,8 +112,8 @@ export default function AdminUserProfilePage() {
             <h3 style={{ margin: 0, fontSize: '15px', color: '#991b1b' }}>Unable to load dossier</h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#b91c1c' }}>{error || 'User not found'}</p>
           </div>
-          <button onClick={() => navigate('/admin/users')} style={styles.backBtnInline}>
-            Back to Directory
+          <button onClick={() => navigate(-1)} style={styles.backBtnInline}>
+            Back
           </button>
         </div>
       </div>
@@ -161,14 +161,14 @@ export default function AdminUserProfilePage() {
       <div style={styles.topBar} className="no-print">
         <button
           type="button"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => navigate(-1)}
           style={styles.backButton}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
-          <span>Back to Users</span>
+          <span>Back</span>
         </button>
 
         <div style={styles.actionsRight}>

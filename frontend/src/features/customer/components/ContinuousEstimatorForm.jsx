@@ -27,6 +27,8 @@ import { leadApi } from '../api/leadApi';
 import { calculateRestorationEstimateClient } from '../utils/pricingEngineClient';
 import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
+import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { useAuth } from '../../auth/hooks/useAuth';
 
 // Helper to validate Mongo ObjectIds
 function isValidObjectId(id) {
@@ -167,7 +169,7 @@ const COMPONENTS = [
   {
     id: 'railings',
     label: 'Perimeter Railings',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.railings.main,
     field: 'railingSqft',
     prompt: 'Railing Surface (sq ft)',
     unit: 'sq ft',
@@ -176,7 +178,7 @@ const COMPONENTS = [
   {
     id: 'stairs',
     label: 'Stair Steps',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.stairs.main,
     field: 'stairSteps',
     prompt: 'Number of Steps (Count)',
     unit: 'steps',
@@ -283,7 +285,7 @@ const WOOD_SPECIES = [
   {
     id: 'trex',
     name: 'Composite Trex',
-    img: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.trex.main,
     laborPct: '−55% credit (clean only)',
     desc: 'Engineered synthetic polymer core. No chemical strippers or stains.',
   },
@@ -320,32 +322,32 @@ const EXISTING_COATINGS = [
   {
     id: 'none',
     label: 'Bare Wood / No Coating',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.none.main,
   },
   {
     id: 'sealer',
     label: 'Clear Sealer',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.sealer.main,
   },
   {
     id: 'transparent_stain',
     label: 'Transparent Stain',
-    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.transparent_stain.main,
   },
   {
     id: 'semi_transparent',
     label: 'Semi-Transparent Stain',
-    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.semi_transparent.main,
   },
   {
     id: 'solid_stain',
     label: 'Solid Color Stain',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.solid_stain.main,
   },
   {
     id: 'paint',
     label: 'Exterior Paint',
-    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.coatings.paint.main,
   },
 ];
 
@@ -353,55 +355,55 @@ const SERVICES_LIST = [
   {
     id: 'cleaning',
     name: 'Deck Cleaning (Deep Cleaning)',
-    img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.cleaning.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'stripping',
     name: 'Deck Stripping (Stain Stripping)',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.stripping.main,
     rate: '50 sqft/hr',
   },
   {
     id: 'sanding',
     name: 'Deck Sanding (Floor & Railing)',
-    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.sanding.main,
     rate: '60 sqft/hr',
   },
   {
     id: 'staining',
     name: 'Deck Staining (Conditioning)',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.staining.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'sealing',
     name: 'Deck Sealing (Clear Sealing)',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.sealing.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'repairs',
     name: 'Deck Board Repair / Replacement',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.repairs.main,
     rate: 'Contractor Quoted',
   },
   {
     id: 'wood_brightening',
     name: 'Wood Brightening',
-    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.wood_brightening.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'waterproofing',
     name: 'Waterproofing Barrier',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.waterproofing.main,
     rate: '100 sqft/hr',
   },
   {
     id: 'no_coating',
     name: 'No Coating / Natural Bare Finish',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.services.no_coating.main,
     rate: 'Starts @ $2.50/sqft',
   },
 ];
@@ -539,11 +541,7 @@ const REFERENCE_SPECS = {
     title: 'Composite & Capped Trex',
     category: 'Synthetic Substrate',
     desc: 'Engineered synthetic polymer core. Chemically washed with bio-safe detergents without heavy mechanical sanding or film-forming stains.',
-    images: [
-      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.trex.references,
   },
 
   // --- SECTION 2: COMPONENTS ---
@@ -551,19 +549,13 @@ const REFERENCE_SPECS = {
     title: 'Perimeter Railings & Balusters',
     category: 'Architectural Component',
     desc: 'Handrails, posts, and vertical spindles. Restored using hand-brushing and spray techniques to coat intricate angles and spindle crevices.',
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.railings.references,
   },
   comp_stairs: {
     title: 'Stair Treads, Risers & Stringers',
     category: 'Architectural Component',
     desc: 'High foot-traffic transition steps. Tread surfaces receive traction-conscious deep penetrating finishes to prevent slipping while protecting wood.',
-    images: [
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.stairs.references,
   },
   comp_pergola: {
     title: 'Overhead Pergola Framing',
@@ -622,6 +614,100 @@ const REFERENCE_SPECS = {
     images: ESTIMATOR_IMAGES.elevations.roof.references,
   },
 
+  // --- SECTION 5: COATINGS & FINISHES ---
+  coating_none: {
+    title: 'Bare Wood / No Coating',
+    category: 'Surface Coating',
+    desc: 'Unfinished natural timber with raw cellulose exposed. Ideal canvas for penetrating conditioning oils and protective sealers.',
+    images: ESTIMATOR_IMAGES.coatings.none.references,
+  },
+  coating_sealer: {
+    title: 'Clear Protective Sealer',
+    category: 'Surface Coating',
+    desc: 'Transparent waterproofing barrier preserving wood grain aesthetics without altering natural timber coloration.',
+    images: ESTIMATOR_IMAGES.coatings.sealer.references,
+  },
+  coating_transparent_stain: {
+    title: 'Transparent Wood Stain',
+    category: 'Surface Coating',
+    desc: 'Lightly pigmented translucent formula enhancing natural grain patterns while imparting mild UV shielding.',
+    images: ESTIMATOR_IMAGES.coatings.transparent_stain.references,
+  },
+  coating_semi_transparent: {
+    title: 'Semi-Transparent Stain',
+    category: 'Surface Coating',
+    desc: 'Richly pigmented stain providing balanced color enrichment while allowing underlying timber grain and texture to shine through.',
+    images: ESTIMATOR_IMAGES.coatings.semi_transparent.references,
+  },
+  coating_solid_stain: {
+    title: 'Solid Color Deck Stain',
+    category: 'Surface Coating',
+    desc: 'Opaque protective film masking wood color variations, delivering maximum solar UV protection and weather shielding.',
+    images: ESTIMATOR_IMAGES.coatings.solid_stain.references,
+  },
+  coating_paint: {
+    title: 'Exterior Deck Paint',
+    category: 'Surface Coating',
+    desc: 'Heavy-duty acrylic exterior coating creating a solid protective shell over high-traffic decking and railing components.',
+    images: ESTIMATOR_IMAGES.coatings.paint.references,
+  },
+
+  // --- SECTION 6: RESTORATION SERVICES ---
+  service_cleaning: {
+    title: 'Deck Deep Cleaning & Wash',
+    category: 'Restoration Service',
+    desc: 'Eco-safe chemical brightening and deep power wash eliminating surface dirt, algae, environmental grime, and oxidized fibers.',
+    images: ESTIMATOR_IMAGES.services.cleaning.references,
+  },
+  service_stripping: {
+    title: 'Stain & Coating Stripping',
+    category: 'Restoration Service',
+    desc: 'Commercial-grade emulsifier application lifting deteriorated old stains, sealers, and failing previous finishes down to raw wood.',
+    images: ESTIMATOR_IMAGES.services.stripping.references,
+  },
+  service_sanding: {
+    title: 'Mechanical Floor & Railing Sanding',
+    category: 'Restoration Service',
+    desc: 'Precision orbital and drum sanding removing surface splinters, leveling mill glaze, and opening wood pores for superior stain penetration.',
+    images: ESTIMATOR_IMAGES.services.sanding.references,
+  },
+  service_staining: {
+    title: 'Deck Conditioning & Staining',
+    category: 'Restoration Service',
+    desc: 'Deep-penetrating oil and conditioning application shielding against sun fade, water pooling, and thermal drying cycles.',
+    images: ESTIMATOR_IMAGES.services.staining.references,
+  },
+  service_sealing: {
+    title: 'Clear Protective Sealing',
+    category: 'Restoration Service',
+    desc: 'High-solids clear silicone/alkyd sealing barrier locking out ambient moisture, rainwater, and mold colonization.',
+    images: ESTIMATOR_IMAGES.services.sealing.references,
+  },
+  service_repairs: {
+    title: 'Board Repair & Replacement',
+    category: 'Restoration Service',
+    desc: 'Targeted extraction of decayed, warped, or split timber planks and fastening of new architectural-grade matching boards.',
+    images: ESTIMATOR_IMAGES.services.repairs.references,
+  },
+  service_wood_brightening: {
+    title: 'Chemical Wood Brightening',
+    category: 'Restoration Service',
+    desc: 'Acidic pH-balancing wash following chemical stripping to neutralize wood tannins and restore brilliant natural wood highlights.',
+    images: ESTIMATOR_IMAGES.services.wood_brightening.references,
+  },
+  service_waterproofing: {
+    title: 'Hydrophobic Waterproofing Barrier',
+    category: 'Restoration Service',
+    desc: 'Commercial-grade water repellant preventing capillary moisture intrusion into end-grains and joist connections.',
+    images: ESTIMATOR_IMAGES.services.waterproofing.references,
+  },
+  service_no_coating: {
+    title: 'Natural Bare Finish Treatment',
+    category: 'Restoration Service',
+    desc: 'Thorough chemical wash, brightening, and biological sanitization leaving wood naturally clean without synthetic topcoats.',
+    images: ESTIMATOR_IMAGES.services.no_coating.references,
+  },
+
   // --- SECTION 7: DECK PHYSICAL CONDITIONS ---
   cond_good_condition: {
     title: 'Good Baseline Condition',
@@ -677,89 +763,6 @@ const REFERENCE_SPECS = {
     desc: 'Backed-out nails or stripped screws causing planks to flex, squeak, or lift. Addressed with countersunk exterior-grade structural screws.',
     images: ESTIMATOR_IMAGES.conditions.loose_board.references,
   },
-
-  // --- SECTION 6: SERVICES ---
-  service_cleaning: {
-    title: 'Deck Deep Chemical Cleaning',
-    category: 'Restoration Scope',
-    desc: 'Commercial-grade sodium percarbonate detergent wash dissolving dirt, mold spores, algae, and grey oxidized cellulose fibers without damaging wood.',
-    images: [
-      'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_stripping: {
-    title: 'Stain & Paint Stripping',
-    category: 'Restoration Scope',
-    desc: 'Professional chemical stripper application lifting failing acrylic solid stains, blistered paint, and old film sealers down to bare structural wood.',
-    images: [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_sanding: {
-    title: 'Mechanical Floor & Railing Sanding',
-    category: 'Restoration Scope',
-    desc: 'Oscillating and drum sanding leveling cupped boards, removing splinters, and opening cellular wood pores for maximum sealer absorption.',
-    images: [
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_staining: {
-    title: 'Penetrating Oil Staining',
-    category: 'Restoration Scope',
-    desc: 'Deep conditioning penetrating oils carrying trans-oxide pigments that enrich grain aesthetics while offering UV photoprotection.',
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_sealing: {
-    title: 'Clear Hydrophobic Sealing',
-    category: 'Restoration Scope',
-    desc: 'Hydrophobic silicone-free exterior sealer repelling standing rainwater and seasonal snowmelt while letting natural wood grain shine.',
-    images: [
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_repairs: {
-    title: 'Board Repair & Structural Replacement',
-    category: 'Restoration Scope',
-    desc: 'Replacement of rotted, severely split, or cupped boards using matching species and galvanized structural fasteners.',
-    images: [
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_wood_brightening: {
-    title: 'Citric/Oxalic Wood Brightening',
-    category: 'Restoration Scope',
-    desc: 'Acidic neutralizer neutralizing alkaline strippers and balancing wood pH to unlock vibrant natural golden and amber tones.',
-    images: [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_waterproofing: {
-    title: 'Heavy Waterproofing Barrier',
-    category: 'Restoration Scope',
-    desc: 'Micro-polymer water lock shielding timber from freeze-thaw cracking and sub-surface moisture rot.',
-    images: [
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  service_no_coating: {
-    title: 'Natural Bare Finish (No Film)',
-    category: 'Restoration Scope',
-    desc: 'Deep chemical wash and conditioning left untreated by topical stains for homeowners preferring a natural silver-patina weathering over time.',
-    images: [
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
 };
 
 export default function ContinuousEstimatorForm({
@@ -769,6 +772,10 @@ export default function ContinuousEstimatorForm({
   isContractor: isContractorProp = undefined,
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [activeSavedDeckId, setActiveSavedDeckId] = useState(() => extractValidObjectId(deckId || initialData?.deckId));
+  const [activeSavedEstimateId, setActiveSavedEstimateId] = useState(() => extractValidObjectId(initialData?.estimateId || initialData?._id || initialData?.id));
+  const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
   const isContractor = isContractorProp !== undefined
     ? isContractorProp
     : (typeof window !== 'undefined' && window.location.pathname.startsWith('/contractor'));
@@ -1202,6 +1209,9 @@ export default function ContinuousEstimatorForm({
     setZipCode('');
     setNotes('');
     setOfficialEstimate(null);
+    setActiveSavedDeckId(null);
+    setActiveSavedEstimateId(null);
+    setSaveSuccessNotice(false);
     setSubmitError(null);
     setLeadCreated(false);
     setApplyContractorDiscount(true);
@@ -1329,7 +1339,7 @@ export default function ContinuousEstimatorForm({
   }, [isContractor, runContractorCalc]);
 
   // --- SUBMIT ESTIMATE (INFALLIBLE CALCULATION GUARANTEE) ---
-  const handleSave = async (status = 'SUBMITTED') => {
+  const handleSave = async (status = 'SUBMITTED', { shouldScroll = true } = {}) => {
     // Sensible defaults so user is NEVER blocked by empty optional fields
     const activeShape = shape || 'rectangle';
     const activeLength = Number(length) > 0 ? Number(length) : 20;
@@ -1415,11 +1425,18 @@ export default function ContinuousEstimatorForm({
     setOfficialEstimate(immediateEstimate);
     if (isContractor) setContractorPricing(localCalc);
 
-    // Smooth scroll down to the official estimate result box immediately
-    setTimeout(() => {
-      const el = document.getElementById('official-estimate-result-box');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 120);
+    // Smooth scroll down to the right sidebar card / estimate result box immediately
+    if (shouldScroll) {
+      setTimeout(() => {
+        const sidebarCard = document.getElementById('sidebar-guidance-card');
+        if (sidebarCard) {
+          sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          const el = document.getElementById('official-estimate-result-box');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 120);
+    }
 
     // 2. Persist to Backend in background
     try {
@@ -1469,11 +1486,11 @@ export default function ContinuousEstimatorForm({
       };
 
       let savedDeck = null;
-      const cleanDeckId = extractValidObjectId(deckId || initialData?.deckId);
+      const targetDeckId = activeSavedDeckId || extractValidObjectId(deckId || initialData?.deckId);
 
-      if (isEditing && cleanDeckId) {
+      if (targetDeckId) {
         try {
-          savedDeck = await updateDeck(cleanDeckId, deckPayload);
+          savedDeck = await updateDeck(targetDeckId, deckPayload);
         } catch (deckErr) {
           console.warn('[Deck Update Fallback to Create]:', deckErr.message);
           savedDeck = await createDeck(deckPayload);
@@ -1482,7 +1499,8 @@ export default function ContinuousEstimatorForm({
         savedDeck = await createDeck(deckPayload);
       }
 
-      const activeDeckId = extractValidObjectId(savedDeck?._id || savedDeck?.id || cleanDeckId);
+      const activeDeckId = extractValidObjectId(savedDeck?._id || savedDeck?.id || targetDeckId);
+      if (activeDeckId) setActiveSavedDeckId(activeDeckId);
 
       // Estimate Payload
       const estimatePayload = {
@@ -1519,6 +1537,13 @@ export default function ContinuousEstimatorForm({
         length: activeLength,
         width: activeWidth,
         notes: notes.trim(),
+        photos: uploadedPhotos.map((p) => ({
+          name: p.name,
+          size: p.size,
+          type: p.type,
+          category: p.category,
+          url: p.dataUrl || p.url,
+        })),
         estimateStatus: 'CREATED',
         applyMinJobPrice,
         applyContractorDiscount: isContractor ? applyContractorDiscount : false,
@@ -1526,16 +1551,27 @@ export default function ContinuousEstimatorForm({
       };
 
       let est = null;
-      const cleanEstimateId = extractValidObjectId(initialData?.estimateId || initialData?._id || initialData?.id);
-      if (isEditing && cleanEstimateId) {
+      const targetEstimateId = activeSavedEstimateId || extractValidObjectId(initialData?.estimateId || initialData?._id || initialData?.id);
+      if (targetEstimateId) {
         try {
-          est = await updateEstimate(cleanEstimateId, estimatePayload);
+          est = await updateEstimate(targetEstimateId, estimatePayload);
         } catch (estErr) {
           console.warn('[Estimate Update Fallback to Create]:', estErr.message);
           est = await createEstimate(estimatePayload);
         }
       } else {
         est = await createEstimate(estimatePayload);
+      }
+
+      const activeEstId = extractValidObjectId(est?._id || est?.id || targetEstimateId);
+      if (activeEstId) setActiveSavedEstimateId(activeEstId);
+      setSaveSuccessNotice(true);
+      setTimeout(() => setSaveSuccessNotice(false), 3500);
+
+      try {
+        window.dispatchEvent(new CustomEvent('estimation_saved', { detail: est }));
+      } catch {
+        // Safe dispatch
       }
 
       if (est) {
@@ -1561,17 +1597,52 @@ export default function ContinuousEstimatorForm({
           minJobApplies,
           minJobAmount: minJobFloor,
           deckId: activeDeckId,
-          estimateId: extractValidObjectId(est._id || est.id || cleanEstimateId),
-          discountBreakdown: est.discountBreakdown || null,
+          estimateId: extractValidObjectId(est?._id || est?.id || activeEstId),
+          discountBreakdown: est?.discountBreakdown || null,
         }));
       }
     } catch (persistErr) {
       console.warn('[Backend Persistence Note]:', persistErr.message);
-      // User's calculated final price remains fully visible and intact
+      setSubmitError(persistErr.message || 'Failed to save estimate to server.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Continuous Auto-Save: whenever inputs change after calculation, auto-update in place
+  useEffect(() => {
+    if (!activeSavedEstimateId && !activeSavedDeckId) return;
+    const timer = setTimeout(() => {
+      handleSave('SUBMITTED', { shouldScroll: false });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [
+    activeSavedEstimateId,
+    activeSavedDeckId,
+    shape,
+    length,
+    width,
+    woodSpecies,
+    height,
+    exactHeightFt,
+    existingCoating,
+    services,
+    stainType,
+    conditions,
+    componentSqft,
+    selectedComponents,
+    crackBoardCount,
+    rottedBoardCount,
+    warpedBoardCount,
+    looseBoardCount,
+    waterDamagedBoardCount,
+    address,
+    city,
+    state,
+    zipCode,
+    notes,
+    applyMinJobPrice,
+  ]);
 
   // Convert Estimate to Hot Project Lead (Lead Generation)
   const handleConvertToLead = async () => {
@@ -1603,144 +1674,39 @@ export default function ContinuousEstimatorForm({
     }
   };
 
-  // Dedicated Export of Official Deck Estimate (Formatted HTML/PDF Document)
-  const handleExportOfficialEstimate = () => {
+  // Dedicated Export of Official Deck Estimate (Template PDF Document & Excel)
+  const handleExportOfficialEstimate = async (format = 'pdf') => {
     if (!officialEstimate) return;
-    const refNum = officialEstimate.ref || 'EST-' + Date.now().toString().slice(-6);
-    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const custName = user?.fullName || 'Valued Deck Owner';
-    const custEmail = user?.email || 'customer@deckrestorationplus.com';
-    const custPhone = user?.phone || user?.phoneNumber || '(856) 678-3325';
-    const projTitle = projectName || 'Deck Restoration Project';
-    const propAddress = address ? `${address}, ${city || ''} ${zipCode || ''}` : 'On-Site Property Inspection Pending';
+    const estimatePayload = {
+      ...officialEstimate,
+      shape,
+      deckShape: shape,
+      length,
+      width,
+      floorArea,
+      woodSpecies,
+      height,
+      accessType: height,
+      exactHeightFt,
+      existingCoating,
+      services,
+      conditions,
+      componentSqft,
+      crackBoardCount,
+      rottedBoardCount,
+      warpedBoardCount,
+      looseBoardCount,
+      waterDamagedBoardCount,
+      photos: uploadedPhotos,
+      projectName: projectName || 'Deck Restoration Project',
+      propertyAddress: { street: address, city, state, zipCode, country: 'USA' },
+    };
 
-    const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Official Estimate - ${refNum} - Deck Restoration Plus</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    body { background: #ffffff; color: #0f172a; margin: 0; padding: 40px; font-size: 13px; line-height: 1.5; }
-    .header-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1E3A63; padding-bottom: 18px; margin-bottom: 24px; }
-    .brand-title { font-size: 22px; font-weight: 800; color: #1E3A63; margin: 0; }
-    .brand-sub { font-size: 11px; font-weight: 700; color: #E08131; text-transform: uppercase; margin-top: 2px; }
-    .meta-box { text-align: right; }
-    .meta-title { font-size: 16px; font-weight: 800; color: #1E3A63; margin: 0; text-transform: uppercase; }
-    .meta-ref { font-size: 12px; color: #64748b; font-weight: 600; margin-top: 3px; }
-    .status-badge { display: inline-block; padding: 4px 10px; background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; border-radius: 6px; font-size: 11px; font-weight: 700; margin-top: 6px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-    .card-title { font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; margin: 0 0 10px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
-    .info-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
-    .info-label { color: #64748b; font-weight: 500; }
-    .info-val { font-weight: 600; color: #0f172a; }
-    .spec-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    .spec-table th { background: #1E3A63; color: #ffffff; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 700; }
-    .spec-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-    .spec-table tr:nth-child(even) { background: #f8fafc; }
-    .price-box { background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 8px; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .price-label { font-size: 14px; font-weight: 700; color: #15803D; }
-    .price-val { font-size: 28px; font-weight: 900; color: #15803D; }
-    .footer-note { border-top: 1px solid #e2e8f0; padding-top: 18px; display: flex; justify-content: space-between; font-size: 11px; color: #64748b; }
-    .btn-print { margin-bottom: 20px; padding: 10px 18px; background: #1E3A63; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; }
-    @media print { .btn-print { display: none; } body { padding: 0; } }
-  </style>
-</head>
-<body>
-  <button class="btn-print" onclick="window.print()">🖨️ Print or Save as PDF</button>
-  <div class="header-row">
-    <div>
-      <h1 class="brand-title">DECK RESTORATION PLUS</h1>
-      <div class="brand-sub">Official Certified Deck Restoration Estimate</div>
-    </div>
-    <div class="meta-box">
-      <div class="meta-title">OFFICIAL QUOTE</div>
-      <div class="meta-ref">Reference: ${refNum}</div>
-      <div class="status-badge">GUARANTEED ESTIMATE</div>
-    </div>
-  </div>
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title">Customer Information</div>
-      <div class="info-row"><span class="info-label">Customer Name:</span><span class="info-val">${custName}</span></div>
-      <div class="info-row"><span class="info-label">Email:</span><span class="info-val">${custEmail}</span></div>
-      <div class="info-row"><span class="info-label">Phone:</span><span class="info-val">${custPhone}</span></div>
-      <div class="info-row"><span class="info-label">Date Generated:</span><span class="info-val">${dateStr}</span></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Project Site Location</div>
-      <div class="info-row"><span class="info-label">Project Name:</span><span class="info-val">${projTitle}</span></div>
-      <div class="info-row"><span class="info-label">Site Address:</span><span class="info-val">${propAddress}</span></div>
-      <div class="info-row"><span class="info-label">Deck Dimensions:</span><span class="info-val">${length || 0} ft × ${width || 0} ft</span></div>
-      <div class="info-row"><span class="info-label">Floor Area:</span><span class="info-val">${floorArea} sq ft</span></div>
-    </div>
-  </div>
-  <table class="spec-table">
-    <thead>
-      <tr>
-        <th>Specification Item</th>
-        <th>Selected Configuration</th>
-        <th>Scope Details</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>Footprint Geometry</strong></td>
-        <td>${(shape || 'Rectangle').toUpperCase()}</td>
-        <td>Standard joist framing alignment</td>
-      </tr>
-      <tr>
-        <td><strong>Wood Substrate</strong></td>
-        <td>${(woodSpecies || 'Pressure Treated Pine').replace(/_/g, ' ').toUpperCase()}</td>
-        <td>Professional deep-penetrating conditioning</td>
-      </tr>
-      <tr>
-        <td><strong>Elevation Tier</strong></td>
-        <td>${(height || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase()}</td>
-        <td>Standard ground staging</td>
-      </tr>
-      <tr>
-        <td><strong>Services Selected</strong></td>
-        <td>${services.map((s) => s.replace(/_/g, ' ').toUpperCase()).join(', ')}</td>
-        <td>Commercial grade mechanical and chemical prep</td>
-      </tr>
-      <tr>
-        <td><strong>Stairs & Railings</strong></td>
-        <td>${selectedComponents.length > 0 ? selectedComponents.join(', ').toUpperCase() : 'Standard perimeter'}</td>
-        <td>Includes step treads, balusters & handrails</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="price-box">
-    <div>
-      <div class="price-label">Official Guaranteed Total</div>
-      <div style="font-size: 11px; color: #475569; margin-top: 3px;">All labor, commercial-grade chemicals & professional equipment included</div>
-    </div>
-    <div class="price-val">$${officialEstimate.total.toLocaleString()}</div>
-  </div>
-  <div style="background: #FFFBEB; border-left: 3px solid #D97706; padding: 12px 16px; margin-bottom: 24px; font-size: 11.5px; color: #92400E; border-radius: 0 6px 6px 0;">
-    <strong>Deck Restoration Plus Quality Guarantee:</strong> All estimates backed by our 1-year workmanship warranty. Fully insured, certified deck restoration professionals.
-  </div>
-  <div class="footer-note">
-    <div><strong>Deck Restoration Plus</strong> • 152 Indian Mills Road, Shamong, NJ 08088</div>
-    <div>Support: <strong>(856) 678-3325</strong> | estimates@deckrestorationplus.com</div>
-  </div>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Deck_Restoration_Plus_Estimate_${refNum}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (format === 'excel') {
+      downloadEstimateExcel(estimatePayload, user);
+    } else {
+      await downloadEstimatePdf(estimatePayload, user);
+    }
   };
 
   // Submit General Reach Out Enquiry
@@ -2197,7 +2163,13 @@ export default function ContinuousEstimatorForm({
                 return (
                   <div
                     key={ec.id}
-                    onClick={() => setExistingCoating(ec.id)}
+                    onClick={() => {
+                      setExistingCoating(ec.id);
+                      if (REFERENCE_SPECS['coating_' + ec.id]) {
+                        setActiveRefKey('coating_' + ec.id);
+                        setRefImageIdx(0);
+                      }
+                    }}
                     style={{
                       ...styles.imageSelectCard,
                       borderColor: isSelected ? '#10B981' : '#E2E8F0',
@@ -2814,181 +2786,111 @@ export default function ContinuousEstimatorForm({
                   </div>
                 </div>
               ) : (
-                /* CONTRACTOR VIEW: Full Operational Breakdown */
-                <div style={styles.contractorBreakdownBox}>
-                  <div style={styles.resultContentRow}>
-                    <div style={styles.resultTotalBox}>
-                      <span style={styles.resultTotalSub}>Contractor Quoted Total</span>
+                /* CONTRACTOR VIEW: Full Operational Estimation Summary (Matches customer box styling & full width) */
+                <div style={styles.customerTotalBox}>
+                  <span style={styles.customerTotalSub}>Contractor Quoted Total</span>
 
-                      {(() => {
-                        const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
-                        const contractorMinJobAmt = officialEstimate.minJobAmount || 2500;
-                        const activeBase = applyMinJobPrice ? Math.max(pureBase, contractorMinJobAmt) : pureBase;
-                        const discountedAmt = Math.max(0, Math.round(activeBase * (1 - contractorDiscountPercent / 100)));
-                        const wholesaleSavings = Math.round(activeBase * (contractorDiscountPercent / 100));
+                  {(() => {
+                    const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
+                    const contractorMinJobAmt = officialEstimate.minJobAmount || 2500;
+                    const activeBase = applyMinJobPrice ? Math.max(pureBase, contractorMinJobAmt) : pureBase;
+                    const discountedAmt = Math.max(0, Math.round(activeBase * (1 - contractorDiscountPercent / 100)));
+                    const wholesaleSavings = Math.round(activeBase * (contractorDiscountPercent / 100));
 
-                        return (
-                          <>
-                            {applyContractorDiscount ? (
-                              <div style={{ margin: '6px 0 8px 0' }}>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                                  <span style={styles.strikePrice}>
-                                    ${activeBase.toLocaleString()}
-                                  </span>
-                                  <strong style={{ ...styles.resultTotalAmt, color: '#15803D' }}>
-                                    ${discountedAmt.toLocaleString()}
-                                  </strong>
-                                  <span style={styles.discountBadgePill}>
-                                    ✓ {contractorDiscountPercent}% Contractor Discount Applied
-                                  </span>
-                                </div>
-                                <span style={styles.discountSavingsSubtext}>
-                                  Wholesale Savings: ${wholesaleSavings.toLocaleString()} deducted via active tier
-                                </span>
-                              </div>
-                            ) : (
-                              <div style={{ margin: '6px 0 8px 0' }}>
-                                <strong style={{ ...styles.resultTotalAmt, color: '#0F2C59' }}>
-                                  ${activeBase.toLocaleString()}
-                                </strong>
-                                <span style={styles.discountSavingsSubtext}>
-                                  Standard retail rate (Wholesale discount unchecked)
-                                </span>
-                              </div>
-                            )}
+                    return (
+                      <>
+                        {applyContractorDiscount ? (
+                          <div style={{ margin: '8px 0 10px 0', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                              <span style={styles.strikePrice}>
+                                ${activeBase.toLocaleString()}
+                              </span>
+                              <strong style={{ ...styles.customerTotalAmt, color: '#15803D', margin: 0 }}>
+                                ${discountedAmt.toLocaleString()}
+                              </strong>
+                              <span style={styles.discountBadgePill}>
+                                ✓ {contractorDiscountPercent}% Contractor Discount Applied
+                              </span>
+                            </div>
+                            <span style={{ ...styles.discountSavingsSubtext, display: 'block', marginTop: '6px' }}>
+                              Wholesale Savings: ${wholesaleSavings.toLocaleString()} deducted via active tier
+                            </span>
+                          </div>
+                        ) : (
+                          <div style={{ margin: '8px 0 10px 0', textAlign: 'center' }}>
+                            <strong style={{ ...styles.customerTotalAmt, color: '#034EA2', margin: 0 }}>
+                              ${activeBase.toLocaleString()}
+                            </strong>
+                            <span style={{ ...styles.discountSavingsSubtext, display: 'block', marginTop: '6px' }}>
+                              Standard retail rate (Wholesale discount unchecked)
+                            </span>
+                          </div>
+                        )}
 
-                            {/* Interactive Contractor Wholesale Discount Checkbox (Default Checked) */}
-                            <label style={styles.contractorDiscountCheckboxLabel}>
+                        {/* Interactive Contractor Wholesale Discount Checkbox */}
+                        <label style={{ ...styles.contractorDiscountCheckboxLabel, margin: '8px 0 12px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={applyContractorDiscount}
+                            onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
+                            style={styles.contractorDiscountCheckboxInput}
+                          />
+                          <span style={styles.contractorDiscountCheckboxText}>
+                            Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
+                          </span>
+                        </label>
+
+                        <span style={{ ...styles.resultRangeNotice, marginBottom: '14px' }}>
+                          Calculated Range: $
+                          {applyContractorDiscount
+                            ? Math.round((officialEstimate.rawLow || Math.round(activeBase * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                            : (officialEstimate.rawLow || Math.round(activeBase * 0.9)).toLocaleString()}{' '}
+                          – $
+                          {applyContractorDiscount
+                            ? Math.round((officialEstimate.rawHigh || Math.round(activeBase * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
+                            : (officialEstimate.rawHigh || Math.round(activeBase * 1.15)).toLocaleString()}
+                        </span>
+
+                        {/* CONTRACTOR IMPORTANT NOTE: Minimum Job Price */}
+                        <div style={styles.customerMinJobNoticeBox}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
+                            <strong style={{ color: '#0369A1', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                              Important Note — Minimum Job Price:
+                            </strong>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#0C4A6E', lineHeight: 1.45 }}>
+                              Standard mobilization minimum is <strong>${contractorMinJobAmt.toLocaleString()}</strong>.
+                              By default, this estimate shows the pure calculated price (${pureBase.toLocaleString()}) without minimum job price applied.
+                            </p>
+                            <label style={{ ...styles.minJobCheckboxLabel, backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }}>
                               <input
                                 type="checkbox"
-                                checked={applyContractorDiscount}
-                                onChange={(e) => handleToggleContractorDiscount(e.target.checked)}
-                                style={styles.contractorDiscountCheckboxInput}
+                                checked={applyMinJobPrice}
+                                onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
+                                style={{ ...styles.minJobCheckboxInput, accentColor: '#0284C7' }}
                               />
-                              <span style={styles.contractorDiscountCheckboxText}>
-                                Apply {contractorDiscountPercent}% Contractor Partner Discount (Admin Wholesale Tier)
+                              <span style={{ ...styles.minJobCheckboxText, color: '#0369A1' }}>
+                                Apply standard minimum job mobilization price (${contractorMinJobAmt.toLocaleString()})
                               </span>
                             </label>
-
-                            <span style={styles.resultRangeNotice}>
-                              Calculated Range: $
-                              {applyContractorDiscount
-                                ? Math.round((officialEstimate.rawLow || Math.round(activeBase * 0.9)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                                : (officialEstimate.rawLow || Math.round(activeBase * 0.9)).toLocaleString()}{' '}
-                              – $
-                              {applyContractorDiscount
-                                ? Math.round((officialEstimate.rawHigh || Math.round(activeBase * 1.15)) * (1 - contractorDiscountPercent / 100)).toLocaleString()
-                                : (officialEstimate.rawHigh || Math.round(activeBase * 1.15)).toLocaleString()}
-                            </span>
-
-                            {/* CONTRACTOR IMPORTANT NOTE: Minimum Job Price with interactive checkbox (default unchecked) */}
-                            <div style={styles.contractorMinNoticeBox}>
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" y2="12" />
-                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                              </svg>
-                              <div style={{ flex: 1, textAlign: 'left' }}>
-                                <strong style={{ color: '#0369A1', fontSize: '12.5px', display: 'block', marginBottom: '3px' }}>
-                                  Important Note — Minimum Job Price:
-                                </strong>
-                                <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#0C4A6E', lineHeight: 1.45 }}>
-                                  Standard mobilization minimum is <strong>${contractorMinJobAmt.toLocaleString()}</strong>.
-                                  By default, this estimate shows the pure calculated price (${pureBase.toLocaleString()}) without minimum job price applied.
-                                </p>
-                                <label style={styles.contractorMinJobCheckboxLabel}>
-                                  <input
-                                    type="checkbox"
-                                    checked={applyMinJobPrice}
-                                    onChange={(e) => handleToggleMinJobPrice(e.target.checked)}
-                                    style={styles.minJobCheckboxInput}
-                                  />
-                                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0369A1' }}>
-                                    Apply standard minimum job mobilization price (${contractorMinJobAmt.toLocaleString()})
-                                  </span>
-                                </label>
-                                {applyMinJobPrice && (
-                                  <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: '#0284C7', fontWeight: '600' }}>
-                                    ✓ Minimum job mobilization price applied (${activeBase.toLocaleString()}). Uncheck to return to pure calculated price.
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    <div style={styles.resultSpecsBox}>
-                      <div style={styles.specLine}>
-                        <span>Billable Surface Area ($A$):</span>
-                        <strong>{officialEstimate.billableArea.toLocaleString()} sq ft</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Rate Card Lookup:</span>
-                        <strong>Prep: {officialEstimate.prep} • Finish: {officialEstimate.finish}</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Unit Rate:</span>
-                        <strong>${officialEstimate.rate.toFixed(2)} / sq ft</strong>
-                      </div>
-                      <div style={styles.specLine}>
-                        <span>Labor Adjustment:</span>
-                        <strong>${officialEstimate.labourAdj.toLocaleString()} ({officialEstimate.baseHours}h base)</strong>
-                      </div>
-                      {officialEstimate.travelFee > 0 && (
-                        <div style={styles.specLine}>
-                          <span>Travel Mobilization:</span>
-                          <strong>${officialEstimate.travelFee}</strong>
-                        </div>
-                      )}
-                      <div style={styles.specLine}>
-                        <span>Workflow Status:</span>
-                        <strong style={{ color: officialEstimate.hasRepairs ? '#B91C1C' : officialEstimate.needsPhotoReview ? '#D97706' : '#15803D' }}>
-                          {officialEstimate.status}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dedicated Repair Estimate Line Item with Overlap Preventions */}
-                  {officialEstimate.repairEstimate && officialEstimate.repairEstimate.repairTotal > 0 && (
-                    <div style={styles.repairEstimateBox}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div>
-                          <strong style={{ color: '#034EA2', fontSize: '13px' }}>Structural Repair Estimate (Separate Line)</strong>
-                          <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>Deduplicated using client overlap-prevention rules</span>
-                        </div>
-                        <strong style={{ color: '#034EA2', fontSize: '15px' }}>
-                          +${officialEstimate.repairEstimate.repairTotal.toLocaleString()}
-                        </strong>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {officialEstimate.repairEstimate.lineItems.map((li, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#334155' }}>
-                            <span>• {li.item} {li.count ? `(${li.count})` : ''}</span>
-                            <strong>${li.totalCost.toLocaleString()}</strong>
+                            {applyMinJobPrice && (
+                              <span style={{ display: 'block', marginTop: '6px', fontSize: '11px', color: '#0284C7', fontWeight: '600' }}>
+                                ✓ Minimum job mobilization price applied (${activeBase.toLocaleString()}). Uncheck to return to pure calculated price.
+                              </span>
+                            )}
                           </div>
-                        ))}
-                      </div>
-
-                      {officialEstimate.repairEstimate.overlapDeductions.length > 0 && (
-                        <div style={styles.overlapBanner}>
-                          <strong>Overlap Deduplications Applied:</strong>
-                          {officialEstimate.repairEstimate.overlapDeductions.map((od, idx) => (
-                            <div key={idx} style={{ marginTop: '2px' }}>
-                              • {od.note || od.rule} {od.saving ? `(Avoided double charge: $${od.saving})` : ''}
-                            </div>
-                          ))}
                         </div>
-                      )}
-                    </div>
-                  )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
-              {/* Action Buttons: 1. Inquiry this Estimation (Green -> converts to lead), 2. + Another Estimation, 3. Export */}
+              {/* Action Buttons: 1. Inquiry this Estimation (Slightly decreased size, 100% lead convert), 2. + Another Estimation, 3. Manual Save, 4. Export PDF & Excel */}
               <div style={styles.resultActionRow}>
                 <button
                   type="button"
@@ -2996,60 +2898,125 @@ export default function ContinuousEstimatorForm({
                   disabled={leadLoading || leadCreated}
                   style={{
                     ...styles.convertLeadBtn,
+                    maxWidth: '220px',
+                    padding: '11px 16px',
                     backgroundColor: leadCreated ? '#166534' : '#15803D',
                     borderColor: '#15803D',
                     color: '#FFFFFF',
                     fontWeight: '700',
+                    fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
+                    gap: '6px',
                   }}
+                  title="Submit inquiry as verified project lead"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                   </svg>
                   <span>
                     {leadLoading
-                      ? 'Submitting Inquiry...'
+                      ? 'Submitting...'
                       : leadCreated
-                      ? '✓ Inquiry Submitted as Lead'
+                      ? '✓ Inquiry Submitted'
                       : 'Inquiry this Estimation'}
                   </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleResetForNewEstimate}
+                  onClick={async () => {
+                    if (!officialEstimate && floorArea > 0) {
+                      await handleSave();
+                    }
+                    handleResetForNewEstimate();
+                  }}
                   style={{
                     ...styles.startNewEstimateActionBtn,
                     fontWeight: '700',
+                    fontSize: '13px',
+                    padding: '11px 18px',
                   }}
+                  title="Save current estimate and start a fresh calculation"
                 >
                   + Another Estimation
                 </button>
 
+                {/* Manual Save Button for Safe Side */}
                 <button
                   type="button"
-                  onClick={handleExportOfficialEstimate}
+                  onClick={() => handleSave()}
+                  disabled={submitting}
+                  style={{
+                    ...styles.startNewEstimateActionBtn,
+                    backgroundColor: '#FFFFFF',
+                    borderColor: '#0284C7',
+                    color: '#0284C7',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    padding: '11px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  title="Manually save your current estimate"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                  </svg>
+                  <span>{submitting ? 'Saving...' : saveSuccessNotice ? '✓ Saved!' : 'Save'}</span>
+                </button>
+
+                {/* Export PDF Template Button */}
+                <button
+                  type="button"
+                  onClick={() => handleExportOfficialEstimate('pdf')}
                   style={{
                     ...styles.talkSpecialistBtn,
                     backgroundColor: '#1E3A63',
                     borderColor: '#1E3A63',
                     color: '#FFFFFF',
                     fontWeight: '700',
+                    fontSize: '13px',
+                    padding: '11px 16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
+                    gap: '6px',
                   }}
+                  title="Download template-based PDF report"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
-                  <span>Export</span>
+                  <span>Export PDF</span>
+                </button>
+
+                {/* Export Excel Button */}
+                <button
+                  type="button"
+                  onClick={() => handleExportOfficialEstimate('excel')}
+                  style={{
+                    ...styles.talkSpecialistBtn,
+                    backgroundColor: '#0F766E',
+                    borderColor: '#0F766E',
+                    color: '#FFFFFF',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    padding: '11px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                  title="Download Excel spreadsheet summary"
+                >
+                  <span>Excel</span>
                 </button>
               </div>
             </div>
@@ -3245,7 +3212,7 @@ export default function ContinuousEstimatorForm({
           </div>
 
           {/* 4. GUIDANCE & IMPORTANT NOTES (ENHANCED LOOK WITH HIGHLIGHTED TEXT) */}
-          <div style={styles.sidebarCard}>
+          <div id="sidebar-guidance-card" style={styles.sidebarCard}>
             {/* If officialEstimate exists or contractor pricing, show total header */}
             {!isContractor ? (
               officialEstimate && (
@@ -4123,9 +4090,10 @@ const styles = {
     fontSize: '14px',
   },
   resultTitle: {
-    fontSize: '16px',
+    fontSize: '17px',
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: '-0.2px',
   },
   refBadge: {
     padding: '4px 10px',
@@ -4204,14 +4172,16 @@ const styles = {
   },
   contractorMinNoticeBox: {
     marginTop: '12px',
-    padding: '12px 14px',
+    padding: '14px 16px',
     backgroundColor: '#F0F9FF',
-    border: '1px solid #BAE6FD',
+    border: '1.5px solid #BAE6FD',
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '10px',
+    gap: '12px',
     textAlign: 'left',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   contractorMinJobCheckboxLabel: {
     display: 'inline-flex',
@@ -4228,25 +4198,32 @@ const styles = {
   contractorBreakdownBox: {
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
     gap: '14px',
   },
   resultContentRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
     gap: '16px',
   },
   resultTotalBox: {
     backgroundColor: '#F0F6FF',
-    border: '1px solid #BFDBFE',
-    borderRadius: '8px',
-    padding: '16px',
+    border: '1.5px solid #BFDBFE',
+    borderRadius: '10px',
+    padding: '24px 20px',
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   resultTotalSub: {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '700',
     color: '#034EA2',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    marginBottom: '2px',
   },
   resultTotalAmt: {
     fontSize: '32px',

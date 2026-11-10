@@ -93,6 +93,21 @@ async function downloadDocument(req, res, next) {
   }
 }
 
+async function deleteDocument(req, res, next) {
+  try {
+    const result = await contractorService.deleteDocument(
+      req.params.documentId,
+      req.user
+    );
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function adminListContractors(req, res, next) {
   try {
     const result = await contractorService.listContractorsForAdmin(req.query);
@@ -156,6 +171,7 @@ module.exports = {
   uploadDocument,
   getMyDocuments,
   downloadDocument,
+  deleteDocument,
   adminListContractors,
   adminGetContractorDetails,
   adminReviewContractor,

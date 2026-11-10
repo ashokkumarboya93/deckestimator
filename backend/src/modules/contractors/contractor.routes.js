@@ -72,6 +72,13 @@ router.get(
   contractorController.downloadDocument
 );
 
+// Delete Document (Contractor Owner or Admin)
+router.delete(
+  '/documents/:documentId',
+  authorize(ROLES.CONTRACTOR, ROLES.ADMIN),
+  contractorController.deleteDocument
+);
+
 // Eligible contractors for lead matching (Admin or authorized estimating services)
 router.get(
   '/eligible',

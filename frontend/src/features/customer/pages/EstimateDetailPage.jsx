@@ -12,6 +12,7 @@ import {
 } from '../api/estimatesApi';
 import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { downloadEstimatePdf } from '../../../utils/reportExport';
 
 export default function EstimateDetailPage() {
   const { estimateId } = useParams();
@@ -104,6 +105,17 @@ export default function EstimateDetailPage() {
       setError(err?.response?.data?.error?.message || err.message || 'Failed to fetch discounts.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!estimate) return;
+    try {
+      await downloadEstimatePdf(estimate, user);
+      setActionMsg(`✓ Official PDF report generated and downloaded for ${estimate.estimateNumber || 'Estimate'}`);
+      setTimeout(() => setActionMsg(null), 3000);
+    } catch (err) {
+      alert(`Could not download PDF report: ${err.message}`);
     }
   };
 
@@ -248,6 +260,56 @@ export default function EstimateDetailPage() {
             >Mark Completed
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #0284c7',
+              backgroundColor: '#f0f9ff',
+              color: '#0284c7',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Download official PDF report"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export PDF
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Print official PDF report"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Print
+          </button>
         </div>
       </div>
 

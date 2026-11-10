@@ -129,21 +129,21 @@ export default function ContractorProfilePage() {
           if (c.businessAddress.zipCode) setBusinessZip(c.businessAddress.zipCode);
         }
       } else {
-        // Sensible fallback defaults
-        setOrganizationName('Master Deck & Restoration Pro');
-        setLicenseNumber('LIC-DRP-2026-88');
-        setWebsiteUrl('https://deckrestorationplus.com');
-        setBusinessPhone('(856) 678-3325');
+        // Real user fallback details
+        setOrganizationName(u?.businessName || u?.organizationName || '');
+        setLicenseNumber(u?.licenseNumber || '');
+        setWebsiteUrl('');
+        setBusinessPhone(u?.phone || '');
         setVerificationStatus('PENDING');
-        setContractorTier('GOLD');
+        setContractorTier('BRONZE');
       }
 
-      // Populate Documents
+      // Populate Documents (Strictly real MongoDB documents only, no fake/mock fallbacks)
       if (docsRes.status === 'fulfilled' && docsRes.value?.data) {
         const rawDocs = Array.isArray(docsRes.value.data) ? docsRes.value.data : docsRes.value.data?.documents || [];
-        setDocuments(rawDocs.length > 0 ? rawDocs : fallbackDocs);
+        setDocuments(rawDocs);
       } else {
-        setDocuments(fallbackDocs);
+        setDocuments([]);
       }
     } catch (err) {
       console.warn('Error loading contractor profile:', err);
@@ -152,38 +152,17 @@ export default function ContractorProfilePage() {
     }
   }
 
-  const fallbackDocs = [
-    {
-      id: 'doc-1',
-      documentType: 'insurance_certificate',
-      fileName: 'General_Liability_2026.pdf',
-      originalFileName: 'General_Liability_2026.pdf',
-      status: 'VERIFIED',
-      documentStatus: 'verified',
-      uploadedAt: '2026-10-15T10:00:00Z',
-      notes: 'State Farm Commercial $2M Aggregate Policy',
-    },
-    {
-      id: 'doc-2',
-      documentType: 'contractor_license',
-      fileName: 'State_Trade_License_NJ.pdf',
-      originalFileName: 'State_Trade_License_NJ.pdf',
-      status: 'VERIFIED',
-      documentStatus: 'verified',
-      uploadedAt: '2026-10-18T14:30:00Z',
-      notes: 'State Home Improvement Contractor Registration',
-    },
-    {
-      id: 'doc-3',
-      documentType: 'business_registration',
-      fileName: 'W9_Tax_Registration_2026.pdf',
-      originalFileName: 'W9_Tax_Registration_2026.pdf',
-      status: 'PENDING_REVIEW',
-      documentStatus: 'pending_review',
-      uploadedAt: '2026-11-01T09:15:00Z',
-      notes: 'W-9 Contractor Tax ID Certification',
-    },
-  ];
+  // Delete trade document handler
+  const handleDeleteDoc = async (docId) => {
+    if (!docId) return;
+    try {
+      await contractorLeadApi.deleteDocument(docId);
+      setDocuments((prev) => prev.filter((d) => (d.id || d._id) !== docId));
+      setSuccessMsg('✓ Trade document removed successfully.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to remove document.');
+    }
+  };
 
   // Profile Picture Upload Handler
   const handlePhotoSelect = (e) => {
@@ -1026,9 +1005,22 @@ export default function ContractorProfilePage() {
                             </span>
                           </td>
                           <td style={{ ...styles.td, textAlign: 'right' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#0284C7', backgroundColor: '#E0F2FE', padding: '3px 8px', borderRadius: '4px' }}>
-                              Queued for Admin
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: isVerified ? '#15803D' : '#0284C7', backgroundColor: isVerified ? '#DCFCE7' : '#E0F2FE', padding: '3px 8px', borderRadius: '4px' }}>
+                                {isVerified ? '✓ Verified' : 'Queued for Admin'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDoc(doc.id || doc._id)}
+                                style={styles.deleteDocBtn}
+                                title="Delete document from portfolio"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1488,6 +1480,18 @@ const styles = {
     borderRadius: '4px',
     fontSize: '11px',
     fontWeight: '700',
+  },
+  deleteDocBtn: {
+    background: 'none',
+    border: '1px solid #FECACA',
+    borderRadius: '6px',
+    padding: '4px 6px',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    transition: 'all 0.15s ease',
   },
   bottomActionBar: {
     display: 'flex',

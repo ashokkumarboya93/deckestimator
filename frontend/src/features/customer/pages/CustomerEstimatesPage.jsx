@@ -18,6 +18,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
+import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
@@ -43,23 +44,37 @@ export default function CustomerEstimatesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
+
   // Modals & Action Menus
   const [viewEstimate, setViewEstimate] = useState(null);
   const [deleteConfirmEst, setDeleteConfirmEst] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
+  const [activeMenuEst, setActiveMenuEst] = useState(null);
 
   const menuRef = useRef(null);
 
-  // Close 3-dots menu on click outside
+  // Close 3-dots menu on click outside or scroll
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setOpenMenuId(null);
       }
     }
+    function handleScroll() {
+      setOpenMenuId(null);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, []);
 
   // Fetch estimates from backend
@@ -80,6 +95,9 @@ export default function CustomerEstimatesPage() {
 
   useEffect(() => {
     fetchEstimates();
+    const handleSaved = () => fetchEstimates(true);
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, [fetchEstimates]);
 
   // Toast notification auto-dismiss
@@ -255,12 +273,68 @@ export default function CustomerEstimatesPage() {
     try {
       await deleteEstimate(id);
       setEstimates((prev) => prev.filter((e) => (e._id || e.id) !== id));
+      setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
       setSuccessToast(`Estimate record "${deleteConfirmEst.deckDetails?.projectName || deleteConfirmEst.estimateName || 'Project'}" deleted.`);
       setDeleteConfirmEst(null);
     } catch (err) {
       alert(`Failed to delete estimate: ${err.message}`);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Multi-select handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredEstimates.map((est) => est._id || est.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const isAllSelected =
+    filteredEstimates.length > 0 &&
+    filteredEstimates.every((est) => selectedIds.includes(est._id || est.id));
+  const isPartiallySelected =
+    selectedIds.length > 0 && !isAllSelected;
+
+  // Batch Export PDF
+  const handleBatchExportPdf = async () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    for (const est of selectedEsts) {
+      await downloadEstimatePdf(est, user);
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    setSuccessToast(`Exported ${selectedEsts.length} official PDF estimates.`);
+  };
+
+  // Batch Export Excel / CSV
+  const handleBatchExportExcel = () => {
+    const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
+    selectedEsts.forEach((est) => downloadEstimateExcel(est, user));
+    setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
+  };
+
+  // Batch Delete
+  const handleConfirmBatchDelete = async () => {
+    setBatchDeleting(true);
+    try {
+      await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
+      setSuccessToast(`Successfully deleted ${selectedIds.length} estimates.`);
+      setSelectedIds([]);
+      setShowBatchDeleteModal(false);
+    } catch (err) {
+      alert(`Could not delete selected items: ${err.message}`);
+    } finally {
+      setBatchDeleting(false);
     }
   };
 
@@ -434,34 +508,30 @@ export default function CustomerEstimatesPage() {
     `;
   };
 
-  // Trigger Dedicated Print Template
-  const handlePrint = (est) => {
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const printWindow = window.open('', '_blank', 'width=900,height=950');
-    if (printWindow) {
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 350);
+  // Trigger Dedicated Print Action (Direct PDF download without browser print dialog)
+  const handlePrint = async (est) => {
+    try {
+      await downloadEstimatePdf(est, user);
+      setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+    } catch (err) {
+      alert(`Could not download PDF report: ${err.message}`);
     }
   };
 
-  // Trigger Dedicated Export Template
-  const handleExport = (est) => {
+  // Trigger Dedicated Export Template (PDF or Excel)
+  const handleExport = async (est, format = 'pdf') => {
     setOpenMenuId(null);
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Deck_Estimate_${est.estimateNumber || est._id || 'Record'}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setSuccessToast(`Estimate template exported for ${est.estimateNumber || 'Project'}.`);
+    try {
+      if (format === 'excel') {
+        downloadEstimateExcel(est, user);
+        setSuccessToast(`Estimate Excel dossier downloaded for ${est.estimateNumber || 'Project'}.`);
+      } else {
+        await downloadEstimatePdf(est, user);
+        setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+      }
+    } catch (err) {
+      alert(`Export error: ${err.message}`);
+    }
   };
 
   return (
@@ -652,6 +722,64 @@ export default function CustomerEstimatesPage() {
         </div>
       )}
 
+      {/* BULK ACTIONS BAR (When estimates selected) */}
+      {selectedIds.length > 0 && (
+        <div style={styles.bulkActionBar}>
+          <div style={styles.bulkLeft}>
+            <span style={styles.bulkCountBadge}>
+              {selectedIds.length} {selectedIds.length === 1 ? 'estimate' : 'estimates'} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={styles.bulkDeselectBtn}
+            >
+              Deselect All
+            </button>
+          </div>
+          <div style={styles.bulkRight}>
+            <button
+              type="button"
+              onClick={handleBatchExportPdf}
+              style={styles.bulkActionBtn}
+              title="Download official PDF reports for all selected estimates"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Batch Export PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBatchExportExcel}
+              style={styles.bulkActionBtn}
+              title="Download Excel dossiers for all selected estimates"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              <span>Batch Export Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBatchDeleteModal(true)}
+              style={styles.bulkDeleteBtn}
+              title="Delete all selected estimates from database"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>Batch Delete</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. ESTIMATES LIST TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
@@ -688,6 +816,18 @@ export default function CustomerEstimatesPage() {
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeadRow}>
+                  <th style={{ ...styles.tableHeadCell, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleSelectAll}
+                      style={styles.checkboxInput}
+                      aria-label="Select all estimates"
+                    />
+                  </th>
                   <th style={styles.tableHeadCell}>Project Name</th>
                   <th style={styles.tableHeadCell}>Deck Size</th>
                   <th style={styles.tableHeadCell}>Labour &amp; Materials</th>
@@ -700,6 +840,7 @@ export default function CustomerEstimatesPage() {
               <tbody>
                 {filteredEstimates.map((est, idx) => {
                   const estId = est._id || est.id;
+                  const isRowSelected = selectedIds.includes(estId);
                   const thumb = DEFAULT_THUMBS[idx % DEFAULT_THUMBS.length];
                   const projName = est.deckDetails?.projectName || est.estimateName || 'Deck Restoration Project';
                   const refNumber = est.estimateNumber || estId;
@@ -710,7 +851,24 @@ export default function CustomerEstimatesPage() {
                   const isMenuOpen = openMenuId === estId;
 
                   return (
-                    <tr key={estId} style={styles.tableBodyRow}>
+                    <tr
+                      key={estId}
+                      style={{
+                        ...styles.tableBodyRow,
+                        backgroundColor: isRowSelected ? '#F0F9FF' : 'transparent',
+                      }}
+                    >
+                      {/* Selection Checkbox */}
+                      <td style={{ ...styles.tableCell, width: '42px', textAlign: 'center', paddingLeft: '14px', paddingRight: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={() => handleSelectOne(estId)}
+                          style={styles.checkboxInput}
+                          aria-label={`Select ${projName}`}
+                        />
+                      </td>
+
                       {/* 1. Project Name: Title TOP (Large), Reference Name BELOW (Small) */}
                       <td style={styles.tableCell}>
                         <div style={styles.refProjectWrap}>
@@ -795,71 +953,24 @@ export default function CustomerEstimatesPage() {
                             <span>Print</span>
                           </button>
 
-                          {/* Three Dots Button & Floating Dropdown */}
-                          <div style={{ position: 'relative' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId((prev) => (prev === estId ? null : estId));
-                              }}
-                              style={styles.threeDotsBtn}
-                              title="More Options"
-                            >
-                              &bull;&bull;&bull;
-                            </button>
-
-                            {isMenuOpen && (
-                              <div ref={menuRef} style={styles.actionDropdownMenu}>
-                                {/* Edit */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(est)}
-                                  style={styles.actionDropdownItem}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                  <span>Edit</span>
-                                </button>
-
-                                {/* Export */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleExport(est)}
-                                  style={styles.actionDropdownItem}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                  </svg>
-                                  <span>Export</span>
-                                </button>
-
-                                <div style={styles.dropdownDivider} />
-
-                                {/* Delete */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    setDeleteConfirmEst(est);
-                                  }}
-                                  style={styles.actionDropdownItemDanger}
-                                >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                    <line x1="10" y1="11" x2="10" y2="17" />
-                                    <line x1="14" y1="11" x2="14" y2="17" />
-                                  </svg>
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          {/* Three Dots Button (Coordinates tracked for fixed non-clipping menu) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuCoords({
+                                top: rect.bottom + 4,
+                                left: Math.max(10, rect.right - 150),
+                              });
+                              setActiveMenuEst(est);
+                              setOpenMenuId((prev) => (prev === estId ? null : estId));
+                            }}
+                            style={styles.threeDotsBtn}
+                            title="More Options"
+                          >
+                            &bull;&bull;&bull;
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -878,88 +989,338 @@ export default function CustomerEstimatesPage() {
         )}
       </div>
 
-      {/* 5. VIEW ESTIMATE MODAL */}
+      {/* Floating Non-Clipping 3-Dots Dropdown Menu (Fixed in Viewport) */}
+      {openMenuId && activeMenuEst && (
+        <div
+          ref={menuRef}
+          style={{
+            ...styles.actionDropdownMenu,
+            position: 'fixed',
+            top: `${menuCoords.top}px`,
+            left: `${menuCoords.left}px`,
+            zIndex: 99999,
+          }}
+        >
+          {/* Edit */}
+          <button
+            type="button"
+            onClick={() => handleEdit(activeMenuEst)}
+            style={styles.actionDropdownItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>Edit</span>
+          </button>
+
+          {/* Export PDF */}
+          <button
+            type="button"
+            onClick={() => handleExport(activeMenuEst, 'pdf')}
+            style={styles.actionDropdownItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export PDF</span>
+          </button>
+
+          {/* Export Excel */}
+          <button
+            type="button"
+            onClick={() => handleExport(activeMenuEst, 'excel')}
+            style={styles.actionDropdownItem}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F766E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+            <span>Export Excel</span>
+          </button>
+
+          <div style={styles.dropdownDivider} />
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenuId(null);
+              setDeleteConfirmEst(activeMenuEst);
+            }}
+            style={styles.actionDropdownItemDanger}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
+
+      {/* 5. VIEW ESTIMATE REPORT MODAL (EXPANDED TO FULL DOSSIER WITH PHOTOS & EXPORTS) */}
       {viewEstimate && (
         <div style={styles.modalOverlay} onClick={() => setViewEstimate(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div
+            style={{
+              ...styles.modalContent,
+              maxWidth: '920px',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={styles.modalHeader}>
               <div>
-                <h3 style={{ margin: '0 0 3px 0', fontSize: '18px', fontWeight: '800', color: '#1E3A63' }}>
+                <h3 style={{ margin: '0 0 3px 0', fontSize: '19px', fontWeight: '800', color: '#1E3A63' }}>
                   {viewEstimate.deckDetails?.projectName || viewEstimate.estimateName || 'Deck Restoration Project'}
                 </h3>
                 <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
                   Ref: {viewEstimate.estimateNumber || viewEstimate._id} &bull; Created {formatFullDate(viewEstimate.createdAt)}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setViewEstimate(null)}
-                style={styles.modalCloseBtn}
-                title="Close"
-              >
-                &times;
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    backgroundColor: '#DCFCE7',
+                    color: '#15803D',
+                    border: '1px solid #BBF7D0',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Guaranteed Estimate
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setViewEstimate(null)}
+                  style={styles.modalCloseBtn}
+                  title="Close"
+                >
+                  &times;
+                </button>
+              </div>
             </div>
 
-            <div style={styles.modalBody}>
-              <div style={styles.modalGrid}>
-                {/* Specifications */}
-                <div style={styles.modalSpecCard}>
-                  <h4 style={styles.modalSectionTitle}>Deck Specifications</h4>
-                  <div style={styles.modalSpecRow}>
-                    <span>Footprint Area:</span>
-                    <strong>{getDeckArea(viewEstimate)}</strong>
+            <div style={{ ...styles.modalBody, overflowY: 'auto', padding: '20px 24px' }}>
+              {/* Customer & Location Dossier */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
+                    Customer Contact Dossier
                   </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Dimensions:</span>
-                    <strong>{getDeckDimensions(viewEstimate)}</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Name:</span>
+                    <strong>{user?.fullName || 'Verified Deck Owner'}</strong>
                   </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Deck Shape:</span>
-                    <strong style={{ textTransform: 'capitalize' }}>
-                      {viewEstimate.deckDetails?.deckShape || viewEstimate.pricingSnapshot?.shape || 'Rectangle'}
-                    </strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Email:</span>
+                    <strong>{user?.email || 'N/A'}</strong>
                   </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Wood Species:</span>
-                    <strong style={{ textTransform: 'capitalize' }}>
-                      {(viewEstimate.deckDetails?.surfaceMaterial || viewEstimate.pricingSnapshot?.wood || 'pressure_treated_pine').replace(/_/g, ' ')}
-                    </strong>
-                  </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Structure Elevation:</span>
-                    <strong style={{ textTransform: 'capitalize' }}>
-                      {(viewEstimate.deckDetails?.deckType || viewEstimate.pricingSnapshot?.elevation || 'Ground Level').replace(/_/g, ' ')}
-                    </strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: '#64748b' }}>Phone:</span>
+                    <strong>{user?.phone || '(856) 678-3325'}</strong>
                   </div>
                 </div>
 
-                {/* Scope & Cost */}
-                <div style={styles.modalSpecCard}>
-                  <h4 style={styles.modalSectionTitle}>Labour, Scope &amp; Pricing</h4>
-                  <div style={styles.modalSpecRow}>
-                    <span>Labour Hours:</span>
-                    <strong>{getLabourAndMaterials(viewEstimate).hours}</strong>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
+                    Project Site Address
                   </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Materials Allowance:</span>
-                    <strong>{getLabourAndMaterials(viewEstimate).materials}</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Street Address:</span>
+                    <strong>{viewEstimate.deckDetails?.propertyAddress?.street || viewEstimate.deckDetails?.location?.street || '152 Indian Mills Road'}</strong>
                   </div>
-                  <div style={styles.modalSpecRow}>
-                    <span>Current Status:</span>
-                    <div>{renderStatusBadge(getNormalizedStatus(viewEstimate))}</div>
-                  </div>
-                  <div style={{ ...styles.modalSpecRow, borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '10px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#1E3A63' }}>Guaranteed Price:</span>
-                    <strong style={{ fontSize: '18px', fontWeight: '900', color: '#1E3A63' }}>
-                      {getExactPrice(viewEstimate)}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span style={{ color: '#64748b' }}>Municipality:</span>
+                    <strong>
+                      {[viewEstimate.deckDetails?.propertyAddress?.city || viewEstimate.deckDetails?.location?.city || 'Shamong', viewEstimate.deckDetails?.propertyAddress?.state || viewEstimate.deckDetails?.location?.state || 'NJ', viewEstimate.deckDetails?.propertyAddress?.zipCode || viewEstimate.deckDetails?.location?.zipCode || '08088'].filter(Boolean).join(', ')}
                     </strong>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: '#64748b' }}>Status:</span>
+                    <div>{renderStatusBadge(getNormalizedStatus(viewEstimate))}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section-by-Section Architectural Inputs Table */}
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ background: '#1E3A63', color: '#ffffff' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '30%' }}>Section</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '35%' }}>Selected Input</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '35%' }}>Dimensions & Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 1: Footprint</td>
+                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{viewEstimate.deckDetails?.deckShape || viewEstimate.pricingSnapshot?.shape || 'Rectangle'}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>{getDeckDimensions(viewEstimate)} • {getDeckArea(viewEstimate)}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 2: Components</td>
+                      <td style={{ padding: '8px 12px' }}>{viewEstimate.components?.length > 0 ? viewEstimate.components.join(', ') : 'Standard Floor'}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>Perimeter railings & step assemblies included</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 3: Wood Species</td>
+                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.deckDetails?.surfaceMaterial || viewEstimate.woodSpecies || 'Pressure Treated Pine').replace(/_/g, ' ')}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>Penetrating oil rate card calibration</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 4: Elevation</td>
+                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.deckDetails?.deckType || viewEstimate.accessType || 'Ground Level (0–4 ft)').replace(/_/g, ' ')}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>{viewEstimate.exactHeightFt ? `${viewEstimate.exactHeightFt} ft staging` : 'Ground tier'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 5: Existing Finish</td>
+                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.coatingType || viewEstimate.surfaceDetails?.coatingStatus || 'None / Bare').replace(/_/g, ' ')}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>Clean pore absorption verified</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 6: Services</td>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#E08131' }}>
+                        {viewEstimate.services?.length > 0 ? viewEstimate.services.map((s) => s.replace(/_/g, ' ').toUpperCase()).join(' • ') : 'Cleaning & Sealing'}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>Commercial chemicals & multi-coat protection</td>
+                    </tr>
+                    <tr style={{ background: '#FFFFFF' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 7: Conditions</td>
+                      <td style={{ padding: '8px 12px' }}>{viewEstimate.damageConditions?.length > 0 ? viewEstimate.damageConditions.join(', ') : 'Weathered baseline'}</td>
+                      <td style={{ padding: '8px 12px', color: '#475569' }}>Surface stabilized prior to coating</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Uploaded Inspection Photos Gallery (Section 8) */}
+              {(() => {
+                const viewPhotos = getEstimatePhotos(viewEstimate);
+                if (viewPhotos.length === 0) return null;
+                return (
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Uploaded Deck Inspection Photos ({viewPhotos.length} On-File)</span>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>Included in Official PDF Report</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                      {viewPhotos.map((p, pIdx) => (
+                        <div key={pIdx} style={{ border: '1px solid #CBD5E1', borderRadius: '6px', overflow: 'hidden', background: '#FFFFFF' }}>
+                          <img
+                            src={p.url || p.dataUrl}
+                            alt={p.category || `Inspection ${pIdx + 1}`}
+                            style={{ width: '100%', height: '85px', objectFit: 'cover', display: 'block' }}
+                          />
+                          <div style={{ padding: '4px', fontSize: '9px', fontWeight: '700', color: '#475569', textAlign: 'center', background: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {p.category || `Photo #${pIdx + 1}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Price Highlight Box */}
+              <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '8px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
+                    Official Guaranteed Estimate Total
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
+                    All labor hours, commercial equipment, EPA detergents &amp; premium wood penetrations included.
+                  </div>
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '900', color: '#15803D' }}>
+                  {getExactPrice(viewEstimate)}
                 </div>
               </div>
             </div>
 
             <div style={styles.modalFooter}>
+              {/* Export PDF Button */}
+              <button
+                type="button"
+                onClick={() => handleExport(viewEstimate, 'pdf')}
+                style={{
+                  ...styles.modalPrimaryActionBtn,
+                  backgroundColor: '#1E3A63',
+                  borderColor: '#1E3A63',
+                  color: '#ffffff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Download template-based PDF report"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Export PDF</span>
+              </button>
+
+              {/* Print Official PDF Button */}
+              <button
+                type="button"
+                onClick={() => handlePrint(viewEstimate)}
+                style={{
+                  ...styles.modalPrimaryActionBtn,
+                  backgroundColor: '#ffffff',
+                  borderColor: '#CBD5E1',
+                  color: '#1E3A63',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Print Official PDF Report"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                <span>Print</span>
+              </button>
+
+              {/* Export Excel Button */}
+              <button
+                type="button"
+                onClick={() => handleExport(viewEstimate, 'excel')}
+                style={{
+                  ...styles.modalPrimaryActionBtn,
+                  backgroundColor: '#0F766E',
+                  borderColor: '#0F766E',
+                  color: '#ffffff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Download Excel spreadsheet summary"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <line x1="9" y1="21" x2="9" y2="9" />
+                </svg>
+                <span>Export Excel</span>
+              </button>
+
               {getNormalizedStatus(viewEstimate) === 'CREATED' && (
                 <button
                   type="button"
@@ -976,21 +1337,12 @@ export default function CustomerEstimatesPage() {
                       alert(err?.message || 'Failed to submit booking request.');
                     }
                   }}
-                  style={{ ...styles.modalPrimaryActionBtn, backgroundColor: '#d97706', borderColor: '#b45309', color: '#ffffff' }}
+                  style={{ ...styles.modalPrimaryActionBtn, backgroundColor: '#D97706', borderColor: '#B45309', color: '#ffffff' }}
                 >
                   Reach Out / Book Project
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setViewEstimate(null);
-                  handlePrint(viewEstimate);
-                }}
-                style={styles.modalPrimaryActionBtn}
-              >
-                Print Official PDF
-              </button>
+
               <button
                 type="button"
                 onClick={() => setViewEstimate(null)}
@@ -1045,6 +1397,45 @@ export default function CustomerEstimatesPage() {
           </div>
         </div>
       )}
+
+      {/* 7. BATCH DELETE CONFIRMATION MODAL */}
+      {showBatchDeleteModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowBatchDeleteModal(false)}>
+          <div style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.deleteIconWrap}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <h3 style={styles.deleteModalTitle}>Delete {selectedIds.length} Selected Estimates?</h3>
+            <p style={styles.deleteModalDesc}>
+              Are you sure you want to permanently delete these <strong>{selectedIds.length} estimates</strong>? This action cannot be undone and will permanently delete them from your account.
+            </p>
+
+            <div style={styles.deleteModalBtnRow}>
+              <button
+                type="button"
+                onClick={() => setShowBatchDeleteModal(false)}
+                style={styles.modalCancelBtn}
+                disabled={batchDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBatchDelete}
+                style={styles.modalConfirmDeleteBtn}
+                disabled={batchDeleting}
+              >
+                {batchDeleting ? 'Deleting...' : 'Delete Selected Estimates'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1058,6 +1449,85 @@ const styles = {
     margin: '0 auto',
     padding: '16px 24px 60px 24px',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+
+  checkboxInput: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#1E3A63',
+    margin: 0,
+    verticalAlign: 'middle',
+  },
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E3A63',
+    color: '#FFFFFF',
+    padding: '12px 20px',
+    borderRadius: '10px',
+    marginBottom: '16px',
+    boxShadow: '0 4px 14px rgba(30, 58, 99, 0.22)',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  bulkLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkCountBadge: {
+    fontSize: '13px',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    padding: '4px 10px',
+    borderRadius: '999px',
+    letterSpacing: '0.2px',
+  },
+  bulkDeselectBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#93C5FD',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    padding: '2px 4px',
+  },
+  bulkRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkActionBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#1E3A63',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 
   // 1. Hero Banner

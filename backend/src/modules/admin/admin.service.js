@@ -1121,6 +1121,7 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     Estimate.find(query)
       .populate('ownerId', 'fullName email phone role')
       .populate('createdBy', 'fullName email phone role')
+      .populate('deckId')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
@@ -1177,6 +1178,13 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
         area: e.deckDetails?.areaSqFt || 400,
         woodSpecies: e.deckDetails?.woodSpecies || 'Pressure Treated Pine',
       },
+      photos: e.deckId?.photos || e.deckDetails?.photos || [],
+      propertyAddress: e.deckId?.propertyAddress || e.deckDetails?.propertyAddress || null,
+      structureDetails: e.deckId?.structureDetails || e.deckDetails?.structureDetails || null,
+      surfaceDetails: e.deckId?.surfaceDetails || e.deckDetails?.surfaceDetails || null,
+      visibleConditions: e.deckId?.visibleConditions || e.conditionFlags || [],
+      services: e.services || e.pricingSnapshot?.services || [],
+      notes: e.deckId?.additionalNotes || e.notes || '',
       estimateData: e,
     };
   });
@@ -1208,6 +1216,8 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
   else if (targetStage === 'in_progress' || targetStage === 'in progress') mappedEstimateStatus = 'IN_PROGRESS';
   else if (targetStage === 'completed') mappedEstimateStatus = 'COMPLETED';
 
+  const adminUserId = adminUser?._id || adminUser?.id || null;
+
   // 1. Update in Estimate collection
   const estimate = await Estimate.findByIdAndUpdate(
     projectId,
@@ -1238,24 +1248,30 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
           previousStatus: 'created',
           newStatus: targetStage,
           notes: actualNote || `Admin updated stage to ${targetStage}`,
-          updatedBy: adminUser?._id,
+          ...(adminUserId ? { updatedBy: adminUserId } : {}),
         },
       },
     }
   );
 
   // 3. Log to AuditLog
-  await AuditLog.create({
-    action: 'UPDATE_PROJECT_STAGE',
-    entityType: 'PROJECT',
-    entityId: projectId,
-    performedBy: adminUser?._id,
-    metadata: {
-      newStage: targetStage,
-      estimateStatus: mappedEstimateStatus,
-      note: actualNote,
-    },
-  });
+  try {
+    if (adminUserId) {
+      await AuditLog.create({
+        action: 'UPDATE_PROJECT_STAGE',
+        entityType: 'PROJECT',
+        entityId: projectId,
+        performedBy: adminUserId,
+        metadata: {
+          newStage: targetStage,
+          estimateStatus: mappedEstimateStatus,
+          note: actualNote,
+        },
+      });
+    }
+  } catch (auditErr) {
+    console.warn('[AuditLog] Warning recording project stage change:', auditErr.message);
+  }
 
   return {
     success: true,
@@ -1267,18 +1283,35 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
 
 async function exportProjectsData(format = 'csv', filters = {}) {
   const result = await listProjects({ page: 1, limit: 1000, ...filters });
-  const headers = ['Project / Estimate ID', 'Project Title', 'Customer / Initiator', 'Contractor Partner', 'Role', 'Deck Size', 'Total Estimated Value ($)', 'Current Life Cycle Stage', 'Location', 'Created Date'];
+  const headers = [
+    'Project ID',
+    'Estimate Ref',
+    'Project Title',
+    'User Role',
+    'Customer / Initiator Name',
+    'User Email',
+    'User Phone',
+    'Contractor Name',
+    'Deck Size',
+    'Estimated Total ($)',
+    'Life Cycle Stage',
+    'Location',
+    'Created Date & Time',
+  ];
   const rows = result.data.map((p) => [
-    p.projectId || p.estimateReference || 'N/A',
-    p.title || p.projectName,
-    p.customerName || 'Customer',
+    p.projectId || 'N/A',
+    p.estimateReference || 'N/A',
+    p.title || p.projectName || 'Deck Project',
+    (p.userRole || 'customer').toUpperCase(),
+    p.customerName || 'N/A',
+    p.userEmail || 'N/A',
+    p.userPhone || 'N/A',
     p.contractorName || 'Unassigned',
-    p.userRole || 'customer',
     p.deckSize || '400 sq ft',
     p.totalAmount || 0,
     (p.stage || p.status || 'created').replace(/_/g, ' ').toUpperCase(),
     p.location || 'New Jersey, USA',
-    p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
+    p.createdAt ? new Date(p.createdAt).toLocaleString() : 'N/A',
   ]);
 
   const escape = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
@@ -1433,7 +1466,7 @@ async function listLeads({
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
-      .populate('deckId', 'name dimensions area surfaceMaterial conditionLevel')
+      .populate('deckId')
       .populate('estimateId', 'estimateReference totalCost totalAmount calculationDetails status deckDetails rawCalculatorInputs pricingBreakdown')
       .sort(sortOption)
       .skip(skip)
@@ -1535,6 +1568,12 @@ async function listLeads({
       estimateSnapshot: l.estimateSnapshot,
       deckId: l.deckId,
       estimateId: l.estimateId,
+      photos: l.deckId?.photos || l.deckSnapshot?.photos || [],
+      propertyAddress: l.deckId?.propertyAddress || l.deckSnapshot?.propertyAddress || null,
+      structureDetails: l.deckId?.structureDetails || l.deckSnapshot?.structureDetails || null,
+      surfaceDetails: l.deckId?.surfaceDetails || l.deckSnapshot?.surfaceDetails || null,
+      visibleConditions: l.deckId?.visibleConditions || l.deckSnapshot?.visibleConditions || [],
+      services: l.estimateId?.calculationDetails?.services || l.deckSnapshot?.services || [],
     };
   });
 
@@ -1664,6 +1703,12 @@ async function getLeadDetails(leadId) {
       })),
     } : null,
     estimateDetails: lead.estimateId || null,
+    deckDetails: lead.deckId || lead.deckSnapshot || null,
+    photos: lead.deckId?.photos || lead.deckSnapshot?.photos || [],
+    propertyAddress: lead.deckId?.propertyAddress || lead.deckSnapshot?.propertyAddress || null,
+    structureDetails: lead.deckId?.structureDetails || lead.deckSnapshot?.structureDetails || null,
+    surfaceDetails: lead.deckId?.surfaceDetails || lead.deckSnapshot?.surfaceDetails || null,
+    visibleConditions: lead.deckId?.visibleConditions || lead.deckSnapshot?.visibleConditions || [],
   };
 }
 
@@ -2705,14 +2750,15 @@ async function exportSingleProjectDossier(projectId, format = 'csv') {
 // ====================================================================
 
 async function getAdminProfile(adminUserId) {
-  const user = await User.findById(adminUserId).select('fullName email phone role accountStatus lastLoginAt createdAt');
+  const user = await User.findById(adminUserId).select('fullName email phone avatar role isParentAdmin accountStatus lastLoginAt createdAt');
   if (!user) throw new NotFoundError('Admin profile not found.');
   const ret = user.toJSON();
   ret.name = user.fullName;
+  ret.isParentAdmin = user.email === 'admin@deckestimator.com' || user.isParentAdmin === true;
   return ret;
 }
 
-async function updateAdminProfile(adminUserId, { fullName, name, email, phone }) {
+async function updateAdminProfile(adminUserId, { fullName, name, email, phone, avatar }) {
   const user = await User.findById(adminUserId);
   if (!user) throw new NotFoundError('User not found.');
 
@@ -2720,11 +2766,121 @@ async function updateAdminProfile(adminUserId, { fullName, name, email, phone })
   if (n) user.fullName = n.trim();
   if (email) user.email = email.trim().toLowerCase();
   if (phone !== undefined) user.phone = phone.trim();
+  if (avatar !== undefined) user.avatar = avatar;
 
   await user.save();
   const ret = user.toJSON();
   ret.name = user.fullName;
+  ret.isParentAdmin = user.email === 'admin@deckestimator.com' || user.isParentAdmin === true;
   return ret;
+}
+
+async function getAdminHierarchy(currentUser) {
+  const currentAdmin = await User.findById(currentUser._id || currentUser.id);
+  if (!currentAdmin) throw new NotFoundError('Admin user not found.');
+  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
+
+  const admins = await User.find({ role: 'admin', deletedAt: null })
+    .select('fullName email phone avatar role isParentAdmin parentAdminId createdAt lastLoginAt')
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const formattedAdmins = admins.map((adm) => ({
+    id: adm._id,
+    _id: adm._id,
+    name: adm.fullName,
+    fullName: adm.fullName,
+    email: adm.email,
+    phone: adm.phone || '',
+    avatar: adm.avatar || '',
+    isParentAdmin: adm.email === 'admin@deckestimator.com' || adm.isParentAdmin === true,
+    createdAt: adm.createdAt,
+    lastLoginAt: adm.lastLoginAt,
+  }));
+
+  return {
+    isParentAdmin: isParent,
+    currentAdmin: {
+      id: currentAdmin._id,
+      _id: currentAdmin._id,
+      name: currentAdmin.fullName,
+      email: currentAdmin.email,
+      isParentAdmin: isParent,
+    },
+    admins: formattedAdmins,
+  };
+}
+
+async function createChildAdmin(currentUser, { fullName, name, email, phone, password }) {
+  const currentAdmin = await User.findById(currentUser._id || currentUser.id);
+  if (!currentAdmin) throw new NotFoundError('Admin user not found.');
+  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
+  if (!isParent) {
+    throw new ForbiddenError('Only the Parent Administrator has authorization to create child administrator accounts.');
+  }
+
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail) throw new BadRequestError('Email address is required.');
+  const existing = await User.findOne({ email: normalizedEmail });
+  if (existing) throw new BadRequestError('An account with this email address already exists.');
+
+  const adminName = (fullName || name || '').trim() || 'Deck Pro Administrator';
+  const plainPassword = password || 'DeckAdmin2026!';
+  const passwordHash = await User.hashPassword(plainPassword);
+
+  const newAdmin = await User.create({
+    fullName: adminName,
+    email: normalizedEmail,
+    phone: (phone || '').trim(),
+    passwordHash,
+    role: 'admin',
+    accountStatus: 'active',
+    isParentAdmin: false,
+    parentAdminId: currentAdmin._id,
+    emailVerifiedAt: new Date(),
+  });
+
+  return {
+    success: true,
+    message: `Child administrator account created successfully for ${adminName} (${normalizedEmail}).`,
+    admin: {
+      id: newAdmin._id,
+      _id: newAdmin._id,
+      name: newAdmin.fullName,
+      email: newAdmin.email,
+      isParentAdmin: false,
+      createdAt: newAdmin.createdAt,
+    },
+  };
+}
+
+async function deleteChildAdmin(currentUser, targetAdminId) {
+  const currentAdmin = await User.findById(currentUser._id || currentUser.id);
+  if (!currentAdmin) throw new NotFoundError('Admin user not found.');
+  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
+  if (!isParent) {
+    throw new ForbiddenError('Only the Parent Administrator has authority to delete child administrators.');
+  }
+
+  const targetAdmin = await User.findById(targetAdminId);
+  if (!targetAdmin) throw new NotFoundError('Administrator account not found.');
+
+  if (
+    targetAdmin.email === 'admin@deckestimator.com' ||
+    targetAdmin.isParentAdmin === true ||
+    targetAdmin._id.toString() === currentAdmin._id.toString()
+  ) {
+    throw new BadRequestError('The Parent Administrator account is protected and cannot be deleted.');
+  }
+
+  targetAdmin.deletedAt = new Date();
+  targetAdmin.accountStatus = 'inactive';
+  await targetAdmin.save();
+
+  return {
+    success: true,
+    message: `Child administrator account (${targetAdmin.email}) has been successfully deleted.`,
+  };
 }
 
 async function changeAdminPassword(adminUserId, { currentPassword, newPassword }) {
@@ -2826,8 +2982,11 @@ module.exports = {
   exportReportsData,
   exportSingleProjectDossier,
 
-  // 13. Profile
+  // 13. Profile & Hierarchy
   getAdminProfile,
   updateAdminProfile,
   changeAdminPassword,
+  getAdminHierarchy,
+  createChildAdmin,
+  deleteChildAdmin,
 };
