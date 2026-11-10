@@ -1537,6 +1537,13 @@ export default function ContinuousEstimatorForm({
         length: activeLength,
         width: activeWidth,
         notes: notes.trim(),
+        photos: uploadedPhotos.map((p) => ({
+          name: p.name,
+          size: p.size,
+          type: p.type,
+          category: p.category,
+          url: p.dataUrl || p.url,
+        })),
         estimateStatus: 'CREATED',
         applyMinJobPrice,
         applyContractorDiscount: isContractor ? applyContractorDiscount : false,

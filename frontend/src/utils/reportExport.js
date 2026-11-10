@@ -1,14 +1,17 @@
 // ====================================================================
 // Deck Estimator — Template-Based PDF & Excel Report Generator
 // Generates official downloadable PDF dossier without browser print dialog
+// Includes dynamic inspection photos and architectural reference images
 // ====================================================================
 
 import html2pdf from 'html2pdf.js';
+import mainLogo from '../assets/images/Main_Logo_v2.png';
+import { ESTIMATOR_IMAGES } from '../assets/images/Input_images/estimatorImages';
 
 /**
  * Format currency helper
  */
-function formatMoney(val) {
+export function formatMoney(val) {
   if (typeof val !== 'number' || isNaN(val)) return '$2,500.00';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -19,8 +22,86 @@ function formatMoney(val) {
 }
 
 /**
+ * Normalizes and extracts all photos associated with an estimate or deck
+ * Supports base64 data URLs, object references, and populated deck photos
+ */
+export function getEstimatePhotos(est = {}) {
+  if (!est) return [];
+  const raw =
+    (Array.isArray(est.photos) && est.photos.length > 0 ? est.photos : null) ||
+    (Array.isArray(est.deckDetails?.photos) && est.deckDetails.photos.length > 0 ? est.deckDetails.photos : null) ||
+    (Array.isArray(est.deckId?.photos) && est.deckId.photos.length > 0 ? est.deckId.photos : null) ||
+    (Array.isArray(est.deckSnapshot?.photos) && est.deckSnapshot.photos.length > 0 ? est.deckSnapshot.photos : null) ||
+    (Array.isArray(est.uploadedPhotos) && est.uploadedPhotos.length > 0 ? est.uploadedPhotos : null) ||
+    (Array.isArray(est.uploadedImages) && est.uploadedImages.length > 0 ? est.uploadedImages : null) ||
+    [];
+
+  return raw
+    .map((p, idx) => {
+      if (!p) return null;
+      if (typeof p === 'string') {
+        const trimmed = p.trim();
+        if (!trimmed) return null;
+        return {
+          id: `photo-${idx}`,
+          url: trimmed,
+          dataUrl: trimmed,
+          category: `Inspection Photo #${idx + 1}`,
+          name: `Photo ${idx + 1}`,
+        };
+      }
+      const src = p.url || p.dataUrl || p.data || p.preview || p.src || '';
+      if (!src) return null;
+      return {
+        ...p,
+        url: src,
+        dataUrl: src,
+        category: p.category ? String(p.category).replace(/_/g, ' ') : `Inspection Photo #${idx + 1}`,
+        name: p.name || `Photo ${idx + 1}`,
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Resolves architectural reference images for shape & wood
+ */
+function getArchitecturalVisuals(shapeName = '', woodName = '') {
+  const shapeLower = String(shapeName).toLowerCase();
+  let shapeImg = ESTIMATOR_IMAGES?.section1?.rectangle?.main || '';
+  if (shapeLower.includes('square')) {
+    shapeImg = ESTIMATOR_IMAGES?.section1?.square?.main || shapeImg;
+  } else if (shapeLower.includes('l_shape') || shapeLower.includes('l-shape') || shapeLower.includes('lshape')) {
+    shapeImg = ESTIMATOR_IMAGES?.section1?.lShape?.main || shapeImg;
+  } else if (shapeLower.includes('custom') || shapeLower.includes('multi')) {
+    shapeImg = ESTIMATOR_IMAGES?.section1?.custom?.main || shapeImg;
+  }
+
+  const woodLower = String(woodName).toLowerCase();
+  let woodImg = ESTIMATOR_IMAGES?.section3?.ptPine?.main || '';
+  if (woodLower.includes('cedar')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.cedar?.main || woodImg;
+  } else if (woodLower.includes('redwood')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.redwood?.main || woodImg;
+  } else if (woodLower.includes('trex') || woodLower.includes('composite')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.composite?.main || woodImg;
+  } else if (woodLower.includes('mahogany')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.mahogany?.main || woodImg;
+  } else if (woodLower.includes('teak')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.teak?.main || woodImg;
+  } else if (woodLower.includes('tiger')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.tigerwood?.main || woodImg;
+  } else if (woodLower.includes('meranti')) {
+    woodImg = ESTIMATOR_IMAGES?.section3?.meranti?.main || woodImg;
+  }
+
+  return { shapeImg, woodImg };
+}
+
+/**
  * Download Official Estimate PDF Dossier
- * @param {Object} est - Estimate or Project or Lead object
+ * Exact same layout, dynamic data, and images wherever invoked
+ * @param {Object} est - Estimate, Deck, Project, or Lead record
  * @param {Object} cust - Customer / User details
  */
 export async function downloadEstimatePdf(est = {}, cust = {}) {
@@ -54,11 +135,17 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
     est.deckSnapshot?.projectName ||
     'Custom Deck Restoration Project';
 
-  const addrObj = est.propertyAddress || est.deckDetails?.propertyAddress || est.deckSnapshot?.propertyAddress || cust.address || {};
-  const street = addrObj.street || est.address || est.location || 'Property Location On-File';
-  const city = addrObj.city || est.city || '';
-  const state = addrObj.state || est.state || '';
-  const zipCode = addrObj.zipCode || est.zipCode || '';
+  const addrObj =
+    est.propertyAddress ||
+    est.deckDetails?.propertyAddress ||
+    est.deckDetails?.location ||
+    est.deckSnapshot?.propertyAddress ||
+    cust.address ||
+    {};
+  const street = addrObj.street || est.address || est.location || '152 Indian Mills Road';
+  const city = addrObj.city || est.city || 'Shamong';
+  const state = addrObj.state || est.state || 'NJ';
+  const zipCode = addrObj.zipCode || est.zipCode || '08088';
   const fullAddress = [street, city, state, zipCode].filter(Boolean).join(', ');
 
   // Dimensions & Areas
@@ -68,15 +155,21 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
   const floorArea = est.floorArea || est.deckDetails?.areaSqFt || est.deckDetails?.area || est.deckArea || (Number(length) * Number(width)) || 400;
   const totalBillableArea = snap.A || est.billableArea || floorArea;
 
-  const shape = (est.shape || est.deckShape || est.deckDetails?.deckShape || 'rectangle').replace(/_/g, ' ').toUpperCase();
-  const wood = (est.woodSpecies || est.deckDetails?.woodSpecies || 'Pressure Treated Pine').replace(/_/g, ' ').toUpperCase();
-  const elevation = (est.height || est.accessType || est.structureDetails?.height || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase();
+  const rawShape = est.shape || est.deckShape || est.deckDetails?.deckShape || 'rectangle';
+  const shape = String(rawShape).replace(/_/g, ' ').toUpperCase();
+
+  const rawWood = est.woodSpecies || est.deckDetails?.woodSpecies || est.deckDetails?.surfaceMaterial || 'Pressure Treated Pine';
+  const wood = String(rawWood).replace(/_/g, ' ').toUpperCase();
+
+  const rawElevation = est.height || est.accessType || est.structureDetails?.height || est.deckDetails?.deckType || 'Ground Level (0–4 ft)';
+  const elevation = String(rawElevation).replace(/_/g, ' ').toUpperCase();
   const exactHeight = est.exactHeightFt || est.structureDetails?.exactHeightFt ? `${est.exactHeightFt || est.structureDetails?.exactHeightFt} ft` : 'Standard';
 
-  const coating = (est.existingCoating || est.coating || est.surfaceDetails?.coatingStatus || 'none').replace(/_/g, ' ').toUpperCase();
+  const rawCoating = est.existingCoating || est.coating || est.surfaceDetails?.coatingStatus || est.deckDetails?.deckCondition || 'none';
+  const coating = String(rawCoating).replace(/_/g, ' ').toUpperCase();
 
   // Services
-  let rawServices = est.services || snap.services || [];
+  let rawServices = est.services || est.deckDetails?.services || snap.services || [];
   if (!Array.isArray(rawServices) || rawServices.length === 0) {
     rawServices = ['cleaning', 'sealing'];
   }
@@ -86,17 +179,31 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
   const componentsList = [];
   const struct = est.structureDetails || est.deckDetails?.structureDetails || {};
   const compSqft = est.componentSqft || {};
-  if (struct.hasRailings || compSqft.railings) componentsList.push(`Perimeter Railings (${compSqft.railings || struct.railingSqft || 50} sq ft)`);
-  if (struct.hasStairs || compSqft.stairs) componentsList.push(`Stair Steps (${compSqft.stairs || struct.stairStepCount || 4} steps)`);
-  if (struct.hasPergola || compSqft.pergola) componentsList.push(`Pergola Overhead (${compSqft.pergola || struct.pergolaSqft || 0} sq ft)`);
-  if (struct.hasPrivacyWall || compSqft.privacy_wall) componentsList.push(`Privacy Screen / Wall (${compSqft.privacy_wall || struct.privacyWallSqft || 0} sq ft)`);
-  if (struct.hasSiding || compSqft.siding) componentsList.push(`Exterior Siding (${compSqft.siding || struct.sidingSqft || 0} sq ft)`);
-  if (struct.hasFascia || compSqft.fascia) componentsList.push(`Fascia Banding (${compSqft.fascia || struct.fasciaSqft || 0} sq ft)`);
-  if (struct.includeJoists || compSqft.joists) componentsList.push(`Underside Joists (${compSqft.joists || struct.joistsSqft || 0} sq ft)`);
+  if (struct.hasRailings || compSqft.railings || (est.components && est.components.includes('railings'))) {
+    componentsList.push(`Perimeter Railings (${compSqft.railings || struct.railingSqft || 50} sq ft)`);
+  }
+  if (struct.hasStairs || compSqft.stairs || (est.components && est.components.includes('stairs'))) {
+    componentsList.push(`Stair Steps (${compSqft.stairs || struct.stairStepCount || 4} steps)`);
+  }
+  if (struct.hasPergola || compSqft.pergola || (est.components && est.components.includes('pergola'))) {
+    componentsList.push(`Pergola Overhead (${compSqft.pergola || struct.pergolaSqft || 0} sq ft)`);
+  }
+  if (struct.hasPrivacyWall || compSqft.privacy_wall || (est.components && est.components.includes('privacy_wall'))) {
+    componentsList.push(`Privacy Screen / Wall (${compSqft.privacy_wall || struct.privacyWallSqft || 0} sq ft)`);
+  }
+  if (struct.hasSiding || compSqft.siding || (est.components && est.components.includes('siding'))) {
+    componentsList.push(`Exterior Siding (${compSqft.siding || struct.sidingSqft || 0} sq ft)`);
+  }
+  if (struct.hasFascia || compSqft.fascia || (est.components && est.components.includes('fascia'))) {
+    componentsList.push(`Fascia Banding (${compSqft.fascia || struct.fasciaSqft || 0} sq ft)`);
+  }
+  if (struct.includeJoists || compSqft.joists || (est.components && est.components.includes('joists'))) {
+    componentsList.push(`Underside Joists (${compSqft.joists || struct.joistsSqft || 0} sq ft)`);
+  }
 
   // Conditions
   const conditionsList = [];
-  const rawConds = est.conditions || est.visibleConditions || est.conditionFlags || [];
+  const rawConds = est.conditions || est.visibleConditions || est.conditionFlags || est.deckDetails?.visibleConditions || [];
   if (Array.isArray(rawConds) && rawConds.length > 0) {
     rawConds.forEach((c) => conditionsList.push(String(c).replace(/_/g, ' ').toUpperCase()));
   } else {
@@ -111,25 +218,31 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
   if (est.looseBoardCount) boardIssues.push(`Loose / Backed Out: ${est.looseBoardCount} boards`);
   if (est.waterDamagedBoardCount) boardIssues.push(`Water Damaged: ${est.waterDamagedBoardCount} boards`);
 
-  // Photos
-  const photos = est.photos || est.deckDetails?.photos || est.deckSnapshot?.photos || [];
+  // Photos (Section 8 Uploaded Inspection Photos)
+  const photos = getEstimatePhotos(est);
+
+  // Architectural Visuals
+  const { shapeImg, woodImg } = getArchitecturalVisuals(rawShape, rawWood);
 
   // Price
-  const totalAmount = typeof est.total === 'number'
-    ? est.total
-    : typeof est.totalAmount === 'number'
-    ? est.totalAmount
-    : typeof snap.total === 'number'
-    ? snap.total
-    : 2500;
+  const totalAmount =
+    typeof est.total === 'number'
+      ? est.total
+      : typeof est.totalAmount === 'number'
+      ? est.totalAmount
+      : typeof snap.calculatedTotal === 'number'
+      ? snap.calculatedTotal
+      : typeof snap.total === 'number'
+      ? snap.total
+      : 2500;
 
-  const minJobAmount = snap.minJob || est.minJobAmount || 2500;
-  const isMinJobApplies = est.minJobApplies || (totalAmount <= minJobAmount);
+  const minJobAmount = snap.minJob || est.minimumJobPrice || est.minJobAmount || 2500;
+  const isMinJobApplies = est.minJobApplies || totalAmount <= minJobAmount;
 
-  // Build HTML Report Template
+  // Build DOM Element for PDF Rendering
   const reportElement = document.createElement('div');
   reportElement.style.width = '780px';
-  reportElement.style.padding = '36px 40px';
+  reportElement.style.padding = '32px 38px';
   reportElement.style.background = '#ffffff';
   reportElement.style.color = '#0f172a';
   reportElement.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
@@ -138,27 +251,30 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
   reportElement.style.boxSizing = 'border-box';
 
   reportElement.innerHTML = `
-    <!-- 1. HEADER SECTION -->
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #1E3A63; padding-bottom: 16px; margin-bottom: 20px;">
-      <div>
-        <div style="font-size: 24px; font-weight: 800; color: #1E3A63; letter-spacing: -0.5px;">DECK RESTORATION PLUS</div>
-        <div style="font-size: 11px; font-weight: 700; color: #E08131; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
-          Official Certified Deck Restoration Estimate Report
+    <!-- 1. BRANDED HEADER WITH LOGO -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1E3A63; padding-bottom: 16px; margin-bottom: 18px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="${mainLogo}" alt="Deck Restoration Plus" style="height: 48px; width: auto; object-fit: contain; display: block;" />
+        <div>
+          <div style="font-size: 20px; font-weight: 800; color: #1E3A63; letter-spacing: -0.4px;">DECK RESTORATION PLUS</div>
+          <div style="font-size: 11px; font-weight: 700; color: #E08131; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">
+            Official Certified Deck Restoration Estimate Report
+          </div>
         </div>
       </div>
       <div style="text-align: right;">
         <div style="font-size: 14px; font-weight: 800; color: #1E3A63;">REFERENCE #: ${refNum}</div>
-        <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 3px;">Generated: ${dateFormatted} at ${timeFormatted}</div>
-        <div style="display: inline-block; padding: 3px 8px; background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; border-radius: 4px; font-size: 10px; font-weight: 800; margin-top: 6px; text-transform: uppercase;">
+        <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">Generated: ${dateFormatted} at ${timeFormatted}</div>
+        <div style="display: inline-block; padding: 3px 8px; background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; border-radius: 4px; font-size: 10px; font-weight: 800; margin-top: 5px; text-transform: uppercase;">
           Guaranteed Estimate
         </div>
       </div>
     </div>
 
-    <!-- 2. CUSTOMER & PROJECT DOSSIER -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
-      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px;">
-        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 8px;">
+    <!-- 2. CUSTOMER CONTACT & PROJECT SITE DETAILS -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; margin-bottom: 8px;">
           Customer Contact Details
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -174,13 +290,13 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
           <span style="font-weight: 600; color: #0F172A;">${customerPhone}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span style="color: #64748b; font-weight: 500;">Account Role:</span>
-          <span style="font-weight: 700; color: #2563EB;">Verified Client</span>
+          <span style="color: #64748b; font-weight: 500;">Client Verification:</span>
+          <span style="font-weight: 700; color: #2563EB;">Official Verified Account</span>
         </div>
       </div>
 
-      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px;">
-        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 8px;">
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; margin-bottom: 8px;">
           Project Site Location & Time
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -202,63 +318,84 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
       </div>
     </div>
 
-    <!-- 3. SECTION-BY-SECTION ARCHITECTURAL BREAKDOWN -->
-    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; margin-bottom: 18px;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+    <!-- 3. ARCHITECTURAL VISUAL SPECIFICATION BAR -->
+    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 7px 10px;">
+        ${shapeImg ? `<img src="${shapeImg}" alt="Deck Blueprint" style="width: 58px; height: 46px; object-fit: cover; border-radius: 4px; border: 1px solid #E2E8F0;" />` : ''}
+        <div>
+          <div style="font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Configured Blueprint</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #1E3A63;">${shape} Layout</div>
+          <div style="font-size: 10px; color: #475569;">${floorArea} sq ft (${length}' × ${width}')</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 7px 10px;">
+        ${woodImg ? `<img src="${woodImg}" alt="Wood Specimen" style="width: 58px; height: 46px; object-fit: cover; border-radius: 4px; border: 1px solid #E2E8F0;" />` : ''}
+        <div>
+          <div style="font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Wood Species Specimen</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #1E3A63;">${wood}</div>
+          <div style="font-size: 10px; color: #475569;">${coating} coating prep verified</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. SECTION-BY-SECTION ARCHITECTURAL BREAKDOWN -->
+    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
         <thead>
           <tr style="background: #1E3A63; color: #FFFFFF;">
-            <th style="padding: 9px 12px; text-align: left; font-weight: 700; width: 28%;">Scope Category</th>
-            <th style="padding: 9px 12px; text-align: left; font-weight: 700; width: 34%;">Selected Specification</th>
-            <th style="padding: 9px 12px; text-align: left; font-weight: 700; width: 38%;">Architectural Impact Details</th>
+            <th style="padding: 8px 12px; text-align: left; font-weight: 700; width: 28%;">Scope Category</th>
+            <th style="padding: 8px 12px; text-align: left; font-weight: 700; width: 34%;">Selected Specification</th>
+            <th style="padding: 8px 12px; text-align: left; font-weight: 700; width: 38%;">Architectural Impact Details</th>
           </tr>
         </thead>
         <tbody>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #FFFFFF;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 1: Footprint & Shape</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${shape}</td>
-            <td style="padding: 8px 12px; color: #475569;">${length} ft length × ${width} ft width (${floorArea} sq ft)</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 1: Footprint & Shape</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${shape}</td>
+            <td style="padding: 7px 12px; color: #475569;">${length} ft length × ${width} ft width (${floorArea} sq ft)</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 2: Components</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${componentsList.length > 0 ? componentsList.join(', ') : 'Standard Floor Only'}</td>
-            <td style="padding: 8px 12px; color: #475569;">Detailed vertical & horizontal surface items included</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 2: Components</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${componentsList.length > 0 ? componentsList.join(', ') : 'Standard Floor Only'}</td>
+            <td style="padding: 7px 12px; color: #475569;">Vertical and horizontal structural elements included</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #FFFFFF;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 3: Wood Species</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${wood}</td>
-            <td style="padding: 8px 12px; color: #475569;">Substrate conditioning tailored for cellular density</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 3: Wood Species</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${wood}</td>
+            <td style="padding: 7px 12px; color: #475569;">Tailored penetrating rate card & cellular density formula</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 4: Elevation Tier</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${elevation}</td>
-            <td style="padding: 8px 12px; color: #475569;">Staging height: ${exactHeight}</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 4: Elevation Tier</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${elevation}</td>
+            <td style="padding: 7px 12px; color: #475569;">Staging height allowance: ${exactHeight}</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #FFFFFF;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 5: Existing Finish</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${coating}</td>
-            <td style="padding: 8px 12px; color: #475569;">Pre-treatment chemical compatibility verified</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 5: Existing Finish</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${coating}</td>
+            <td style="padding: 7px 12px; color: #475569;">Chemical stripping / stripping neutralizer prep compatibility</td>
           </tr>
           <tr style="border-bottom: 1px solid #E2E8F0; background: #F8FAFC;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 6: Services Selected</td>
-            <td style="padding: 8px 12px; font-weight: 700; color: #E08131;">${servicesList.join(' • ')}</td>
-            <td style="padding: 8px 12px; color: #475569;">Commercial chemical wash, prep, and protective coats</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 6: Services Selected</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #E08131;">${servicesList.join(' • ')}</td>
+            <td style="padding: 7px 12px; color: #475569;">Commercial eco-safe detergents, prep & protective sealers</td>
           </tr>
           <tr style="background: #FFFFFF;">
-            <td style="padding: 8px 12px; font-weight: 700; color: #1E3A63;">Section 7: Surface Conditions</td>
-            <td style="padding: 8px 12px; font-weight: 600;">${conditionsList.join(', ')}</td>
-            <td style="padding: 8px 12px; color: #475569;">${boardIssues.length > 0 ? boardIssues.join('; ') : 'No structural board decay observed'}</td>
+            <td style="padding: 7px 12px; font-weight: 700; color: #1E3A63;">Section 7: Surface Conditions</td>
+            <td style="padding: 7px 12px; font-weight: 600;">${conditionsList.join(', ')}</td>
+            <td style="padding: 7px 12px; color: #475569;">${boardIssues.length > 0 ? boardIssues.join('; ') : 'No severe structural board decay noted'}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 4. UPLOADED INSPECTION PHOTOS (SECTION 8) -->
+    <!-- 5. UPLOADED INSPECTION PHOTOS (SECTION 8) -->
     ${
-      photos && photos.length > 0
+      photos.length > 0
         ? `
-      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px;">
-        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 10px;">
-          Section 8: Uploaded Deck Inspection Photos (${photos.length} On-File)
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; margin-bottom: 10px; display: flex; justify-content: space-between;">
+          <span>Section 8: Uploaded Deck Inspection Photos (${photos.length} On-File)</span>
+          <span style="font-size: 10px; color: #64748b; font-weight: 600;">Client Site Documentation</span>
         </div>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
           ${photos
@@ -266,9 +403,9 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
             .map(
               (p, idx) => `
             <div style="border: 1px solid #CBD5E1; border-radius: 6px; overflow: hidden; background: #FFFFFF; text-align: center;">
-              <img src="${p.url || p.dataUrl}" alt="Deck Photo ${idx + 1}" style="width: 100%; height: 95px; object-fit: cover; display: block;" />
+              <img src="${p.url}" alt="${p.category || 'Inspection Photo'}" style="width: 100%; height: 95px; object-fit: cover; display: block;" />
               <div style="padding: 4px 6px; font-size: 9.5px; font-weight: 700; color: #475569; background: #F1F5F9; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${p.category ? p.category.replace(/_/g, ' ') : 'Deck View'} #${idx + 1}
+                ${p.category || `Inspection Photo #${idx + 1}`}
               </div>
             </div>
           `
@@ -280,40 +417,40 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
         : ''
     }
 
-    <!-- 5. GUARANTEED ESTIMATE TOTAL & PRICING BOX -->
-    <div style="background: #F0FDF4; border: 2px solid #BBF7D0; border-radius: 8px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <!-- 6. GUARANTEED ESTIMATE TOTAL & PRICING BOX -->
+    <div style="background: #F0FDF4; border: 2px solid #BBF7D0; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
       <div>
-        <div style="font-size: 14px; font-weight: 800; color: #15803D; text-transform: uppercase;">
+        <div style="font-size: 13px; font-weight: 800; color: #15803D; text-transform: uppercase;">
           Official Guaranteed Estimate Total
         </div>
-        <div style="font-size: 11px; color: #475569; margin-top: 2px;">
+        <div style="font-size: 10.5px; color: #475569; margin-top: 2px;">
           Includes all labor, commercial equipment, chemical restoration agents, and protective penetrating coats.
         </div>
         ${
           isMinJobApplies
-            ? `<div style="font-size: 10.5px; font-weight: 700; color: #B45309; margin-top: 4px;">
+            ? `<div style="font-size: 10px; font-weight: 700; color: #B45309; margin-top: 3px;">
                 * Standard certified crew mobilization minimum ($${Number(minJobAmount).toLocaleString()}) applies upon dispatch.
               </div>`
             : ''
         }
       </div>
       <div style="text-align: right;">
-        <div style="font-size: 26px; font-weight: 900; color: #15803D; letter-spacing: -0.5px;">
+        <div style="font-size: 24px; font-weight: 900; color: #15803D; letter-spacing: -0.5px;">
           ${formatMoney(totalAmount)}
         </div>
-        <div style="font-size: 10px; font-weight: 700; color: #166534; text-transform: uppercase;">
+        <div style="font-size: 9.5px; font-weight: 700; color: #166534; text-transform: uppercase;">
           Guaranteed Quote
         </div>
       </div>
     </div>
 
-    <!-- 6. QUALITY GUARANTEE & WORKMANSHIP WARRANTY -->
-    <div style="background: #FFFBEB; border-left: 3.5px solid #D97706; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 18px; font-size: 11px; color: #92400E; line-height: 1.45;">
+    <!-- 7. QUALITY GUARANTEE & WORKMANSHIP WARRANTY -->
+    <div style="background: #FFFBEB; border-left: 3.5px solid #D97706; border-radius: 0 6px 6px 0; padding: 8px 12px; margin-bottom: 16px; font-size: 10.5px; color: #92400E; line-height: 1.45;">
       <strong>Deck Restoration Plus Certified Quality Guarantee:</strong> All restoration contracts are backed by our comprehensive 1-Year Workmanship Warranty. Performed strictly by certified, licensed, and insured exterior wood specialists using EPA-registered restoration detergents.
     </div>
 
-    <!-- 7. OFFICIAL FOOTER -->
-    <div style="border-top: 1.5px solid #E2E8F0; padding-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b;">
+    <!-- 8. OFFICIAL FOOTER -->
+    <div style="border-top: 1.5px solid #E2E8F0; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #64748b;">
       <div>
         <strong style="color: #1E3A63;">Deck Restoration Plus, LLC</strong> • 152 Indian Mills Road, Shamong, NJ 08088
       </div>
@@ -334,9 +471,24 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
 
   document.body.appendChild(reportElement);
   try {
+    // Wait for all report images (logo, visuals, inspection photos) to fully load in DOM before capturing
+    const imgElements = reportElement.querySelectorAll('img');
+    await Promise.all(
+      Array.from(imgElements).map((img) => {
+        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          setTimeout(resolve, 2500);
+        });
+      })
+    );
+
     await html2pdf().from(reportElement).set(opt).save();
   } finally {
-    document.body.removeChild(reportElement);
+    if (document.body.contains(reportElement)) {
+      document.body.removeChild(reportElement);
+    }
   }
 }
 
@@ -357,11 +509,12 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
   const customerPhone = cust.phone || cust.phoneNumber || est.userPhone || est.phone || '(856) 678-3325';
 
   const projectName = est.projectName || est.title || est.deckDetails?.projectName || 'Deck Restoration Project';
-  const totalAmount = typeof est.total === 'number'
-    ? est.total
-    : typeof est.totalAmount === 'number'
-    ? est.totalAmount
-    : 2500;
+  const totalAmount =
+    typeof est.total === 'number'
+      ? est.total
+      : typeof est.totalAmount === 'number'
+      ? est.totalAmount
+      : 2500;
 
   const snap = est.pricingSnapshot || {};
   const length = est.length || est.deckDetails?.length || 20;
@@ -397,7 +550,9 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
     ['Company Contact', 'Deck Restoration Plus • (856) 678-3325 • estimates@deckrestorationplus.com'],
   ];
 
-  const csvContent = '\uFEFF' + rows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const csvContent =
+    '\uFEFF' +
+    rows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -408,4 +563,3 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-

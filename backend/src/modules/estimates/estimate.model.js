@@ -96,6 +96,14 @@ const estimateSchema = new mongoose.Schema(
         zipCode: { type: String, default: '' },
         country: { type: String, default: '' },
       },
+      photos: {
+        type: [mongoose.Schema.Types.Mixed],
+        default: [],
+      },
+    },
+    photos: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
     },
     selectedMaterials: [
       {

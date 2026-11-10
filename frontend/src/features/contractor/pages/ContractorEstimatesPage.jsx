@@ -12,9 +12,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getEstimates } from '../../customer/api/estimatesApi';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { downloadEstimatePdf } from '../../../utils/reportExport';
 
 export default function ContractorEstimatesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -323,9 +326,9 @@ export default function ContractorEstimatesPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => window.print()}
+                        onClick={() => downloadEstimatePdf(item, user)}
                         style={styles.printBtn}
-                        title="Print Estimate"
+                        title="Download / Print Official PDF Estimate"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="6 9 6 2 18 2 18 9" />

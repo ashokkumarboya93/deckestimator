@@ -15,6 +15,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate } from '../../customer/api/estimatesApi';
+import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
 
 export default function ContractorProjectsPage() {
@@ -402,34 +403,30 @@ export default function ContractorProjectsPage() {
     `;
   };
 
-  // Trigger Dedicated Print Template
-  const handlePrint = (est) => {
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const printWindow = window.open('', '_blank', 'width=900,height=950');
-    if (printWindow) {
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 350);
+  // Trigger Dedicated Print Template (Direct PDF download without browser print dialog)
+  const handlePrint = async (est) => {
+    try {
+      await downloadEstimatePdf(est, user);
+      setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+    } catch (err) {
+      alert(`Could not download PDF report: ${err.message}`);
     }
   };
 
   // Trigger Dedicated Export Template
-  const handleExport = (est) => {
+  const handleExport = async (est, format = 'pdf') => {
     setOpenMenuId(null);
-    const htmlContent = generateOfficialEstimateHtml(est);
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Contractor_Project_${est.estimateNumber || est._id || 'Record'}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setSuccessToast(`Estimate template exported for ${est.estimateNumber || 'Project'}.`);
+    try {
+      if (format === 'excel') {
+        downloadEstimateExcel(est, user);
+        setSuccessToast(`Estimate Excel dossier downloaded for ${est.estimateNumber || 'Project'}.`);
+      } else {
+        await downloadEstimatePdf(est, user);
+        setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+      }
+    } catch (err) {
+      alert(`Export error: ${err.message}`);
+    }
   };
 
   return (

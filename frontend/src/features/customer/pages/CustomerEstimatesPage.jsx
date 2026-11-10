@@ -18,7 +18,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
-import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
@@ -1059,27 +1059,32 @@ export default function CustomerEstimatesPage() {
               </div>
 
               {/* Uploaded Inspection Photos Gallery (Section 8) */}
-              {viewEstimate.photos && viewEstimate.photos.length > 0 && (
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
-                    Uploaded Deck Inspection Photos ({viewEstimate.photos.length} On-File)
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
-                    {viewEstimate.photos.map((p, pIdx) => (
-                      <div key={pIdx} style={{ border: '1px solid #CBD5E1', borderRadius: '6px', overflow: 'hidden', background: '#FFFFFF' }}>
-                        <img
-                          src={p.url || p.dataUrl}
-                          alt={`Inspection ${pIdx + 1}`}
-                          style={{ width: '100%', height: '85px', objectFit: 'cover', display: 'block' }}
-                        />
-                        <div style={{ padding: '4px', fontSize: '9px', fontWeight: '700', color: '#475569', textAlign: 'center', background: '#F1F5F9' }}>
-                          {p.category ? p.category.replace(/_/g, ' ') : `Photo #${pIdx + 1}`}
+              {(() => {
+                const viewPhotos = getEstimatePhotos(viewEstimate);
+                if (viewPhotos.length === 0) return null;
+                return (
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Uploaded Deck Inspection Photos ({viewPhotos.length} On-File)</span>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>Included in Official PDF Report</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                      {viewPhotos.map((p, pIdx) => (
+                        <div key={pIdx} style={{ border: '1px solid #CBD5E1', borderRadius: '6px', overflow: 'hidden', background: '#FFFFFF' }}>
+                          <img
+                            src={p.url || p.dataUrl}
+                            alt={p.category || `Inspection ${pIdx + 1}`}
+                            style={{ width: '100%', height: '85px', objectFit: 'cover', display: 'block' }}
+                          />
+                          <div style={{ padding: '4px', fontSize: '9px', fontWeight: '700', color: '#475569', textAlign: 'center', background: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {p.category || `Photo #${pIdx + 1}`}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Price Highlight Box */}
               <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '8px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1119,6 +1124,29 @@ export default function CustomerEstimatesPage() {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
                 <span>Export PDF</span>
+              </button>
+
+              {/* Print Official PDF Button */}
+              <button
+                type="button"
+                onClick={() => handlePrint(viewEstimate)}
+                style={{
+                  ...styles.modalPrimaryActionBtn,
+                  backgroundColor: '#ffffff',
+                  borderColor: '#CBD5E1',
+                  color: '#1E3A63',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Print Official PDF Report"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                <span>Print</span>
               </button>
 
               {/* Export Excel Button */}

@@ -790,6 +790,12 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
     visibleConditions: specData.conditions,
   };
 
+  const incomingPhotos = payload.photos || payload.uploadedPhotos;
+  if (Array.isArray(incomingPhotos) && incomingPhotos.length > 0) {
+    estimate.deckDetails.photos = incomingPhotos;
+    estimate.photos = incomingPhotos;
+  }
+
   const applyMinJob = payload.applyMinJobPrice !== undefined
     ? Boolean(payload.applyMinJobPrice)
     : Boolean(estimate.pricingSnapshot?.applyMinJobPrice);
@@ -867,19 +873,23 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   // Keep underlying Deck in sync if present
   if (estimate.deckId) {
     try {
+      const deckSyncData = {
+        projectName: payload.estimateName || estimate.estimateName,
+        'dimensions.length': specData.length,
+        'dimensions.width': specData.width,
+        'dimensions.area': floorVal,
+        deckShape: specData.deckShape,
+        'structureDetails.height': specData.accessType,
+        'structureDetails.components': specData.components,
+        'surfaceDetails.woodSpecies': specData.woodSpecies,
+        'surfaceDetails.coatingStatus': specData.existingCoating,
+        visibleConditions: specData.conditions,
+      };
+      if (Array.isArray(incomingPhotos) && incomingPhotos.length > 0) {
+        deckSyncData.photos = incomingPhotos;
+      }
       await Deck.findByIdAndUpdate(estimate.deckId, {
-        $set: {
-          projectName: payload.estimateName || estimate.estimateName,
-          'dimensions.length': specData.length,
-          'dimensions.width': specData.width,
-          'dimensions.area': floorVal,
-          deckShape: specData.deckShape,
-          'structureDetails.height': specData.accessType,
-          'structureDetails.components': specData.components,
-          'surfaceDetails.woodSpecies': specData.woodSpecies,
-          'surfaceDetails.coatingStatus': specData.existingCoating,
-          visibleConditions: specData.conditions,
-        },
+        $set: deckSyncData,
       });
     } catch (deckSyncErr) {
       console.warn('[Deck Sync Warning]:', deckSyncErr.message);
