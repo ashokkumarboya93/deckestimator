@@ -50,6 +50,7 @@ import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
 import AdminSettingsPage from '../features/admin/pages/AdminSettingsPage';
 import AdminGuidelinesPage from '../features/admin/pages/AdminGuidelinesPage';
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage';
+import LandingPage from '../features/landing/pages/LandingPage';
 
 // Route Guards
 import {
@@ -69,7 +70,15 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <RootRedirect />,
+        element: <LandingPage />,
+      },
+      {
+        path: 'landing',
+        element: <LandingPage />,
+      },
+      {
+        path: 'estimator',
+        element: <DeckEstimatorPage />,
       },
       // Customer & Contractor Login
       {

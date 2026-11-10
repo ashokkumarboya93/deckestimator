@@ -26,6 +26,7 @@ import { createEstimate, updateEstimate, calculateLivePricing, updateEstimateSta
 import { leadApi } from '../api/leadApi';
 import { calculateRestorationEstimateClient } from '../utils/pricingEngineClient';
 import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
+import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 
 // Helper to validate Mongo ObjectIds
 function isValidObjectId(id) {
@@ -48,8 +49,7 @@ function normalizeShape(val) {
   const s = String(val).toLowerCase().trim();
   if (s.includes('square')) return 'square';
   if (s.includes('l_shape') || s.includes('l-shape') || s.includes('l_shaped') || s === 'l') return 'l_shaped';
-  if (s.includes('multi')) return 'multi_level';
-  if (s.includes('custom')) return 'custom';
+  if (s.includes('custom') || s.includes('multi')) return 'custom';
   if (s.includes('rect')) return 'rectangle';
   return '';
 }
@@ -71,8 +71,7 @@ function normalizeWood(val) {
 function normalizeElevation(val) {
   if (!val) return '';
   const h = String(val).toLowerCase().trim();
-  if (h.includes('ground') || h === '0-2' || h === '0_2') return 'ground';
-  if (h.includes('low') || h === '2-4' || h === '2_4') return 'low';
+  if (h.includes('ground') || h.includes('low') || h === '0-4' || h === '0_4' || h === '0-2' || h === '0_2' || h === '2-4' || h === '2_4') return 'ground';
   if (h.includes('second') || h === '8-12' || h === '8_12') return 'second';
   if (h.includes('roof') || h.includes('staging') || h.includes('12')) return 'roof';
   if (h.includes('first') || h === '4-8' || h === '4_8') return 'first';
@@ -137,31 +136,29 @@ const SHAPES = [
   {
     id: 'rectangle',
     label: 'Rectangle',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.shapes.rectangle.main,
+    isDiagram: true,
     desc: 'Classic uniform platform, max square footage efficiency.',
   },
   {
     id: 'square',
     label: 'Square',
-    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.shapes.square.main,
+    isDiagram: true,
     desc: 'Equal perimeter length and width, courtyard living.',
   },
   {
     id: 'l_shaped',
     label: 'L-Shape',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.shapes.l_shaped.main,
+    isDiagram: true,
     desc: 'Wraps exterior corners, dual dining and lounge zones.',
-  },
-  {
-    id: 'multi_level',
-    label: 'Multi-Level',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
-    desc: 'Stepped transition tiers accommodating slope grades.',
   },
   {
     id: 'custom',
     label: 'Custom Shape',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.shapes.custom.main,
+    isDiagram: true,
     desc: 'Curved, angled or faceted bespoke architectural perimeter.',
   },
 ];
@@ -189,7 +186,7 @@ const COMPONENTS = [
   {
     id: 'pergola',
     label: 'Pergola',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.pergola.main,
     field: 'pergolaSqft',
     prompt: 'Pergola Framing (sq ft)',
     unit: 'sq ft',
@@ -198,7 +195,7 @@ const COMPONENTS = [
   {
     id: 'privacy_wall',
     label: 'Privacy Wall / Fencing',
-    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.privacy_wall.main,
     field: 'privacyWallSqft',
     prompt: 'Privacy Wall Surface (sq ft)',
     unit: 'sq ft',
@@ -207,7 +204,7 @@ const COMPONENTS = [
   {
     id: 'siding',
     label: 'Exterior Siding',
-    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.siding.main,
     field: 'sidingSqft',
     prompt: 'Siding Area (sq ft)',
     unit: 'sq ft',
@@ -216,7 +213,7 @@ const COMPONENTS = [
   {
     id: 'fascia',
     label: 'Perimeter Fascia',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.fascia.main,
     field: 'fasciaSqft',
     prompt: 'Fascia Board Surface (sq ft)',
     unit: 'sq ft',
@@ -225,7 +222,7 @@ const COMPONENTS = [
   {
     id: 'joists',
     label: 'Underside Joists',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.components.joists.main,
     field: 'joistsSqft',
     prompt: 'Exposed Framing Joists (sq ft)',
     unit: 'sq ft',
@@ -237,49 +234,49 @@ const WOOD_SPECIES = [
   {
     id: 'pt_pine',
     name: 'Pressure-Treated Pine',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.pt_pine.main,
     laborPct: '0% labor adj.',
     desc: 'Standard commercial softwood, treated for exterior ground contact.',
   },
   {
     id: 'cedar',
     name: 'Western Red Cedar',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.cedar.main,
     laborPct: '+10% labor adj.',
     desc: 'Naturally rot-resistant aromatic softwood with rich natural grain.',
   },
   {
     id: 'redwood',
     name: 'California Redwood',
-    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.redwood.main,
     laborPct: '+15% labor adj.',
     desc: 'Dense, durable heartwood with natural tannin resistance.',
   },
   {
     id: 'mahogany',
     name: 'Honduran Mahogany',
-    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.mahogany.main,
     laborPct: '+20% labor adj.',
     desc: 'High-density architectural hardwood with tight ribbon grain.',
   },
   {
     id: 'meranti',
     name: 'Meranti Hardwood',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.meranti.main,
     laborPct: '+20% labor adj.',
     desc: 'Durable exotic dark red hardwood, requires thin penetrating oils.',
   },
   {
     id: 'tigerwood',
     name: 'Tigerwood',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.tigerwood.main,
     laborPct: '+30% labor adj.',
     desc: 'Striking exotic Brazilian hardwood with dark striped grain.',
   },
   {
     id: 'teak',
     name: 'Burmese Teak',
-    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.woodSpecies.teak.main,
     laborPct: '+35% labor adj.',
     desc: 'Extremely durable golden hardwood packed with natural silica.',
   },
@@ -296,32 +293,26 @@ const ELEVATIONS = [
   {
     id: 'ground',
     label: 'Ground Level',
-    range: '0–2 ft elevation',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'low',
-    label: 'Low Elevation',
-    range: '2–4 ft elevation',
-    img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80',
+    range: '0–4 ft elevation',
+    img: ESTIMATOR_IMAGES.elevations.ground.main,
   },
   {
     id: 'first',
     label: 'First Story',
     range: '4–8 ft elevation',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.elevations.first.main,
   },
   {
     id: 'second',
     label: 'Second Story',
     range: '8–12 ft elevation',
-    img: 'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.elevations.second.main,
   },
   {
     id: 'roof',
     label: 'Roof / Staging',
     range: 'Over 12 ft elevation',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.elevations.roof.main,
   },
 ];
 
@@ -419,177 +410,130 @@ const CONDITIONS = [
   {
     id: 'good_condition',
     label: '1. Good Condition (Baseline)',
-    img: 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.good_condition.main,
     exclusive: true,
   },
   {
     id: 'weathered',
     label: '2. Weathered Wood',
-    img: 'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.weathered.main,
   },
   {
     id: 'crack',
     label: '3. Cracks & Checks',
-    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.crack.main,
     hasCount: true,
   },
   {
     id: 'rotted',
     label: '4. Rotted Boards',
-    img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.rotted.main,
     hasCount: true,
   },
   {
     id: 'mold',
     label: '5. Heavy Mold & Mildew',
-    img: 'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.mold.main,
   },
   {
     id: 'peeling',
     label: '6. Peeling Coating',
-    img: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.peeling.main,
   },
   {
     id: 'water_damaged',
     label: '7. Water Damaged Wood',
-    img: 'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.water_damaged.main,
     hasCount: true,
   },
   {
     id: 'warped',
     label: '8. Warped Boards',
-    img: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.warped.main,
     hasCount: true,
   },
   {
     id: 'loose_board',
     label: '9. Loose Deck Boards',
-    img: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    img: ESTIMATOR_IMAGES.conditions.loose_board.main,
     hasCount: true,
   },
 ];
 
 // Curated Multi-Image Architectural Reference Dictionary
 const REFERENCE_SPECS = {
+  // --- SECTION 1: SHAPES ---
   shape_rectangle: {
     title: 'Rectangle Deck Blueprint',
     category: 'Perimeter Geometry',
+    isDiagram: true,
     desc: 'Uniform rectangular geometry maximizing usable floor area with standardized joist runs and parallel board layouts. Minimal lumber trimming waste.',
-    images: [
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.shapes.rectangle.references,
   },
   shape_square: {
     title: 'Square Deck Platform',
     category: 'Perimeter Geometry',
+    isDiagram: true,
     desc: 'Equilateral perimeter offering concentric load distribution. Well-suited for dedicated dining areas, fire features, and balanced outdoor entertaining.',
-    images: [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.shapes.square.references,
   },
   shape_l_shaped: {
     title: 'L-Shaped Wraparound Deck',
     category: 'Perimeter Geometry',
+    isDiagram: true,
     desc: 'Wraps exterior architectural corners to form distinct dining and lounging zones. Features multi-directional framing transitions and optimized traffic flow.',
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-    ],
-  },
-  shape_multi_level: {
-    title: 'Multi-Level Stepped Deck',
-    category: 'Perimeter Geometry',
-    desc: 'Tiered elevation platforms accommodating yard slopes. Connected by wide steps with dedicated structural support for upper and lower living tiers.',
-    images: [
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.shapes.l_shaped.references,
   },
   shape_custom: {
     title: 'Bespoke Architectural Footprint',
     category: 'Perimeter Geometry',
+    isDiagram: true,
     desc: 'Curved, angled, or faceted perimeter footprints tailored to complex foundation lines, pool borders, or mature landscape trees.',
-    images: [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.shapes.custom.references,
   },
+
+  // --- SECTION 3: WOOD SPECIES ---
   wood_pt_pine: {
     title: 'Pressure-Treated Southern Pine',
     category: 'Wood Substrate',
     desc: 'Dense commercial softwood treated with preservative chemistry. Benefits from deep-penetrating oil sealers to stabilize moisture and minimize checking.',
-    images: [
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.pt_pine.references,
   },
   wood_cedar: {
     title: 'Western Red Cedar',
     category: 'Wood Substrate',
     desc: 'Naturally decay-resistant aromatic softwood with rich natural grain. Demands non-film-forming penetrating stains to preserve fiber porosity and breathability.',
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.cedar.references,
   },
   wood_redwood: {
     title: 'California Redwood',
     category: 'Wood Substrate',
     desc: 'Dense, durable heartwood with natural tannin resistance and fine texture. Treated with delicate conditioning agents to prevent surface fiber darkening.',
-    images: [
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.redwood.references,
   },
   wood_mahogany: {
     title: 'Honduran Mahogany',
     category: 'Wood Substrate',
     desc: 'High-density architectural hardwood with tight ribbon grain. Requires deep penetrating oils and fine detail sanding to prevent grain fuzzing.',
-    images: [
-      'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.mahogany.references,
   },
   wood_meranti: {
     title: 'Meranti Exotic Hardwood',
     category: 'Wood Substrate',
     desc: 'Durable exotic dark red hardwood with fine pores. Requires specialized low-viscosity penetrating oils for proper saturation.',
-    images: [
-      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.meranti.references,
   },
   wood_tigerwood: {
     title: 'Tigerwood (Goncalo Alves)',
     category: 'Wood Substrate',
     desc: 'Striking exotic Brazilian hardwood with dark striped grain and high silica content. Demands solvent-reduced exterior oils.',
-    images: [
-      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.tigerwood.references,
   },
   wood_teak: {
     title: 'Burmese Natural Teak',
     category: 'Wood Substrate',
     desc: 'Extremely durable golden hardwood packed with natural oils and silica. Immune to rot, requiring breathable conditioning without synthetic topcoats.',
-    images: [
-      'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.woodSpecies.teak.references,
   },
   wood_trex: {
     title: 'Composite & Capped Trex',
@@ -601,6 +545,8 @@ const REFERENCE_SPECS = {
       'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
     ],
   },
+
+  // --- SECTION 2: COMPONENTS ---
   comp_railings: {
     title: 'Perimeter Railings & Balusters',
     category: 'Architectural Component',
@@ -623,47 +569,116 @@ const REFERENCE_SPECS = {
     title: 'Overhead Pergola Framing',
     category: 'Architectural Component',
     desc: 'Sun-exposed overhead beams and rafter tails. Treated with high-UV-blocking penetrating oils to counteract intense solar weathering.',
-    images: [
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.pergola.references,
   },
   comp_privacy_wall: {
     title: 'Privacy Wall & Vertical Fencing',
     category: 'Architectural Component',
     desc: 'Vertical tongue-and-groove or horizontal privacy slat panels. Treated with dual-face penetrating sealers to shield against moisture trapping.',
-    images: [
-      'https://images.unsplash.com/photo-1502005229762-ee1b2da97a06?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.privacy_wall.references,
   },
   comp_siding: {
     title: 'Adjacent Exterior Siding',
     category: 'Architectural Component',
     desc: 'Exterior wooden sidewalls flanking the deck platform. Protected with matching chemical wash and mildew-inhibiting wood barrier.',
-    images: [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.siding.references,
   },
   comp_fascia: {
     title: 'Perimeter Fascia Banding',
     category: 'Architectural Component',
     desc: 'Rim joist fascia boards framing the deck perimeter edges. Sealed to defend against ground-splash rot and end-grain capillary water absorption.',
-    images: [
-      'https://images.unsplash.com/photo-1546484396-fb3fc6f95f98?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.fascia.references,
   },
   comp_joists: {
     title: 'Underside Framing Joists',
     category: 'Architectural Component',
     desc: 'Exposed structural framing beneath elevated decks. Treated with anti-fungal preservative coatings to deter mold growth in shaded moisture zones.',
-    images: [
-      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=600&q=80',
-    ],
+    images: ESTIMATOR_IMAGES.components.joists.references,
   },
+
+  // --- SECTION 4: ELEVATIONS ---
+  elev_ground: {
+    title: 'Ground Level Deck Platform',
+    category: 'Site Elevation',
+    desc: 'Elevated 0–4 feet above grade with close ground clearance. Inspection focuses on perimeter rim ventilation, splash back from turf sprinklers, and early damp detection.',
+    images: ESTIMATOR_IMAGES.elevations.ground.references,
+  },
+  elev_first: {
+    title: 'First Story Elevation',
+    category: 'Site Elevation',
+    desc: 'Elevated 4–8 feet above grade. Standard height requiring perimeter guard railings, multi-step stairs, and ladder access during restoration.',
+    images: ESTIMATOR_IMAGES.elevations.first.references,
+  },
+  elev_second: {
+    title: 'Second Story Elevated Deck',
+    category: 'Site Elevation',
+    desc: 'Elevated 8–12 feet above grade over walkout basements. Supported on tall heavy-duty columns with underside joist exposure and staging needs.',
+    images: ESTIMATOR_IMAGES.elevations.second.references,
+  },
+  elev_roof: {
+    title: 'Roof / Staging Elevation',
+    category: 'Site Elevation',
+    desc: 'Elevated over 12 feet above grade or rooftop deck setup. Requires specialized staging, safety harnesses, and heavy-duty scaffolding protocols.',
+    images: ESTIMATOR_IMAGES.elevations.roof.references,
+  },
+
+  // --- SECTION 7: DECK PHYSICAL CONDITIONS ---
+  cond_good_condition: {
+    title: 'Good Baseline Condition',
+    category: 'Surface Condition',
+    desc: 'Deck boards maintain structural integrity with smooth surface fibers, intact protective coatings, and zero dry rot. Requires regular maintenance cleaning.',
+    images: ESTIMATOR_IMAGES.conditions.good_condition.references,
+  },
+  cond_weathered: {
+    title: 'Weathered Wood Surface',
+    category: 'Surface Condition',
+    desc: 'UV-degraded surface lignin with grey oxidized appearance. Benefits from chemical brightening and conditioning to restore rich natural wood tones.',
+    images: ESTIMATOR_IMAGES.conditions.weathered.references,
+  },
+  cond_crack: {
+    title: 'Cracks & Checks',
+    category: 'Surface Condition',
+    desc: 'Longitudinal surface fissures caused by wet-dry thermal expansion cycles. Requires deep-penetrating oil sealers to stabilize moisture and prevent splitting.',
+    images: ESTIMATOR_IMAGES.conditions.crack.references,
+  },
+  cond_rotted: {
+    title: 'Rotted Boards & Decay',
+    category: 'Surface Condition',
+    desc: 'Fungal decay causing soft, spongy, or compromised timber fibers. Targeted board replacement required prior to chemical treatment and sealing.',
+    images: ESTIMATOR_IMAGES.conditions.rotted.references,
+  },
+  cond_mold: {
+    title: 'Heavy Mold & Mildew Colonization',
+    category: 'Surface Condition',
+    desc: 'Surface spores flourishing in damp, shaded deck microclimates. Requires targeted anti-microbial detergent wash to eradicate spores down to cellular roots.',
+    images: ESTIMATOR_IMAGES.conditions.mold.references,
+  },
+  cond_peeling: {
+    title: 'Peeling & Blistered Coating',
+    category: 'Surface Condition',
+    desc: 'Failing surface film or solid stain flaking away from wood pores. Professional chemical stripping and mechanical sanding required before refinishing.',
+    images: ESTIMATOR_IMAGES.conditions.peeling.references,
+  },
+  cond_water_damaged: {
+    title: 'Water Damaged Timber',
+    category: 'Surface Condition',
+    desc: 'Deep water stains, moisture pooling discoloration, and softened surface cells. Demands drying evaluation, brightener treatment, and hydrophobic sealing.',
+    images: ESTIMATOR_IMAGES.conditions.water_damaged.references,
+  },
+  cond_warped: {
+    title: 'Warped & Cupped Boards',
+    category: 'Surface Condition',
+    desc: 'Boards curving upward at edges or bowing along joists due to uneven moisture evaporation. Requires leveling sanding or board replacement.',
+    images: ESTIMATOR_IMAGES.conditions.warped.references,
+  },
+  cond_loose_board: {
+    title: 'Loose Deck Boards',
+    category: 'Surface Condition',
+    desc: 'Backed-out nails or stripped screws causing planks to flex, squeak, or lift. Addressed with countersunk exterior-grade structural screws.',
+    images: ESTIMATOR_IMAGES.conditions.loose_board.references,
+  },
+
+  // --- SECTION 6: SERVICES ---
   service_cleaning: {
     title: 'Deck Deep Chemical Cleaning',
     category: 'Restoration Scope',
@@ -1017,6 +1032,14 @@ export default function ContinuousEstimatorForm({
     }
   }, [woodSpecies]);
 
+  // Sync reference window when elevation changes
+  useEffect(() => {
+    if (height && REFERENCE_SPECS['elev_' + height]) {
+      setActiveRefKey('elev_' + height);
+      setRefImageIdx(0);
+    }
+  }, [height]);
+
   // --- RULE R1: TREX LOCK ---
   useEffect(() => {
     if (woodSpecies === 'trex' || woodSpecies === 'composite') {
@@ -1126,6 +1149,10 @@ export default function ContinuousEstimatorForm({
 
   // Toggle Condition (Good Condition is 100% exclusive)
   const toggleCondition = (id) => {
+    if (REFERENCE_SPECS['cond_' + id]) {
+      setActiveRefKey('cond_' + id);
+      setRefImageIdx(0);
+    }
     if (id === 'good_condition') {
       setConditions(['good_condition']);
       setCrackBoardCount('');
@@ -1842,8 +1869,8 @@ export default function ContinuousEstimatorForm({
               </div>
             </div>
 
-            {/* Shape Image Cards Grid */}
-            <div style={styles.imageCardsGrid5}>
+            {/* Shape Image Cards Grid (4 Shapes) */}
+            <div style={styles.imageCardsGrid4}>
               {SHAPES.map((s) => {
                 const isSelected = shape === s.id;
                 return (
@@ -1871,7 +1898,13 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={s.img} alt={s.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img
+                        src={s.img}
+                        alt={s.label}
+                        style={s.isDiagram ? styles.cardCoverImageContain : styles.cardCoverImage}
+                      />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {s.label}
@@ -1970,7 +2003,9 @@ export default function ContinuousEstimatorForm({
                       }}
                       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                     >
-                      <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
+                      <div style={styles.componentThumbFrame}>
+                        <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
+                      </div>
                       <div style={styles.componentMetaRow}>
                         <input
                           type="checkbox"
@@ -2056,7 +2091,9 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {w.name}
@@ -2080,13 +2117,19 @@ export default function ContinuousEstimatorForm({
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid5}>
+            <div style={styles.imageCardsGrid4}>
               {ELEVATIONS.map((el) => {
                 const isSelected = height === el.id;
                 return (
                   <div
                     key={el.id}
-                    onClick={() => setHeight(el.id)}
+                    onClick={() => {
+                      setHeight(el.id);
+                      if (REFERENCE_SPECS['elev_' + el.id]) {
+                        setActiveRefKey('elev_' + el.id);
+                        setRefImageIdx(0);
+                      }
+                    }}
                     style={{
                       ...styles.imageSelectCard,
                       borderColor: isSelected ? '#10B981' : '#E2E8F0',
@@ -2102,7 +2145,9 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {el.label}
@@ -2129,7 +2174,7 @@ export default function ContinuousEstimatorForm({
                 style={{ ...styles.textInput, maxWidth: '140px', padding: '6px 10px', fontSize: '13px' }}
               />
               <span style={{ fontSize: '12px', color: '#64748B' }}>
-                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 2 ? 'Ground (0–2 ft)' : Number(exactHeightFt) <= 4 ? 'Low (2–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / High (Over 12 ft)'}` : 'Defaults to selected card tier above'}
+                {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 4 ? 'Ground Level (0–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / Staging (Over 12 ft)'}` : 'Defaults to selected card tier above'}
               </span>
             </div>
           </section>
@@ -2168,7 +2213,9 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
                         {ec.label}
@@ -2225,7 +2272,9 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <input
@@ -2316,7 +2365,13 @@ export default function ContinuousEstimatorForm({
                 return (
                   <div
                     key={c.id}
-                    onClick={() => toggleCondition(c.id)}
+                    onClick={() => {
+                      toggleCondition(c.id);
+                      if (REFERENCE_SPECS['cond_' + c.id]) {
+                        setActiveRefKey('cond_' + c.id);
+                        setRefImageIdx(0);
+                      }
+                    }}
                     style={{
                       ...styles.imageSelectCard,
                       borderColor: isSelected ? '#10B981' : '#E2E8F0',
@@ -2332,7 +2387,9 @@ export default function ContinuousEstimatorForm({
                         </svg>
                       </div>
                     )}
-                    <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame}>
+                      <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
+                    </div>
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <input
@@ -3131,7 +3188,12 @@ export default function ContinuousEstimatorForm({
                 <img
                   src={(activeRefObj.images && activeRefObj.images[refImageIdx]) || (activeRefObj.images && activeRefObj.images[0]) || 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80'}
                   alt={activeRefObj.title || 'Deck Reference'}
-                  style={styles.refMainImage}
+                  style={{
+                    ...styles.refMainImage,
+                    objectFit: activeRefObj.isDiagram ? 'contain' : 'cover',
+                    padding: activeRefObj.isDiagram ? '8px' : '0',
+                    backgroundColor: activeRefObj.isDiagram ? '#F8FAFC' : '#0F172A',
+                  }}
                 />
                 {activeRefObj.images && activeRefObj.images.length > 1 && (
                   <div style={styles.refImageCounterBadge}>
@@ -3156,7 +3218,15 @@ export default function ContinuousEstimatorForm({
                       }}
                       title={`View image ${idx + 1}`}
                     >
-                      <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} style={styles.refThumbImg} />
+                      <img
+                        src={imgUrl}
+                        alt={`Thumbnail ${idx + 1}`}
+                        style={{
+                          ...styles.refThumbImg,
+                          objectFit: activeRefObj.isDiagram ? 'contain' : 'cover',
+                          padding: activeRefObj.isDiagram ? '2px' : '0',
+                        }}
+                      />
                     </button>
                   ))}
                 </div>
@@ -3774,9 +3844,27 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
   },
+  cardImageFrame: {
+    width: '100%',
+    height: '96px',
+    backgroundColor: '#F8FAFC',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+    borderBottom: '1px solid #F1F5F9',
+  },
+  cardCoverImageContain: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    display: 'block',
+    padding: '8px',
+  },
   cardCoverImage: {
     width: '100%',
-    height: '90px',
+    height: '100%',
     objectFit: 'cover',
     display: 'block',
   },
@@ -3864,9 +3952,20 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
   },
+  componentThumbFrame: {
+    width: '100%',
+    height: '84px',
+    backgroundColor: '#F8FAFC',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+    borderBottom: '1px solid #F1F5F9',
+  },
   componentThumbImage: {
     width: '100%',
-    height: '80px',
+    height: '100%',
     objectFit: 'cover',
     display: 'block',
   },
