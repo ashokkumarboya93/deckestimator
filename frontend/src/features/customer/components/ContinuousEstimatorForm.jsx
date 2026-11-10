@@ -1339,7 +1339,7 @@ export default function ContinuousEstimatorForm({
   }, [isContractor, runContractorCalc]);
 
   // --- SUBMIT ESTIMATE (INFALLIBLE CALCULATION GUARANTEE) ---
-  const handleSave = async (status = 'SUBMITTED') => {
+  const handleSave = async (status = 'SUBMITTED', { shouldScroll = true } = {}) => {
     // Sensible defaults so user is NEVER blocked by empty optional fields
     const activeShape = shape || 'rectangle';
     const activeLength = Number(length) > 0 ? Number(length) : 20;
@@ -1426,15 +1426,17 @@ export default function ContinuousEstimatorForm({
     if (isContractor) setContractorPricing(localCalc);
 
     // Smooth scroll down to the right sidebar card / estimate result box immediately
-    setTimeout(() => {
-      const sidebarCard = document.getElementById('sidebar-guidance-card');
-      if (sidebarCard) {
-        sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        const el = document.getElementById('official-estimate-result-box');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 120);
+    if (shouldScroll) {
+      setTimeout(() => {
+        const sidebarCard = document.getElementById('sidebar-guidance-card');
+        if (sidebarCard) {
+          sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          const el = document.getElementById('official-estimate-result-box');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 120);
+    }
 
     // 2. Persist to Backend in background
     try {
@@ -1599,6 +1601,41 @@ export default function ContinuousEstimatorForm({
       setSubmitting(false);
     }
   };
+
+  // Continuous Auto-Save: whenever inputs change after calculation, auto-update in place
+  useEffect(() => {
+    if (!activeSavedEstimateId && !activeSavedDeckId) return;
+    const timer = setTimeout(() => {
+      handleSave('SUBMITTED', { shouldScroll: false });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [
+    activeSavedEstimateId,
+    activeSavedDeckId,
+    shape,
+    length,
+    width,
+    woodSpecies,
+    height,
+    exactHeightFt,
+    existingCoating,
+    services,
+    stainType,
+    conditions,
+    componentSqft,
+    selectedComponents,
+    crackBoardCount,
+    rottedBoardCount,
+    warpedBoardCount,
+    looseBoardCount,
+    waterDamagedBoardCount,
+    address,
+    city,
+    state,
+    zipCode,
+    notes,
+    applyMinJobPrice,
+  ]);
 
   // Convert Estimate to Hot Project Lead (Lead Generation)
   const handleConvertToLead = async () => {

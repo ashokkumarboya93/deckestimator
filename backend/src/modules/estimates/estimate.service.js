@@ -231,7 +231,7 @@ async function createEstimate(data, user, ipAddress) {
       };
     }
 
-    const applyMinJob = Boolean(data.applyMinJobPrice || payload.applyMinJobPrice);
+    const applyMinJob = Boolean(data.applyMinJobPrice);
     const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
     const minJobThreshold = clientCalc.minJob || 2500;
     const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
@@ -491,6 +491,8 @@ async function getEstimates(query = {}, user) {
     filter.$or = [
       { createdBy: userId },
       { ownerId: userId },
+      { createdFor: userId },
+      { customerId: userId },
     ];
   }
 

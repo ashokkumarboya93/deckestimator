@@ -67,6 +67,9 @@ export default function ContractorProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
+    const handleSaved = () => fetchProjects(true);
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, [fetchProjects]);
 
   // Toast notification auto-dismiss

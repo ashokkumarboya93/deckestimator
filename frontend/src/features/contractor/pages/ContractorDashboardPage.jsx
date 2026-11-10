@@ -39,6 +39,9 @@ export default function ContractorDashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
+    const handleSaved = () => loadDashboardData();
+    window.addEventListener('estimation_saved', handleSaved);
+    return () => window.removeEventListener('estimation_saved', handleSaved);
   }, []);
 
   async function loadDashboardData() {
