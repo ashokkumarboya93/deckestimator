@@ -105,12 +105,15 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '40px 24px',
+    padding: '24px 20px',
     backgroundColor: '#F1F5F9',
+    minHeight: '100vh',
+    boxSizing: 'border-box',
+    overflowY: 'auto',
   },
   formWrapper: {
     width: '100%',
-    maxWidth: '460px',
+    maxWidth: '440px',
   },
   heroColumn: {
     flex: '1 1 50%',
