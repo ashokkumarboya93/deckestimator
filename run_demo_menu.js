@@ -31,3 +31,4 @@ if (arg === 'all') {
 } else {
   console.log('Invalid option. Pass 1, 2, 3, or all.');
 }
+
