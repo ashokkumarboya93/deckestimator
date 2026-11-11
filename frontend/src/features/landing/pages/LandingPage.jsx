@@ -9,7 +9,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 // Image Assets
-import logoImg from '../../../assets/images/landing/landing_logo.png';
+import mainNavLogo from '../../../assets/images/Main_Logo_v2.png';
+import footerLogo from '../../../assets/images/MainLodo.png';
 import wizardHeroImg from '../../../assets/images/Wizard Hat Deck Finishing Portrait.png';
 import calculatorDeckImg from '../../../assets/images/Round Wooden Deck with Wicker Seating.png';
 
@@ -196,7 +197,7 @@ export default function LandingPage() {
         <div style={styles.headerInner}>
           {/* Logo */}
           <Link to="/" style={styles.logoLink}>
-            <img src={logoImg} alt="DECK Plus Restoration" style={styles.logoImg} />
+            <img src={mainNavLogo} alt="DECK Plus Restoration" style={styles.logoImg} />
           </Link>
 
           {/* Navigation Links */}
@@ -286,7 +287,12 @@ export default function LandingPage() {
               style={styles.searchDropdownInput}
               autoFocus
             />
-            <button onClick={() => setSearchOpen(false)} style={styles.searchCloseBtn}>✕</button>
+            <button onClick={() => setSearchOpen(false)} style={styles.searchCloseBtn} title="Close search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
         )}
       </header>
@@ -300,7 +306,19 @@ export default function LandingPage() {
 
         {/* Floating Wooden Sticker Badge positioned above wizard contractor's pointing hand */}
         <div style={styles.floatingWoodSticker}>
-          <div style={styles.woodStickerSunburst}>☀</div>
+          <div style={styles.woodStickerSunburst}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#FDE047" style={{ display: 'block', margin: '0 auto 2px auto' }}>
+              <circle cx="12" cy="12" r="4.5" />
+              <line x1="12" y1="1" x2="12" y2="3.5" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="12" y1="20.5" x2="12" y2="23" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="4.22" y1="4.22" x2="5.99" y2="5.99" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="18.01" y1="18.01" x2="19.78" y2="19.78" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="1" y1="12" x2="3.5" y2="12" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="20.5" y1="12" x2="23" y2="12" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="4.22" y1="19.78" x2="5.99" y2="18.01" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="18.01" y1="5.99" x2="19.78" y2="4.22" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          </div>
           <div style={styles.woodStickerTextTop}>Bring Your Deck</div>
           <div style={styles.woodStickerTextBottom}>Back to Life!</div>
         </div>
@@ -310,7 +328,9 @@ export default function LandingPage() {
           <div style={styles.heroLeft}>
             {/* Tag Badge */}
             <div style={styles.tagBadge}>
-              <span style={{ fontSize: '14px', marginRight: '6px' }}>🪵</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
               <span>Premium Deck Restoration</span>
             </div>
 
@@ -385,14 +405,30 @@ export default function LandingPage() {
                 style={styles.calcDeckImg}
               />
               <div style={styles.calcImageBadge}>
-                <span>✓ Guaranteed Estimates</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Guaranteed Estimates</span>
               </div>
             </div>
 
             {/* Middle: Controls Form */}
             <div style={styles.calcFormCol}>
               <div style={styles.calcHeaderRow}>
-                <span style={{ fontSize: '24px', marginRight: '8px' }}>🧮</span>
+                <div style={{ marginRight: '10px', display: 'flex', alignItems: 'center', color: '#0F2C59' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="2" width="16" height="20" rx="2" />
+                    <line x1="8" y1="6" x2="16" y2="6" />
+                    <line x1="16" y1="14" x2="16" y2="18" />
+                    <path d="M16 10h.01" />
+                    <path d="M12 10h.01" />
+                    <path d="M8 10h.01" />
+                    <path d="M12 14h.01" />
+                    <path d="M8 14h.01" />
+                    <path d="M12 18h.01" />
+                    <path d="M8 18h.01" />
+                  </svg>
+                </div>
                 <div>
                   <h3 style={styles.calcTitle}>Deck Restoration Calculator</h3>
                   <p style={styles.calcSub}>Get an instant, accurate estimate for your deck restoration project.</p>
@@ -447,7 +483,14 @@ export default function LandingPage() {
               </div>
 
               <button onClick={handleLaunchEstimator} style={styles.calcSubmitBtn} className="btn-hover">
-                <span style={{ marginRight: '6px' }}>🧮</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                  <rect x="4" y="2" width="16" height="20" rx="2" />
+                  <line x1="8" y1="6" x2="16" y2="6" />
+                  <line x1="16" y1="14" x2="16" y2="18" />
+                  <path d="M16 10h.01" />
+                  <path d="M12 10h.01" />
+                  <path d="M8 10h.01" />
+                </svg>
                 Calculate Estimate →
               </button>
             </div>
@@ -455,7 +498,10 @@ export default function LandingPage() {
             {/* Right: Estimated Cost Card */}
             <div style={styles.calcResultCol}>
               <div style={styles.costBadgeHeader}>
-                <span style={{ marginRight: '6px' }}>🏷️</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
                 <span>Estimated Cost</span>
               </div>
               <div style={styles.costPriceDisplay}>{calculateQuickEstimate()}</div>
@@ -470,7 +516,14 @@ export default function LandingPage() {
           {/* 4 Trust Stats Bar */}
           <div style={styles.statsBar}>
             <div style={styles.statItem}>
-              <span style={styles.statIcon}>👥</span>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
               <div>
                 <div style={styles.statNumber}>1,500+</div>
                 <div style={styles.statLabel}>Decks Restored</div>
@@ -480,7 +533,11 @@ export default function LandingPage() {
             <div style={styles.statDivider} />
 
             <div style={styles.statItem}>
-              <span style={styles.statIcon}>⭐</span>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
               <div>
                 <div style={styles.statNumber}>4.9/5</div>
                 <div style={styles.statLabel}>Customer Rating</div>
@@ -490,7 +547,14 @@ export default function LandingPage() {
             <div style={styles.statDivider} />
 
             <div style={styles.statItem}>
-              <span style={styles.statIcon}>📅</span>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
               <div>
                 <div style={styles.statNumber}>10+ Years</div>
                 <div style={styles.statLabel}>of Experience</div>
@@ -500,7 +564,12 @@ export default function LandingPage() {
             <div style={styles.statDivider} />
 
             <div style={styles.statItem}>
-              <span style={styles.statIcon}>🛡️</span>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+              </div>
               <div>
                 <div style={styles.statNumber}>100%</div>
                 <div style={styles.statLabel}>Satisfaction Guarantee</div>
@@ -533,7 +602,9 @@ export default function LandingPage() {
             </div>
             <div style={styles.serviceContent}>
               <div style={styles.serviceIconPill}>
-                <span style={{ fontSize: '18px' }}>💧</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
               </div>
               <h3 style={styles.serviceName}>Deck Cleaning</h3>
               <p style={styles.serviceDesc}>
@@ -549,7 +620,9 @@ export default function LandingPage() {
             </div>
             <div style={styles.serviceContent}>
               <div style={{ ...styles.serviceIconPill, backgroundColor: '#FEF3C7', color: '#B45309' }}>
-                <span style={{ fontSize: '18px' }}>🛠️</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
               </div>
               <h3 style={styles.serviceName}>Deck Restoration</h3>
               <p style={styles.serviceDesc}>
@@ -565,7 +638,9 @@ export default function LandingPage() {
             </div>
             <div style={styles.serviceContent}>
               <div style={{ ...styles.serviceIconPill, backgroundColor: '#E0F2FE', color: '#0369A1' }}>
-                <span style={{ fontSize: '18px' }}>🛡️</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
               </div>
               <h3 style={styles.serviceName}>Deck Protection</h3>
               <p style={styles.serviceDesc}>
@@ -637,13 +712,28 @@ export default function LandingPage() {
               <h3 style={styles.promoTitle}>High-Quality Deck Restoration Products</h3>
               <ul style={styles.promoList}>
                 <li style={styles.promoListItem}>
-                  <span style={styles.promoCheck}>✓</span> Weather Resistant
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Weather Resistant
                 </li>
                 <li style={styles.promoListItem}>
-                  <span style={styles.promoCheck}>✓</span> Long-Lasting Protection
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Long-Lasting Protection
                 </li>
                 <li style={styles.promoListItem}>
-                  <span style={styles.promoCheck}>✓</span> Enhances Natural Beauty
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Enhances Natural Beauty
                 </li>
               </ul>
               <button
@@ -793,7 +883,18 @@ export default function LandingPage() {
           <div style={styles.stepCard} className="hover-card">
             <div style={styles.stepHeaderRow}>
               <div style={styles.stepNumberBadge}>1</div>
-              <span style={{ fontSize: '22px' }}>🧮</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2" />
+                <line x1="8" y1="6" x2="16" y2="6" />
+                <line x1="16" y1="14" x2="16" y2="18" />
+                <path d="M16 10h.01" />
+                <path d="M12 10h.01" />
+                <path d="M8 10h.01" />
+                <path d="M12 14h.01" />
+                <path d="M8 14h.01" />
+                <path d="M12 18h.01" />
+                <path d="M8 18h.01" />
+              </svg>
             </div>
             <h4 style={styles.stepTitle}>Get an Estimate</h4>
             <p style={styles.stepDesc}>Use our calculator or request an official contractor quote in seconds.</p>
@@ -805,7 +906,12 @@ export default function LandingPage() {
           <div style={styles.stepCard} className="hover-card">
             <div style={styles.stepHeaderRow}>
               <div style={styles.stepNumberBadge}>2</div>
-              <span style={{ fontSize: '22px' }}>📅</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
             </div>
             <h4 style={styles.stepTitle}>Schedule Service</h4>
             <p style={styles.stepDesc}>Choose an inspection and service schedule that works best for you.</p>
@@ -817,7 +923,10 @@ export default function LandingPage() {
           <div style={styles.stepCard} className="hover-card">
             <div style={styles.stepHeaderRow}>
               <div style={styles.stepNumberBadge}>3</div>
-              <span style={{ fontSize: '22px' }}>🖌️</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18.37 2.63L14 7l3 3 4.37-4.37a2.12 2.12 0 1 0-3-3z" />
+                <path d="M9 12l-6 6a3 3 0 0 0 4.24 4.24l6-6" />
+              </svg>
             </div>
             <h4 style={styles.stepTitle}>We Restore Your Deck</h4>
             <p style={styles.stepDesc}>Our licensed specialists deep clean, refinish, and protect every board.</p>
@@ -829,7 +938,10 @@ export default function LandingPage() {
           <div style={styles.stepCard} className="hover-card">
             <div style={styles.stepHeaderRow}>
               <div style={styles.stepNumberBadge}>4</div>
-              <span style={{ fontSize: '22px' }}>☕</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
             </div>
             <h4 style={styles.stepTitle}>Enjoy Your Space</h4>
             <p style={styles.stepDesc}>A beautiful, weather-resistant outdoor space built to last for years.</p>
@@ -866,8 +978,12 @@ export default function LandingPage() {
                   <span style={styles.testimonialRole}>{t.role}</span>
                 </div>
               </div>
-              <div style={styles.starsRow}>
-                {'★'.repeat(t.stars)}
+              <div style={{ ...styles.starsRow, display: 'flex', gap: '3px' }}>
+                {[...Array(t.stars || 5)].map((_, sIdx) => (
+                  <svg key={sIdx} width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                ))}
               </div>
               <p style={styles.testimonialText}>{t.text}</p>
               <div style={styles.testimonialProjectTag}>
@@ -891,7 +1007,18 @@ export default function LandingPage() {
               Get a fast, accurate estimate and bring your outdoor space back to life.
             </p>
             <button onClick={handleLaunchEstimator} style={styles.ctaBannerBtn} className="btn-hover">
-              <span style={{ marginRight: '8px' }}>🧮</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                <rect x="4" y="2" width="16" height="20" rx="2" />
+                <line x1="8" y1="6" x2="16" y2="6" />
+                <line x1="16" y1="14" x2="16" y2="18" />
+                <path d="M16 10h.01" />
+                <path d="M12 10h.01" />
+                <path d="M8 10h.01" />
+                <path d="M12 14h.01" />
+                <path d="M8 14h.01" />
+                <path d="M12 18h.01" />
+                <path d="M8 18h.01" />
+              </svg>
               Try Deck Calculator Now →
             </button>
           </div>
@@ -906,7 +1033,7 @@ export default function LandingPage() {
           {/* Col 1: Brand & Tagline */}
           <div style={styles.footerColBrand}>
             <Link to="/" style={styles.footerLogoLink}>
-              <img src={logoImg} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
+              <img src={footerLogo} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
             </Link>
             <p style={styles.footerBrandDesc}>
               Premium deck restoration solutions for homes and contractors. Specialized formulas, licensed partner network, and guaranteed precision estimating.
@@ -939,19 +1066,33 @@ export default function LandingPage() {
           <div style={styles.footerCol}>
             <h4 style={styles.footerColHeading}>Get in Touch</h4>
             <div style={styles.footerContactRow}>
-              <span style={styles.footerContactIcon}>📞</span>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              </span>
               <a href="tel:8664403325" style={styles.footerContactLink}>
                 (866) 440-DECK (3325)
               </a>
             </div>
             <div style={styles.footerContactRow}>
-              <span style={styles.footerContactIcon}>✉</span>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+              </span>
               <a href="mailto:estimates@deckrestorationplus.com" style={styles.footerContactLink}>
                 estimates@deckrestorationplus.com
               </a>
             </div>
             <div style={styles.footerContactRow}>
-              <span style={styles.footerContactIcon}>📍</span>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </span>
               <span style={styles.footerContactText}>
                 Serving Your Area & Nationally
               </span>
@@ -959,10 +1100,31 @@ export default function LandingPage() {
 
             {/* Social Icons */}
             <div style={styles.socialRow}>
-              <a href="#facebook" style={styles.socialIcon}>f</a>
-              <a href="#instagram" style={styles.socialIcon}>📷</a>
-              <a href="#youtube" style={styles.socialIcon}>▶</a>
-              <a href="#linkedin" style={styles.socialIcon}>in</a>
+              <a href="#facebook" style={styles.socialIcon} title="Facebook">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </a>
+              <a href="#instagram" style={styles.socialIcon} title="Instagram">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+              </a>
+              <a href="#youtube" style={styles.socialIcon} title="YouTube">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+                  <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
+                </svg>
+              </a>
+              <a href="#linkedin" style={styles.socialIcon} title="LinkedIn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                  <rect x="2" y="9" width="4" height="12" />
+                  <circle cx="4" cy="4" r="2" />
+                </svg>
+              </a>
             </div>
           </div>
         </div>
