@@ -1,0 +1,476 @@
+================================================================================
+DECK RESTORATION PLUS — COMPLETE END-TO-END DEMO PRESENTATION SCRIPT
+================================================================================
+Project: Deck Estimator & Enterprise Restoration Platform
+Stack: React 18 + Vite | Node.js + Express | MongoDB Atlas | Pure CSS / Inline Theme
+Audience: Clients, Stakeholders, Developers, and System Administrators
+Format: Turn-by-turn spoken presenter script with on-screen actions, cross-portal
+        synchronization demonstrations, and technical architecture highlights.
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+1. INTRODUCTION & HIGH-LEVEL PLATFORM OVERVIEW
+2. ACT I: THE LANDING PAGE (SHORT & IMPACTFUL WALKTHROUGH)
+3. ACT II: AUTHENTICATION & MULTI-ROLE ONBOARDING
+4. ACT III: CUSTOMER PORTAL & REAL-TIME ADMIN SYNCHRONIZATION
+   - 3.1 Customer Dashboard
+   - 3.2 Continuous Deck Estimator (7 Steps, Blueprint & Live Pricing)
+   - 3.3 Estimate Submission & Lead Dispatch
+   - 3.4 [CROSS-PORTAL DEMO 1] Admin Lead Management & Instant Conversion
+   - 3.5 Customer My Projects & Estimations (Batch Actions & PDF Dossier)
+   - 3.6 Customer Profile & Support Hub
+5. ACT IV: CONTRACTOR PORTAL & ADMIN VERIFICATION WORKFLOW
+   - 4.1 Contractor Registration & "Waiting for Approval" State
+   - 4.2 [CROSS-PORTAL DEMO 2] Admin Verification & Live Document Preview
+   - 4.3 Contractor Dashboard Unlock (Logo, Layout & Real Notifications)
+   - 4.4 Contractor Deck Estimator (10% Wholesale Discount & Compact Official Box)
+   - 4.5 Contractor My Projects & Lead Conversion (Zero Validation Errors)
+   - 4.6 Discounts & Earnings Ledger
+   - 4.7 Contractor Profile & Document Management
+6. ACT V: ADMIN PORTAL DEEP DIVE (PAGE-BY-PAGE SYSTEM WALKTHROUGH)
+   - 5.1 Admin Real-Time Dashboard
+   - 5.2 User Management (Auto Search, Activity & Profile Previews)
+   - 5.3 Verification & Progress (Modal Inspection & Document Approval)
+   - 5.4 Lead Management (HOT Priority Leads & Workflow Conversion)
+   - 5.5 Project Management (Single-Row KPI Cards & Progress Updates)
+   - 5.6 Pricing Configuration & Contractor Wholesale Discount Tuner
+   - 5.7 Reports & Business Analytics (100% Real Database Analytics)
+   - 5.8 System Settings & Multi-Channel Communications
+7. ACT VI: SUMMARY & TECHNICAL ARCHITECTURE CONCLUSION
+================================================================================
+
+
+================================================================================
+1. INTRODUCTION & HIGH-LEVEL PLATFORM OVERVIEW
+================================================================================
+[PRESENTER STANDBY]
+[Screen open on browser: http://localhost:5173]
+
+SPOKEN SCRIPT:
+"Hello everyone, and welcome to today's comprehensive demonstration of the Deck 
+Restoration Plus platform. 
+
+Deck Restoration Plus is a full-stack, enterprise-grade web application built to 
+revolutionize the outdoor deck restoration industry. It bridges three distinct 
+user ecosystems into one cohesive real-time platform:
+1. Retail Homeowners & Customers who want instant, reliable deck restoration 
+   estimates with transparent pricing and hassle-free contractor booking.
+2. Licensed Professional Contractors who access custom wholesale rate cards, 
+   manage client deck projects, calculate contractor bids, and track earnings.
+3. Central Administrators who oversee lead dispatch, contractor license 
+   verifications, dynamic pricing formulas, and end-to-end project lifecycles.
+
+In this demonstration, I will guide you through each portal step by step. We will 
+begin with our modern landing page, walk through customer estimation and 
+show how it instantly creates actionable leads on the administrative side. Then, 
+we will register a new contractor, watch the verification workflow in the admin 
+portal, unlock the contractor workspace, and conclude with a tour of all 
+administrative operations."
+
+
+================================================================================
+2. ACT I: THE LANDING PAGE (SHORT & IMPACTFUL WALKTHROUGH)
+================================================================================
+[URL: http://localhost:5173]
+[SCREEN ACTION: Start at top of page, scroll smoothly through each section]
+
+SPOKEN SCRIPT:
+"Let's start right here on our brand-new landing page. 
+
+Notice first the clean, modern navigation bar. It features our high-resolution 
+transparent official brand logo on the left, smooth navigation anchor links, an 
+instant search toggle, and dynamic role-based Sign In or Dashboard buttons.
+
+As we look at the Hero section, you can see our high-impact portrait background 
+featuring the Deck Restoration Plus wizard mascot with a precision white-to-
+transparent overlay. Notice that this page is 100% vector SVG — there are zero 
+emojis anywhere on the entire site. We have clean icons, trust badges for 
+'Trusted Professionals', 'Fast Service', and 'Quality Results', plus our floating 
+wood plaque badge: 'Bring Your Deck Back to Life!'.
+
+Directly below the hero CTA is our Interactive Quick Calculator. Homeowners can 
+immediately pick their deck size, wood species, and required service type, and 
+the calculator instantly computes an approximate cost range using our proprietary 
+rate cards.
+
+As we scroll down, each section is designed to comfortably fit modern screen 
+heights:
+- Our 4 Trust Metrics Bar showcasing over 1,500 decks restored with a 4.9-star rating.
+- Our Core Restoration Services: Deck Cleaning with clean droplet iconography, 
+  Structural Restoration with precision repair tools, and Commercial Protection 
+  featuring penetrating sealers.
+- Our Products Gallery displaying genuine Deck Restoration Plus pro-line sealers, 
+  cleaners, and stains alongside a highlight promo banner.
+- Recent Projects with real before-and-after photo comparisons.
+- The 4-Step 'How It Works' guide with custom calculator, calendar, brush, and 
+  patio SVG icons.
+- Customer Testimonials with 5-star ratings and carousel navigation.
+- A high-impact Pre-Footer Call to Action banner.
+- And finally, our official dark-navy Footer featuring the secondary brand logo, 
+  direct phone and email links, and verified social media vector icons."
+
+
+================================================================================
+3. ACT II: AUTHENTICATION & MULTI-ROLE ONBOARDING
+================================================================================
+[URL: http://localhost:5173/login and http://localhost:5173/register]
+[SCREEN ACTION: Click 'Sign In' in top navbar -> Navigate to /login]
+
+SPOKEN SCRIPT:
+"Now, let's explore our authentication system. 
+
+Our application features unified, secure authentication powered by JWT cookies, 
+Bcrypt password encryption, and strict role-based access control.
+
+On the Sign In page:
+- Customers, Contractors, and Administrators all authenticate securely.
+- Administrators have dedicated authentication safeguards that route directly 
+  into the administrative dashboard.
+- Contractors are intelligently routed based on their live verification status: 
+  if their account is approved, they enter the full contractor portal; if their 
+  account is pending review, they are safely directed to the approval screen.
+
+On the Registration page:
+- Homeowners can register as a Customer with simple personal details.
+- Alternatively, professionals can select 'Contractor / Partner' which dynamically 
+  reveals contractor onboarding fields: Business Name, License Number, and 
+  Jurisdiction/State.
+- Client-side and server-side validations guarantee duplicate-free registration 
+  and data integrity."
+
+
+================================================================================
+4. ACT III: CUSTOMER PORTAL & REAL-TIME ADMIN SYNCHRONIZATION
+================================================================================
+
+--- 3.1 Customer Dashboard ---
+[URL: http://localhost:5173/customer/dashboard]
+[SCREEN ACTION: Log in as customer -> Customer Dashboard displays]
+
+SPOKEN SCRIPT:
+"We are now logged in as a retail customer on the Customer Dashboard. 
+
+Notice the personalized greeting banner with our '+ Create New Estimate' quick 
+action, alongside shiny summary KPI cards showing Active Estimates, Completed 
+Projects, Total Saved, and Project Progress.
+
+Below the summary cards, the customer sees their Recent Estimations table, 
+allowing them to immediately review past calculations, check status badges, 
+or click 'View' to see complete estimation specifications."
+
+--- 3.2 Continuous Deck Estimator (7 Steps, Blueprint & Live Pricing) ---
+[URL: http://localhost:5173/customer/decks/new]
+[SCREEN ACTION: Click '+ Create New Estimate']
+
+SPOKEN SCRIPT:
+"Now let's launch the centerpiece of the customer experience: the Continuous Deck 
+Estimator. 
+
+This estimator is built as a seamless, continuous single-page workflow divided 
+into 7 architectural sections:
+- Section 1: Dimensions & Footprint: The customer enters deck length and width 
+  (e.g., 20 by 20 feet for 400 square feet) or selects shapes like Rectangle, 
+  L-Shape, or Custom.
+- Section 2: Architectural Components: Selection of perimeter railings, stair 
+  steps, fascia boards, or privacy screens.
+- Section 3: Wood Species & Material: Real photo options for Pressure-Treated 
+  Pine, Cedar, Redwood, Mahogany, Teak, and Trex Composite.
+- Section 4: Existing Condition: Highlighting bare wood, weathered graying, 
+  mildew, or peeling coats.
+- Section 5: Services & Chemistry: Eco-friendly deep cleaning, chemical stripping, 
+  wood brightening, and sanding.
+- Section 6: Premium Finish & Stain: Choosing penetrating oil sealers, semi-
+  transparent stains, solid coatings, or natural tone finishes.
+- Section 7: Photo Uploads: Drag-and-drop file upload allowing the homeowner to 
+  attach photos of their deck for site review.
+
+Notice the fixed right-hand sidebar. As the customer fills out each section, the 
+circular progress tracker smoothly advances to 7/7, dynamically calculating the 
+exact project price in real-time."
+
+--- 3.3 Customer Final Estimate Box & Minimum Job Price Feature ---
+[SCREEN ACTION: Scroll to the bottom of the estimator form]
+
+SPOKEN SCRIPT:
+"Now look at the Official Estimate Result Box. 
+
+In strict compliance with our design specification, the customer sees ONE SINGLE 
+TOTAL PRICE without overwhelming cost breakdowns. 
+
+Notice our Minimum Job Price feature: Deck Restoration Plus maintains a standard 
+mobilization floor of $2,500. By default, the estimate displays the pure 
+calculated price (for example, $1,400). If the homeowner wishes to apply standard 
+priority crew mobilization, they can check 'Apply Standard Minimum Job Price', 
+and the total updates to $2,500 immediately.
+
+Below the price are four clear primary actions:
+1. 'Request Booking & Reach-out'
+2. 'Create Another Estimate'
+3. 'Export PDF Dossier'
+4. 'Save Estimate'"
+
+--- 3.4 [CROSS-PORTAL DEMO 1] Booking Request -> Admin Lead Management ---
+[SCREEN ACTION: Click 'Request Booking & Reach-out' -> Toast confirms submission]
+[SCREEN ACTION: Open new tab or window -> http://localhost:5173/admin/leads]
+
+SPOKEN SCRIPT:
+"Now watch the cross-portal synchronization in action. 
+
+The customer clicks 'Request Booking & Reach-out'. The system immediately saves 
+the estimate with status 'REQUESTED' and creates a HOT Priority Lead in the 
+central database.
+
+Let's switch over to the Admin Portal under Lead Management at /admin/leads. 
+
+Look right here at the top of the Leads table:
+- Lead Number: Automatically generated reference.
+- Customer Name and Phone Number: Captured directly from the session.
+- Deck Specifications: 400 square feet, Pressure-Treated Pine, Deep Cleaning & Sealing.
+- Estimated Amount: Exactly matches the customer's calculated total.
+- Priority: Marked with a bright red 'HOT' badge because the customer actively 
+  requested booking.
+- Date, Time, and Location: Fully populated.
+
+The administrator can click 'View Request' in the preview modal to inspect the 
+entire scope, and click 'Accept Request'. Once accepted, the system instantly 
+updates the project and estimate status from 'REQUESTED' to 'IN_PROGRESS'!"
+
+--- 3.5 Customer My Projects & Estimations (Batch Actions & PDF Dossier) ---
+[URL: http://localhost:5173/customer/projects]
+[SCREEN ACTION: Return to customer tab -> Click 'My Projects']
+
+SPOKEN SCRIPT:
+"Back in the Customer Portal on 'My Projects & Estimations':
+- The search bar allows instant real-time filtering as you type.
+- Multi-select checkboxes allow homeowners or managers to select individual 
+  projects or click 'Select All' to batch-export CSV spreadsheets or delete records.
+- Clicking 'Export PDF' directly generates and downloads a branded, print-ready 
+  Official Estimate Dossier containing complete contractor notes, dimensions, and 
+  the homeowner's uploaded deck photos.
+- Clicking 'View' opens the dedicated project page at /customer/projects/:id with 
+  full architectural specifications."
+
+
+================================================================================
+5. ACT IV: CONTRACTOR PORTAL & ADMIN VERIFICATION WORKFLOW
+================================================================================
+
+--- 4.1 Contractor Registration & "Waiting for Approval" State ---
+[URL: http://localhost:5173/register]
+[SCREEN ACTION: Open incognito tab -> Go to /register -> Select 'Contractor']
+[SCREEN ACTION: Fill in: Name: 'David Miller', Business: 'Miller Deck Masters LLC', 
+ License: 'LIC-NJ-2026-99', State: 'NJ' -> Click 'Register']
+
+SPOKEN SCRIPT:
+"Now, let's look at the contractor onboarding journey. 
+
+We register a brand-new professional contractor, 'David Miller' from 'Miller Deck 
+Masters LLC', with license 'LIC-NJ-2026-99'. 
+
+Upon registration, the contractor is routed directly to their workspace. 
+
+Notice what is on screen:
+- The top header clearly reads: 'Contractor Dashboard'.
+- The left sidebar displays our crisp, high-visibility Deck Restoration Plus logo.
+- Instead of an empty screen or collapsed footer, the contractor sees a clear, 
+  structured status card: 'Waiting for Administrative Approval'.
+- The card explains that credentials have been received and are pending admin review.
+- A prominent 'Refresh Status' button allows the contractor to check approval in 
+  real-time without browser reloads.
+- Below the status card is an optional CTA: 'Upload Verification Documents for 
+  Higher Wholesale Discounts (Optional) — Qualify for 15%–25% Wholesale Margin'.
+  Contractors can upload insurance certificates or tax forms right here to expedite 
+  higher margin tiers."
+
+--- 4.2 [CROSS-PORTAL DEMO 2] Admin Verification & Live Document Preview ---
+[URL: http://localhost:5173/admin/verifications]
+[SCREEN ACTION: Switch to Admin Tab -> Navigate to 'Verification & Progress']
+
+SPOKEN SCRIPT:
+"Now let's switch to the Admin Portal to approve this contractor. 
+
+We navigate to 'Verification & Progress' at /admin/verifications:
+- Under the 'Verifications' tab, we see 'Miller Deck Masters LLC' (David Miller) 
+  flagged as 'Pending Review'.
+- The administrator can click 'View' to open a clean popup modal showing the 
+  contractor's license number, contact phone, submission timestamp, and jurisdiction.
+- Under the 'Contractor Documents' tab, any uploaded licensing or insurance files 
+  can be reviewed live in preview mode.
+- The admin clicks 'Approve Contractor'. The database immediately commits the 
+  approved status and records an audit log entry."
+
+--- 4.3 Contractor Dashboard Unlock & Real-Time Sync ---
+[SCREEN ACTION: Switch back to Contractor tab -> Click 'Refresh Status']
+
+SPOKEN SCRIPT:
+"Now watch the contractor's screen. 
+
+David Miller clicks 'Refresh Status'. Instantly, without needing to re-login, the 
+page unlocks into the Full Contractor Operational Dashboard!
+
+Notice the features:
+1. The hero banner displays 'Welcome Back, David!' with a green 'Verified Contractor 
+   Partner' badge and two wood-outlined action buttons: '+ Create Estimation' and 
+   'All Projects'.
+2. Exactly 4 pale shiny summary cards: Total Estimations, Completed Projects, Total 
+   Revenue, and Total Estimations Value.
+3. Left-to-right balanced layout: Recent Deck Projects table on the left, 
+   Professional Products Showcase on the right, and our 2x2 Support Hub below.
+4. Top notification bell: 100% synchronized with MongoDB Atlas — zero fake or 
+   hardcoded mock notifications."
+
+--- 4.4 Contractor Deck Estimator (Wholesale Discounts & Compact Price Box) ---
+[URL: http://localhost:5173/contractor/decks/new]
+[SCREEN ACTION: Click '+ Create Estimation' in banner]
+
+SPOKEN SCRIPT:
+"Let's create an estimate from the contractor side at /contractor/decks/new. 
+
+The contractor estimator shares the identical 7-step blueprint engine as the 
+customer side, but with crucial wholesale business logic built in:
+
+Look at the Official Estimate Result Box:
+- Notice that all dead white space has been eliminated. The official green badge 
+  'Deck Restoration Plus • Official Estimate' sits cleanly atop the card.
+- Below is the 'Contractor Quoted Total' featuring an interactive checkbox: 
+  'Apply 10% Contractor Partner Discount (Admin Wholesale Tier)'.
+- When checked, the wholesale partner savings are deducted live, showing the 
+  strikethrough retail price alongside the discounted contractor price.
+- Minimum job price calculations, labor allowance hours, and price ranges are 
+  clearly visible.
+- The contractor can click 'Save', 'Export PDF', or 'Request Enquiry'."
+
+--- 4.5 Contractor My Projects & Lead Conversion (Zero Validation Errors) ---
+[URL: http://localhost:5173/contractor/projects]
+[SCREEN ACTION: Navigate to /contractor/projects]
+
+SPOKEN SCRIPT:
+"On the Contractor Projects page:
+- Summary cards display live project counts and active valuations.
+- The multi-select checkbox feature allows selecting multiple projects to batch-
+  export into Excel/CSV dossiers or batch-delete.
+- On any project row, clicking the Three-Dots menu gives:
+  - 'Request Enquiry / Convert to Booking': clicking this smoothly submits an 
+    inquiry and dispatches an official HOT priority lead to the admin portal with 
+    zero validation errors.
+  - 'Edit in Estimator'
+  - 'Export PDF'
+  - 'Delete'
+- Clicking 'View' opens the dedicated project overview page with full business 
+  details, billable square footage, labor hours, and photo galleries."
+
+--- 4.6 Discounts & Earnings Ledger & Profile ---
+[URL: http://localhost:5173/contractor/discounts-earnings and /contractor/profile]
+[SCREEN ACTION: Click 'Discounts & Earnings' -> Then 'Profile Settings']
+
+SPOKEN SCRIPT:
+"In 'Discounts & Earnings':
+- The contractor tracks active wholesale margin tiers, earned commissions, and 
+  payout ledgers with real-time search and filter controls.
+
+In 'Profile Settings':
+- Contractors manage their company address, license jurisdiction, coverage radius, 
+  and uploaded compliance documents. Document upload zones feature drag-and-drop 
+  uploads with clean, real-time database persistence."
+
+
+================================================================================
+6. ACT V: ADMIN PORTAL DEEP DIVE (PAGE-BY-PAGE SYSTEM WALKTHROUGH)
+================================================================================
+[URL: http://localhost:5173/admin/dashboard]
+[SCREEN ACTION: Navigate to Admin Portal]
+
+SPOKEN SCRIPT:
+"Now, let's conduct a complete walkthrough of all central Administrative pages. 
+This is the command center where business operations, pricing models, and system 
+configurations are managed.
+
+--- 5.1 Admin Dashboard (/admin/dashboard) ---
+- Displays genuine real-time database KPIs: Total Platform Users, Active Estimates, 
+  Converted Projects, and Total Gross Volume.
+- Quick navigation shortcuts to User Management, Estimations, Leads, and Pricing.
+- Recent platform activity stream showing audit events in chronological order.
+
+--- 5.2 User Management (/admin/users) ---
+- Five dedicated sub-tabs: All Users, Customers, Contractors, User Activity, and 
+  User Requests.
+- Real-time search bar that filters users automatically as you type without 
+  requiring search buttons.
+- Each user row features a 'View Profile' button opening a dedicated profile page 
+  displaying contact information, profile photos, full estimation history, and 
+  for contractors, compliance documents in preview mode.
+- User account status management (Active, Suspended, Blocked) with complete 
+  moderation reason logging.
+
+--- 5.3 Verification & Progress (/admin/verifications) ---
+- Verifications tab: Inspect contractor onboarding requests in structured popups 
+  including submission timestamp and geolocation.
+- Contractor Documents tab: Direct preview mode for licenses and insurance files 
+  prior to approval.
+- Customers & Contractors tabs: Full management views with proper back-button 
+  navigation that preserves application context.
+
+--- 5.4 Lead Management (/admin/leads) ---
+- Captures all customer inquiries and contractor booking conversions.
+- Categorized into New, Assigned, In Review, and Converted leads.
+- Full lead cards display Customer/Contractor snapshot, contact info, deck 
+  specifications, and exact date, time, and location.
+- One-click 'Accept Request' action that transitions estimates into active projects.
+
+--- 5.5 Project Management (/admin/projects) ---
+- Clean, compact single-row summary KPI cards (Total Projects, In Progress, 
+  Completed, On Hold).
+- Real-time tracking of assigned contractors, deck dimensions, and project milestones.
+- Update Progress modal: Administrators can update project completion (0% to 100%), 
+  modify status, and record notes. All updates validate cleanly against MongoDB 
+  and record audit history.
+- Batch export to Excel and CSV with customer and contractor details formatted 
+  cleanly as rows.
+
+--- 5.6 Pricing Configuration & Contractor Discount Tuner (/admin/pricing-discounts) ---
+- Base price per square foot, labor allowance rates, travel charges, and minimum 
+  job price rules.
+- Contractor Wholesale Discount Tuner: Allows administrators to tune wholesale 
+  discount policies universally or assign custom, contractor-specific discount 
+  percentages to individual partners with live saving.
+
+--- 5.7 Reports & Business Analytics (/admin/reports) ---
+- 100% real-data business analytics powered by MongoDB aggregation pipelines.
+- Monthly revenue trends, conversion funnel metrics, top-performing wood species, 
+  and regional service breakdowns.
+- One-click CSV and PDF report export for financial accounting.
+
+--- 5.8 System Settings & Multi-Channel Communications (/admin/settings) ---
+- Centralized contact channels management: Phone number, WhatsApp dispatch, 
+  official email, and physical headquarters address.
+- Updates made here automatically propagate across all customer and contractor 
+  portals in real-time."
+
+
+================================================================================
+7. ACT VI: SUMMARY & TECHNICAL ARCHITECTURE CONCLUSION
+================================================================================
+[PRESENTER CLOSING REMARKS]
+[Screen on Landing Page or Admin Dashboard]
+
+SPOKEN SCRIPT:
+"To summarize what we have demonstrated today:
+
+1. A high-performance, responsive Landing Page with zero emojis, 100% SVG 
+   vector iconography, full-screen architectural sections, and branded logos.
+2. A unified Customer Portal featuring our continuous 7-step estimator, 
+   transparent single-price quotes, and minimum job price flexibility.
+3. An enterprise Contractor Portal with wholesale discount tiers, dedicated 
+   waiting-for-approval workflows with document uploads, and zero layout collapse.
+4. Seamless Cross-Portal Synchronization where customer booking requests and 
+   contractor verifications instantly update the central Admin Command Center.
+5. Robust Backend & Database Architecture on Node.js, Express, and MongoDB 
+   Atlas, featuring clean model validation, resilient error handling, and 
+   production-ready security.
+
+Thank you very much for your time. The platform is now fully operational, tested, 
+and ready for live deployment."
+================================================================================
+END OF DEMO SCRIPT
+================================================================================
