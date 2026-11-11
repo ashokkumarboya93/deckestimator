@@ -765,6 +765,60 @@ const REFERENCE_SPECS = {
   },
 };
 
+function isAuthError(err) {
+  return (
+    err?.status === 401 ||
+    err?.code === 'AUTH_REQUIRED' ||
+    err?.code === 'TOKEN_EXPIRED' ||
+    err?.code === 'INVALID_TOKEN' ||
+    /authentication is required/i.test(err?.message || '')
+  );
+}
+
+function AuthPromptBanner({ message, onSignIn, style = {} }) {
+  if (!message) return null;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        padding: '12px 16px',
+        backgroundColor: '#EFF6FF',
+        border: '1px solid #93C5FD',
+        borderRadius: '8px',
+        fontSize: '13px',
+        color: '#1E3A63',
+        marginBottom: '14px',
+        ...style,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: '220px', lineHeight: 1.45 }}>
+        <strong style={{ color: '#1E3A63' }}>Sign In to Save &amp; Submit:</strong> {message}
+      </div>
+      <button
+        type="button"
+        onClick={onSignIn}
+        style={{
+          padding: '7px 14px',
+          backgroundColor: '#1E3A63',
+          color: '#FFFFFF',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '12.5px',
+          fontWeight: '700',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Sign In →
+      </button>
+    </div>
+  );
+}
+
 export default function ContinuousEstimatorForm({
   initialData = null,
   isEditing = false,
@@ -827,6 +881,7 @@ export default function ContinuousEstimatorForm({
   const [contractorPricing, setContractorPricing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [authNotice, setAuthNotice] = useState(null);
 
   // Post-Estimate Box State
   const [officialEstimate, setOfficialEstimate] = useState(null);
@@ -1013,6 +1068,7 @@ export default function ContinuousEstimatorForm({
   const [reachOutMsg, setReachOutMsg] = useState('');
   const [reachOutSending, setReachOutSending] = useState(false);
   const [reachOutSuccess, setReachOutSuccess] = useState(false);
+  const [reachOutError, setReachOutError] = useState(null);
 
   // Upload Photos (Section 8 Optional)
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
@@ -1213,6 +1269,7 @@ export default function ContinuousEstimatorForm({
     setActiveSavedEstimateId(null);
     setSaveSuccessNotice(false);
     setSubmitError(null);
+    setAuthNotice(null);
     setLeadCreated(false);
     setApplyContractorDiscount(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1354,6 +1411,7 @@ export default function ContinuousEstimatorForm({
 
     setSubmitting(true);
     setSubmitError(null);
+    setAuthNotice(null);
 
     // 1. Instant Client-Side Calculation Guarantee (Zero-delay, zero-failure)
     const localCalc = calculateRestorationEstimateClient({
@@ -1436,6 +1494,12 @@ export default function ContinuousEstimatorForm({
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 120);
+    }
+
+    if (!user) {
+      setAuthNotice('Preview mode: your estimate is ready below. Sign in to save this project to your account or book an estimate.');
+      setSubmitting(false);
+      return;
     }
 
     // 2. Persist to Backend in background
@@ -1603,7 +1667,12 @@ export default function ContinuousEstimatorForm({
       }
     } catch (persistErr) {
       console.warn('[Backend Persistence Note]:', persistErr.message);
-      setSubmitError(persistErr.message || 'Failed to save estimate to server.');
+      if (isAuthError(persistErr)) {
+        setSubmitError(null);
+        setAuthNotice('Your session needs sign-in. Your quote is ready below — sign in to save this estimate to your portal.');
+      } else {
+        setSubmitError(persistErr.message || 'Failed to save estimate to server.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1611,7 +1680,7 @@ export default function ContinuousEstimatorForm({
 
   // Continuous Auto-Save: whenever inputs change after calculation, auto-update in place
   useEffect(() => {
-    if (!activeSavedEstimateId && !activeSavedDeckId) return;
+    if (!user || (!activeSavedEstimateId && !activeSavedDeckId)) return;
     const timer = setTimeout(() => {
       handleSave('SUBMITTED', { shouldScroll: false });
     }, 1500);
@@ -1644,9 +1713,17 @@ export default function ContinuousEstimatorForm({
     applyMinJobPrice,
   ]);
 
+  const handleSignInRedirect = () => {
+    navigate('/login', { state: { from: window.location.pathname } });
+  };
+
   // Convert Estimate to Hot Project Lead (Lead Generation)
   const handleConvertToLead = async () => {
     if (!officialEstimate) return;
+    if (!user) {
+      setAuthNotice('Please sign in to submit an official booking inquiry for this estimate.');
+      return;
+    }
     setLeadLoading(true);
     try {
       await leadApi.submitReachOut({
@@ -1668,7 +1745,11 @@ export default function ContinuousEstimatorForm({
 
       setLeadCreated(true);
     } catch (err) {
-      alert(`Could not convert to lead: ${err.message}`);
+      if (isAuthError(err)) {
+        setAuthNotice('Your session needs sign-in before submitting a booking inquiry.');
+      } else {
+        alert(`Could not convert to lead: ${err.message}`);
+      }
     } finally {
       setLeadLoading(false);
     }
@@ -1713,6 +1794,14 @@ export default function ContinuousEstimatorForm({
   const handleSubmitReachOut = async (e) => {
     e.preventDefault();
     if (!reachOutMsg.trim()) return;
+    setReachOutError(null);
+    if (!user) {
+      setReachOutError({
+        isAuth: true,
+        message: 'Please sign in to send a direct inquiry to our specialists.',
+      });
+      return;
+    }
     setReachOutSending(true);
     try {
       await leadApi.submitReachOut({
@@ -1735,10 +1824,21 @@ export default function ContinuousEstimatorForm({
       setTimeout(() => {
         setReachOutOpen(false);
         setReachOutSuccess(false);
+        setReachOutError(null);
         setReachOutMsg('');
       }, 1800);
     } catch (err) {
-      alert(`Enquiry failed: ${err.message}`);
+      if (isAuthError(err)) {
+        setReachOutError({
+          isAuth: true,
+          message: 'Your session expired or needs sign-in. Please sign in to send an inquiry.',
+        });
+      } else {
+        setReachOutError({
+          isAuth: false,
+          message: `Enquiry failed: ${err.message}`,
+        });
+      }
     } finally {
       setReachOutSending(false);
     }
@@ -1817,6 +1917,7 @@ export default function ContinuousEstimatorForm({
       <div style={styles.contentLayoutRow}>
         {/* MIDDLE SCROLLABLE FORM */}
         <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
+          <AuthPromptBanner message={authNotice} onSignIn={handleSignInRedirect} />
           {submitError && (
             <div style={styles.errorBox}>
               <strong style={{ color: '#B91C1C' }}>Attention:</strong> {submitError}
@@ -2697,6 +2798,11 @@ export default function ContinuousEstimatorForm({
             </div>
 
             {/* SUBMIT BUTTON BAR WITH INLINE FEEDBACK */}
+            <AuthPromptBanner
+              message={authNotice}
+              onSignIn={handleSignInRedirect}
+              style={{ marginTop: '16px', marginBottom: '8px' }}
+            />
             {submitError && (
               <div style={{ ...styles.errorBox, marginTop: '16px', marginBottom: '8px' }}>
                 <strong style={{ color: '#B91C1C' }}>Notice:</strong> {submitError}
@@ -3347,7 +3453,10 @@ export default function ContinuousEstimatorForm({
               <h3 style={styles.modalTitle}>Specialist Support & Project Inquiries</h3>
               <button
                 type="button"
-                onClick={() => setReachOutOpen(false)}
+                onClick={() => {
+                  setReachOutOpen(false);
+                  setReachOutError(null);
+                }}
                 style={styles.modalCloseBtn}
               >
                 ✕
@@ -3363,6 +3472,17 @@ export default function ContinuousEstimatorForm({
               </div>
             ) : (
               <form onSubmit={handleSubmitReachOut} style={styles.modalForm}>
+                {reachOutError?.isAuth ? (
+                  <AuthPromptBanner
+                    message={reachOutError.message}
+                    onSignIn={handleSignInRedirect}
+                    style={{ marginBottom: '12px' }}
+                  />
+                ) : reachOutError ? (
+                  <div style={{ ...styles.errorBox, marginBottom: '12px' }}>
+                    {reachOutError.message}
+                  </div>
+                ) : null}
                 <p style={styles.modalSub}>
                   Have questions regarding your deck restoration scope or need custom inspection assistance? Send our certified team a direct inquiry.
                 </p>
@@ -3392,7 +3512,10 @@ export default function ContinuousEstimatorForm({
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setReachOutOpen(false)}
+                    onClick={() => {
+                      setReachOutOpen(false);
+                      setReachOutError(null);
+                    }}
                     style={styles.draftBtn}
                   >
                     Cancel
