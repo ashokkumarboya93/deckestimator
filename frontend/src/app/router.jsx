@@ -182,11 +182,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard',
-            element: (
-              <RequireApprovedContractor>
-                <ContractorDashboardPage />
-              </RequireApprovedContractor>
-            ),
+            element: <ContractorDashboardPage />,
           },
           {
             path: 'decks/new',

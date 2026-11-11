@@ -200,7 +200,7 @@ export default function ContractorLayout() {
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '52px',
+                  height: '56px',
                   maxWidth: '210px',
                   objectFit: 'contain',
                 }}
@@ -212,8 +212,9 @@ export default function ContractorLayout() {
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '38px',
-                  maxWidth: '46px',
+                  height: '46px',
+                  maxWidth: '54px',
+                  maxHeight: '46px',
                   objectFit: 'contain',
                 }}
               />
@@ -449,7 +450,7 @@ export default function ContractorLayout() {
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1 style={styles.headerTitle}>
-                  {currentPath.includes('/dashboard')
+                  {currentPath.includes('/dashboard') || currentPath === '/contractor' || currentPath === '/contractor/'
                     ? 'Contractor Dashboard'
                     : currentPath.includes('/leads')
                     ? 'Assigned Leads & Enquiries'
@@ -465,7 +466,7 @@ export default function ContractorLayout() {
                     ? 'Partner Discounts'
                     : currentPath.includes('/profile') || currentPath.includes('/settings')
                     ? 'Profile & Business Settings'
-                    : 'Contractor Portal'}
+                    : 'Contractor Dashboard'}
                 </h1>
               </div>
             )}
@@ -850,6 +851,7 @@ const styles = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
+    justifyContent: 'space-between',
     minWidth: 0,
     minHeight: '100vh',
     transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1092,11 +1094,13 @@ const styles = {
     cursor: 'pointer',
   },
   mainContent: {
-    flex: 1,
+    flex: '1 0 auto',
     minWidth: 0,
     minHeight: 'calc(100vh - 65px - 260px)',
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   modalOverlay: {
     position: 'fixed',

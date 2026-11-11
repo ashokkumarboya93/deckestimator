@@ -1,42 +1,81 @@
-import React, { useState } from 'react';
+// ====================================================================
+// Deck Estimator — Premium Full-Screen Landing Page
+// Screen-Fitting Long Landing Page (Viewport Proportional Sections)
+// Matches Reference Specification Design with Rich Animations
+// ====================================================================
+
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 
-// Image assets extracted directly from specification design (enhanced 2x resolution)
-import logoImg from '../../../assets/images/landing/landing_logo.png';
-import heroContractorImg from '../../../assets/images/landing/hero_contractor_deck.png';
-import contractorWorkerImg from '../../../assets/images/landing/contractor_worker.png';
-import customerCoupleImg from '../../../assets/images/landing/customer_couple.png';
+// Image Assets
+import mainNavLogo from '../../../assets/images/Main_Logo_v2.png';
+import footerLogo from '../../../assets/images/MainLodo.png';
+import wizardHeroImg from '../../../assets/images/Wizard Hat Deck Finishing Portrait.png';
+import calculatorDeckImg from '../../../assets/images/Round Wooden Deck with Wicker Seating.png';
 
-import proj1Img from '../../../assets/images/landing/project_1_modern.png';
-import proj2Img from '../../../assets/images/landing/project_2_classic.png';
-import proj3Img from '../../../assets/images/landing/project_3_poolside.png';
-import proj4Img from '../../../assets/images/landing/project_4_backyard.png';
+// Service Visuals (100% matched local high-resolution assets)
+import cleaningImg from '../../../assets/images/Input_images/section6/Deep Cleaning/Deep Cleaning_Main.jpg';
+import restorationImg from '../../../assets/images/Input_images/section6/Deck Staining (Conditioning)/Deck Staining_Main.jpg';
+import protectionImg from '../../../assets/images/Input_images/section6/Deck Sealing (Clear Sealing)/Deck Sealing_Main.jpg';
 
+// Products
 import prod1Img from '../../../assets/images/landing/product_1_finishes.png';
 import prod2Img from '../../../assets/images/landing/product_2_sealers.png';
 import prod3Img from '../../../assets/images/landing/product_3_stains.png';
 import prod4Img from '../../../assets/images/landing/product_4_cleaners.png';
 import prod5Img from '../../../assets/images/landing/product_5_tools.png';
+
+// Projects (Internet Images & Real Restoration Before/After Comparisons)
+import proj1Internet from '../../../assets/images/landing/project_1_internet.jpg';
+import proj2Internet from '../../../assets/images/landing/project_2_internet.jpg';
+import proj3Internet from '../../../assets/images/landing/project_3_internet.jpg';
+import proj4Internet from '../../../assets/images/landing/project_4_internet.jpg';
+
+import proj1Before from '../../../assets/images/landing/project_1_before.jpg';
+import proj2Before from '../../../assets/images/landing/project_2_before.jpg';
+import proj3Before from '../../../assets/images/landing/project_3_before.jpg';
+import proj4Before from '../../../assets/images/landing/project_4_before.jpg';
+
+// CTA Background
 import ctaDeckBgImg from '../../../assets/images/landing/cta_deck_bg.png';
 
 export default function LandingPage() {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Quick Estimator State
-  const [deckSize, setDeckSize] = useState('200');
-  const [woodType, setWoodType] = useState('Composite');
-  const [serviceType, setServiceType] = useState('Refinish');
+  // Active navigation tracking for smooth scroll
   const [activeNav, setActiveNav] = useState('Home');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProject, setSelectedProject] = useState(null);
 
-  // Dynamic cost calculation matching the design preview ($2,400 – $3,200 baseline for 200 sq ft)
+  // Quick Calculator State
+  const [deckSize, setDeckSize] = useState('200');
+  const [woodType, setWoodType] = useState('Composite');
+  const [serviceType, setServiceType] = useState('Refinish');
+
+  // Testimonial Carousel State
+  const [activeTestimonialIdx, setActiveTestimonialIdx] = useState(0);
+
+  // Before / After Comparison Active States
+  const [projectViews, setProjectViews] = useState({
+    1: 'after',
+    2: 'after',
+    3: 'after',
+    4: 'after',
+  });
+
+  const toggleProjectView = (id) => {
+    setProjectViews((prev) => ({
+      ...prev,
+      [id]: prev[id] === 'before' ? 'after' : 'before',
+    }));
+  };
+
+  // Dynamic cost calculation based on selection
   const calculateQuickEstimate = () => {
     const size = parseInt(deckSize, 10) || 200;
-    let baseRate = 12; // default $/sq ft baseline range midpoint
+    let baseRate = 12.5;
 
     if (woodType === 'Composite') baseRate = 13.5;
     else if (woodType === 'Cedar') baseRate = 14.5;
@@ -50,7 +89,7 @@ export default function LandingPage() {
     else if (serviceType === 'Full Restoration') baseRate *= 1.45;
 
     const mid = size * baseRate;
-    const low = Math.round((mid * 0.88) / 50) * 50;
+    const low = Math.round((mid * 0.9) / 50) * 50;
     const high = Math.round((mid * 1.15) / 50) * 50;
 
     return `$${low.toLocaleString()} – $${high.toLocaleString()}`;
@@ -66,47 +105,91 @@ export default function LandingPage() {
     });
   };
 
-  const projects = [
+  const scrollToSection = (id, name) => {
+    setActiveNav(name);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Testimonials Data
+  const testimonials = [
     {
-      id: 1,
-      title: 'Modern Deck Revival',
-      type: 'Composite Deck • 320 sq ft',
-      image: proj1Img,
-      desc: 'Deep surface conditioning, eco-stripping of weathered polymer film, and rich protective sealant application.',
+      name: 'Sarah M.',
+      role: 'Verified Homeowner',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&h=200&q=80',
+      text: '“They completely transformed our old weathered deck. The team was prompt, ultra-clean, and the wood looks brand new again!”',
+      stars: 5,
+      project: '320 sq ft Cedar Deck',
     },
     {
-      id: 2,
-      title: 'Classic Wood Restoration',
-      type: 'Wood Deck • 280 sq ft',
-      image: proj2Img,
-      desc: 'Mechanical sanding, grain brightening, and penetrating oil finish restoring natural cedar warmth.',
+      name: 'James R.',
+      role: 'Verified Homeowner',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80',
+      text: '“Professional, on time, and great quality work. The protective finish held up against harsh winter snow without any peeling. Highly recommend!”',
+      stars: 5,
+      project: '450 sq ft Mahogany Deck',
     },
     {
-      id: 3,
-      title: 'Poolside Deck Upgrade',
-      type: 'Composite Deck • 400 sq ft',
-      image: proj3Img,
-      desc: 'High-moisture zone protection, slip-resistant finish, and perimeter structural stabilization.',
-    },
-    {
-      id: 4,
-      title: 'Backyard Deck Makeover',
-      type: 'Wood Deck • 350 sq ft',
-      image: proj4Img,
-      desc: 'Complete dual-coat semi-transparent stain, joist fungicide treatment, and railing refinishing.',
+      name: 'Emily T.',
+      role: 'Verified Homeowner',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80',
+      text: '“The deck calculator was super easy to use and the estimate was spot on. Seamless communication from booking to the final coat.”',
+      stars: 5,
+      project: '280 sq ft Pine Deck',
     },
   ];
 
-  const products = [
-    { name: 'Deck Finishes', image: prod1Img, desc: 'Commercial exterior wood sealers & clear protective coatings' },
-    { name: 'Restoration Sealers', image: prod2Img, desc: 'Deep-penetrating natural grain preservative formulas' },
-    { name: 'Premium Deck Stains', image: prod3Img, desc: 'UV-blocking semi-transparent & solid color pigments' },
-    { name: 'Deck Cleaners', image: prod4Img, desc: 'Bio-wash wood brighteners & mildew stain removers' },
-    { name: 'Professional Tools', image: prod5Img, desc: 'Contractor-grade applicator brushes, rollers & sprayer systems' },
-  ];
+  const handleNextTestimonial = () => {
+    setActiveTestimonialIdx((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const handlePrevTestimonial = () => {
+    setActiveTestimonialIdx((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
 
   return (
     <div style={styles.pageContainer}>
+      {/* Dynamic Keyframes for Animations */}
+      <style>{`
+        @keyframes floatWood {
+          0%, 100% {
+            transform: translateY(0px) rotate(-2deg);
+          }
+          50% {
+            transform: translateY(-9px) rotate(-1deg);
+          }
+        }
+        @keyframes pulseGlow {
+          0%, 100% {
+            box-shadow: 0 4px 16px rgba(224, 122, 43, 0.35);
+          }
+          50% {
+            box-shadow: 0 8px 26px rgba(224, 122, 43, 0.65);
+          }
+        }
+        @keyframes subtleScale {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.02);
+          }
+        }
+        .hover-card:hover {
+          transform: translateY(-8px) !important;
+          box-shadow: 0 20px 35px -8px rgba(15, 44, 89, 0.14) !important;
+        }
+        .hover-zoom:hover img {
+          transform: scale(1.06) !important;
+        }
+        .btn-hover:hover {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+      `}</style>
+
       {/* ======================================================== */}
       {/* 1. TOP NAVBAR / HEADER */}
       {/* ======================================================== */}
@@ -114,75 +197,61 @@ export default function LandingPage() {
         <div style={styles.headerInner}>
           {/* Logo */}
           <Link to="/" style={styles.logoLink}>
-            <img src={logoImg} alt="DECK Plus Restoration" style={styles.logoImg} />
+            <img src={mainNavLogo} alt="DECK Plus Restoration" style={styles.logoImg} />
           </Link>
 
-          {/* Center Navigation Links */}
+          {/* Navigation Links */}
           <nav style={styles.navMenu}>
             <button
-              onClick={() => {
-                setActiveNav('Home');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('hero', 'Home')}
               style={activeNav === 'Home' ? styles.navItemActive : styles.navItem}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '6px' }}>
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-              </svg>
               Home
             </button>
             <button
-              onClick={() => {
-                setActiveNav('Projects');
-                document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              style={activeNav === 'Projects' ? styles.navItemActive : styles.navItem}
+              onClick={() => scrollToSection('services', 'Services')}
+              style={activeNav === 'Services' ? styles.navItemActive : styles.navItem}
             >
-              Projects
+              Services
             </button>
             <button
-              onClick={() => {
-                setActiveNav('Products');
-                document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('products', 'Products')}
               style={activeNav === 'Products' ? styles.navItemActive : styles.navItem}
             >
               Products
             </button>
             <button
-              onClick={() => {
-                setActiveNav('About');
-                document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('projects', 'Projects')}
+              style={activeNav === 'Projects' ? styles.navItemActive : styles.navItem}
+            >
+              Projects
+            </button>
+            <button
+              onClick={() => scrollToSection('how-it-works', 'About')}
               style={activeNav === 'About' ? styles.navItemActive : styles.navItem}
             >
               About
             </button>
             <button
-              onClick={() => {
-                setActiveNav('Contact');
-                document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => scrollToSection('footer', 'Contact')}
               style={activeNav === 'Contact' ? styles.navItemActive : styles.navItem}
             >
               Contact
             </button>
           </nav>
 
-          {/* Right Action Buttons */}
+          {/* Header Actions */}
           <div style={styles.headerRight}>
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              title="Search Deck Estimator"
+              title="Search"
               style={styles.searchIconButton}
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </button>
-
-            <span style={styles.headerDivider} />
 
             {isAuthenticated ? (
               <button
@@ -201,111 +270,620 @@ export default function LandingPage() {
               </Link>
             )}
 
-            <button onClick={handleLaunchEstimator} style={styles.getStartedBtn}>
-              Get Started →
+            <button onClick={handleLaunchEstimator} style={styles.getFreeEstimateBtn} className="btn-hover">
+              Get Free Estimate →
             </button>
           </div>
         </div>
 
-        {/* Expandable Search Input */}
+        {/* Search Popup Dropdown */}
         {searchOpen && (
           <div style={styles.searchDropdownBar}>
             <input
               type="text"
-              placeholder="Search projects, wood species, stains, deck services..."
+              placeholder="Search deck services, stains, cleaners, wood species..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={styles.searchDropdownInput}
               autoFocus
             />
-            <button onClick={() => setSearchOpen(false)} style={styles.searchCloseBtn}>✕</button>
+            <button onClick={() => setSearchOpen(false)} style={styles.searchCloseBtn} title="Close search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
         )}
       </header>
 
       {/* ======================================================== */}
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section style={styles.heroSection}>
-        <div style={styles.heroInner}>
-          {/* Left Text & CTA */}
+      <section id="hero" style={styles.heroSection}>
+        {/* Soft white/transparent horizontal gradient overlay */}
+        <div style={styles.heroOverlay} />
+
+        {/* Floating Wooden Sticker Badge positioned above wizard contractor's pointing hand */}
+        <div style={styles.floatingWoodSticker}>
+          <div style={styles.woodStickerSunburst}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#FDE047" style={{ display: 'block', margin: '0 auto 2px auto' }}>
+              <circle cx="12" cy="12" r="4.5" />
+              <line x1="12" y1="1" x2="12" y2="3.5" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="12" y1="20.5" x2="12" y2="23" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="4.22" y1="4.22" x2="5.99" y2="5.99" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="18.01" y1="18.01" x2="19.78" y2="19.78" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="1" y1="12" x2="3.5" y2="12" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="20.5" y1="12" x2="23" y2="12" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="4.22" y1="19.78" x2="5.99" y2="18.01" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="18.01" y1="5.99" x2="19.78" y2="4.22" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div style={styles.woodStickerTextTop}>Bring Your Deck</div>
+          <div style={styles.woodStickerTextBottom}>Back to Life!</div>
+        </div>
+
+        <div style={styles.heroContainer}>
+          {/* Left Column: Heading, Subhead, CTAs & Trust Badges */}
           <div style={styles.heroLeft}>
+            {/* Tag Badge */}
+            <div style={styles.tagBadge}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>Premium Deck Restoration</span>
+            </div>
+
+            {/* Headline */}
             <h1 style={styles.heroHeading}>
-              Restore. Protect.{' '}
-              <span style={styles.heroEnjoyWord}>Enjoy.</span>
+              Restore. Protect. Enjoy <br />
+              <span style={styles.heroAccentWord}>Your Deck Again.</span>
             </h1>
 
+            {/* Subhead */}
             <p style={styles.heroSubtitle}>
-              Premium deck restoration solutions for a longer-lasting, beautiful outdoor space.
+              Professional deck restoration services that bring back beauty, strength, and long-lasting protection to your outdoor space.
             </p>
 
-            <div style={styles.heroBtnGroup}>
-              <button onClick={handleLaunchEstimator} style={styles.tryEstimatorBtn}>
-                Try Deck Estimator →
+            {/* Buttons */}
+            <div style={styles.heroBtnRow}>
+              <button onClick={handleLaunchEstimator} style={styles.heroPrimaryBtn} className="btn-hover">
+                Try Deck Calculator →
               </button>
               <button
-                onClick={() => document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' })}
-                style={styles.exploreProjectsBtn}
+                onClick={() => scrollToSection('projects', 'Projects')}
+                style={styles.heroSecondaryBtn}
+                className="btn-hover"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#162C46" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '7px' }}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                Explore Projects
+                <div style={styles.playIconCircle}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#0F2C59">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </div>
+                View Our Work
               </button>
             </div>
 
             {/* Trust Badges */}
             <div style={styles.trustBadgesRow}>
-              <div style={styles.trustBadgeItem}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+              <div style={styles.trustItem}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <span>Trusted Quality</span>
+                <span>Trusted Professionals</span>
               </div>
-
-              <span style={styles.trustDivider} />
-
-              <div style={styles.trustBadgeItem}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                  <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-                </svg>
-                <span>Expert Support</span>
-              </div>
-
-              <span style={styles.trustDivider} />
-
-              <div style={styles.trustBadgeItem}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+              <div style={styles.trustItem}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 <span>Fast Service</span>
               </div>
-            </div>
-          </div>
-
-          {/* Right Visual: Contractor + Deck + Product Finish Can */}
-          <div style={styles.heroRight}>
-            <div style={styles.heroImageFrame}>
-              <img
-                src={heroContractorImg}
-                alt="Deck Restoration Plus Contractor with Premium Finish"
-                style={styles.heroImg}
-              />
+              <div style={styles.trustItem}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                  <circle cx="12" cy="8" r="7" />
+                  <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+                </svg>
+                <span>Quality Results</span>
+              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* ======================================================== */}
-        {/* 3. QUICK DECK ESTIMATOR FLOATING CARD */}
-        {/* ======================================================== */}
-        <div style={styles.quickEstimatorCard}>
-          {/* Col 1: Overview */}
-          <div style={styles.qeCol1}>
-            <div style={styles.qeIconSquare}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* ======================================================== */}
+      {/* 3. DECK RESTORATION CALCULATOR & TRUST STATS SECTION */}
+      {/* ======================================================== */}
+      <section style={styles.calculatorSection}>
+        <div style={styles.calculatorSectionInner}>
+          {/* Main Calculator Box */}
+          <div style={styles.calcBox} className="hover-card">
+            {/* Left: Deck Image Visual */}
+            <div style={styles.calcVisualCol}>
+              <img
+                src={calculatorDeckImg}
+                alt="Beautiful Restored Deck"
+                style={styles.calcDeckImg}
+              />
+              <div style={styles.calcImageBadge}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Guaranteed Estimates</span>
+              </div>
+            </div>
+
+            {/* Middle: Controls Form */}
+            <div style={styles.calcFormCol}>
+              <div style={styles.calcHeaderRow}>
+                <div style={{ marginRight: '10px', display: 'flex', alignItems: 'center', color: '#0F2C59' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="2" width="16" height="20" rx="2" />
+                    <line x1="8" y1="6" x2="16" y2="6" />
+                    <line x1="16" y1="14" x2="16" y2="18" />
+                    <path d="M16 10h.01" />
+                    <path d="M12 10h.01" />
+                    <path d="M8 10h.01" />
+                    <path d="M12 14h.01" />
+                    <path d="M8 14h.01" />
+                    <path d="M12 18h.01" />
+                    <path d="M8 18h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={styles.calcTitle}>Deck Restoration Calculator</h3>
+                  <p style={styles.calcSub}>Get an instant, accurate estimate for your deck restoration project.</p>
+                </div>
+              </div>
+
+              <div style={styles.calcInputsRow}>
+                <div style={styles.calcField}>
+                  <label style={styles.calcLabel}>Deck Size</label>
+                  <select
+                    value={deckSize}
+                    onChange={(e) => setDeckSize(e.target.value)}
+                    style={styles.calcSelect}
+                  >
+                    <option value="150">150 sq ft</option>
+                    <option value="200">200 sq ft</option>
+                    <option value="300">300 sq ft</option>
+                    <option value="400">400 sq ft</option>
+                    <option value="550">550 sq ft</option>
+                    <option value="800">800+ sq ft</option>
+                  </select>
+                </div>
+
+                <div style={styles.calcField}>
+                  <label style={styles.calcLabel}>Wood Type</label>
+                  <select
+                    value={woodType}
+                    onChange={(e) => setWoodType(e.target.value)}
+                    style={styles.calcSelect}
+                  >
+                    <option value="Composite">Composite</option>
+                    <option value="Pressure-Treated Pine">Pressure-Treated Pine</option>
+                    <option value="Cedar">Cedar</option>
+                    <option value="Redwood">Redwood</option>
+                    <option value="Hardwood / Mahogany">Hardwood / Mahogany</option>
+                  </select>
+                </div>
+
+                <div style={styles.calcField}>
+                  <label style={styles.calcLabel}>Service Type</label>
+                  <select
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value)}
+                    style={styles.calcSelect}
+                  >
+                    <option value="Refinish">Refinish</option>
+                    <option value="Clean & Seal">Clean & Seal</option>
+                    <option value="Strip & Stain">Strip & Stain</option>
+                    <option value="Full Restoration">Full Restoration</option>
+                  </select>
+                </div>
+              </div>
+
+              <button onClick={handleLaunchEstimator} style={styles.calcSubmitBtn} className="btn-hover">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                  <rect x="4" y="2" width="16" height="20" rx="2" />
+                  <line x1="8" y1="6" x2="16" y2="6" />
+                  <line x1="16" y1="14" x2="16" y2="18" />
+                  <path d="M16 10h.01" />
+                  <path d="M12 10h.01" />
+                  <path d="M8 10h.01" />
+                </svg>
+                Calculate Estimate →
+              </button>
+            </div>
+
+            {/* Right: Estimated Cost Card */}
+            <div style={styles.calcResultCol}>
+              <div style={styles.costBadgeHeader}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                  <line x1="7" y1="7" x2="7.01" y2="7" />
+                </svg>
+                <span>Estimated Cost</span>
+              </div>
+              <div style={styles.costPriceDisplay}>{calculateQuickEstimate()}</div>
+              <div style={styles.costApproxNotice}>(Approximate Range)</div>
+              <div style={styles.costFootnote}>
+                <span style={{ marginRight: '4px' }}>ⓘ</span>
+                Final price may vary based on site conditions, deck condition, and materials.
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Trust Stats Bar */}
+          <div style={styles.statsBar}>
+            <div style={styles.statItem}>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.statNumber}>1,500+</div>
+                <div style={styles.statLabel}>Decks Restored</div>
+              </div>
+            </div>
+
+            <div style={styles.statDivider} />
+
+            <div style={styles.statItem}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.statNumber}>4.9/5</div>
+                <div style={styles.statLabel}>Customer Rating</div>
+              </div>
+            </div>
+
+            <div style={styles.statDivider} />
+
+            <div style={styles.statItem}>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.statNumber}>10+ Years</div>
+                <div style={styles.statLabel}>of Experience</div>
+              </div>
+            </div>
+
+            <div style={styles.statDivider} />
+
+            <div style={styles.statItem}>
+              <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+              </div>
+              <div>
+                <div style={styles.statNumber}>100%</div>
+                <div style={styles.statLabel}>Satisfaction Guarantee</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 4. OUR DECK RESTORATION SERVICES (FULL SCREEN) */}
+      {/* ======================================================== */}
+      <section id="services" style={styles.screenSection}>
+        <div style={styles.sectionHeaderCentered}>
+          <div style={styles.titleWithLines}>
+            <span style={styles.woodAccentLine} />
+            <h2 style={styles.sectionTitle}>Our Deck Restoration Services</h2>
+            <span style={styles.woodAccentLine} />
+          </div>
+          <p style={styles.sectionSubtitle}>
+            Complete solutions to clean, restore, and protect your deck for years to come.
+          </p>
+        </div>
+
+        <div style={styles.servicesGrid}>
+          {/* Service Card 1: Deck Cleaning */}
+          <div style={styles.serviceCard} className="hover-card hover-zoom">
+            <div style={styles.serviceImgWrapper}>
+              <img src={cleaningImg} alt="Deck Cleaning Process" style={styles.serviceImg} />
+            </div>
+            <div style={styles.serviceContent}>
+              <div style={styles.serviceIconPill}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+              </div>
+              <h3 style={styles.serviceName}>Deck Cleaning</h3>
+              <p style={styles.serviceDesc}>
+                Remove dirt, mold, mildew, and failed old finishes for a fresh, clean, and revitalized surface.
+              </p>
+            </div>
+          </div>
+
+          {/* Service Card 2: Deck Restoration */}
+          <div style={styles.serviceCard} className="hover-card hover-zoom">
+            <div style={styles.serviceImgWrapper}>
+              <img src={restorationImg} alt="Deck Restoration and Refinishing" style={styles.serviceImg} />
+            </div>
+            <div style={styles.serviceContent}>
+              <div style={{ ...styles.serviceIconPill, backgroundColor: '#FEF3C7', color: '#B45309' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+              </div>
+              <h3 style={styles.serviceName}>Deck Restoration</h3>
+              <p style={styles.serviceDesc}>
+                Repair damaged boards, precision sand wood fibers, and bring back the original architectural beauty.
+              </p>
+            </div>
+          </div>
+
+          {/* Service Card 3: Deck Protection */}
+          <div style={styles.serviceCard} className="hover-card hover-zoom">
+            <div style={styles.serviceImgWrapper}>
+              <img src={protectionImg} alt="Deck Protection with Protective Sealers" style={styles.serviceImg} />
+            </div>
+            <div style={styles.serviceContent}>
+              <div style={{ ...styles.serviceIconPill, backgroundColor: '#E0F2FE', color: '#0369A1' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <h3 style={styles.serviceName}>Deck Protection</h3>
+              <p style={styles.serviceDesc}>
+                Long-lasting commercial penetrating sealers and UV-inhibiting stains that resist weather, moisture, and wear.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 5. OUR PRODUCTS SECTION (FULL SCREEN) */}
+      {/* ======================================================== */}
+      <section id="products" style={styles.screenSection}>
+        <div style={styles.sectionHeaderCentered}>
+          <div style={styles.titleWithLines}>
+            <span style={styles.woodAccentLine} />
+            <h2 style={styles.sectionTitle}>Our Products</h2>
+            <span style={styles.woodAccentLine} />
+          </div>
+          <p style={styles.sectionSubtitle}>
+            Professional-grade products for durable, long-lasting, and beautiful results.
+          </p>
+        </div>
+
+        <div style={styles.productsContainer}>
+          {/* Left Grid: 5 Products */}
+          <div style={styles.productsGrid}>
+            <div style={styles.productCard} className="hover-card">
+              <div style={styles.productImgFrame}>
+                <img src={prod1Img} alt="Deck Finishes" style={styles.productImg} />
+              </div>
+              <div style={styles.productTitle}>Deck Finishes</div>
+            </div>
+
+            <div style={styles.productCard} className="hover-card">
+              <div style={styles.productImgFrame}>
+                <img src={prod2Img} alt="Restoration Sealers" style={styles.productImg} />
+              </div>
+              <div style={styles.productTitle}>Restoration Sealers</div>
+            </div>
+
+            <div style={styles.productCard} className="hover-card">
+              <div style={styles.productImgFrame}>
+                <img src={prod3Img} alt="Premium Deck Stains" style={styles.productImg} />
+              </div>
+              <div style={styles.productTitle}>Premium Deck Stains</div>
+            </div>
+
+            <div style={styles.productCard} className="hover-card">
+              <div style={styles.productImgFrame}>
+                <img src={prod4Img} alt="Deck Cleaners" style={styles.productImg} />
+              </div>
+              <div style={styles.productTitle}>Deck Cleaners</div>
+            </div>
+
+            <div style={styles.productCard} className="hover-card">
+              <div style={styles.productImgFrame}>
+                <img src={prod5Img} alt="Professional Tools" style={styles.productImg} />
+              </div>
+              <div style={styles.productTitle}>Professional Tools</div>
+            </div>
+          </div>
+
+          {/* Right Highlight Promo Card */}
+          <div style={styles.promoProductCard} className="hover-card">
+            <div style={styles.promoOverlay} />
+            <div style={styles.promoContent}>
+              <h3 style={styles.promoTitle}>High-Quality Deck Restoration Products</h3>
+              <ul style={styles.promoList}>
+                <li style={styles.promoListItem}>
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Weather Resistant
+                </li>
+                <li style={styles.promoListItem}>
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Long-Lasting Protection
+                </li>
+                <li style={styles.promoListItem}>
+                  <span style={styles.promoCheck}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Enhances Natural Beauty
+                </li>
+              </ul>
+              <button
+                onClick={handleLaunchEstimator}
+                style={styles.shopProductsBtn}
+                className="btn-hover"
+              >
+                Shop Products →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 6. RECENT DECK RESTORATION PROJECTS (FULL SCREEN) */}
+      {/* ======================================================== */}
+      <section id="projects" style={styles.screenSection}>
+        <div style={styles.projectsHeaderRow}>
+          <div>
+            <div style={styles.titleWithLines}>
+              <span style={styles.woodAccentLine} />
+              <h2 style={styles.sectionTitle}>Recent Deck Restoration Projects</h2>
+              <span style={styles.woodAccentLine} />
+            </div>
+            <p style={styles.sectionSubtitle}>See the transformation for yourself.</p>
+          </div>
+          <button
+            onClick={() => navigate('/customer/projects')}
+            style={styles.viewAllProjectsBtn}
+            className="btn-hover"
+          >
+            View All Projects →
+          </button>
+        </div>
+
+        <div style={styles.projectsGrid}>
+          {/* Project 1 */}
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(1)} title="Click to toggle Before / After view">
+            <div style={styles.projectImgBox}>
+              <img
+                src={projectViews[1] === 'before' ? proj1Before : proj1Internet}
+                alt="Modern Deck Revival"
+                style={styles.projectImg}
+              />
+              <div style={styles.sliderPillBar}>
+                <span style={projectViews[1] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  BEFORE
+                </span>
+                <span style={styles.sliderDivider}>↔</span>
+                <span style={projectViews[1] === 'after' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  AFTER
+                </span>
+              </div>
+            </div>
+            <div style={styles.projectDetails}>
+              <h4 style={styles.projectTitle}>Modern Deck Revival</h4>
+              <p style={styles.projectMeta}>Composite Deck • 320 sq ft</p>
+            </div>
+          </div>
+
+          {/* Project 2 */}
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(2)} title="Click to toggle Before / After view">
+            <div style={styles.projectImgBox}>
+              <img
+                src={projectViews[2] === 'before' ? proj2Before : proj2Internet}
+                alt="Classic Wood Restoration"
+                style={styles.projectImg}
+              />
+              <div style={styles.sliderPillBar}>
+                <span style={projectViews[2] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  BEFORE
+                </span>
+                <span style={styles.sliderDivider}>↔</span>
+                <span style={projectViews[2] === 'after' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  AFTER
+                </span>
+              </div>
+            </div>
+            <div style={styles.projectDetails}>
+              <h4 style={styles.projectTitle}>Classic Wood Restoration</h4>
+              <p style={styles.projectMeta}>Wood Deck • 280 sq ft</p>
+            </div>
+          </div>
+
+          {/* Project 3 */}
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(3)} title="Click to toggle Before / After view">
+            <div style={styles.projectImgBox}>
+              <img
+                src={projectViews[3] === 'before' ? proj3Before : proj3Internet}
+                alt="Poolside Deck Upgrade"
+                style={styles.projectImg}
+              />
+              <div style={styles.sliderPillBar}>
+                <span style={projectViews[3] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  BEFORE
+                </span>
+                <span style={styles.sliderDivider}>↔</span>
+                <span style={projectViews[3] === 'after' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  AFTER
+                </span>
+              </div>
+            </div>
+            <div style={styles.projectDetails}>
+              <h4 style={styles.projectTitle}>Poolside Deck Upgrade</h4>
+              <p style={styles.projectMeta}>Composite Deck • 400 sq ft</p>
+            </div>
+          </div>
+
+          {/* Project 4 */}
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(4)} title="Click to toggle Before / After view">
+            <div style={styles.projectImgBox}>
+              <img
+                src={projectViews[4] === 'before' ? proj4Before : proj4Internet}
+                alt="Backyard Deck Makeover"
+                style={styles.projectImg}
+              />
+              <div style={styles.sliderPillBar}>
+                <span style={projectViews[4] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  BEFORE
+                </span>
+                <span style={styles.sliderDivider}>↔</span>
+                <span style={projectViews[4] === 'after' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
+                  AFTER
+                </span>
+              </div>
+            </div>
+            <div style={styles.projectDetails}>
+              <h4 style={styles.projectTitle}>Backyard Deck Makeover</h4>
+              <p style={styles.projectMeta}>Wood Deck • 350 sq ft</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 7. HOW IT WORKS SECTION (FULL SCREEN) */}
+      {/* ======================================================== */}
+      <section id="how-it-works" style={styles.screenSection}>
+        <div style={styles.sectionHeaderCentered}>
+          <h2 style={styles.sectionTitle}>How It Works</h2>
+          <p style={styles.sectionSubtitle}>A simple, hassle-free process to restore your deck.</p>
+        </div>
+
+        <div style={styles.stepsContainer}>
+          {/* Step 1 */}
+          <div style={styles.stepCard} className="hover-card">
+            <div style={styles.stepHeaderRow}>
+              <div style={styles.stepNumberBadge}>1</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="2" width="16" height="20" rx="2" />
                 <line x1="8" y1="6" x2="16" y2="6" />
                 <line x1="16" y1="14" x2="16" y2="18" />
@@ -318,475 +896,230 @@ export default function LandingPage() {
                 <path d="M8 18h.01" />
               </svg>
             </div>
-            <div>
-              <h3 style={styles.qeTitle}>Deck Estimator</h3>
-              <p style={styles.qeSubtitle}>Get an instant estimate for your deck restoration project.</p>
-              <ul style={styles.qeChecklist}>
-                <li style={styles.qeCheckItem}>
-                  <span style={styles.qeCheckIcon}>✔</span> Select deck size & materials
-                </li>
-                <li style={styles.qeCheckItem}>
-                  <span style={styles.qeCheckIcon}>✔</span> Choose services
-                </li>
-                <li style={styles.qeCheckItem}>
-                  <span style={styles.qeCheckIcon}>✔</span> Get your estimate instantly
-                </li>
-              </ul>
-            </div>
+            <h4 style={styles.stepTitle}>Get an Estimate</h4>
+            <p style={styles.stepDesc}>Use our calculator or request an official contractor quote in seconds.</p>
           </div>
 
-          {/* Col 2: Inputs Form */}
-          <div style={styles.qeCol2}>
-            <div style={styles.qeHeaderRow}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#162C46" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+          <div style={styles.stepArrow}>→</div>
+
+          {/* Step 2 */}
+          <div style={styles.stepCard} className="hover-card">
+            <div style={styles.stepHeaderRow}>
+              <div style={styles.stepNumberBadge}>2</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <strong style={styles.qeFormHeader}>Estimate Your Deck Restoration</strong>
             </div>
+            <h4 style={styles.stepTitle}>Schedule Service</h4>
+            <p style={styles.stepDesc}>Choose an inspection and service schedule that works best for you.</p>
+          </div>
 
-            <div style={styles.qeInputsRow}>
-              <div style={styles.qeInputGroup}>
-                <label style={styles.qeInputLabel}>Deck Size</label>
-                <select
-                  value={deckSize}
-                  onChange={(e) => setDeckSize(e.target.value)}
-                  style={styles.qeSelect}
-                >
-                  <option value="200">200 sq ft</option>
-                  <option value="320">320 sq ft</option>
-                  <option value="400">400 sq ft</option>
-                  <option value="550">550 sq ft</option>
-                  <option value="800">800 sq ft</option>
-                </select>
+          <div style={styles.stepArrow}>→</div>
+
+          {/* Step 3 */}
+          <div style={styles.stepCard} className="hover-card">
+            <div style={styles.stepHeaderRow}>
+              <div style={styles.stepNumberBadge}>3</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18.37 2.63L14 7l3 3 4.37-4.37a2.12 2.12 0 1 0-3-3z" />
+                <path d="M9 12l-6 6a3 3 0 0 0 4.24 4.24l6-6" />
+              </svg>
+            </div>
+            <h4 style={styles.stepTitle}>We Restore Your Deck</h4>
+            <p style={styles.stepDesc}>Our licensed specialists deep clean, refinish, and protect every board.</p>
+          </div>
+
+          <div style={styles.stepArrow}>→</div>
+
+          {/* Step 4 */}
+          <div style={styles.stepCard} className="hover-card">
+            <div style={styles.stepHeaderRow}>
+              <div style={styles.stepNumberBadge}>4</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E07A2B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </div>
+            <h4 style={styles.stepTitle}>Enjoy Your Space</h4>
+            <p style={styles.stepDesc}>A beautiful, weather-resistant outdoor space built to last for years.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================== */}
+      {/* 8. WHAT OUR CUSTOMERS SAY (TESTIMONIALS) */}
+      {/* ======================================================== */}
+      <section style={styles.screenSection}>
+        <div style={styles.testimonialHeaderRow}>
+          <div>
+            <h2 style={styles.sectionTitle}>What Our Customers Say</h2>
+            <p style={styles.sectionSubtitle}>Real results from happy homeowners across the country.</p>
+          </div>
+          <div style={styles.carouselBtnGroup}>
+            <button onClick={handlePrevTestimonial} style={styles.carouselBtn} title="Previous review">
+              ←
+            </button>
+            <button onClick={handleNextTestimonial} style={styles.carouselBtn} title="Next review">
+              →
+            </button>
+          </div>
+        </div>
+
+        <div style={styles.testimonialsGrid}>
+          {testimonials.map((t, idx) => (
+            <div key={idx} style={styles.testimonialCard} className="hover-card">
+              <div style={styles.testimonialUserRow}>
+                <img src={t.avatar} alt={t.name} style={styles.testimonialAvatar} />
+                <div>
+                  <h4 style={styles.testimonialName}>{t.name}</h4>
+                  <span style={styles.testimonialRole}>{t.role}</span>
+                </div>
               </div>
-
-              <div style={styles.qeInputGroup}>
-                <label style={styles.qeInputLabel}>Wood Type</label>
-                <select
-                  value={woodType}
-                  onChange={(e) => setWoodType(e.target.value)}
-                  style={styles.qeSelect}
-                >
-                  <option value="Composite">Composite</option>
-                  <option value="Pressure-Treated Pine">Pressure-Treated Pine</option>
-                  <option value="Cedar">Cedar</option>
-                  <option value="Redwood">Redwood</option>
-                  <option value="Hardwood / Mahogany">Hardwood / Mahogany</option>
-                </select>
+              <div style={{ ...styles.starsRow, display: 'flex', gap: '3px' }}>
+                {[...Array(t.stars || 5)].map((_, sIdx) => (
+                  <svg key={sIdx} width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                ))}
               </div>
-
-              <div style={styles.qeInputGroup}>
-                <label style={styles.qeInputLabel}>Service Type</label>
-                <select
-                  value={serviceType}
-                  onChange={(e) => setServiceType(e.target.value)}
-                  style={styles.qeSelect}
-                >
-                  <option value="Refinish">Refinish</option>
-                  <option value="Clean & Seal">Clean & Seal</option>
-                  <option value="Strip & Stain">Strip & Stain</option>
-                  <option value="Full Restoration">Full Restoration</option>
-                </select>
+              <p style={styles.testimonialText}>{t.text}</p>
+              <div style={styles.testimonialProjectTag}>
+                <span>Project: {t.project}</span>
               </div>
             </div>
+          ))}
+        </div>
+      </section>
 
-            <button onClick={handleLaunchEstimator} style={styles.qeSubmitBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+      {/* ======================================================== */}
+      {/* 9. PRE-FOOTER FULL-WIDTH CTA BANNER */}
+      {/* ======================================================== */}
+      <section style={styles.preFooterCtaSection}>
+        <div style={styles.ctaBannerContainer}>
+          <img src={ctaDeckBgImg} alt="Deck background" style={styles.ctaBgImg} />
+          <div style={styles.ctaDarkOverlay} />
+          <div style={styles.ctaContent}>
+            <h2 style={styles.ctaHeadline}>Ready to Restore Your Deck?</h2>
+            <p style={styles.ctaSubhead}>
+              Get a fast, accurate estimate and bring your outdoor space back to life.
+            </p>
+            <button onClick={handleLaunchEstimator} style={styles.ctaBannerBtn} className="btn-hover">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                 <rect x="4" y="2" width="16" height="20" rx="2" />
                 <line x1="8" y1="6" x2="16" y2="6" />
                 <line x1="16" y1="14" x2="16" y2="18" />
+                <path d="M16 10h.01" />
+                <path d="M12 10h.01" />
+                <path d="M8 10h.01" />
+                <path d="M12 14h.01" />
+                <path d="M8 14h.01" />
+                <path d="M12 18h.01" />
+                <path d="M8 18h.01" />
               </svg>
-              Get Estimate →
+              Try Deck Calculator Now →
             </button>
           </div>
-
-          {/* Col 3: Cost Output */}
-          <div style={styles.qeCol3}>
-            <div style={styles.qeCoinsIcon}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="#EAA428">
-                <circle cx="12" cy="7" r="4" opacity="0.8" />
-                <path d="M12 11c-4.42 0-8 1.79-8 4v2c0 2.21 3.58 4 8 4s8-1.79 8-4v-2c0-2.21-3.58-4-8-4z" />
-              </svg>
-            </div>
-            <span style={styles.qeCostLabel}>Estimated Cost</span>
-            <div style={styles.qePriceRange}>{calculateQuickEstimate()}</div>
-            <span style={styles.qeApproxText}>(Approximate Range)</span>
-
-            <div style={styles.qeNoticeBox}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
-              <span>Final price may vary based on site conditions.</span>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* ======================================================== */}
-      {/* 4. BUILT FOR EVERYONE */}
+      {/* 10. OFFICIAL FOOTER */}
       {/* ======================================================== */}
-      <section style={styles.builtSection} id="about-section">
-        <div style={styles.sectionHeaderCentered}>
-          <div style={styles.titleWithLines}>
-            <span style={styles.accentLineShort} />
-            <h2 style={styles.sectionTitle}>Built for Everyone</h2>
-            <span style={styles.accentLineShort} />
-          </div>
-          <p style={styles.sectionSubtitle}>
-            Whether you're a contractor or a homeowner, we've got you covered.
-          </p>
-        </div>
-
-        <div style={styles.builtCardsGrid}>
-          {/* Card 1: Contractor */}
-          <div style={styles.portalCard}>
-            <div style={styles.portalCardImgFrame}>
-              <img src={contractorWorkerImg} alt="Contractor Partner" style={styles.portalCardImg} />
-            </div>
-            <div style={styles.portalCardContent}>
-              <div style={styles.portalCardHeader}>
-                <div style={styles.portalIconYellow}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 18h20" />
-                    <path d="M6 18v-4a6 6 0 0 1 12 0v4" />
-                    <circle cx="12" cy="9" r="1" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 style={styles.portalCardTitle}>Contractor</h3>
-                  <p style={styles.portalCardSubtitle}>Grow Your Business</p>
-                </div>
-              </div>
-
-              <ul style={styles.portalChecklist}>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Get more leads & projects
-                </li>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Provide accurate estimates
-                </li>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Track your work easily
-                </li>
-              </ul>
-
-              <Link to="/register?role=contractor" style={styles.portalActionBtn}>
-                Join as Contractor →
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 2: Customer */}
-          <div style={styles.portalCard}>
-            <div style={styles.portalCardImgFrame}>
-              <img src={customerCoupleImg} alt="Homeowner Customer" style={styles.portalCardImg} />
-            </div>
-            <div style={styles.portalCardContent}>
-              <div style={styles.portalCardHeader}>
-                <div style={styles.portalIconBlue}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 style={styles.portalCardTitle}>Customer</h3>
-                  <p style={styles.portalCardSubtitleBlue}>Plan Your Deck Restoration</p>
-                </div>
-              </div>
-
-              <ul style={styles.portalChecklist}>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Get instant estimates
-                </li>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Explore trusted contractors
-                </li>
-                <li style={styles.portalCheckItem}>
-                  <span style={styles.checkBulletGold}>✔</span> Track your requests
-                </li>
-              </ul>
-
-              <Link to="/register?role=customer" style={styles.portalActionBtn}>
-                Get Started →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================== */}
-      {/* 5. OUR PROJECTS */}
-      {/* ======================================================== */}
-      <section style={styles.projectsSection} id="projects-section">
-        <div style={styles.projectsHeaderRow}>
-          <div style={{ flex: 1 }}>
-            <div style={styles.titleWithLines}>
-              <span style={styles.accentLineShort} />
-              <h2 style={styles.sectionTitle}>Our Projects</h2>
-              <span style={styles.accentLineShort} />
-            </div>
-            <p style={styles.sectionSubtitle}>Quality work. Lasting results.</p>
-          </div>
-          <button
-            onClick={() => {
-              if (isAuthenticated) navigate('/customer/decks/new');
-              else navigate('/login');
-            }}
-            style={styles.viewAllProjectsBtn}
-          >
-            View All Projects →
-          </button>
-        </div>
-
-        <div style={styles.projectsGrid}>
-          {projects.map((proj) => (
-            <div
-              key={proj.id}
-              style={styles.projectCard}
-              onClick={() => setSelectedProject(proj)}
-            >
-              <div style={styles.projectImgFrame}>
-                <img src={proj.image} alt={proj.title} style={styles.projectImg} />
-                <div style={styles.projectPillBefore}>Before</div>
-                <div style={styles.projectPillCenter}>↔</div>
-                <div style={styles.projectPillAfter}>After</div>
-              </div>
-
-              <div style={styles.projectCardBottom}>
-                <div>
-                  <h4 style={styles.projectTitle}>{proj.title}</h4>
-                  <p style={styles.projectType}>{proj.type}</p>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedProject(proj);
-                  }}
-                  style={styles.projectArrowCircle}
-                  title="View Project Details"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ======================================================== */}
-      {/* 6. OUR PRODUCTS & SERVICES */}
-      {/* ======================================================== */}
-      <section style={styles.productsSection} id="products-section">
-        <div style={styles.sectionHeaderCentered}>
-          <div style={styles.titleWithLines}>
-            <span style={styles.accentLineShort} />
-            <h2 style={styles.sectionTitle}>Our Products & Services</h2>
-            <span style={styles.accentLineShort} />
-          </div>
-          <p style={styles.sectionSubtitle}>
-            Everything you need for a durable and beautiful deck.
-          </p>
-        </div>
-
-        {/* 5 Product Cards */}
-        <div style={styles.productsRow}>
-          {products.map((p, idx) => (
-            <div key={idx} style={styles.productCard}>
-              <div style={styles.productImgFrame}>
-                <img src={p.image} alt={p.name} style={styles.productImg} />
-              </div>
-              <span style={styles.productName}>{p.name}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* 4 Feature Badges Bar */}
-        <div style={styles.featuresFloatingBar}>
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>🍃</div>
-            <div>
-              <strong style={styles.featureTitle}>Extends Deck Life</strong>
-              <p style={styles.featureSub}>Protects against weather</p>
-            </div>
-          </div>
-
-          <span style={styles.featureDivider} />
-
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>🛡️</div>
-            <div>
-              <strong style={styles.featureTitle}>Enhances Beauty</strong>
-              <p style={styles.featureSub}>Restores natural look</p>
-            </div>
-          </div>
-
-          <span style={styles.featureDivider} />
-
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>💧</div>
-            <div>
-              <strong style={styles.featureTitle}>Repels Moisture</strong>
-              <p style={styles.featureSub}>Prevents damage & rot</p>
-            </div>
-          </div>
-
-          <span style={styles.featureDivider} />
-
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>🏢</div>
-            <div>
-              <strong style={styles.featureTitle}>Professional Results</strong>
-              <p style={styles.featureSub}>Trusted by contractors</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================== */}
-      {/* 7. CTA BANNER */}
-      {/* ======================================================== */}
-      <section style={styles.ctaBannerSection}>
-        <div style={styles.ctaBannerInner}>
-          <div style={styles.ctaBannerLeft}>
-            <h2 style={styles.ctaTitle}>Ready to Restore Your Deck?</h2>
-            <p style={styles.ctaSubtitle}>
-              Try our Deck Estimator now and get started in seconds.
-            </p>
-          </div>
-
-          <div style={styles.ctaBannerCenter}>
-            <button onClick={handleLaunchEstimator} style={styles.ctaTryNowBtn}>
-              Try Now →
-            </button>
-          </div>
-
-          <div style={styles.ctaBannerRightBg}>
-            <img src={ctaDeckBgImg} alt="Deck Atmosphere" style={styles.ctaBgImg} />
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================== */}
-      {/* 8. FOOTER */}
-      {/* ======================================================== */}
-      <footer style={styles.footer} id="contact-section">
-        <div style={styles.footerInner}>
-          {/* Brand Col */}
-          <div style={styles.footerBrandCol}>
-            <img src={logoImg} alt="DECK Plus Restoration" style={styles.footerLogoImg} />
-            <p style={styles.footerTagline}>
-              Premium deck restoration solutions for homes and contractors.
-            </p>
-            <p style={styles.footerCopyright}>
-              © 2026 Deck Restoration Plus, LLC. All rights reserved.
+      <footer id="footer" style={styles.footer}>
+        <div style={styles.footerContainer}>
+          {/* Col 1: Brand & Tagline */}
+          <div style={styles.footerColBrand}>
+            <Link to="/" style={styles.footerLogoLink}>
+              <img src={footerLogo} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
+            </Link>
+            <p style={styles.footerBrandDesc}>
+              Premium deck restoration solutions for homes and contractors. Specialized formulas, licensed partner network, and guaranteed precision estimating.
             </p>
           </div>
 
           {/* Col 2: Quick Links */}
           <div style={styles.footerCol}>
-            <h4 style={styles.footerColHeader}>Quick Links</h4>
-            <ul style={styles.footerLinksList}>
-              <li>
-                <button
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                  style={styles.footerLinkBtn}
-                >
-                  Home
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  style={styles.footerLinkBtn}
-                >
-                  Projects
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  style={styles.footerLinkBtn}
-                >
-                  Products
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  style={styles.footerLinkBtn}
-                >
-                  About
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  style={styles.footerLinkBtn}
-                >
-                  Contact
-                </button>
-              </li>
+            <h4 style={styles.footerColHeading}>Quick Links</h4>
+            <ul style={styles.footerList}>
+              <li><button onClick={() => scrollToSection('hero', 'Home')} style={styles.footerLinkBtn}>Home</button></li>
+              <li><button onClick={() => scrollToSection('services', 'Services')} style={styles.footerLinkBtn}>Services</button></li>
+              <li><button onClick={() => scrollToSection('products', 'Products')} style={styles.footerLinkBtn}>Products</button></li>
+              <li><button onClick={() => scrollToSection('projects', 'Projects')} style={styles.footerLinkBtn}>Projects</button></li>
             </ul>
           </div>
 
-          {/* Col 3: Resources */}
+          {/* Col 3: Company */}
           <div style={styles.footerCol}>
-            <h4 style={styles.footerColHeader}>Resources</h4>
-            <ul style={styles.footerLinksList}>
-              <li>
-                <Link to="/contractor/guidelines" style={styles.footerLink}>Contractor Guidelines</Link>
-              </li>
-              <li>
-                <Link to="/contractor/support" style={styles.footerLink}>Compliance</Link>
-              </li>
-              <li>
-                <Link to="/contractor/terms" style={styles.footerLink}>Terms</Link>
-              </li>
+            <h4 style={styles.footerColHeading}>Company</h4>
+            <ul style={styles.footerList}>
+              <li><Link to="/about" style={styles.footerLink}>About Us</Link></li>
+              <li><Link to="/contact" style={styles.footerLink}>Contact</Link></li>
+              <li><Link to="/contractor/register" style={styles.footerLink}>Contractor Program</Link></li>
+              <li><Link to="/customer/support" style={styles.footerLink}>FAQs & Guide</Link></li>
             </ul>
           </div>
 
           {/* Col 4: Get in Touch */}
           <div style={styles.footerCol}>
-            <h4 style={styles.footerColHeader}>Get in Touch</h4>
-            <div style={styles.contactItem}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-              <span>(866) 440-DECK (3325)</span>
+            <h4 style={styles.footerColHeading}>Get in Touch</h4>
+            <div style={styles.footerContactRow}>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              </span>
+              <a href="tel:8664403325" style={styles.footerContactLink}>
+                (866) 440-DECK (3325)
+              </a>
             </div>
-            <div style={styles.contactItem}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EAA428" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                <polyline points="22,6 12,13 2,6" />
-              </svg>
-              <span>estimates@deckrestorationplus.com</span>
+            <div style={styles.footerContactRow}>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+              </span>
+              <a href="mailto:estimates@deckrestorationplus.com" style={styles.footerContactLink}>
+                estimates@deckrestorationplus.com
+              </a>
             </div>
-          </div>
+            <div style={styles.footerContactRow}>
+              <span style={styles.footerContactIcon}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </span>
+              <span style={styles.footerContactText}>
+                Serving Your Area & Nationally
+              </span>
+            </div>
 
-          {/* Col 5: Follow Us */}
-          <div style={styles.footerCol}>
-            <h4 style={styles.footerColHeader}>Follow Us</h4>
-            <div style={styles.socialIconsRow}>
-              {/* Facebook */}
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="Facebook">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="#FFFFFF">
+            {/* Social Icons */}
+            <div style={styles.socialRow}>
+              <a href="#facebook" style={styles.socialIcon} title="Facebook">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>
               </a>
-              {/* YouTube */}
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="YouTube">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="#FFFFFF">
-                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
-                  <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#081726" />
+              <a href="#instagram" style={styles.socialIcon} title="Instagram">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                 </svg>
               </a>
-              {/* LinkedIn */}
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={styles.socialIconBtn} title="LinkedIn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF">
+              <a href="#youtube" style={styles.socialIcon} title="YouTube">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+                  <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
+                </svg>
+              </a>
+              <a href="#linkedin" style={styles.socialIcon} title="LinkedIn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
                   <rect x="2" y="9" width="4" height="12" />
                   <circle cx="4" cy="4" r="2" />
@@ -795,1067 +1128,1131 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </footer>
 
-      {/* ======================================================== */}
-      {/* 9. PROJECT DETAIL MODAL */}
-      {/* ======================================================== */}
-      {selectedProject && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedProject(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div>
-                <h3 style={styles.modalTitle}>{selectedProject.title}</h3>
-                <span style={styles.modalBadge}>{selectedProject.type}</span>
-              </div>
-              <button onClick={() => setSelectedProject(null)} style={styles.modalCloseBtn}>✕</button>
-            </div>
-            <div style={styles.modalImgFrame}>
-              <img src={selectedProject.image} alt={selectedProject.title} style={styles.modalImg} />
-            </div>
-            <p style={styles.modalDesc}>{selectedProject.desc}</p>
-            <div style={styles.modalActions}>
-              <button onClick={() => setSelectedProject(null)} style={styles.modalCancelBtn}>
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedProject(null);
-                  handleLaunchEstimator();
-                }}
-                style={styles.modalActionBtn}
-              >
-                Estimate A Project Like This →
-              </button>
+        {/* Footer Bottom Bar */}
+        <div style={styles.footerBottomBar}>
+          <div style={styles.footerBottomInner}>
+            <span>© {new Date().getFullYear()} Deck Restoration Plus. All rights reserved.</span>
+            <div style={{ display: 'flex', gap: '20px' }}>
+              <Link to="/privacy" style={styles.footerBottomLink}>Privacy Policy</Link>
+              <Link to="/terms" style={styles.footerBottomLink}>Terms of Service</Link>
             </div>
           </div>
         </div>
-      )}
+      </footer>
     </div>
   );
 }
 
 // ========================================================
-// STYLES (Pixel-matched to specifications)
+// STYLES OBJECT (Generous Viewport-Proportional Design)
 // ========================================================
 const styles = {
   pageContainer: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    backgroundColor: '#FFFFFF',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    backgroundColor: '#F8FAFC',
     color: '#0F172A',
     minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
     overflowX: 'hidden',
   },
 
-  // 1. HEADER
+  // Header / Navbar
   header: {
     position: 'sticky',
     top: 0,
-    zIndex: 100,
-    backgroundColor: '#FFFFFF',
-    borderBottom: '1px solid #E2E8F0',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backdropFilter: 'blur(16px)',
+    borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+    boxShadow: '0 2px 12px rgba(15, 44, 89, 0.04)',
   },
   headerInner: {
-    maxWidth: '1240px',
+    maxWidth: '1360px',
     margin: '0 auto',
-    padding: '12px 24px',
+    padding: '14px 28px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '20px',
   },
   logoLink: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     textDecoration: 'none',
   },
   logoImg: {
-    height: '38px',
+    height: '46px',
     width: 'auto',
     objectFit: 'contain',
   },
   navMenu: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '8px',
   },
   navItem: {
-    backgroundColor: 'transparent',
-    border: 'none',
-    color: '#334155',
-    fontSize: '14px',
-    fontWeight: '500',
-    padding: '7px 16px',
-    borderRadius: '9999px',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  navItemActive: {
-    backgroundColor: '#162C46',
-    border: 'none',
-    color: '#FFFFFF',
+    padding: '8px 16px',
     fontSize: '14px',
     fontWeight: '600',
-    padding: '7px 18px',
-    borderRadius: '9999px',
+    color: '#475569',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderRadius: '8px',
     cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
+    transition: 'all 0.2s',
+  },
+  navItemActive: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#0F2C59',
+    backgroundColor: '#EEF2F6',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
   },
   headerRight: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '14px',
   },
   searchIconButton: {
-    background: 'transparent',
+    width: '38px',
+    height: '38px',
+    borderRadius: '50%',
+    backgroundColor: '#F1F5F9',
     border: 'none',
-    padding: '6px',
-    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '50%',
-    transition: 'background-color 0.15s',
-  },
-  headerDivider: {
-    width: '1px',
-    height: '20px',
-    backgroundColor: '#CBD5E1',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   signInBtn: {
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #162C46',
-    color: '#162C46',
-    fontSize: '13px',
-    fontWeight: '600',
-    padding: '6px 18px',
+    padding: '8px 18px',
     borderRadius: '9999px',
+    border: '1.5px solid #CBD5E1',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    fontSize: '14px',
+    fontWeight: '600',
     textDecoration: 'none',
     cursor: 'pointer',
-    transition: 'all 0.15s',
+    transition: 'all 0.2s',
   },
-  getStartedBtn: {
-    backgroundColor: '#EAA428',
-    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    border: 'none',
-    color: '#0F172A',
-    fontSize: '13px',
-    fontWeight: '700',
-    padding: '8px 20px',
+  getFreeEstimateBtn: {
+    padding: '10px 22px',
     borderRadius: '9999px',
+    border: 'none',
+    backgroundColor: '#E07A2B',
+    color: '#FFFFFF',
+    fontSize: '14px',
+    fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)',
-    transition: 'all 0.15s ease',
+    boxShadow: '0 4px 14px rgba(224, 122, 43, 0.35)',
+    transition: 'all 0.25s ease',
   },
   searchDropdownBar: {
-    maxWidth: '1240px',
+    maxWidth: '1360px',
     margin: '0 auto',
-    padding: '8px 24px 14px',
+    padding: '10px 28px 16px 28px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
   },
   searchDropdownInput: {
     flex: 1,
-    padding: '8px 14px',
-    borderRadius: '9999px',
+    padding: '10px 16px',
+    borderRadius: '10px',
     border: '1px solid #CBD5E1',
-    fontSize: '13px',
+    fontSize: '14px',
     outline: 'none',
   },
   searchCloseBtn: {
-    background: 'none',
+    padding: '8px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#F1F5F9',
     border: 'none',
-    fontSize: '16px',
     cursor: 'pointer',
-    color: '#64748B',
+    fontSize: '14px',
   },
 
   // 2. HERO SECTION
   heroSection: {
-    backgroundColor: '#F8FAFC',
-    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%)',
-    padding: '48px 24px 100px',
-    position: 'relative',
-  },
-  heroInner: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: '1.1fr 0.9fr',
-    gap: '40px',
+    minHeight: '94vh',
+    display: 'flex',
     alignItems: 'center',
+    position: 'relative',
+    backgroundImage: `url("${wizardHeroImg}")`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'right 25% center',
+    backgroundRepeat: 'no-repeat',
+    overflow: 'hidden',
+    padding: '60px 24px 80px 24px',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(90deg, #FFFFFF 0%, rgba(255, 255, 255, 0.98) 32%, rgba(255, 255, 255, 0.82) 48%, rgba(255, 255, 255, 0.16) 68%, rgba(255, 255, 255, 0) 82%)',
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+  heroContainer: {
+    maxWidth: '1360px',
+    width: '100%',
+    margin: '0 auto',
+    position: 'relative',
+    zIndex: 2,
+    display: 'flex',
+    justifyContent: 'flex-start',
   },
   heroLeft: {
-    paddingRight: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    maxWidth: '580px',
+  },
+  tagBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '6px 14px',
+    borderRadius: '9999px',
+    backgroundColor: '#FEF3C7',
+    border: '1px solid #FDE68A',
+    color: '#92400E',
+    fontSize: '12px',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+    textTransform: 'uppercase',
+    marginBottom: '20px',
   },
   heroHeading: {
-    fontSize: '52px',
-    fontWeight: '800',
-    color: '#0E2A47',
-    lineHeight: '1.15',
-    margin: '0 0 16px 0',
-    letterSpacing: '-0.02em',
+    fontSize: '56px',
+    fontWeight: '900',
+    lineHeight: 1.12,
+    color: '#0F2C59',
+    margin: '0 0 20px 0',
+    letterSpacing: '-1.5px',
   },
-  heroEnjoyWord: {
-    color: '#EAA428',
-    fontStyle: 'italic',
-    fontWeight: '700',
+  heroAccentWord: {
+    color: '#A35422',
   },
   heroSubtitle: {
-    fontSize: '16px',
+    fontSize: '17px',
+    lineHeight: 1.6,
     color: '#475569',
-    lineHeight: '1.55',
-    margin: '0 0 28px 0',
-    maxWidth: '460px',
+    margin: '0 0 32px 0',
+    maxWidth: '540px',
   },
-  heroBtnGroup: {
+  heroBtnRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '14px',
-    marginBottom: '32px',
+    gap: '16px',
+    marginBottom: '36px',
     flexWrap: 'wrap',
   },
-  tryEstimatorBtn: {
-    backgroundColor: '#EAA428',
-    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+  heroPrimaryBtn: {
+    padding: '14px 28px',
+    borderRadius: '9999px',
     border: 'none',
-    color: '#0F172A',
-    fontSize: '14px',
+    backgroundColor: '#E07A2B',
+    color: '#FFFFFF',
+    fontSize: '15px',
     fontWeight: '700',
-    padding: '12px 26px',
-    borderRadius: '9999px',
     cursor: 'pointer',
-    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
-    transition: 'all 0.18s ease',
+    boxShadow: '0 6px 18px rgba(224, 122, 43, 0.35)',
+    transition: 'all 0.25s',
   },
-  exploreProjectsBtn: {
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #162C46',
-    color: '#162C46',
-    fontSize: '14px',
-    fontWeight: '600',
-    padding: '11px 22px',
+  heroSecondaryBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '12px 24px',
     borderRadius: '9999px',
+    border: '1.5px solid #CBD5E1',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
+    transition: 'all 0.25s',
+  },
+  playIconCircle: {
+    width: '26px',
+    height: '26px',
+    borderRadius: '50%',
+    backgroundColor: '#EEF2F6',
     display: 'flex',
     alignItems: 'center',
-    transition: 'all 0.15s',
+    justifyContent: 'center',
   },
   trustBadgesRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
-    paddingTop: '8px',
-    borderTop: '1px solid #E2E8F0',
-    maxWidth: '460px',
-  },
-  trustBadgeItem: {
-    display: 'flex',
-    alignItems: 'center',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#334155',
-  },
-  trustDivider: {
-    width: '1px',
-    height: '14px',
-    backgroundColor: '#CBD5E1',
-  },
-  heroRight: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroImageFrame: {
-    width: '100%',
-    maxWidth: '520px',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)',
-    border: '4px solid #FFFFFF',
-  },
-  heroImg: {
-    width: '100%',
-    height: 'auto',
-    display: 'block',
-    objectFit: 'cover',
-  },
-
-  // 3. FLOATING QUICK ESTIMATOR CARD
-  quickEstimatorCard: {
-    maxWidth: '1160px',
-    margin: '36px auto -40px',
-    backgroundColor: '#FFFFFF',
-    borderRadius: '20px',
-    boxShadow: '0 16px 45px rgba(15, 23, 42, 0.1)',
-    border: '1px solid #E2E8F0',
-    padding: '24px 28px',
-    display: 'grid',
-    gridTemplateColumns: '1.1fr 1.6fr 1fr',
     gap: '24px',
+    flexWrap: 'wrap',
+    paddingTop: '16px',
+    borderTop: '1px solid #E2E8F0',
+  },
+  trustItem: {
+    display: 'inline-flex',
     alignItems: 'center',
-    position: 'relative',
-    zIndex: 10,
-  },
-  qeCol1: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '16px',
-    borderRight: '1px solid #F1F5F9',
-    paddingRight: '16px',
-  },
-  qeIconSquare: {
-    width: '46px',
-    height: '46px',
-    borderRadius: '12px',
-    backgroundColor: '#FEF3C7',
-    border: '1px solid #FDE68A',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  qeTitle: {
-    fontSize: '17px',
-    fontWeight: '700',
-    color: '#0F172A',
-    margin: '0 0 4px 0',
-  },
-  qeSubtitle: {
-    fontSize: '12px',
-    color: '#64748B',
-    lineHeight: '1.4',
-    margin: '0 0 10px 0',
-  },
-  qeChecklist: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  qeCheckItem: {
-    fontSize: '12px',
-    color: '#334155',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  qeCheckIcon: {
-    color: '#D97706',
-    fontWeight: '800',
-    fontSize: '11px',
-  },
-  qeCol2: {
-    borderRight: '1px solid #F1F5F9',
-    paddingRight: '16px',
-  },
-  qeHeaderRow: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '10px',
-  },
-  qeFormHeader: {
     fontSize: '13px',
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#334155',
   },
-  qeInputsRow: {
+  floatingWoodSticker: {
+    position: 'absolute',
+    top: '36px',
+    right: '60px',
+    backgroundColor: '#78350F',
+    backgroundImage: 'linear-gradient(135deg, #92400E 0%, #78350F 100%)',
+    color: '#FEF3C7',
+    padding: '14px 26px',
+    borderRadius: '18px',
+    boxShadow: '0 16px 32px rgba(0, 0, 0, 0.35)',
+    border: '2.5px solid #FCD34D',
+    textAlign: 'center',
+    animation: 'floatWood 3.5s ease-in-out infinite',
+    zIndex: 10,
+  },
+  woodStickerSunburst: {
+    fontSize: '16px',
+    lineHeight: 1,
+    color: '#FDE047',
+    marginBottom: '2px',
+  },
+  woodStickerTextTop: {
+    fontSize: '13px',
+    fontWeight: '800',
+    letterSpacing: '0.4px',
+    textTransform: 'uppercase',
+  },
+  woodStickerTextBottom: {
+    fontSize: '16px',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textShadow: '0 2px 4px rgba(0,0,0,0.4)',
+  },
+
+  // 3. CALCULATOR & STATS SECTION
+  calculatorSection: {
+    padding: '40px 24px 60px 24px',
+    backgroundColor: '#FFFFFF',
+    borderTop: '1px solid #E2E8F0',
+    borderBottom: '1px solid #E2E8F0',
+  },
+  calculatorSectionInner: {
+    maxWidth: '1360px',
+    margin: '0 auto',
+  },
+  calcBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '24px',
+    border: '1.5px solid #E2E8F0',
+    boxShadow: '0 16px 36px -8px rgba(15, 44, 89, 0.08)',
+    padding: '24px',
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '8px',
-    marginBottom: '12px',
+    gridTemplateColumns: '260px 1.4fr 300px',
+    gap: '28px',
+    alignItems: 'center',
+    marginBottom: '40px',
+    transition: 'all 0.3s ease',
   },
-  qeInputGroup: {
+  calcVisualCol: {
+    position: 'relative',
+    height: '180px',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  },
+  calcDeckImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  calcImageBadge: {
+    position: 'absolute',
+    bottom: '10px',
+    left: '10px',
+    backgroundColor: 'rgba(15, 44, 89, 0.85)',
+    backdropFilter: 'blur(8px)',
+    color: '#FFFFFF',
+    fontSize: '11px',
+    fontWeight: '700',
+    padding: '4px 10px',
+    borderRadius: '6px',
+  },
+  calcFormCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  calcHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  calcTitle: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#0F2C59',
+    margin: 0,
+  },
+  calcSub: {
+    fontSize: '12px',
+    color: '#64748B',
+    margin: '2px 0 0 0',
+  },
+  calcInputsRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '12px',
+  },
+  calcField: {
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
   },
-  qeInputLabel: {
+  calcLabel: {
     fontSize: '11px',
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
   },
-  qeSelect: {
-    padding: '6px 8px',
-    borderRadius: '8px',
-    border: '1px solid #CBD5E1',
-    backgroundColor: '#FFFFFF',
-    fontSize: '12px',
-    fontWeight: '500',
+  calcSelect: {
+    padding: '9px 12px',
+    borderRadius: '10px',
+    border: '1.5px solid #CBD5E1',
+    backgroundColor: '#F8FAFC',
     color: '#0F172A',
+    fontSize: '13px',
+    fontWeight: '600',
     outline: 'none',
     cursor: 'pointer',
   },
-  qeSubmitBtn: {
-    width: '100%',
-    backgroundColor: '#162C46',
+  calcSubmitBtn: {
+    padding: '11px 20px',
+    borderRadius: '10px',
     border: 'none',
+    backgroundColor: '#0F2C59',
     color: '#FFFFFF',
-    padding: '8px 16px',
-    borderRadius: '8px',
     fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 2px 6px rgba(22, 44, 70, 0.25)',
-    transition: 'all 0.15s ease',
+    boxShadow: '0 4px 12px rgba(15, 44, 89, 0.25)',
+    transition: 'all 0.25s',
   },
-  qeCol3: {
+  calcResultCol: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: '16px',
+    border: '1.5px dashed #CBD5E1',
+    padding: '20px',
     textAlign: 'center',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  qeCoinsIcon: {
-    marginBottom: '2px',
-  },
-  qeCostLabel: {
+  costBadgeHeader: {
+    display: 'inline-flex',
+    alignItems: 'center',
     fontSize: '11px',
-    fontWeight: '600',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
-  },
-  qePriceRange: {
-    fontSize: '22px',
     fontWeight: '800',
-    color: '#0F172A',
-    margin: '3px 0 2px 0',
+    textTransform: 'uppercase',
+    letterSpacing: '0.6px',
+    color: '#E07A2B',
+    marginBottom: '6px',
   },
-  qeApproxText: {
+  costPriceDisplay: {
+    fontSize: '28px',
+    fontWeight: '900',
+    color: '#0F2C59',
+    letterSpacing: '-0.5px',
+    lineHeight: 1.1,
+  },
+  costApproxNotice: {
     fontSize: '11px',
-    color: '#94A3B8',
-    marginBottom: '8px',
-  },
-  qeNoticeBox: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '5px',
-    fontSize: '10.5px',
     color: '#64748B',
-    textAlign: 'left',
-    lineHeight: '1.3',
+    fontWeight: '600',
+    marginTop: '4px',
+    marginBottom: '10px',
+  },
+  costFootnote: {
+    fontSize: '10.5px',
+    lineHeight: 1.35,
+    color: '#94A3B8',
   },
 
-  // 4. BUILT FOR EVERYONE
-  builtSection: {
-    padding: '90px 24px 60px',
-    maxWidth: '1160px',
+  // 4 Stats Bar
+  statsBar: {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr auto 1fr auto 1fr',
+    alignItems: 'center',
+    padding: '16px 28px',
+    borderRadius: '18px',
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #E2E8F0',
+  },
+  statItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    justifyContent: 'center',
+  },
+  statIcon: {
+    fontSize: '28px',
+  },
+  statNumber: {
+    fontSize: '22px',
+    fontWeight: '900',
+    color: '#0F2C59',
+    lineHeight: 1.1,
+  },
+  statLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: '2px',
+  },
+  statDivider: {
+    width: '1px',
+    height: '42px',
+    backgroundColor: '#E2E8F0',
+  },
+
+  // GENERIC FULL-SCREEN SECTION
+  screenSection: {
+    minHeight: '88vh',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    maxWidth: '1360px',
     margin: '0 auto',
-    width: '100%',
+    padding: '70px 24px',
   },
   sectionHeaderCentered: {
     textAlign: 'center',
-    marginBottom: '36px',
+    marginBottom: '46px',
   },
   titleWithLines: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
+    gap: '16px',
     justifyContent: 'center',
-    gap: '12px',
-    marginBottom: '6px',
-  },
-  accentLineShort: {
-    width: '40px',
-    height: '2px',
-    backgroundColor: '#EAA428',
-    display: 'inline-block',
-  },
-  sectionTitle: {
-    fontSize: '28px',
-    fontWeight: '800',
-    color: '#0F172A',
-    margin: 0,
-    letterSpacing: '-0.01em',
-  },
-  sectionSubtitle: {
-    fontSize: '13px',
-    color: '#64748B',
-    margin: 0,
-  },
-  builtCardsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-    gap: '24px',
-  },
-  portalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: '16px',
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
-    display: 'flex',
-    overflow: 'hidden',
-    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
-  },
-  portalCardImgFrame: {
-    width: '42%',
-    minHeight: '180px',
-    backgroundColor: '#F8FAFC',
-    overflow: 'hidden',
-  },
-  portalCardImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  portalCardContent: {
-    width: '58%',
-    padding: '20px 22px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  portalCardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
     marginBottom: '10px',
   },
-  portalIconYellow: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
-    backgroundColor: '#FEF3C7',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  portalIconBlue: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
-    backgroundColor: '#EFF6FF',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  portalCardTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#0F172A',
-    margin: 0,
-  },
-  portalCardSubtitle: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#D97706',
-    margin: 0,
-  },
-  portalCardSubtitleBlue: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#2563EB',
-    margin: 0,
-  },
-  portalChecklist: {
-    listStyle: 'none',
-    padding: 0,
-    margin: '0 0 16px 0',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '5px',
-  },
-  portalCheckItem: {
-    fontSize: '12px',
-    color: '#334155',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  checkBulletGold: {
-    color: '#D97706',
-    fontWeight: '800',
-    fontSize: '11px',
-  },
-  portalActionBtn: {
-    backgroundColor: '#162C46',
-    color: '#FFFFFF',
-    textDecoration: 'none',
-    fontSize: '12px',
-    fontWeight: '700',
-    padding: '8px 18px',
-    borderRadius: '9999px',
-    textAlign: 'center',
+  woodAccentLine: {
     display: 'inline-block',
-    width: 'fit-content',
-    boxShadow: '0 2px 6px rgba(22, 44, 70, 0.25)',
+    width: '40px',
+    height: '3px',
+    backgroundColor: '#E07A2B',
+    borderRadius: '2px',
+  },
+  sectionTitle: {
+    fontSize: '34px',
+    fontWeight: '900',
+    color: '#0F2C59',
+    margin: 0,
+    letterSpacing: '-0.6px',
+  },
+  sectionSubtitle: {
+    fontSize: '15px',
+    color: '#64748B',
+    margin: '4px 0 0 0',
   },
 
-  // 5. OUR PROJECTS
-  projectsSection: {
-    padding: '40px 24px 60px',
-    maxWidth: '1160px',
-    margin: '0 auto',
-    width: '100%',
-  },
-  projectsHeaderRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '24px',
-  },
-  viewAllProjectsBtn: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #CBD5E1',
-    color: '#162C46',
-    fontSize: '12px',
-    fontWeight: '600',
-    padding: '6px 16px',
-    borderRadius: '9999px',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  projectsGrid: {
+  // 4. SERVICES SECTION
+  servicesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '30px',
   },
-  projectCard: {
+  serviceCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '12px',
+    borderRadius: '20px',
     border: '1px solid #E2E8F0',
     overflow: 'hidden',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
-    cursor: 'pointer',
-    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+    boxShadow: '0 8px 24px -4px rgba(15, 44, 89, 0.06)',
+    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    display: 'flex',
+    flexDirection: 'column',
   },
-  projectImgFrame: {
-    width: '100%',
-    height: '140px',
-    backgroundColor: '#F8FAFC',
-    position: 'relative',
+  serviceImgWrapper: {
+    height: '240px',
     overflow: 'hidden',
+    backgroundColor: '#EEF2F6',
   },
-  projectImg: {
+  serviceImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    display: 'block',
+    transition: 'transform 0.4s ease',
   },
-  projectPillBefore: {
-    position: 'absolute',
-    top: '10px',
-    left: '10px',
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    backdropFilter: 'blur(4px)',
-    color: '#FFFFFF',
-    fontSize: '9px',
-    fontWeight: '700',
-    padding: '2px 8px',
-    borderRadius: '9999px',
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
+  serviceContent: {
+    padding: '24px',
+    position: 'relative',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
   },
-  projectPillCenter: {
+  serviceIconPill: {
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    backgroundColor: '#FFFFFF',
-    color: '#162C46',
-    fontSize: '11px',
-    fontWeight: '900',
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
+    top: '-24px',
+    left: '24px',
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
+    backgroundColor: '#FEF3C7',
+    color: '#B45309',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    boxShadow: '0 6px 14px rgba(0,0,0,0.1)',
+    border: '2px solid #FFFFFF',
   },
-  projectPillAfter: {
-    position: 'absolute',
-    top: '10px',
-    right: '10px',
-    backgroundColor: '#EAA428',
-    color: '#0F172A',
-    fontSize: '9px',
+  serviceName: {
+    fontSize: '20px',
     fontWeight: '800',
-    padding: '2px 8px',
-    borderRadius: '9999px',
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
+    color: '#0F2C59',
+    margin: '16px 0 8px 0',
   },
-  projectCardBottom: {
-    padding: '12px 14px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  projectTitle: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#0F172A',
-    margin: '0 0 2px 0',
-  },
-  projectType: {
-    fontSize: '11px',
+  serviceDesc: {
+    fontSize: '13.5px',
+    lineHeight: 1.55,
     color: '#64748B',
     margin: 0,
   },
-  projectArrowCircle: {
-    width: '26px',
-    height: '26px',
-    borderRadius: '50%',
-    backgroundColor: '#F1F5F9',
-    border: 'none',
-    color: '#162C46',
-    fontSize: '13px',
-    fontWeight: '800',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
 
-  // 6. OUR PRODUCTS & SERVICES
-  productsSection: {
-    padding: '40px 24px 60px',
-    maxWidth: '1160px',
-    margin: '0 auto',
-    width: '100%',
-  },
-  productsRow: {
+  // 5. PRODUCTS SECTION
+  productsContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '14px',
-    marginBottom: '28px',
+    gridTemplateColumns: '1.45fr 1fr',
+    gap: '28px',
+    alignItems: 'stretch',
+  },
+  productsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '18px',
   },
   productCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '12px',
+    borderRadius: '16px',
     border: '1px solid #E2E8F0',
-    padding: '16px 12px',
+    padding: '16px',
     textAlign: 'center',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+    boxShadow: '0 4px 14px rgba(15, 44, 89, 0.04)',
+    transition: 'all 0.3s ease',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    transition: 'transform 0.18s ease',
+    justifyContent: 'center',
   },
   productImgFrame: {
-    width: '100%',
-    height: '90px',
+    height: '100px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: '10px',
   },
   productImg: {
-    maxHeight: '85px',
-    maxWidth: '90%',
+    maxHeight: '90px',
+    maxWidth: '100%',
     objectFit: 'contain',
-    display: 'block',
   },
-  productName: {
+  productTitle: {
     fontSize: '13px',
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#0F2C59',
   },
-  featuresFloatingBar: {
+  promoProductCard: {
+    borderRadius: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#0F2C59',
+    backgroundImage: `url(${ctaDeckBgImg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    color: '#FFFFFF',
+    padding: '36px 32px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    boxShadow: '0 16px 36px rgba(15, 44, 89, 0.25)',
+  },
+  promoOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(15, 44, 89, 0.88)',
+    backdropFilter: 'blur(2px)',
+  },
+  promoContent: {
+    position: 'relative',
+    zIndex: 1,
+  },
+  promoTitle: {
+    fontSize: '24px',
+    fontWeight: '900',
+    lineHeight: 1.25,
+    margin: '0 0 20px 0',
+  },
+  promoList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: '0 0 28px 0',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  promoListItem: {
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '14.5px',
+    fontWeight: '600',
+  },
+  promoCheck: {
+    color: '#FDE047',
+    fontWeight: '900',
+    marginRight: '10px',
+    fontSize: '16px',
+  },
+  shopProductsBtn: {
+    padding: '12px 26px',
+    borderRadius: '9999px',
+    border: 'none',
+    backgroundColor: '#E07A2B',
+    color: '#FFFFFF',
+    fontSize: '14px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    alignSelf: 'flex-start',
+    boxShadow: '0 4px 14px rgba(224, 122, 43, 0.4)',
+    transition: 'all 0.25s',
+  },
+
+  // 6. PROJECTS SECTION
+  projectsHeaderRow: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: '36px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  viewAllProjectsBtn: {
+    padding: '10px 22px',
+    borderRadius: '9999px',
+    border: '1.5px solid #CBD5E1',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.25s',
+  },
+  projectsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '22px',
+  },
+  projectCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: '16px',
     border: '1px solid #E2E8F0',
-    boxShadow: '0 6px 20px rgba(0,0,0,0.05)',
-    padding: '16px 24px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '16px',
-    alignItems: 'center',
-  },
-  featureItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  featureIcon: {
-    fontSize: '20px',
-  },
-  featureTitle: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#0F172A',
-    display: 'block',
-    lineHeight: '1.2',
-  },
-  featureSub: {
-    fontSize: '11px',
-    color: '#64748B',
-    margin: '2px 0 0 0',
-  },
-  featureDivider: {
-    width: '1px',
-    height: '32px',
-    backgroundColor: '#E2E8F0',
-  },
-
-  // 7. CTA BANNER
-  ctaBannerSection: {
-    padding: '0 24px 70px',
-    maxWidth: '1160px',
-    margin: '0 auto',
-    width: '100%',
-  },
-  ctaBannerInner: {
-    backgroundColor: '#0D253E',
-    backgroundImage: 'linear-gradient(135deg, #0D253E 0%, #163657 100%)',
-    borderRadius: '18px',
-    padding: '24px 36px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '24px',
-    position: 'relative',
     overflow: 'hidden',
-    boxShadow: '0 12px 30px rgba(13, 37, 62, 0.25)',
-  },
-  ctaBannerLeft: {
-    zIndex: 2,
-  },
-  ctaTitle: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: '#FFFFFF',
-    margin: '0 0 4px 0',
-  },
-  ctaSubtitle: {
-    fontSize: '13px',
-    color: '#94A3B8',
-    margin: 0,
-  },
-  ctaBannerCenter: {
-    zIndex: 2,
-  },
-  ctaTryNowBtn: {
-    backgroundColor: '#EAA428',
-    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    border: 'none',
-    color: '#0F172A',
-    fontSize: '13px',
-    fontWeight: '800',
-    padding: '11px 26px',
-    borderRadius: '9999px',
+    boxShadow: '0 6px 20px -4px rgba(15, 44, 89, 0.06)',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
-    whiteSpace: 'nowrap',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.3s ease',
   },
-  ctaBannerRightBg: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '38%',
-    opacity: 0.85,
-    pointerEvents: 'none',
+  projectImgBox: {
+    height: '210px',
+    position: 'relative',
+    backgroundColor: '#EEF2F6',
   },
-  ctaBgImg: {
+  projectImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    display: 'block',
-    maskImage: 'linear-gradient(to right, transparent, black)',
-    WebkitMaskImage: 'linear-gradient(to right, transparent, black)',
   },
-
-  // 8. FOOTER
-  footer: {
-    backgroundColor: '#081726',
+  sliderPillBar: {
+    position: 'absolute',
+    top: '12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backdropFilter: 'blur(8px)',
+    borderRadius: '9999px',
+    padding: '4px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  sliderBadgeActive: {
+    fontSize: '9.5px',
+    fontWeight: '900',
+    color: '#FDE047',
+    letterSpacing: '0.4px',
+  },
+  sliderBadgeInactive: {
+    fontSize: '9.5px',
+    fontWeight: '700',
+    color: '#CBD5E1',
+    letterSpacing: '0.4px',
+  },
+  sliderDivider: {
+    fontSize: '10px',
     color: '#94A3B8',
-    padding: '50px 24px 30px',
-    marginTop: 'auto',
   },
-  footerInner: {
-    maxWidth: '1160px',
-    margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: '1.4fr 1fr 1fr 1.3fr 0.9fr',
-    gap: '30px',
+  projectDetails: {
+    padding: '16px',
   },
-  footerBrandCol: {
-    paddingRight: '12px',
+  projectTitle: {
+    fontSize: '15px',
+    fontWeight: '800',
+    color: '#0F2C59',
+    margin: '0 0 4px 0',
   },
-  footerLogoImg: {
-    height: '34px',
-    width: 'auto',
-    marginBottom: '12px',
-    filter: 'brightness(1.1)',
-  },
-  footerTagline: {
+  projectMeta: {
     fontSize: '12px',
-    lineHeight: '1.5',
-    color: '#94A3B8',
-    margin: '0 0 14px 0',
-  },
-  footerCopyright: {
-    fontSize: '11px',
     color: '#64748B',
     margin: 0,
+    fontWeight: '500',
+  },
+
+  // 7. HOW IT WORKS
+  stepsContainer: {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr auto 1fr auto 1fr',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  stepCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '18px',
+    border: '1px solid #E2E8F0',
+    padding: '28px 22px',
+    boxShadow: '0 6px 20px -4px rgba(15, 44, 89, 0.06)',
+    transition: 'all 0.3s ease',
+  },
+  stepHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '16px',
+  },
+  stepNumberBadge: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#FEF3C7',
+    color: '#92400E',
+    fontWeight: '900',
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1.5px solid #FCD34D',
+  },
+  stepTitle: {
+    fontSize: '17px',
+    fontWeight: '800',
+    color: '#0F2C59',
+    margin: '0 0 8px 0',
+  },
+  stepDesc: {
+    fontSize: '13px',
+    lineHeight: 1.55,
+    color: '#64748B',
+    margin: 0,
+  },
+  stepArrow: {
+    fontSize: '22px',
+    fontWeight: '900',
+    color: '#CBD5E1',
+    textAlign: 'center',
+  },
+
+  // 8. TESTIMONIALS
+  testimonialHeaderRow: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: '36px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  carouselBtnGroup: {
+    display: 'flex',
+    gap: '8px',
+  },
+  carouselBtn: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '50%',
+    border: '1px solid #CBD5E1',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    fontSize: '16px',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  testimonialsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '24px',
+  },
+  testimonialCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '20px',
+    border: '1px solid #E2E8F0',
+    padding: '28px',
+    boxShadow: '0 8px 24px -4px rgba(15, 44, 89, 0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    transition: 'all 0.3s ease',
+  },
+  testimonialUserRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    marginBottom: '14px',
+  },
+  testimonialAvatar: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  },
+  testimonialName: {
+    fontSize: '16px',
+    fontWeight: '800',
+    color: '#0F2C59',
+    margin: 0,
+  },
+  testimonialRole: {
+    fontSize: '12px',
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  starsRow: {
+    color: '#F59E0B',
+    fontSize: '16px',
+    letterSpacing: '2px',
+    marginBottom: '12px',
+  },
+  testimonialText: {
+    fontSize: '13.5px',
+    lineHeight: 1.6,
+    color: '#334155',
+    margin: '0 0 16px 0',
+    flex: 1,
+    fontStyle: 'italic',
+  },
+  testimonialProjectTag: {
+    fontSize: '11.5px',
+    color: '#0284C7',
+    fontWeight: '700',
+    borderTop: '1px solid #F1F5F9',
+    paddingTop: '12px',
+  },
+
+  // 9. PRE-FOOTER CTA BANNER
+  preFooterCtaSection: {
+    maxWidth: '1360px',
+    margin: '0 auto 60px auto',
+    padding: '0 24px',
+  },
+  ctaBannerContainer: {
+    borderRadius: '24px',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#0F2C59',
+    padding: '60px 40px',
+    textAlign: 'center',
+    boxShadow: '0 20px 45px -10px rgba(15, 44, 89, 0.3)',
+  },
+  ctaBgImg: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  ctaDarkOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(11, 25, 44, 0.88)',
+    backdropFilter: 'blur(3px)',
+  },
+  ctaContent: {
+    position: 'relative',
+    zIndex: 1,
+    maxWidth: '680px',
+    margin: '0 auto',
+  },
+  ctaHeadline: {
+    fontSize: '38px',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    margin: '0 0 14px 0',
+    letterSpacing: '-0.8px',
+  },
+  ctaSubhead: {
+    fontSize: '16px',
+    color: '#E2E8F0',
+    lineHeight: 1.6,
+    margin: '0 0 28px 0',
+  },
+  ctaBannerBtn: {
+    padding: '14px 34px',
+    borderRadius: '9999px',
+    border: 'none',
+    backgroundColor: '#E07A2B',
+    color: '#FFFFFF',
+    fontSize: '15px',
+    fontWeight: '800',
+    cursor: 'pointer',
+    boxShadow: '0 6px 20px rgba(224, 122, 43, 0.45)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'all 0.25s',
+  },
+
+  // 10. FOOTER
+  footer: {
+    backgroundColor: '#0B192C',
+    color: '#CBD5E1',
+    paddingTop: '60px',
+  },
+  footerContainer: {
+    maxWidth: '1360px',
+    margin: '0 auto',
+    padding: '0 28px 48px 28px',
+    display: 'grid',
+    gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr',
+    gap: '40px',
+  },
+  footerColBrand: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  footerLogoLink: {
+    display: 'inline-block',
+  },
+  footerLogoImg: {
+    height: '42px',
+    width: 'auto',
+    filter: 'brightness(1.1)',
+  },
+  footerBrandDesc: {
+    fontSize: '13px',
+    lineHeight: 1.65,
+    color: '#94A3B8',
+    margin: 0,
+    maxWidth: '320px',
   },
   footerCol: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
   },
-  footerColHeader: {
-    fontSize: '13px',
-    fontWeight: '700',
+  footerColHeading: {
+    fontSize: '14px',
+    fontWeight: '800',
     color: '#FFFFFF',
-    margin: '0 0 4px 0',
+    textTransform: 'uppercase',
+    letterSpacing: '0.6px',
+    margin: '0 0 18px 0',
   },
-  footerLinksList: {
+  footerList: {
     listStyle: 'none',
     padding: 0,
     margin: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '10px',
   },
   footerLink: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: '#94A3B8',
     textDecoration: 'none',
-    transition: 'color 0.15s ease',
+    transition: 'color 0.2s',
   },
   footerLinkBtn: {
     background: 'none',
     border: 'none',
-    color: '#94A3B8',
-    fontSize: '12px',
-    cursor: 'pointer',
     padding: 0,
+    fontSize: '13px',
+    color: '#94A3B8',
+    cursor: 'pointer',
     textAlign: 'left',
+    transition: 'color 0.2s',
   },
-  contactItem: {
-    display: 'flex',
-    alignItems: 'center',
-    fontSize: '12px',
-    color: '#CBD5E1',
-    marginBottom: '6px',
-  },
-  socialIconsRow: {
+  footerContactRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    fontSize: '13px',
+    marginBottom: '10px',
+    color: '#CBD5E1',
   },
-  socialIconBtn: {
+  footerContactIcon: {
+    fontSize: '14px',
+    color: '#E07A2B',
+  },
+  footerContactLink: {
+    color: '#CBD5E1',
+    textDecoration: 'none',
+    fontWeight: '500',
+  },
+  footerContactText: {
+    color: '#94A3B8',
+  },
+  socialRow: {
+    display: 'flex',
+    gap: '10px',
+    marginTop: '16px',
+  },
+  socialIcon: {
     width: '32px',
     height: '32px',
-    borderRadius: '50%',
-    backgroundColor: '#162C46',
+    borderRadius: '8px',
+    backgroundColor: '#1E293B',
+    color: '#CBD5E1',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     textDecoration: 'none',
-    transition: 'background-color 0.15s',
-  },
-
-  // 9. MODAL
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-    backdropFilter: 'blur(4px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: '16px',
-    maxWidth: '560px',
-    width: '100%',
-    padding: '24px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
-  },
-  modalHeader: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: '16px',
-  },
-  modalTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#0F172A',
-    margin: '0 0 4px 0',
-  },
-  modalBadge: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#162C46',
-    backgroundColor: '#F1F5F9',
-    padding: '2px 8px',
-    borderRadius: '4px',
-  },
-  modalCloseBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: '18px',
-    color: '#64748B',
-    cursor: 'pointer',
-  },
-  modalImgFrame: {
-    width: '100%',
-    height: '240px',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    backgroundColor: '#F8FAFC',
-    marginBottom: '16px',
-  },
-  modalImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  modalDesc: {
     fontSize: '13px',
-    color: '#475569',
-    lineHeight: '1.5',
-    marginBottom: '20px',
+    fontWeight: '700',
+    transition: 'background-color 0.2s',
   },
-  modalActions: {
+  footerBottomBar: {
+    borderTop: '1px solid #1E293B',
+    padding: '20px 28px',
+  },
+  footerBottomInner: {
+    maxWidth: '1360px',
+    margin: '0 auto',
     display: 'flex',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '12px',
+    color: '#64748B',
+    flexWrap: 'wrap',
     gap: '10px',
   },
-  modalCancelBtn: {
-    backgroundColor: '#F1F5F9',
-    border: 'none',
-    color: '#475569',
-    fontSize: '13px',
-    fontWeight: '600',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-  },
-  modalActionBtn: {
-    backgroundColor: '#EAA428',
-    backgroundImage: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    border: 'none',
-    color: '#0F172A',
-    fontSize: '13px',
-    fontWeight: '700',
-    padding: '8px 18px',
-    borderRadius: '8px',
-    cursor: 'pointer',
+  footerBottomLink: {
+    color: '#64748B',
+    textDecoration: 'none',
   },
 };
-

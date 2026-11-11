@@ -129,7 +129,7 @@ export function RequireApprovedContractor({ children }) {
   const isApproved = contractorProfile?.verificationStatus === 'approved';
 
   if (!isApproved) {
-    return <Navigate to="/contractor/verification-request" replace />;
+    return <Navigate to="/contractor/dashboard" replace />;
   }
 
   return children;

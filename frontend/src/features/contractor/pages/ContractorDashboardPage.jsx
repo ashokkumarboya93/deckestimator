@@ -19,12 +19,13 @@ import { contractorLeadApi } from '../api/contractorLeadApi';
 import { contractorCommissionApi } from '../api/contractorCommissionApi';
 import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import ContractorVerificationRequestPage from './ContractorVerificationRequestPage';
 import bannerBg from '../../../assets/images/contractor_banner_bg.png';
 import productImg from '../../../assets/images/deck_restoration_products.jpg';
 
 export default function ContractorDashboardPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, contractorProfile } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -115,6 +116,27 @@ export default function ContractorDashboardPage() {
   const fmt = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
   const contractorName = user?.fullName ? user.fullName.split(' ')[0] : 'Partner';
+
+  const currentVerificationStatus = (profile?.verificationStatus || contractorProfile?.verificationStatus || user?.verificationStatus || '').toLowerCase();
+  const isApproved = currentVerificationStatus === 'approved';
+
+  if (loading && !profile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px - 260px)', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: '#0B2447', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ marginTop: '14px', color: '#64748B', fontSize: '14px', fontWeight: '500' }}>Loading Contractor Dashboard...</p>
+      </div>
+    );
+  }
+
+  // If newly registered or pending verification, show the dedicated Waiting for Approval & Document Upload view
+  if (!isApproved) {
+    return (
+      <div style={{ width: '100%', minHeight: 'calc(100vh - 65px - 260px)', boxSizing: 'border-box' }}>
+        <ContractorVerificationRequestPage />
+      </div>
+    );
+  }
 
   return (
     <div style={styles.dashboardContainer}>
