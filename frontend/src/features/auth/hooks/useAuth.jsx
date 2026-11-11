@@ -7,12 +7,38 @@ import { authApi } from '../api/authApi';
 import { getErrorMessage } from '../../../api/apiErrors';
 
 const AuthContext = createContext(null);
+const SESSION_SYNC_KEY = 'drp_session_sync';
+
+function broadcastSessionSync() {
+  try {
+    localStorage.setItem(SESSION_SYNC_KEY, String(Date.now()));
+  } catch {
+    // Ignore storage restriction
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [contractorProfile, setContractorProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await authApi.getMe();
+      if (response?.data) {
+        setUser(response.data.user);
+        setContractorProfile(response.data.contractorProfile || null);
+        return response.data;
+      }
+    } catch (err) {
+      if (err?.status === 401) {
+        setUser(null);
+        setContractorProfile(null);
+      }
+    }
+    return null;
+  }, []);
 
   // Load current session on mount
   useEffect(() => {
@@ -45,6 +71,26 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Sync auth state across tabs and recover cleanly when session cookie clears or expires
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (user) {
+        refreshUser();
+      }
+    };
+    const handleStorage = (e) => {
+      if (e.key === SESSION_SYNC_KEY) {
+        refreshUser();
+      }
+    };
+    window.addEventListener('drp:unauthorized', handleUnauthorized);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('drp:unauthorized', handleUnauthorized);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [user, refreshUser]);
+
   const login = useCallback(async (credentials) => {
     setError(null);
     try {
@@ -52,6 +98,7 @@ export function AuthProvider({ children }) {
       if (response?.data) {
         setUser(response.data.user);
         setContractorProfile(response.data.contractorProfile || null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -68,6 +115,7 @@ export function AuthProvider({ children }) {
       if (response?.data) {
         setUser(response.data.user);
         setContractorProfile(null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -84,6 +132,7 @@ export function AuthProvider({ children }) {
       if (response?.data) {
         setUser(response.data.user);
         setContractorProfile(response.data.contractorProfile || null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -99,21 +148,8 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setContractorProfile(null);
+      broadcastSessionSync();
     }
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    try {
-      const response = await authApi.getMe();
-      if (response?.data) {
-        setUser(response.data.user);
-        setContractorProfile(response.data.contractorProfile || null);
-        return response.data;
-      }
-    } catch {
-      // ignore
-    }
-    return null;
   }, []);
 
   const value = {

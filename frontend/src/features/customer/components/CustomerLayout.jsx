@@ -40,6 +40,7 @@ export default function CustomerLayout() {
 
   // Real-time synchronization of notifications from MongoDB
   const fetchRealNotifications = useCallback(async () => {
+    if (!user) return;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -47,7 +48,7 @@ export default function CustomerLayout() {
     } catch {
       // Fallback silently without breaking UI
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchRealNotifications();

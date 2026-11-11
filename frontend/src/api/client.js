@@ -58,6 +58,13 @@ async function apiClient(endpoint, options = {}) {
       }
 
       if (!response.ok) {
+        if (response.status === 401 && !endpoint.startsWith('/auth/') && typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('drp:unauthorized', {
+              detail: { endpoint, code: data?.error?.code || 'AUTH_REQUIRED' },
+            })
+          );
+        }
         const error = new Error(data?.error?.message || `Server error (${response.status})`);
         error.code = data?.error?.code || 'UNKNOWN_ERROR';
         error.status = response.status;
