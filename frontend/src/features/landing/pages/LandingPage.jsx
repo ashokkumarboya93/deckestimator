@@ -25,11 +25,16 @@ import prod3Img from '../../../assets/images/landing/product_3_stains.png';
 import prod4Img from '../../../assets/images/landing/product_4_cleaners.png';
 import prod5Img from '../../../assets/images/landing/product_5_tools.png';
 
-// Projects
-import proj1Img from '../../../assets/images/landing/project_1_modern.png';
-import proj2Img from '../../../assets/images/landing/project_2_classic.png';
-import proj3Img from '../../../assets/images/landing/project_3_poolside.png';
-import proj4Img from '../../../assets/images/landing/project_4_backyard.png';
+// Projects (Internet Images & Real Restoration Before/After Comparisons)
+import proj1Internet from '../../../assets/images/landing/project_1_internet.jpg';
+import proj2Internet from '../../../assets/images/landing/project_2_internet.jpg';
+import proj3Internet from '../../../assets/images/landing/project_3_internet.jpg';
+import proj4Internet from '../../../assets/images/landing/project_4_internet.jpg';
+
+import proj1Before from '../../../assets/images/landing/project_1_before.jpg';
+import proj2Before from '../../../assets/images/landing/project_2_before.jpg';
+import proj3Before from '../../../assets/images/landing/project_3_before.jpg';
+import proj4Before from '../../../assets/images/landing/project_4_before.jpg';
 
 // CTA Background
 import ctaDeckBgImg from '../../../assets/images/landing/cta_deck_bg.png';
@@ -290,6 +295,16 @@ export default function LandingPage() {
       {/* 2. HERO SECTION (FULL SCREEN) */}
       {/* ======================================================== */}
       <section id="hero" style={styles.heroSection}>
+        {/* Soft white/transparent horizontal gradient overlay */}
+        <div style={styles.heroOverlay} />
+
+        {/* Floating Wooden Sticker Badge positioned above wizard contractor's pointing hand */}
+        <div style={styles.floatingWoodSticker}>
+          <div style={styles.woodStickerSunburst}>☀</div>
+          <div style={styles.woodStickerTextTop}>Bring Your Deck</div>
+          <div style={styles.woodStickerTextBottom}>Back to Life!</div>
+        </div>
+
         <div style={styles.heroContainer}>
           {/* Left Column: Heading, Subhead, CTAs & Trust Badges */}
           <div style={styles.heroLeft}>
@@ -349,24 +364,6 @@ export default function LandingPage() {
                   <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
                 </svg>
                 <span>Quality Results</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Hero Wizard Portrait & Floating Sticker */}
-          <div style={styles.heroRight}>
-            <div style={styles.heroPortraitContainer}>
-              <img
-                src={wizardHeroImg}
-                alt="Deck Restoration Plus Master Contractor with Deck Finish"
-                style={styles.heroPortraitImg}
-              />
-
-              {/* Floating Wooden Sticker Badge */}
-              <div style={styles.floatingWoodSticker}>
-                <div style={styles.woodStickerSunburst}>☀</div>
-                <div style={styles.woodStickerTextTop}>Bring Your Deck</div>
-                <div style={styles.woodStickerTextBottom}>Back to Life!</div>
               </div>
             </div>
           </div>
@@ -685,9 +682,13 @@ export default function LandingPage() {
 
         <div style={styles.projectsGrid}>
           {/* Project 1 */}
-          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(1)}>
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(1)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
-              <img src={proj1Img} alt="Modern Deck Revival" style={styles.projectImg} />
+              <img
+                src={projectViews[1] === 'before' ? proj1Before : proj1Internet}
+                alt="Modern Deck Revival"
+                style={styles.projectImg}
+              />
               <div style={styles.sliderPillBar}>
                 <span style={projectViews[1] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
                   BEFORE
@@ -705,9 +706,13 @@ export default function LandingPage() {
           </div>
 
           {/* Project 2 */}
-          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(2)}>
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(2)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
-              <img src={proj2Img} alt="Classic Wood Restoration" style={styles.projectImg} />
+              <img
+                src={projectViews[2] === 'before' ? proj2Before : proj2Internet}
+                alt="Classic Wood Restoration"
+                style={styles.projectImg}
+              />
               <div style={styles.sliderPillBar}>
                 <span style={projectViews[2] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
                   BEFORE
@@ -725,9 +730,13 @@ export default function LandingPage() {
           </div>
 
           {/* Project 3 */}
-          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(3)}>
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(3)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
-              <img src={proj3Img} alt="Poolside Deck Upgrade" style={styles.projectImg} />
+              <img
+                src={projectViews[3] === 'before' ? proj3Before : proj3Internet}
+                alt="Poolside Deck Upgrade"
+                style={styles.projectImg}
+              />
               <div style={styles.sliderPillBar}>
                 <span style={projectViews[3] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
                   BEFORE
@@ -745,9 +754,13 @@ export default function LandingPage() {
           </div>
 
           {/* Project 4 */}
-          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(4)}>
+          <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(4)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
-              <img src={proj4Img} alt="Backyard Deck Makeover" style={styles.projectImg} />
+              <img
+                src={projectViews[4] === 'before' ? proj4Before : proj4Internet}
+                alt="Backyard Deck Makeover"
+                style={styles.projectImg}
+              />
               <div style={styles.sliderPillBar}>
                 <span style={projectViews[4] === 'before' ? styles.sliderBadgeActive : styles.sliderBadgeInactive}>
                   BEFORE
@@ -1104,27 +1117,38 @@ const styles = {
 
   // 2. HERO SECTION
   heroSection: {
-    minHeight: '88vh',
+    minHeight: '94vh',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 24px 60px 24px',
     position: 'relative',
-    background: 'radial-gradient(circle at 85% 40%, rgba(224, 122, 43, 0.06) 0%, transparent 60%), #F8FAFC',
+    backgroundImage: `url("${wizardHeroImg}")`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'right 25% center',
+    backgroundRepeat: 'no-repeat',
+    overflow: 'hidden',
+    padding: '60px 24px 80px 24px',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(90deg, #FFFFFF 0%, rgba(255, 255, 255, 0.98) 32%, rgba(255, 255, 255, 0.82) 48%, rgba(255, 255, 255, 0.16) 68%, rgba(255, 255, 255, 0) 82%)',
+    zIndex: 1,
+    pointerEvents: 'none',
   },
   heroContainer: {
     maxWidth: '1360px',
     width: '100%',
     margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: '1.05fr 0.95fr',
-    alignItems: 'center',
-    gap: '40px',
+    position: 'relative',
+    zIndex: 2,
+    display: 'flex',
+    justifyContent: 'flex-start',
   },
   heroLeft: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
+    maxWidth: '580px',
   },
   tagBadge: {
     display: 'inline-flex',
@@ -1215,34 +1239,17 @@ const styles = {
     fontWeight: '700',
     color: '#334155',
   },
-  heroRight: {
-    display: 'flex',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  heroPortraitContainer: {
-    position: 'relative',
-    maxWidth: '520px',
-    width: '100%',
-  },
-  heroPortraitImg: {
-    width: '100%',
-    height: 'auto',
-    borderRadius: '24px',
-    boxShadow: '0 20px 45px -10px rgba(15, 44, 89, 0.18)',
-    display: 'block',
-  },
   floatingWoodSticker: {
     position: 'absolute',
-    top: '25px',
-    right: '-15px',
+    top: '36px',
+    right: '60px',
     backgroundColor: '#78350F',
     backgroundImage: 'linear-gradient(135deg, #92400E 0%, #78350F 100%)',
     color: '#FEF3C7',
-    padding: '12px 22px',
-    borderRadius: '16px',
-    boxShadow: '0 12px 25px rgba(0, 0, 0, 0.35)',
-    border: '2px solid #FCD34D',
+    padding: '14px 26px',
+    borderRadius: '18px',
+    boxShadow: '0 16px 32px rgba(0, 0, 0, 0.35)',
+    border: '2.5px solid #FCD34D',
     textAlign: 'center',
     animation: 'floatWood 3.5s ease-in-out infinite',
     zIndex: 10,
