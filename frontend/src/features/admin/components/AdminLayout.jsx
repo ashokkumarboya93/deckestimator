@@ -11,6 +11,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
+import { API_BASE_URL } from '../../../api/client';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
 export default function AdminLayout() {
@@ -97,7 +98,7 @@ export default function AdminLayout() {
   // Load badge counts
   useEffect(() => {
     let mounted = true;
-    fetch('http://localhost:5000/api/v1/admin/dashboard/summary', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/admin/dashboard/summary`, { credentials: 'include' })
       .then((r) => r.json())
       .then((res) => {
         if (mounted && res?.data?.summary) {
@@ -106,7 +107,7 @@ export default function AdminLayout() {
       })
       .catch(() => {});
 
-    fetch('http://localhost:5000/api/v1/admin/verifications?status=pending', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/admin/verifications?status=pending`, { credentials: 'include' })
       .then((r) => r.json())
       .then((res) => {
         if (mounted && res?.counts?.pending !== undefined) {

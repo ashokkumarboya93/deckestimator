@@ -88,7 +88,6 @@ export async function deleteDeckImage(deckId, imageId) {
  * Get direct stream URL for an authorized deck photo.
  */
 export function getDeckImageUrl(deckId, imageId) {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-  return `${baseUrl}/decks/${deckId}/images/${imageId}`;
+  return `${API_BASE_URL}/decks/${deckId}/images/${imageId}`;
 }
 

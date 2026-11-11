@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
+import { resolveAssetUrl } from '../../../api/client';
 
 const TABS = [
   { id: 'materials', label: 'Deck Materials' },
@@ -191,7 +192,7 @@ export default function AdminCatalogPage() {
                 <div key={item._id} style={styles.itemCard}>
                   <div style={styles.imageContainer}>
                     <img
-                      src={img.startsWith('http') ? img : `http://localhost:5000${img}`}
+                      src={resolveAssetUrl(img)}
                       alt={item.name || item.title}
                       style={styles.cardImage}
                       onError={(e) => {
@@ -254,7 +255,7 @@ export default function AdminCatalogPage() {
                   <div style={styles.previewBox}>
                     {imagePreview ? (
                       <img
-                        src={imagePreview.startsWith('http') || imagePreview.startsWith('blob:') ? imagePreview : `http://localhost:5000${imagePreview}`}
+                        src={resolveAssetUrl(imagePreview)}
                         alt="Preview"
                         style={styles.previewImg}
                         onError={(e) => {

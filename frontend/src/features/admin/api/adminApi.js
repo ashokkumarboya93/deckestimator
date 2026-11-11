@@ -2,7 +2,11 @@
 // Deck Estimator — Comprehensive Admin Portal API Service
 // =============================================
 
-import { client } from '../../../api/client';
+import { client, API_BASE_URL } from '../../../api/client';
+
+function buildAdminExportUrl(path) {
+  return `${API_BASE_URL}/admin${path}`;
+}
 
 export const adminApi = {
   // 1. Dashboard
@@ -51,7 +55,7 @@ export const adminApi = {
     return res.data;
   },
   exportUserUrl: (id, format = 'csv') => {
-    return `http://localhost:5000/api/v1/admin/users/${id}/export?format=${format}`;
+    return buildAdminExportUrl(`/users/${id}/export?format=${format}`);
   },
 
   // 3. Contractor Verifications & Documents
@@ -87,10 +91,10 @@ export const adminApi = {
     return res.data;
   },
   exportProjectsUrl: (format = 'csv', status = 'all') => {
-    return `http://localhost:5000/api/v1/admin/projects/export?format=${format}&status=${status}`;
+    return buildAdminExportUrl(`/projects/export?format=${format}&status=${status}`);
   },
   exportSingleProjectUrl: (id, format = 'csv') => {
-    return `http://localhost:5000/api/v1/admin/projects/${id}/export?format=${format}`;
+    return buildAdminExportUrl(`/projects/${id}/export?format=${format}`);
   },
 
   // 5. Leads
@@ -103,10 +107,10 @@ export const adminApi = {
   },
   exportLeadsUrl: (format = 'csv', tab = 'all', filters = {}) => {
     const params = new URLSearchParams({ format, tab, ...filters });
-    return `http://localhost:5000/api/v1/admin/leads/export?${params.toString()}`;
+    return buildAdminExportUrl(`/leads/export?${params.toString()}`);
   },
   exportSingleLeadUrl: (id, format = 'csv') => {
-    return `http://localhost:5000/api/v1/admin/leads/${id}/export?format=${format}`;
+    return buildAdminExportUrl(`/leads/${id}/export?format=${format}`);
   },
 
   // 6. Estimator Configuration
@@ -263,7 +267,7 @@ export const adminApi = {
     return res.data;
   },
   exportReportsUrl: (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
-    return `http://localhost:5000/api/v1/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
+    return buildAdminExportUrl(`/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`);
   },
 
   // 13. Admin Profile & Hierarchy

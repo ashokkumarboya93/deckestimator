@@ -25,6 +25,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
+import { API_BASE_URL } from '../../../api/client';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 
 const TABS = [
@@ -167,7 +168,7 @@ export default function AdminLeadManagementPage() {
     if (dateRangeFilter !== 'all') params.append('dateRange', dateRangeFilter);
     if (activeTab === 'all' && lastDateFilter) params.append('lastDate', lastDateFilter);
     if (searchTerm.trim()) params.append('search', searchTerm.trim());
-    return `http://localhost:5000/api/v1/admin/leads/export?format=${format}&tab=${activeTab}&${params.toString()}`;
+    return `${API_BASE_URL}/admin/leads/export?format=${format}&tab=${activeTab}&${params.toString()}`;
   };
 
   return (

@@ -4,7 +4,18 @@
 // Shared HTTP client with safe defaults.
 // All API calls go through this module.
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const RAW_ENV_API_URL = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+export const API_BASE_URL =
+  RAW_ENV_API_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:5000/api/v1');
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1$/, '');
+
+export function resolveAssetUrl(url) {
+  if (!url) return '';
+  if (/^(https?:|blob:|data:)/i.test(url)) return url;
+  return `${API_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+const BASE_URL = API_BASE_URL;
 
 /**
  * Make an API request with consistent error handling.
@@ -84,7 +95,7 @@ async function apiClient(endpoint, options = {}) {
       }
 
       if (isNetworkError) {
-        const connError = new Error('Connection to Deck Estimator backend server failed. Please ensure the backend server is running on port 5000.');
+        const connError = new Error('Connection to Deck Estimator backend server failed. Please ensure the backend server is reachable.');
         connError.code = 'NETWORK_ERROR';
         throw connError;
       }

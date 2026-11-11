@@ -5,13 +5,14 @@
 // Does NOT start the server — that is server.js's job.
 
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
-const { corsOptions } = require('./config/cors');
+const { createCorsOptionsDelegate } = require('./config/cors');
 const { env } = require('./config/env');
 const { requestId } = require('./middleware/requestId');
 const { apiLimiter } = require('./middleware/rateLimiters');
@@ -20,9 +21,18 @@ const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+// Trust Railway / reverse-proxy headers (X-Forwarded-For, X-Forwarded-Proto)
+app.set('trust proxy', 1);
+
 // --------------- Security middleware ---------------
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors(corsOptions));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // Disable restrictive default CSP when serving the React SPA, Unsplash assets, Google Fonts, and blob/data previews
+    contentSecurityPolicy: false,
+  })
+);
+app.use(cors(createCorsOptionsDelegate));
 
 // --------------- Request parsing ---------------
 app.use(express.json({ limit: '50mb' }));
@@ -137,6 +147,23 @@ app.use('/api/v1/admin', adminRoutes);
 //           app.use('/api/v1/reports', reportRoutes);
 //           app.use('/api/v1/admin', adminRoutes);
 // -----------------------------------------------
+
+// --------------- API & Upload 404 guard ---------------
+app.use('/api', notFound);
+app.use('/uploads', notFound);
+
+// --------------- Serve built React SPA in unified deployment ---------------
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+const frontendIndexPath = path.join(frontendDistPath, 'index.html');
+if (!env.isTest && fs.existsSync(frontendIndexPath)) {
+  app.use(express.static(frontendDistPath, { index: false }));
+  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(frontendIndexPath, (err) => {
+      if (err) next(err);
+    });
+  });
+}
 
 // --------------- 404 handler ---------------
 app.use(notFound);

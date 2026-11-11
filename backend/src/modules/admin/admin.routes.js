@@ -3,6 +3,7 @@
 // =============================================
 
 const express = require('express');
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const adminController = require('./admin.controller');
@@ -10,10 +11,15 @@ const { authenticate } = require('../../middleware/authenticate');
 const { authorize } = require('../../middleware/authorize');
 const { ROLES } = require('../../shared/constants');
 
+const catalogUploadDir = path.join(__dirname, '../../../uploads/catalog');
+if (!fs.existsSync(catalogUploadDir)) {
+  fs.mkdirSync(catalogUploadDir, { recursive: true });
+}
+
 // Multer storage for catalog image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../../../uploads/catalog'));
+    cb(null, catalogUploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
