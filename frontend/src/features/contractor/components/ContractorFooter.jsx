@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import mainLogo from '../../../assets/images/MainLodo.png';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 export default function ContractorFooter() {
   const [hoveredBtn, setHoveredBtn] = useState(null);
@@ -189,6 +190,8 @@ export default function ContractorFooter() {
                 </svg>
                 <span>estimates@deckrestorationplus.com</span>
               </a>
+
+              <OperatingHoursBlock variant="dark" />
             </div>
           </div>
 

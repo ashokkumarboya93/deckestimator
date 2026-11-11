@@ -24,6 +24,7 @@ async function runVideo3() {
     // ------------------------------------------------------------------------
     await clearSession();
     await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('input[type="email"]', { visible: true, timeout: 15000 });
     await page.mouse.click(100, 100);
     await centerActiveForm();
 
@@ -73,7 +74,7 @@ async function runVideo3() {
     // ------------------------------------------------------------------------
     // SCENE 3: VERIFICATION & COMPLIANCE
     // ------------------------------------------------------------------------
-    await page.goto(`${BASE_URL}/admin/verifications`, { waitUntil: 'networkidle2' });
+    await page.goto(`${BASE_URL}/admin/verification-progress`, { waitUntil: 'networkidle2' });
     await sleep(1000);
 
     await speak('VERIFICATION & PROGRESS', 'In Verification and Progress, the View button opens contractor details complete with exact timestamp and geographic location.');
@@ -117,7 +118,7 @@ async function runVideo3() {
     // ------------------------------------------------------------------------
     // SCENE 6: PRICING & DISCOUNTS
     // ------------------------------------------------------------------------
-    await page.goto(`${BASE_URL}/admin/pricing-discounts`, { waitUntil: 'networkidle2' });
+    await page.goto(`${BASE_URL}/admin/pricing`, { waitUntil: 'networkidle2' });
     await sleep(1000);
 
     await speak('PRICING CONFIGURATION', 'Pricing and Discounts allows tuning master architectural rate cards and setting material cost multipliers.');

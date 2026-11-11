@@ -48,6 +48,7 @@ async function runVideo2() {
     // ------------------------------------------------------------------------
     await clearSession();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('input[type="email"]', { visible: true, timeout: 15000 });
     await page.mouse.click(100, 100);
     await centerActiveForm();
 
@@ -93,6 +94,7 @@ async function runVideo2() {
 
     await clearSession();
     await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('input[type="email"]', { visible: true, timeout: 15000 });
     await centerActiveForm();
 
     await page.type('input[type="email"]', 'admin@deckestimator.com', { delay: 35 });
@@ -104,7 +106,7 @@ async function runVideo2() {
     await sleep(1200);
 
     // Navigate to Verification & Progress
-    await page.goto(`${BASE_URL}/admin/verifications`, { waitUntil: 'networkidle2' });
+    await page.goto(`${BASE_URL}/admin/verification-progress`, { waitUntil: 'networkidle2' });
     await sleep(1000);
 
     await speak('VERIFICATION PIPELINE', 'Here is the Verification and Progress hub. In the Verifications tab, clicking View displays contractor details with exact timestamp and location.');

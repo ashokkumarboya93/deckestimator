@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
 import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
+import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
@@ -500,7 +501,8 @@ export default function CustomerEstimatesPage() {
           <div class="footer-contact" style="text-align: right;">
             Toll Free Support: <strong>1 (866) 440-DECK (3325)</strong><br>
             Office: <strong>(609) 268-3436</strong> &bull; Email: <strong>info@deckrestorationplus.com</strong><br>
-            Support Hours: Monday – Friday 8:00 AM – 6:00 PM EST
+            ${OPERATING_HOURS_PRINT_LINES.contracting}<br>
+            ${OPERATING_HOURS_PRINT_LINES.office}
           </div>
         </div>
       </body>
