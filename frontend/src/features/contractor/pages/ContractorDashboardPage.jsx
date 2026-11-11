@@ -22,6 +22,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import ContractorVerificationRequestPage from './ContractorVerificationRequestPage';
 import bannerBg from '../../../assets/images/contractor_banner_bg.png';
 import productImg from '../../../assets/images/deck_restoration_products.jpg';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 export default function ContractorDashboardPage() {
   const navigate = useNavigate();
@@ -647,14 +648,15 @@ export default function ContractorDashboardPage() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Operating Hours</span>
-                <strong style={styles.contactBoxValueStatic}>Mon – Fri: 7:30 AM – 6:00 PM</strong>
-                <span style={{ fontSize: '11.5px', color: '#475569', fontWeight: '600', display: 'block' }}>Sat: 8:00 AM – 2:00 PM EST</span>
+                <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
                 <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
                   Live senior estimator dispatch
                 </div>
               </div>
             </div>
           </div>
+
+          <OperatingHoursBlock variant="cards" style={{ marginTop: '16px' }} />
         </div>
 
         {/* Right Side: Product Card 2 (Improved Design with Theme-Based Outlined Shiny Button) */}

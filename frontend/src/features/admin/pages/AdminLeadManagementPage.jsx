@@ -72,7 +72,8 @@ export default function AdminLeadManagementPage() {
     setAcceptingLead(true);
     setAcceptSuccessNotice(null);
     try {
-      const estId = lead.estimateId || lead.estimateSnapshot?.estimateId || leadDossier?.estimateDetails?.estimateId || lead._id;
+      const rawEstId = lead.estimateId || lead.estimateSnapshot?.estimateId || leadDossier?.estimateDetails?.estimateId || lead._id;
+      const estId = (typeof rawEstId === 'object' && rawEstId !== null) ? (rawEstId._id || rawEstId.id) : rawEstId;
       await adminApi.updateProjectProgress(estId, {
         stage: 'in_progress',
         status: 'in_progress',

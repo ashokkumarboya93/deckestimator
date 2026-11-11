@@ -7,6 +7,7 @@
 import html2pdf from 'html2pdf.js';
 import mainLogo from '../assets/images/Main_Logo_v2.png';
 import { ESTIMATOR_IMAGES } from '../assets/images/Input_images/estimatorImages';
+import { OPERATING_HOURS_PRINT_LINES } from '../constants/operatingHours';
 
 /**
  * Format currency helper
@@ -450,12 +451,14 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
     </div>
 
     <!-- 8. OFFICIAL FOOTER -->
-    <div style="border-top: 1.5px solid #E2E8F0; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #64748b;">
+    <div style="border-top: 1.5px solid #E2E8F0; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 9.5px; color: #64748b; line-height: 1.45;">
       <div>
-        <strong style="color: #1E3A63;">Deck Restoration Plus, LLC</strong> • 152 Indian Mills Road, Shamong, NJ 08088
-      </div>
-      <div>
+        <strong style="color: #1E3A63;">Deck Restoration Plus, LLC</strong> • 152 Indian Mills Road, Shamong, NJ 08088<br>
         Toll-Free Support: <strong style="color: #1E3A63;">(856) 678-3325</strong> | estimates@deckrestorationplus.com
+      </div>
+      <div style="text-align: right;">
+        ${OPERATING_HOURS_PRINT_LINES.contracting}<br>
+        ${OPERATING_HOURS_PRINT_LINES.office}
       </div>
     </div>
   `;

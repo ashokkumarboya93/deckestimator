@@ -52,6 +52,7 @@ async function runVideo1() {
     // ------------------------------------------------------------------------
     await clearSession();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('input[type="email"]', { visible: true, timeout: 15000 });
     await page.mouse.click(100, 100);
     await centerActiveForm();
 
@@ -123,6 +124,7 @@ async function runVideo1() {
 
     await clearSession();
     await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('input[type="email"]', { visible: true, timeout: 15000 });
     await centerActiveForm();
 
     await page.type('input[type="email"]', 'admin@deckestimator.com', { delay: 35 });

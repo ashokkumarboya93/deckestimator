@@ -17,6 +17,7 @@ import { getEstimates } from '../api/estimatesApi';
 import { getDecks } from '../api/decksApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { downloadEstimatePdf } from '../../../utils/reportExport';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 import deckProductsImg from '../../../assets/images/deck_products_highlight.png';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
@@ -659,8 +660,8 @@ export default function CustomerDashboardPage() {
               </a>
             </div>
 
-            <div style={styles.helpHours}>
-              <span>Mon – Fri: 8:00 AM – 6:00 PM EST</span>
+            <div style={{ marginTop: '4px' }}>
+              <OperatingHoursBlock variant="stacked" />
             </div>
           </div>
         </div>

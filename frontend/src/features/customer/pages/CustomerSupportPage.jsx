@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { leadApi } from '../api/leadApi';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 export default function CustomerSupportPage() {
   const { user } = useAuth();
@@ -965,13 +966,13 @@ export default function CustomerSupportPage() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={styles.contactLabel}>Operating Hours</span>
-              <strong style={styles.contactValueStatic}>
-                Mon – Fri: 7:30 AM – 6:00 PM EST
-              </strong>
-              <span style={{ ...styles.contactSub, marginTop: '2px' }}>Sat: 8:00 AM – 2:00 PM | Sun: Closed</span>
+              <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
             </div>
           </div>
         </div>
+
+        {/* Full Standard Hours of Operation (Contracting Services & Office Hours) */}
+        <OperatingHoursBlock variant="cards" style={{ marginBottom: '20px' }} />
 
         {/* Credentials / Trust Banner */}
         <div style={styles.credentialsBanner}>
