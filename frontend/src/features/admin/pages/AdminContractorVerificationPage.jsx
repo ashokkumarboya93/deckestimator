@@ -4,6 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminVerificationApi } from '../api/adminVerificationApi';
+import { resolveAssetUrl } from '../../../api/client';
+import { getErrorMessage } from '../../../api/apiErrors';
 
 export default function AdminContractorVerificationPage() {
   const [contractors, setContractors] = useState([]);
@@ -45,7 +47,7 @@ export default function AdminContractorVerificationPage() {
       setContractors(list);
       setPagination(data?.pagination || { page: 1, totalPages: 1, total: list.length });
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to load contractor applications.');
+      setError(getErrorMessage(err, 'Failed to load contractor applications.'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,7 @@ export default function AdminContractorVerificationPage() {
       setSelectedApp(null);
       loadContractors(pagination.page);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Action failed.');
+      setError(getErrorMessage(err, 'Action failed.'));
     } finally {
       setReviewLoading(false);
     }
@@ -106,7 +108,7 @@ export default function AdminContractorVerificationPage() {
       setActionSuccess(`Contractor "${businessName}" approved successfully.`);
       await loadContractors(pagination.page);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Approval failed.');
+      setError(getErrorMessage(err, 'Approval failed.'));
     } finally {
       setLoading(false);
     }
@@ -127,7 +129,7 @@ export default function AdminContractorVerificationPage() {
       setActionSuccess(`Contractor "${businessName}" application rejected.`);
       await loadContractors(pagination.page);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Rejection failed.');
+      setError(getErrorMessage(err, 'Rejection failed.'));
     } finally {
       setLoading(false);
     }
@@ -325,7 +327,7 @@ export default function AdminContractorVerificationPage() {
                           </span>
                         </div>
                         <a
-                          href={`/api/v1/contractors/documents/${d.id}/file`}
+                          href={resolveAssetUrl(`/api/v1/contractors/documents/${d.id}/file`)}
                           target="_blank"
                           rel="noreferrer"
                           style={styles.downloadLink}

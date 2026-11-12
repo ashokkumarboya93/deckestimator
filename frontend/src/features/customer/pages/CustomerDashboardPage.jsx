@@ -411,7 +411,7 @@ export default function CustomerDashboardPage() {
       {/* ============================================================== */}
       {/* 4. TWO-COLUMN LAYOUT: RECENT ESTIMATES (66%) + SIDE PANEL (34%) */}
       {/* ============================================================== */}
-      <section style={styles.bottomGrid}>
+      <section style={styles.bottomGrid} className="drp-grid-collapse-lg">
         {/* Left: Recent Estimates Table with Crisp Outlined Borders */}
         <div style={styles.tablePanel}>
           <div style={styles.tablePanelHeader}>
@@ -716,8 +716,12 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '18px',
   },
   heroContent: {
+    flex: '1 1 min(100%, 320px)',
+    minWidth: 0,
     maxWidth: '680px',
     zIndex: 2,
   },
@@ -781,11 +785,8 @@ const styles = {
     transition: 'background-color 0.15s ease',
   },
   bannerStickerWrap: {
-    display: 'none',
+    display: 'block',
     zIndex: 2,
-    '@media (min-width: 900px)': {
-      display: 'block',
-    },
   },
   bannerSticker: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -811,7 +812,7 @@ const styles = {
   // 2. PALE SHINY SUMMARY KPI ROW (Strict Order: Total | Created | Completed | In Progress)
   kpiRowGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 215px), 1fr))',
     gap: '16px',
     marginBottom: '20px',
   },
@@ -864,7 +865,7 @@ const styles = {
   // 3. QUICK NAVIGATION ACTION BUTTONS
   actionCardsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '14px',
     marginBottom: '24px',
   },

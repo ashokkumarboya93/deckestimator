@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import mainLogo from '../../../assets/images/MainLodo.png';
 import { client } from '../../../api/client';
+import { getErrorMessage } from '../../../api/apiErrors';
 
 export default function BlockedAccountPortal({ user }) {
   const { logout } = useAuth();
@@ -23,8 +24,9 @@ export default function BlockedAccountPortal({ user }) {
     let mounted = true;
     client.get('/users/unblock-request/status')
       .then((res) => {
-        if (mounted && res.data?.data) {
-          setSubmittedRequest(res.data.data);
+        const latestRequest = res?.data ?? null;
+        if (mounted && latestRequest) {
+          setSubmittedRequest(latestRequest);
         }
       })
       .catch(() => {});
@@ -50,10 +52,10 @@ export default function BlockedAccountPortal({ user }) {
         phone: phone.trim(),
       });
       setFeedback('Your reactivation appeal has been submitted successfully to Deck Restoration Plus Team.');
-      setSubmittedRequest(res.data?.data || { status: 'pending', createdAt: new Date() });
+      setSubmittedRequest(res?.data || { status: 'pending', createdAt: new Date() });
       setMessage('');
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to submit appeal request.');
+      setError(getErrorMessage(err, 'Failed to submit appeal request.'));
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ export default function BlockedAccountPortal({ user }) {
           </p>
 
           <form onSubmit={handleSubmitAppeal}>
-            <div style={styles.rowTwo}>
+            <div className="drp-grid-collapse" style={styles.rowTwo}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Full Name</label>
                 <input

@@ -22,11 +22,11 @@ export default function ContractorFooter() {
       {/* Background subtle curve accent */}
       <div style={styles.bgWaveOverlay} />
 
-      <div style={styles.footerContent}>
+      <div style={styles.footerContent} className="drp-footer-pad">
         {/* Main 4-Column Modular Grid with subtle vertical dividers */}
-        <div style={styles.footerMainGrid}>
+        <div style={styles.footerMainGrid} className="drp-footer-grid">
           {/* Column 1: Brand Logo, Description & 3 Outlined Icon Buttons */}
-          <div style={styles.col1}>
+          <div style={styles.col1} className="drp-footer-col-divider">
             <div style={styles.logoWrap}>
               <img
                 src={mainLogo}
@@ -117,7 +117,7 @@ export default function ContractorFooter() {
           </div>
 
           {/* Column 2: Portal Navigation with Orange Underline */}
-          <div style={styles.col2}>
+          <div style={styles.col2} className="drp-footer-col-divider">
             <div style={styles.headerBlock}>
               <h4 style={styles.colTitle}>Portal</h4>
               <div style={styles.titleUnderline} />
@@ -169,7 +169,7 @@ export default function ContractorFooter() {
           </div>
 
           {/* Column 3: Support with Orange Underline */}
-          <div style={styles.col3}>
+          <div style={styles.col3} className="drp-footer-col-divider">
             <div style={styles.headerBlock}>
               <h4 style={styles.colTitle}>Support</h4>
               <div style={styles.titleUnderline} />

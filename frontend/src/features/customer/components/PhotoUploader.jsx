@@ -134,9 +134,10 @@ export default function PhotoUploader({ deckId, onUploadSuccess, existingCount =
                   type="button"
                   onClick={() =>removeSelected(idx)}
                   style={styles.removeBtn}
+                  aria-label={`Remove ${prev.name}`}
                   disabled={isUploading}
                 >
-                  
+                  &times;
                 </button>
               </div>
             ))}

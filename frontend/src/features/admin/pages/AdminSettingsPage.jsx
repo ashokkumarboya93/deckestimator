@@ -227,7 +227,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* Tabs */}
-      <div style={styles.tabBar}>
+      <div className="drp-tab-scroll" style={styles.tabBar}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -558,7 +558,7 @@ export default function AdminSettingsPage() {
               )}
 
               {/* Title & Category */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '14px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '14px' }}>
                 <div>
                   <label style={styles.inputLabel}>Notification Title</label>
                   <input
@@ -613,7 +613,7 @@ export default function AdminSettingsPage() {
               {notifHistory.length === 0 ? (
                 <p style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No notification broadcasts recorded yet.</p>
               ) : (
-                <div style={styles.tableResponsive}>
+                <div className="drp-table-wrap" style={styles.tableResponsive}>
                   <table style={styles.table}>
                     <thead>
                       <tr>
@@ -860,7 +860,7 @@ const styles = {
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
     gap: '16px',
   },
   formGroup: {
@@ -1029,7 +1029,7 @@ const styles = {
   },
   kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
     gap: '16px',
   },
   kpiCard: {

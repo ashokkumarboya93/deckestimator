@@ -457,8 +457,9 @@ export default function MaterialsTab() {
                 type="button"
                 onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
+                aria-label="Close modal"
               >
-                
+                &times;
               </button>
             </div>
 
@@ -467,7 +468,7 @@ export default function MaterialsTab() {
             <form onSubmit={handleModalSubmit} style={styles.modalFormScrollable}>
               {/* Section 1: Basic Information */}
               <h4 style={styles.sectionHeader}>1. Identification & Classification</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Material Name <span style={{ color: '#d9534f' }}>*</span>
                   </label>
@@ -495,7 +496,7 @@ export default function MaterialsTab() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Category <span style={{ color: '#d9534f' }}>*</span>
                   </label>
@@ -532,7 +533,7 @@ export default function MaterialsTab() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Brand Name</label>
                   <input
@@ -583,7 +584,7 @@ export default function MaterialsTab() {
 
               {/* Section 3: Cost & Coverage */}
               <h4 style={styles.sectionHeader}>3. Unit Measurement, Cost & Coverage</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Unit of Measure</label>
                   <select
@@ -627,7 +628,7 @@ export default function MaterialsTab() {
 
               {/* Section 4: Specifications */}
               <h4 style={styles.sectionHeader}>4. Product Specifications</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Finish Type</label>
                   <input
@@ -941,6 +942,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '16px',
     zIndex: 9999,
   },
   modalContentLarge: {

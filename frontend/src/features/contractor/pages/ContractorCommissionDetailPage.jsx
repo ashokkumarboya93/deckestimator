@@ -79,7 +79,7 @@ export default function ContractorCommissionDetailPage() {
       </div>
 
       {/* 3. TWO CARDS: PROJECT & ESTIMATE DETAILS (LEFT) + TRANSACTION DETAILS (RIGHT) */}
-      <div style={styles.detailsGrid}>
+      <div className="drp-grid-collapse" style={styles.detailsGrid}>
         {/* Left: Project & Estimate Details */}
         <div style={styles.card}>
           <h3 style={styles.cardHeading}>Project &amp; Estimate Details</h3>
@@ -151,7 +151,7 @@ export default function ContractorCommissionDetailPage() {
       <div style={styles.timelineCard}>
         <h3 style={styles.cardHeading}>Commission Timeline</h3>
 
-        <div style={styles.timelineRow}>
+        <div className="drp-flex-wrap-mobile" style={styles.timelineRow}>
           {/* Step 1 */}
           <div style={styles.timelineStep}>
             <div style={styles.timelineCircleActive}>

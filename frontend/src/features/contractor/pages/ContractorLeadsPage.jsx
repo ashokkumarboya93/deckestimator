@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorLeadsPage() {
   const navigate = useNavigate();
@@ -130,22 +131,22 @@ export default function ContractorLeadsPage() {
   async function handleAcceptLead(leadId) {
     try {
       await contractorLeadApi.acceptLead(leadId, 'Accepted by contractor');
-      alert('Lead accepted successfully! Status changed to In Progress.');
+      toast.success('Lead accepted successfully! Status changed to In Progress.');
       await loadLeads();
       setSelectedLead(null);
     } catch (err) {
-      alert(err?.message || 'Failed to accept lead.');
+      toast.error(err?.message || 'Failed to accept lead.');
     }
   }
 
   async function handleConvertLead(leadId) {
     try {
       await contractorLeadApi.updateLeadStatus(leadId, 'converted', 'Converted to signed project');
-      alert('Lead marked as Converted!');
+      toast.success('Lead marked as Converted!');
       await loadLeads();
       setSelectedLead(null);
     } catch (err) {
-      alert(err?.message || 'Failed to update lead status.');
+      toast.error(err?.message || 'Failed to update lead status.');
     }
   }
 
@@ -154,11 +155,11 @@ export default function ContractorLeadsPage() {
     if (!reason) return;
     try {
       await contractorLeadApi.rejectLead(leadId, reason);
-      alert('Lead declined.');
+      toast.info('Lead declined.');
       await loadLeads();
       setSelectedLead(null);
     } catch (err) {
-      alert(err?.message || 'Failed to decline lead.');
+      toast.error(err?.message || 'Failed to decline lead.');
     }
   }
 
@@ -187,7 +188,7 @@ export default function ContractorLeadsPage() {
       </div>
 
       {/* 2. FOUR KPI CARDS */}
-      <div style={styles.kpiRow}>
+      <div className="drp-grid-2-mobile" style={styles.kpiRow}>
         <div style={styles.kpiCard}>
           <div style={styles.kpiIconBox}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -245,7 +246,7 @@ export default function ContractorLeadsPage() {
       </div>
 
       {/* 3. CONTROLS BAR: SEARCH + FILTER + REFRESH */}
-      <div style={styles.controlsBar}>
+      <div className="drp-flex-wrap-mobile" style={styles.controlsBar}>
         <div style={styles.searchWrap}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -287,7 +288,7 @@ export default function ContractorLeadsPage() {
 
       {/* 4. LEADS TABLE */}
       <div style={styles.tableCard}>
-        <div style={styles.tableResponsive}>
+        <div className="drp-table-wrap" style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
               <tr>
@@ -366,8 +367,8 @@ export default function ContractorLeadsPage() {
 
       {/* View Lead Details Modal */}
       {selectedLead && (
-        <div style={styles.modalOverlay} onClick={() =>setSelectedLead(null)}>
-          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
+        <div className="drp-modal-overlay" style={styles.modalOverlay} onClick={() =>setSelectedLead(null)} role="dialog" aria-modal="true" aria-label="Lead Details">
+          <div className="drp-modal-card" style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Lead Details: {selectedLead.customer}
               </h3>

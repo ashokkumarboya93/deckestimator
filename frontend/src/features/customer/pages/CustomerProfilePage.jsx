@@ -334,7 +334,7 @@ export default function CustomerProfilePage() {
             </div>
 
             <div style={styles.grid2Col}>
-              <div style={{ ...styles.inputGroup, gridColumn: 'span 2' }}>
+              <div style={{ ...styles.inputGroup, gridColumn: '1 / -1' }}>
                 <label style={styles.label}>Street Address</label>
                 <input
                   type="text"
@@ -620,12 +620,12 @@ const styles = {
   },
   grid2Col: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '12px',
   },
   grid3Col: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
     gap: '12px',
   },
   inputGroup: {

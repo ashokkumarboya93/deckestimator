@@ -16,18 +16,19 @@ import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
+import { useMediaQuery } from '../../../hooks/useViewport';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isDrawerViewport = useMediaQuery('(max-width: 900px)');
+  const isCompactViewport = useMediaQuery('(max-width: 560px)');
 
   const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
-  if (isBlocked) {
-    return <BlockedAccountPortal user={user} />;
-  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -38,9 +39,14 @@ export default function CustomerLayout() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Real-time synchronization of notifications from MongoDB
-  const fetchRealNotifications = useCallback(async () => {
-    if (!user) return;
+  // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
+  const lastNotifFetchRef = useRef(0);
+  const fetchRealNotifications = useCallback(async (force = false) => {
+    if (!user || isBlocked) return;
+    if (!force && document.hidden) return;
+    const now = Date.now();
+    if (!force && now - lastNotifFetchRef.current < 4000) return;
+    lastNotifFetchRef.current = now;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -48,17 +54,23 @@ export default function CustomerLayout() {
     } catch {
       // Fallback silently without breaking UI
     }
-  }, [user]);
+  }, [user, isBlocked]);
 
   useEffect(() => {
-    fetchRealNotifications();
-    const interval = setInterval(fetchRealNotifications, 20000);
-    window.addEventListener('focus', fetchRealNotifications);
+    if (isBlocked) return undefined;
+    fetchRealNotifications(true);
+    const interval = setInterval(() => fetchRealNotifications(false), 30000);
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden) fetchRealNotifications(false);
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', fetchRealNotifications);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
-  }, [fetchRealNotifications]);
+  }, [fetchRealNotifications, isBlocked]);
 
   const handleClearAllNotifications = async () => {
     try {
@@ -87,6 +99,7 @@ export default function CustomerLayout() {
 
   // Sync project name updates from active estimator
   useEffect(() => {
+    if (isBlocked) return undefined;
     const handleProjectName = (e) => {
       if (e?.detail !== undefined) {
         setProjectName(e.detail);
@@ -96,10 +109,11 @@ export default function CustomerLayout() {
     return () => {
       window.removeEventListener('deck_project_name_updated', handleProjectName);
     };
-  }, []);
+  }, [isBlocked]);
 
-  // Click-outside listener for notifications & profile dropdowns
+  // Click-outside & Escape listener for notifications, profile dropdowns & mobile drawer
   useEffect(() => {
+    if (isBlocked) return undefined;
     function handleClickOutside(event) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setShowNotifications(false);
@@ -108,11 +122,35 @@ export default function CustomerLayout() {
         setShowProfileMenu(false);
       }
     }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+        setShowProfileMenu(false);
+        setIsHelpOpen(false);
+        setIsMobileMenuOpen(false);
+        setIsSidebarHovered(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isBlocked]);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setShowNotifications(false);
+    setShowProfileMenu(false);
+    if (isDrawerViewport) {
+      setIsSidebarHovered(false);
+    }
+  }, [location.pathname, isDrawerViewport]);
+
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -121,6 +159,12 @@ export default function CustomerLayout() {
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/customer/decks/new' || currentPath.includes('/decks/');
+  const effectiveDrawerOpen = isDrawerViewport && isMobileMenuOpen;
+
+  const closeMobileDrawer = () => {
+    setIsMobileMenuOpen(false);
+    setIsSidebarHovered(false);
+  };
 
   // Active path checker
   const isActive = (path) => {
@@ -166,27 +210,56 @@ export default function CustomerLayout() {
         minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
+      {/* Mobile Drawer Backdrop */}
+      {effectiveDrawerOpen && (
+        <div
+          onClick={closeMobileDrawer}
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            zIndex: 95,
+          }}
+        />
+      )}
+
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Drawer on mobile <=900px) */}
       <aside
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
+        id="customer-portal-sidebar"
+        aria-label="Customer Navigation"
+        onMouseEnter={() => { if (!isDrawerViewport) setIsSidebarHovered(true); }}
+        onMouseLeave={() => { if (!isDrawerViewport) setIsSidebarHovered(false); }}
+        onClick={(e) => {
+          if (isDrawerViewport && e.target.closest('a, button')) {
+            closeMobileDrawer();
+          }
+        }}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '240px' : '68px',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
+          width: isDrawerViewport ? '240px' : (isSidebarHovered ? '240px' : '68px'),
+          transform: isDrawerViewport
+            ? (effectiveDrawerOpen ? 'translateX(0)' : 'translateX(-100%)')
+            : 'translateX(0)',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.24s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: (isDrawerViewport ? effectiveDrawerOpen : isSidebarHovered)
+            ? '6px 0 28px rgba(15, 23, 42, 0.16)'
+            : 'none',
+          visibility: isDrawerViewport && !effectiveDrawerOpen ? 'hidden' : 'visible',
+          pointerEvents: isDrawerViewport && !effectiveDrawerOpen ? 'none' : 'auto',
+          zIndex: 100,
         }}
       >
         {/* Brand Header */}
-        <div style={styles.brandBox}>
-          {isSidebarHovered ? (
-            <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
+        <div style={{ ...styles.brandBox, justifyContent: 'space-between', gap: '8px' }}>
+          {(isSidebarHovered || effectiveDrawerOpen) ? (
+            <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flex: 1, minWidth: 0 }}>
               <img
                 src={mainLogoDeck}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '52px',
-                  maxWidth: '215px',
+                  height: '46px',
+                  maxWidth: isDrawerViewport ? '168px' : '205px',
                   objectFit: 'contain',
                 }}
               />
@@ -200,6 +273,31 @@ export default function CustomerLayout() {
                 </svg>
               </div>
             </Link>
+          )}
+          {isDrawerViewport && (
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={closeMobileDrawer}
+              className="drp-touch-btn"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                color: '#ffffff',
+                fontSize: '18px',
+                lineHeight: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              &times;
+            </button>
           )}
         </div>
 
@@ -318,22 +416,63 @@ export default function CustomerLayout() {
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: '68px',
+          marginLeft: isDrawerViewport ? '0px' : '68px',
+          minWidth: 0,
         }}
       >
-        {/* TOP NAVIGATION BAR (Normal Natural Flow — Not Sticky) */}
-        <header style={styles.topHeader}>
-          {/* Left: Dynamic Back Button / Project Name / Brand Logo */}
-          <div style={styles.headerLeft}>
+        {/* TOP NAVIGATION BAR */}
+        <header
+          style={{
+            ...styles.topHeader,
+            padding: isCompactViewport ? '8px 12px' : isDrawerViewport ? '0 16px' : '0 28px',
+            height: isCompactViewport ? 'auto' : '65px',
+            minHeight: '60px',
+            gap: '10px',
+          }}
+        >
+          {/* Left: Mobile Menu Button + Dynamic Back Button / Project Name / Brand Logo */}
+          <div style={{ ...styles.headerLeft, minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isDrawerViewport && (
+              <button
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded={effectiveDrawerOpen}
+                aria-controls="customer-portal-sidebar"
+                className="drp-touch-btn"
+                onClick={() => {
+                  const next = !isMobileMenuOpen;
+                  setIsMobileMenuOpen(next);
+                  setIsSidebarHovered(next);
+                }}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
             {currentPath === '/customer/dashboard' ? (
-              !isSidebarHovered ? (
-                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              (!isSidebarHovered || isDrawerViewport) ? (
+                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
                   <img
                     src={mainLogoV2}
                     alt="Deck Restoration Plus"
                     style={{
-                      height: '50px',
-                      maxWidth: '240px',
+                      height: isCompactViewport ? '34px' : isDrawerViewport ? '42px' : '50px',
+                      maxWidth: isCompactViewport ? '124px' : isDrawerViewport ? '180px' : '240px',
                       objectFit: 'contain',
                     }}
                   />
@@ -342,7 +481,7 @@ export default function CustomerLayout() {
                 <div style={{ height: '50px', width: '240px', visibility: 'hidden' }} />
               )
             ) : isEstimatorPage ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isCompactViewport ? '6px' : '12px', minWidth: 0, flex: 1 }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -352,7 +491,12 @@ export default function CustomerLayout() {
                       navigate('/customer/dashboard');
                     }
                   }}
-                  style={styles.outlinedBackBtn}
+                  style={{
+                    ...styles.outlinedBackBtn,
+                    padding: isCompactViewport ? '6px 9px' : styles.outlinedBackBtn.padding,
+                    fontSize: isCompactViewport ? '12px' : styles.outlinedBackBtn.fontSize,
+                    flexShrink: 0,
+                  }}
                   title="← Back to Dashboard / Previous Page"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f1f5f9';
@@ -367,11 +511,20 @@ export default function CustomerLayout() {
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
-                  <span>Back</span>
+                  {!isCompactViewport && <span>Back</span>}
                 </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
-                  <span style={styles.headerProjectName}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactViewport ? '6px' : '10px', minWidth: 0, flex: 1 }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300', flexShrink: 0 }}>|</span>
+                  <span
+                    style={{
+                      ...styles.headerProjectName,
+                      fontSize: isCompactViewport ? '0.9rem' : '1.05rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                    }}
+                  >
                     {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
                   </span>
                 </div>
@@ -386,7 +539,7 @@ export default function CustomerLayout() {
                     navigate('/customer/dashboard');
                   }
                 }}
-                style={styles.headerBackBtn}
+                style={{ ...styles.headerBackBtn, minWidth: 0, maxWidth: '100%' }}
                 title="← Back to Dashboard / Previous Page"
               >
                 <div style={styles.backIconCircle}>
@@ -395,25 +548,40 @@ export default function CustomerLayout() {
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
                 </div>
-                <div style={{ textAlign: 'left' }}>
-                  {!currentPath.includes('/customer/profile') && (
-                    <div style={styles.breadcrumbText}>
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  {!currentPath.includes('/customer/profile') && !isCompactViewport && (
+                    <div style={{ ...styles.breadcrumbText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{ color: '#1E3A63', fontWeight: '700' }}>← </span>
                       {pageInfo.breadcrumb}
                     </div>
                   )}
-                  <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
+                  <h1
+                    style={{
+                      ...styles.headerTitle,
+                      fontSize: isCompactViewport ? '0.95rem' : '1.15rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {pageInfo.title}
+                  </h1>
                 </div>
               </button>
             )}
           </div>
 
           {/* Right: Notifications, Profile, Logout */}
-          <div style={styles.headerRight}>
+          <div style={{ ...styles.headerRight, gap: isCompactViewport ? '8px' : '12px', flexShrink: 0 }}>
             {/* Quick Action Button */}
             <Link
               to="/customer/decks/new"
-              style={styles.primaryActionBtn}
+              style={{
+                ...styles.primaryActionBtn,
+                padding: isCompactViewport ? '7px 10px' : styles.primaryActionBtn?.padding,
+                fontSize: isCompactViewport ? '12px' : styles.primaryActionBtn?.fontSize,
+                whiteSpace: 'nowrap',
+              }}
               title="Start New Estimation"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#274A7C';
@@ -422,7 +590,7 @@ export default function CustomerLayout() {
                 e.currentTarget.style.backgroundColor = '#1E3A63';
               }}
             >
-              <span>+ New Estimation</span>
+              <span>{isCompactViewport ? '+ New' : '+ New Estimation'}</span>
             </Link>
 
             {/* Notification Bell */}
@@ -443,7 +611,13 @@ export default function CustomerLayout() {
               </button>
 
               {showNotifications && (
-                <div style={styles.notifDropdown}>
+                <div
+                  style={{
+                    ...styles.notifDropdown,
+                    width: 'min(320px, calc(100vw - 24px))',
+                    right: isCompactViewport ? '-48px' : 0,
+                  }}
+                >
                   <div style={styles.dropdownHeader}>
                     <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
                       Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
@@ -525,9 +699,11 @@ export default function CustomerLayout() {
                 ) : (
                   <div style={styles.avatar}>{initials}</div>
                 )}
-                <div style={styles.profileText}>
-                  <span style={styles.profileName}>{user?.fullName || 'Jane Homeowner'}</span>
-                </div>
+                {!isCompactViewport && (
+                  <div style={styles.profileText}>
+                    <span style={styles.profileName}>{user?.fullName || 'Jane Homeowner'}</span>
+                  </div>
+                )}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -586,14 +762,16 @@ export default function CustomerLayout() {
               )}
             </div>
 
-            {/* Direct Logout Button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-            >
-              Logout
-            </button>
+            {/* Direct Logout Button (hidden on mobile; available inside Profile dropdown and Drawer) */}
+            {!isDrawerViewport && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={styles.logoutBtn}
+              >
+                Logout
+              </button>
+            )}
           </div>
         </header>
 
@@ -608,8 +786,15 @@ export default function CustomerLayout() {
 
       {/* Educational Walkthrough Modal */}
       {isHelpOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsHelpOpen(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div
+          className="drp-modal-overlay"
+          style={styles.modalOverlay}
+          onClick={() => setIsHelpOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Restoration Calculator Guide"
+        >
+          <div className="drp-modal-card" style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={styles.modalIconBox}>

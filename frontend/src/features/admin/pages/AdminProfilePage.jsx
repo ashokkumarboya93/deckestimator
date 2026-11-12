@@ -254,7 +254,7 @@ export default function AdminProfilePage() {
         </div>
       )}
 
-      <div style={styles.grid}>
+      <div className="drp-grid-collapse-lg" style={styles.grid}>
         {/* ======================================================== */}
         {/* LEFT COLUMN: Profile Overview Card & Avatar Upload       */}
         {/* ======================================================== */}
@@ -528,7 +528,7 @@ export default function AdminProfilePage() {
           Registered Platform Administrators ({hierarchy.admins?.length || 1})
         </h4>
 
-        <div style={styles.tableResponsive}>
+        <div className="drp-table-wrap" style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
               <tr>
@@ -811,7 +811,7 @@ const styles = {
   },
   formRow: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
   },
   inputLabel: {

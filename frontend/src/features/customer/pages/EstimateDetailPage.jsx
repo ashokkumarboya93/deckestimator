@@ -13,6 +13,8 @@ import {
 import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { downloadEstimatePdf } from '../../../utils/reportExport';
+import { getErrorMessage } from '../../../api/apiErrors';
+import { toast } from '../../../utils/toast';
 
 export default function EstimateDetailPage() {
   const { estimateId } = useParams();
@@ -102,7 +104,7 @@ export default function EstimateDetailPage() {
       setEligibleDiscounts(res.data || []);
       setIsDiscountModalOpen(true);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to fetch discounts.');
+      setError(getErrorMessage(err, 'Failed to fetch discounts.'));
     } finally {
       setActionLoading(false);
     }
@@ -115,7 +117,7 @@ export default function EstimateDetailPage() {
       setActionMsg(`✓ Official PDF report generated and downloaded for ${estimate.estimateNumber || 'Estimate'}`);
       setTimeout(() => setActionMsg(null), 3000);
     } catch (err) {
-      alert(`Could not download PDF report: ${err.message}`);
+      toast.error(`Could not download PDF report: ${err.message}`);
     }
   };
 
@@ -132,7 +134,7 @@ export default function EstimateDetailPage() {
       setTimeout(() =>setActionMsg(null), 3000);
       loadEstimateData();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to apply discount.');
+      setError(getErrorMessage(err, 'Failed to apply discount.'));
     } finally {
       setActionLoading(false);
     }
@@ -148,7 +150,7 @@ export default function EstimateDetailPage() {
       setTimeout(() =>setActionMsg(null), 3000);
       loadEstimateData();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to remove discount.');
+      setError(getErrorMessage(err, 'Failed to remove discount.'));
     } finally {
       setActionLoading(false);
     }
@@ -358,7 +360,8 @@ export default function EstimateDetailPage() {
       {/* Materials Breakdown Table */}
       <div style={styles.sectionCard}>
         <h3 style={styles.sectionHeading}>Material Requirements & Pricing Breakdown</h3>
-        <table style={styles.table}>
+        <div className="drp-table-wrap">
+          <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
               <th style={styles.th}>Material Name</th>
@@ -384,12 +387,14 @@ export default function EstimateDetailPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Services Breakdown Table */}
       <div style={styles.sectionCard}>
         <h3 style={styles.sectionHeading}>Services & Labor Breakdown</h3>
-        <table style={styles.table}>
+        <div className="drp-table-wrap">
+          <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
               <th style={styles.th}>Service Name</th>
@@ -415,6 +420,7 @@ export default function EstimateDetailPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Transparent Calculation Breakdown */}
@@ -458,7 +464,8 @@ export default function EstimateDetailPage() {
         {revisions.length === 0 ? (
           <div style={styles.emptyNotice}>This is the original version (v1). No previous revisions archived.</div>
         ) : (
-          <table style={styles.table}>
+          <div className="drp-table-wrap">
+            <table style={styles.table}>
             <thead>
               <tr style={styles.thRow}>
                 <th style={styles.th}>Version</th>
@@ -482,6 +489,7 @@ export default function EstimateDetailPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -588,7 +596,7 @@ const styles = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '24px 20px 60px',
+    padding: 'clamp(14px, 3vw, 24px) clamp(12px, 3vw, 20px) 60px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   centerBox: {
@@ -700,7 +708,7 @@ const styles = {
   },
   metricGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },

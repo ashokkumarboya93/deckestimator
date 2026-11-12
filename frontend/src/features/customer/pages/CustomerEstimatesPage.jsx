@@ -20,6 +20,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
 import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
+import { toast } from '../../../utils/toast';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
@@ -278,7 +279,7 @@ export default function CustomerEstimatesPage() {
       setSuccessToast(`Estimate record "${deleteConfirmEst.deckDetails?.projectName || deleteConfirmEst.estimateName || 'Project'}" deleted.`);
       setDeleteConfirmEst(null);
     } catch (err) {
-      alert(`Failed to delete estimate: ${err.message}`);
+      toast.error(`Failed to delete estimate: ${err.message}`);
     } finally {
       setDeletingId(null);
     }
@@ -333,7 +334,7 @@ export default function CustomerEstimatesPage() {
       setSelectedIds([]);
       setShowBatchDeleteModal(false);
     } catch (err) {
-      alert(`Could not delete selected items: ${err.message}`);
+      toast.error(`Could not delete selected items: ${err.message}`);
     } finally {
       setBatchDeleting(false);
     }
@@ -516,7 +517,7 @@ export default function CustomerEstimatesPage() {
       await downloadEstimatePdf(est, user);
       setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
     } catch (err) {
-      alert(`Could not download PDF report: ${err.message}`);
+      toast.error(`Could not download PDF report: ${err.message}`);
     }
   };
 
@@ -532,7 +533,7 @@ export default function CustomerEstimatesPage() {
         setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
       }
     } catch (err) {
-      alert(`Export error: ${err.message}`);
+      toast.error(`Export error: ${err.message}`);
     }
   };
 
@@ -572,7 +573,7 @@ export default function CustomerEstimatesPage() {
       </section>
 
       {/* 2. SUMMARY KPI CARDS (Colored Cards Kept Intact) */}
-      <div style={styles.kpiGrid}>
+      <div style={styles.kpiGrid} className="drp-grid-2-mobile">
         {/* Total Estimates */}
         <div style={{ ...styles.kpiCard, backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
           <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dbeafe', color: '#1E3A63' }}>
@@ -644,7 +645,7 @@ export default function CustomerEstimatesPage() {
       )}
 
       {/* 3. SEARCH & FILTER TOOLBAR */}
-      <div style={styles.toolbarCard}>
+      <div style={styles.toolbarCard} className="drp-flex-wrap-mobile">
         {/* Working Search Bar */}
         <div style={styles.searchBox}>
           <span style={styles.searchIcon}>
@@ -1068,8 +1069,16 @@ export default function CustomerEstimatesPage() {
 
       {/* 5. VIEW ESTIMATE REPORT MODAL (EXPANDED TO FULL DOSSIER WITH PHOTOS & EXPORTS) */}
       {viewEstimate && (
-        <div style={styles.modalOverlay} onClick={() => setViewEstimate(null)}>
+        <div
+          className="drp-modal-overlay"
+          style={styles.modalOverlay}
+          onClick={() => setViewEstimate(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Estimate Report Details"
+        >
           <div
+            className="drp-modal-card"
             style={{
               ...styles.modalContent,
               maxWidth: '920px',
@@ -1117,7 +1126,7 @@ export default function CustomerEstimatesPage() {
 
             <div style={{ ...styles.modalBody, overflowY: 'auto', padding: '20px 24px' }}>
               {/* Customer & Location Dossier */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
                     Customer Contact Dossier
@@ -1158,7 +1167,7 @@ export default function CustomerEstimatesPage() {
               </div>
 
               {/* Section-by-Section Architectural Inputs Table */}
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflowX: 'auto', marginBottom: '16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ background: '#1E3A63', color: '#ffffff' }}>
@@ -1332,11 +1341,11 @@ export default function CustomerEstimatesPage() {
                       await requestProjectEstimate(estId, {
                         message: `Customer requested service booking / reach-out for ${viewEstimate.deckDetails?.projectName || 'Deck'} ($${viewEstimate.totalAmount || 0})`,
                       });
-                      alert('Request submitted! Our team will contact you shortly and your project status is now Requested.');
+                      toast.success('Request submitted! Our team will contact you shortly and your project status is now Requested.');
                       setViewEstimate(null);
                       fetchEstimates();
                     } catch (err) {
-                      alert(err?.message || 'Failed to submit booking request.');
+                      toast.error(err?.message || 'Failed to submit booking request.');
                     }
                   }}
                   style={{ ...styles.modalPrimaryActionBtn, backgroundColor: '#D97706', borderColor: '#B45309', color: '#ffffff' }}
@@ -1359,8 +1368,8 @@ export default function CustomerEstimatesPage() {
 
       {/* 6. DELETE CONFIRMATION MODAL */}
       {deleteConfirmEst && (
-        <div style={styles.modalOverlay} onClick={() => setDeleteConfirmEst(null)}>
-          <div style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setDeleteConfirmEst(null)}>
+          <div className="drp-modal-card" style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.deleteIconWrap}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6" />
@@ -1402,8 +1411,8 @@ export default function CustomerEstimatesPage() {
 
       {/* 7. BATCH DELETE CONFIRMATION MODAL */}
       {showBatchDeleteModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowBatchDeleteModal(false)}>
-          <div style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setShowBatchDeleteModal(false)}>
+          <div className="drp-modal-card" style={styles.deleteConfirmCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.deleteIconWrap}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6" />
@@ -2093,6 +2102,9 @@ const styles = {
     borderRadius: '12px',
     maxWidth: '680px',
     width: '100%',
+    maxHeight: '90vh',
+    display: 'flex',
+    flexDirection: 'column',
     overflow: 'hidden',
     boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
   },
@@ -2146,6 +2158,7 @@ const styles = {
   modalFooter: {
     display: 'flex',
     justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: '10px',
     padding: '14px 24px',
     borderTop: '1px solid #f1f5f9',

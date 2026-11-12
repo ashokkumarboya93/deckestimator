@@ -40,6 +40,34 @@ import proj4Before from '../../../assets/images/landing/project_4_before.jpg';
 // CTA Background
 import ctaDeckBgImg from '../../../assets/images/landing/cta_deck_bg.png';
 
+// Static Testimonials Data (hoisted outside component to avoid re-allocation)
+const LANDING_TESTIMONIALS = [
+  {
+    name: 'Sarah M.',
+    role: 'Verified Homeowner',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&h=200&q=80',
+    text: '“They completely transformed our old weathered deck. The team was prompt, ultra-clean, and the wood looks brand new again!”',
+    stars: 5,
+    project: '320 sq ft Cedar Deck',
+  },
+  {
+    name: 'James R.',
+    role: 'Verified Homeowner',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80',
+    text: '“Professional, on time, and great quality work. The protective finish held up against harsh winter snow without any peeling. Highly recommend!”',
+    stars: 5,
+    project: '450 sq ft Mahogany Deck',
+  },
+  {
+    name: 'Emily T.',
+    role: 'Verified Homeowner',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80',
+    text: '“The deck calculator was super easy to use and the estimate was spot on. Seamless communication from booking to the final coat.”',
+    stars: 5,
+    project: '280 sq ft Pine Deck',
+  },
+];
+
 export default function LandingPage() {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -48,6 +76,7 @@ export default function LandingPage() {
   const [activeNav, setActiveNav] = useState('Home');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Quick Calculator State
   const [deckSize, setDeckSize] = useState('200');
@@ -107,46 +136,19 @@ export default function LandingPage() {
 
   const scrollToSection = (id, name) => {
     setActiveNav(name);
+    setMobileNavOpen(false);
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // Testimonials Data
-  const testimonials = [
-    {
-      name: 'Sarah M.',
-      role: 'Verified Homeowner',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&h=200&q=80',
-      text: '“They completely transformed our old weathered deck. The team was prompt, ultra-clean, and the wood looks brand new again!”',
-      stars: 5,
-      project: '320 sq ft Cedar Deck',
-    },
-    {
-      name: 'James R.',
-      role: 'Verified Homeowner',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80',
-      text: '“Professional, on time, and great quality work. The protective finish held up against harsh winter snow without any peeling. Highly recommend!”',
-      stars: 5,
-      project: '450 sq ft Mahogany Deck',
-    },
-    {
-      name: 'Emily T.',
-      role: 'Verified Homeowner',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80',
-      text: '“The deck calculator was super easy to use and the estimate was spot on. Seamless communication from booking to the final coat.”',
-      stars: 5,
-      project: '280 sq ft Pine Deck',
-    },
-  ];
-
   const handleNextTestimonial = () => {
-    setActiveTestimonialIdx((prev) => (prev + 1) % testimonials.length);
+    setActiveTestimonialIdx((prev) => (prev + 1) % LANDING_TESTIMONIALS.length);
   };
 
   const handlePrevTestimonial = () => {
-    setActiveTestimonialIdx((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    setActiveTestimonialIdx((prev) => (prev - 1 + LANDING_TESTIMONIALS.length) % LANDING_TESTIMONIALS.length);
   };
 
   return (
@@ -188,20 +190,159 @@ export default function LandingPage() {
           transform: translateY(-2px) !important;
           box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
         }
+        .lp-mobile-toggle {
+          display: none !important;
+        }
+        .lp-mobile-drawer {
+          display: none;
+        }
+        @media (max-width: 1024px) {
+          .lp-floating-sticker {
+            display: none !important;
+          }
+          .lp-hero-overlay {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.88) 65%, rgba(255, 255, 255, 0.65) 100%) !important;
+          }
+          .lp-calc-box {
+            grid-template-columns: 1fr !important;
+            gap: 18px !important;
+          }
+          .lp-services-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .lp-products-container {
+            grid-template-columns: 1fr !important;
+          }
+          .lp-projects-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .lp-steps-container {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .lp-step-arrow {
+            display: none !important;
+          }
+          .lp-testimonials-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .lp-footer-container {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 28px !important;
+          }
+        }
+        @media (max-width: 900px) {
+          .lp-nav-desktop {
+            display: none !important;
+          }
+          .lp-mobile-toggle {
+            display: inline-flex !important;
+          }
+          .lp-mobile-drawer {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px 18px 18px 18px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+          }
+          .lp-header-inner {
+            padding: 10px 16px !important;
+            gap: 10px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .lp-hero-section {
+            min-height: auto !important;
+            padding: 40px 16px 48px 16px !important;
+          }
+          .lp-hero-heading {
+            font-size: clamp(1.95rem, 7vw, 2.75rem) !important;
+          }
+          .lp-screen-section {
+            min-height: auto !important;
+            padding: 48px 16px !important;
+          }
+          .lp-section-title {
+            font-size: clamp(1.45rem, 5vw, 2rem) !important;
+          }
+          .lp-wood-line {
+            width: 20px !important;
+          }
+          .lp-stats-bar {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 18px !important;
+            padding: 18px !important;
+          }
+          .lp-stat-divider {
+            display: none !important;
+          }
+          .lp-services-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .lp-projects-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 14px !important;
+          }
+          .lp-cta-banner {
+            padding: 36px 20px !important;
+          }
+          .lp-cta-headline {
+            font-size: clamp(1.5rem, 6vw, 2.2rem) !important;
+          }
+        }
+        @media (max-width: 560px) {
+          .lp-header-signin {
+            display: none !important;
+          }
+          .lp-header-cta {
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            white-space: nowrap;
+          }
+          .lp-calc-box {
+            padding: 16px !important;
+          }
+          .lp-calc-inputs {
+            grid-template-columns: 1fr !important;
+          }
+          .lp-products-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .lp-projects-grid,
+          .lp-steps-container,
+          .lp-footer-container {
+            grid-template-columns: 1fr !important;
+          }
+          .lp-footer-container {
+            padding: 0 18px 36px 18px !important;
+          }
+          .lp-footer-bottom-inner {
+            flex-direction: column !important;
+            gap: 10px !important;
+            text-align: center !important;
+          }
+        }
+        @media (max-width: 400px) {
+          .lp-stats-bar,
+          .lp-products-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
       {/* ======================================================== */}
       {/* 1. TOP NAVBAR / HEADER */}
       {/* ======================================================== */}
       <header style={styles.header}>
-        <div style={styles.headerInner}>
+        <div style={styles.headerInner} className="lp-header-inner">
           {/* Logo */}
           <Link to="/" style={styles.logoLink}>
-            <img src={mainNavLogo} alt="DECK Plus Restoration" style={styles.logoImg} />
+            <img decoding="async" fetchPriority="high" src={mainNavLogo} alt="DECK Plus Restoration" style={styles.logoImg} />
           </Link>
 
           {/* Navigation Links */}
-          <nav style={styles.navMenu}>
+          <nav style={styles.navMenu} className="lp-nav-desktop">
             <button
               onClick={() => scrollToSection('hero', 'Home')}
               style={activeNav === 'Home' ? styles.navItemActive : styles.navItem}
@@ -261,20 +402,90 @@ export default function LandingPage() {
                   else navigate('/customer/dashboard');
                 }}
                 style={styles.signInBtn}
+                className="lp-header-signin"
               >
                 Dashboard
               </button>
             ) : (
-              <Link to="/login" style={styles.signInBtn}>
+              <Link to="/login" style={styles.signInBtn} className="lp-header-signin">
                 Sign In
               </Link>
             )}
 
-            <button onClick={handleLaunchEstimator} style={styles.getFreeEstimateBtn} className="btn-hover">
+            <button onClick={handleLaunchEstimator} style={styles.getFreeEstimateBtn} className="btn-hover lp-header-cta">
               Get Free Estimate →
+            </button>
+
+            <button
+              type="button"
+              aria-label="Toggle navigation menu"
+              onClick={() => setMobileNavOpen((prev) => !prev)}
+              className="lp-mobile-toggle drp-touch-btn"
+              style={{
+                background: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                width: '40px',
+                height: '40px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {mobileNavOpen ? (
+                  <>
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </>
+                )}
+              </svg>
             </button>
           </div>
         </div>
+
+        {/* Mobile Nav Drawer */}
+        {mobileNavOpen && (
+          <div className="lp-mobile-drawer">
+            <button onClick={() => scrollToSection('hero', 'Home')} style={{ ...styles.navItem, textAlign: 'left' }}>Home</button>
+            <button onClick={() => scrollToSection('services', 'Services')} style={{ ...styles.navItem, textAlign: 'left' }}>Services</button>
+            <button onClick={() => scrollToSection('products', 'Products')} style={{ ...styles.navItem, textAlign: 'left' }}>Products</button>
+            <button onClick={() => scrollToSection('projects', 'Projects')} style={{ ...styles.navItem, textAlign: 'left' }}>Projects</button>
+            <button onClick={() => scrollToSection('how-it-works', 'About')} style={{ ...styles.navItem, textAlign: 'left' }}>About</button>
+            <button onClick={() => scrollToSection('footer', 'Contact')} style={{ ...styles.navItem, textAlign: 'left' }}>Contact</button>
+            <div style={{ display: 'flex', gap: '10px', paddingTop: '8px', borderTop: '1px solid #E2E8F0' }}>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    if (user?.role === 'admin') navigate('/admin/dashboard');
+                    else if (user?.role === 'contractor') navigate('/contractor/dashboard');
+                    else navigate('/customer/dashboard');
+                  }}
+                  style={{ ...styles.signInBtn, flex: 1, textAlign: 'center' }}
+                >
+                  Dashboard
+                </button>
+              ) : (
+                <Link to="/login" onClick={() => setMobileNavOpen(false)} style={{ ...styles.signInBtn, flex: 1, textAlign: 'center' }}>
+                  Sign In
+                </Link>
+              )}
+              <button
+                onClick={() => { setMobileNavOpen(false); handleLaunchEstimator(); }}
+                style={{ ...styles.getFreeEstimateBtn, flex: 1 }}
+              >
+                Free Estimate
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Search Popup Dropdown */}
         {searchOpen && (
@@ -300,12 +511,12 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 2. HERO SECTION (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section id="hero" style={styles.heroSection}>
+      <section id="hero" style={styles.heroSection} className="lp-hero-section">
         {/* Soft white/transparent horizontal gradient overlay */}
-        <div style={styles.heroOverlay} />
+        <div style={styles.heroOverlay} className="lp-hero-overlay" />
 
         {/* Floating Wooden Sticker Badge positioned above wizard contractor's pointing hand */}
-        <div style={styles.floatingWoodSticker}>
+        <div style={styles.floatingWoodSticker} className="lp-floating-sticker">
           <div style={styles.woodStickerSunburst}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="#FDE047" style={{ display: 'block', margin: '0 auto 2px auto' }}>
               <circle cx="12" cy="12" r="4.5" />
@@ -335,7 +546,7 @@ export default function LandingPage() {
             </div>
 
             {/* Headline */}
-            <h1 style={styles.heroHeading}>
+            <h1 style={styles.heroHeading} className="lp-hero-heading">
               Restore. Protect. Enjoy <br />
               <span style={styles.heroAccentWord}>Your Deck Again.</span>
             </h1>
@@ -396,10 +607,12 @@ export default function LandingPage() {
       <section style={styles.calculatorSection}>
         <div style={styles.calculatorSectionInner}>
           {/* Main Calculator Box */}
-          <div style={styles.calcBox} className="hover-card">
+          <div style={styles.calcBox} className="hover-card lp-calc-box">
             {/* Left: Deck Image Visual */}
             <div style={styles.calcVisualCol}>
               <img
+                loading="lazy"
+                decoding="async"
                 src={calculatorDeckImg}
                 alt="Beautiful Restored Deck"
                 style={styles.calcDeckImg}
@@ -435,7 +648,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div style={styles.calcInputsRow}>
+              <div style={styles.calcInputsRow} className="lp-calc-inputs">
                 <div style={styles.calcField}>
                   <label style={styles.calcLabel}>Deck Size</label>
                   <select
@@ -514,7 +727,7 @@ export default function LandingPage() {
           </div>
 
           {/* 4 Trust Stats Bar */}
-          <div style={styles.statsBar}>
+          <div style={styles.statsBar} className="lp-stats-bar">
             <div style={styles.statItem}>
               <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -530,7 +743,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={styles.statDivider} />
+            <div style={styles.statDivider} className="lp-stat-divider" />
 
             <div style={styles.statItem}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -544,7 +757,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={styles.statDivider} />
+            <div style={styles.statDivider} className="lp-stat-divider" />
 
             <div style={styles.statItem}>
               <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
@@ -561,7 +774,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={styles.statDivider} />
+            <div style={styles.statDivider} className="lp-stat-divider" />
 
             <div style={styles.statItem}>
               <div style={{ color: '#0F2C59', display: 'flex', alignItems: 'center' }}>
@@ -582,7 +795,7 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 4. OUR DECK RESTORATION SERVICES (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section id="services" style={styles.screenSection}>
+      <section id="services" style={styles.screenSection} className="lp-screen-section">
         <div style={styles.sectionHeaderCentered}>
           <div style={styles.titleWithLines}>
             <span style={styles.woodAccentLine} />
@@ -594,11 +807,11 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div style={styles.servicesGrid}>
+        <div style={styles.servicesGrid} className="lp-services-grid">
           {/* Service Card 1: Deck Cleaning */}
           <div style={styles.serviceCard} className="hover-card hover-zoom">
             <div style={styles.serviceImgWrapper}>
-              <img src={cleaningImg} alt="Deck Cleaning Process" style={styles.serviceImg} />
+              <img loading="lazy" decoding="async" src={cleaningImg} alt="Deck Cleaning Process" style={styles.serviceImg} />
             </div>
             <div style={styles.serviceContent}>
               <div style={styles.serviceIconPill}>
@@ -616,7 +829,7 @@ export default function LandingPage() {
           {/* Service Card 2: Deck Restoration */}
           <div style={styles.serviceCard} className="hover-card hover-zoom">
             <div style={styles.serviceImgWrapper}>
-              <img src={restorationImg} alt="Deck Restoration and Refinishing" style={styles.serviceImg} />
+              <img loading="lazy" decoding="async" src={restorationImg} alt="Deck Restoration and Refinishing" style={styles.serviceImg} />
             </div>
             <div style={styles.serviceContent}>
               <div style={{ ...styles.serviceIconPill, backgroundColor: '#FEF3C7', color: '#B45309' }}>
@@ -634,7 +847,7 @@ export default function LandingPage() {
           {/* Service Card 3: Deck Protection */}
           <div style={styles.serviceCard} className="hover-card hover-zoom">
             <div style={styles.serviceImgWrapper}>
-              <img src={protectionImg} alt="Deck Protection with Protective Sealers" style={styles.serviceImg} />
+              <img loading="lazy" decoding="async" src={protectionImg} alt="Deck Protection with Protective Sealers" style={styles.serviceImg} />
             </div>
             <div style={styles.serviceContent}>
               <div style={{ ...styles.serviceIconPill, backgroundColor: '#E0F2FE', color: '#0369A1' }}>
@@ -654,7 +867,7 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 5. OUR PRODUCTS SECTION (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section id="products" style={styles.screenSection}>
+      <section id="products" style={styles.screenSection} className="lp-screen-section">
         <div style={styles.sectionHeaderCentered}>
           <div style={styles.titleWithLines}>
             <span style={styles.woodAccentLine} />
@@ -666,40 +879,40 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div style={styles.productsContainer}>
+        <div style={styles.productsContainer} className="lp-products-container">
           {/* Left Grid: 5 Products */}
-          <div style={styles.productsGrid}>
+          <div style={styles.productsGrid} className="lp-products-grid">
             <div style={styles.productCard} className="hover-card">
               <div style={styles.productImgFrame}>
-                <img src={prod1Img} alt="Deck Finishes" style={styles.productImg} />
+                <img loading="lazy" decoding="async" src={prod1Img} alt="Deck Finishes" style={styles.productImg} />
               </div>
               <div style={styles.productTitle}>Deck Finishes</div>
             </div>
 
             <div style={styles.productCard} className="hover-card">
               <div style={styles.productImgFrame}>
-                <img src={prod2Img} alt="Restoration Sealers" style={styles.productImg} />
+                <img loading="lazy" decoding="async" src={prod2Img} alt="Restoration Sealers" style={styles.productImg} />
               </div>
               <div style={styles.productTitle}>Restoration Sealers</div>
             </div>
 
             <div style={styles.productCard} className="hover-card">
               <div style={styles.productImgFrame}>
-                <img src={prod3Img} alt="Premium Deck Stains" style={styles.productImg} />
+                <img loading="lazy" decoding="async" src={prod3Img} alt="Premium Deck Stains" style={styles.productImg} />
               </div>
               <div style={styles.productTitle}>Premium Deck Stains</div>
             </div>
 
             <div style={styles.productCard} className="hover-card">
               <div style={styles.productImgFrame}>
-                <img src={prod4Img} alt="Deck Cleaners" style={styles.productImg} />
+                <img loading="lazy" decoding="async" src={prod4Img} alt="Deck Cleaners" style={styles.productImg} />
               </div>
               <div style={styles.productTitle}>Deck Cleaners</div>
             </div>
 
             <div style={styles.productCard} className="hover-card">
               <div style={styles.productImgFrame}>
-                <img src={prod5Img} alt="Professional Tools" style={styles.productImg} />
+                <img loading="lazy" decoding="async" src={prod5Img} alt="Professional Tools" style={styles.productImg} />
               </div>
               <div style={styles.productTitle}>Professional Tools</div>
             </div>
@@ -751,13 +964,13 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 6. RECENT DECK RESTORATION PROJECTS (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section id="projects" style={styles.screenSection}>
-        <div style={styles.projectsHeaderRow}>
+      <section id="projects" style={styles.screenSection} className="lp-screen-section">
+        <div style={styles.projectsHeaderRow} className="lp-projects-header">
           <div>
             <div style={styles.titleWithLines}>
-              <span style={styles.woodAccentLine} />
+              <span style={styles.woodAccentLine} className="lp-wood-line" />
               <h2 style={styles.sectionTitle}>Recent Deck Restoration Projects</h2>
-              <span style={styles.woodAccentLine} />
+              <span style={styles.woodAccentLine} className="lp-wood-line" />
             </div>
             <p style={styles.sectionSubtitle}>See the transformation for yourself.</p>
           </div>
@@ -770,11 +983,13 @@ export default function LandingPage() {
           </button>
         </div>
 
-        <div style={styles.projectsGrid}>
+        <div style={styles.projectsGrid} className="lp-projects-grid">
           {/* Project 1 */}
           <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(1)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
               <img
+                loading="lazy"
+                decoding="async"
                 src={projectViews[1] === 'before' ? proj1Before : proj1Internet}
                 alt="Modern Deck Revival"
                 style={styles.projectImg}
@@ -799,6 +1014,8 @@ export default function LandingPage() {
           <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(2)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
               <img
+                loading="lazy"
+                decoding="async"
                 src={projectViews[2] === 'before' ? proj2Before : proj2Internet}
                 alt="Classic Wood Restoration"
                 style={styles.projectImg}
@@ -823,6 +1040,8 @@ export default function LandingPage() {
           <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(3)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
               <img
+                loading="lazy"
+                decoding="async"
                 src={projectViews[3] === 'before' ? proj3Before : proj3Internet}
                 alt="Poolside Deck Upgrade"
                 style={styles.projectImg}
@@ -847,6 +1066,8 @@ export default function LandingPage() {
           <div style={styles.projectCard} className="hover-card" onClick={() => toggleProjectView(4)} title="Click to toggle Before / After view">
             <div style={styles.projectImgBox}>
               <img
+                loading="lazy"
+                decoding="async"
                 src={projectViews[4] === 'before' ? proj4Before : proj4Internet}
                 alt="Backyard Deck Makeover"
                 style={styles.projectImg}
@@ -872,13 +1093,13 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 7. HOW IT WORKS SECTION (FULL SCREEN) */}
       {/* ======================================================== */}
-      <section id="how-it-works" style={styles.screenSection}>
+      <section id="how-it-works" style={styles.screenSection} className="lp-screen-section">
         <div style={styles.sectionHeaderCentered}>
           <h2 style={styles.sectionTitle}>How It Works</h2>
           <p style={styles.sectionSubtitle}>A simple, hassle-free process to restore your deck.</p>
         </div>
 
-        <div style={styles.stepsContainer}>
+        <div style={styles.stepsContainer} className="lp-steps-container">
           {/* Step 1 */}
           <div style={styles.stepCard} className="hover-card">
             <div style={styles.stepHeaderRow}>
@@ -900,7 +1121,7 @@ export default function LandingPage() {
             <p style={styles.stepDesc}>Use our calculator or request an official contractor quote in seconds.</p>
           </div>
 
-          <div style={styles.stepArrow}>→</div>
+          <div style={styles.stepArrow} className="lp-step-arrow">→</div>
 
           {/* Step 2 */}
           <div style={styles.stepCard} className="hover-card">
@@ -917,7 +1138,7 @@ export default function LandingPage() {
             <p style={styles.stepDesc}>Choose an inspection and service schedule that works best for you.</p>
           </div>
 
-          <div style={styles.stepArrow}>→</div>
+          <div style={styles.stepArrow} className="lp-step-arrow">→</div>
 
           {/* Step 3 */}
           <div style={styles.stepCard} className="hover-card">
@@ -932,7 +1153,7 @@ export default function LandingPage() {
             <p style={styles.stepDesc}>Our licensed specialists deep clean, refinish, and protect every board.</p>
           </div>
 
-          <div style={styles.stepArrow}>→</div>
+          <div style={styles.stepArrow} className="lp-step-arrow">→</div>
 
           {/* Step 4 */}
           <div style={styles.stepCard} className="hover-card">
@@ -952,7 +1173,7 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 8. WHAT OUR CUSTOMERS SAY (TESTIMONIALS) */}
       {/* ======================================================== */}
-      <section style={styles.screenSection}>
+      <section style={styles.screenSection} className="lp-screen-section">
         <div style={styles.testimonialHeaderRow}>
           <div>
             <h2 style={styles.sectionTitle}>What Our Customers Say</h2>
@@ -968,11 +1189,11 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div style={styles.testimonialsGrid}>
-          {testimonials.map((t, idx) => (
+        <div style={styles.testimonialsGrid} className="lp-testimonials-grid">
+          {LANDING_TESTIMONIALS.map((t, idx) => (
             <div key={idx} style={styles.testimonialCard} className="hover-card">
               <div style={styles.testimonialUserRow}>
-                <img src={t.avatar} alt={t.name} style={styles.testimonialAvatar} />
+                <img loading="lazy" decoding="async" src={t.avatar} alt={t.name} style={styles.testimonialAvatar} />
                 <div>
                   <h4 style={styles.testimonialName}>{t.name}</h4>
                   <span style={styles.testimonialRole}>{t.role}</span>
@@ -998,11 +1219,11 @@ export default function LandingPage() {
       {/* 9. PRE-FOOTER FULL-WIDTH CTA BANNER */}
       {/* ======================================================== */}
       <section style={styles.preFooterCtaSection}>
-        <div style={styles.ctaBannerContainer}>
-          <img src={ctaDeckBgImg} alt="Deck background" style={styles.ctaBgImg} />
+        <div style={styles.ctaBannerContainer} className="lp-cta-banner">
+          <img loading="lazy" decoding="async" src={ctaDeckBgImg} alt="Deck background" style={styles.ctaBgImg} />
           <div style={styles.ctaDarkOverlay} />
           <div style={styles.ctaContent}>
-            <h2 style={styles.ctaHeadline}>Ready to Restore Your Deck?</h2>
+            <h2 style={styles.ctaHeadline} className="lp-cta-headline">Ready to Restore Your Deck?</h2>
             <p style={styles.ctaSubhead}>
               Get a fast, accurate estimate and bring your outdoor space back to life.
             </p>
@@ -1029,11 +1250,11 @@ export default function LandingPage() {
       {/* 10. OFFICIAL FOOTER */}
       {/* ======================================================== */}
       <footer id="footer" style={styles.footer}>
-        <div style={styles.footerContainer}>
+        <div style={styles.footerContainer} className="lp-footer-container">
           {/* Col 1: Brand & Tagline */}
           <div style={styles.footerColBrand}>
             <Link to="/" style={styles.footerLogoLink}>
-              <img src={footerLogo} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
+              <img loading="lazy" decoding="async" src={footerLogo} alt="Deck Restoration Plus" style={styles.footerLogoImg} />
             </Link>
             <p style={styles.footerBrandDesc}>
               Premium deck restoration solutions for homes and contractors. Specialized formulas, licensed partner network, and guaranteed precision estimating.
@@ -1131,7 +1352,7 @@ export default function LandingPage() {
 
         {/* Footer Bottom Bar */}
         <div style={styles.footerBottomBar}>
-          <div style={styles.footerBottomInner}>
+          <div style={styles.footerBottomInner} className="lp-footer-bottom-inner">
             <span>© {new Date().getFullYear()} Deck Restoration Plus. All rights reserved.</span>
             <div style={{ display: 'flex', gap: '20px' }}>
               <Link to="/privacy" style={styles.footerBottomLink}>Privacy Policy</Link>
@@ -1153,7 +1374,7 @@ const styles = {
     backgroundColor: '#F8FAFC',
     color: '#0F172A',
     minHeight: '100vh',
-    overflowX: 'hidden',
+    overflowX: 'clip',
   },
 
   // Header / Navbar

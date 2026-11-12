@@ -191,7 +191,7 @@ export default function ContractorDashboardPage() {
         </div>
 
         {/* Decorative Right-Side Sticker Badge (Matching Customer Portal Banner) */}
-        <div style={styles.bannerStickerWrap}>
+        <div className="drp-hero-sticker" style={styles.bannerStickerWrap}>
           <div style={styles.bannerSticker}>
             <div style={styles.stickerIconBox}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -311,7 +311,7 @@ export default function ContractorDashboardPage() {
       </div>
 
       {/* 3. ROW 1: RECENT DECK PROJECTS TABLE (LEFT) + ONLY PRODUCT CARD 1 (RIGHT) */}
-      <div style={styles.contentRowGrid}>
+      <div style={styles.contentRowGrid} className="drp-grid-collapse-lg">
         {/* Left Side: Recent Deck Projects Table */}
         <div style={styles.projectsCard}>
           <div style={styles.cardHeaderRow}>
@@ -340,7 +340,7 @@ export default function ContractorDashboardPage() {
             </button>
           </div>
 
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -495,7 +495,7 @@ export default function ContractorDashboardPage() {
       </div>
 
       {/* 4. ROW 2: THEME-BASED CONTACT SECTION (LEFT) + PRODUCT CARD 2 (RIGHT) */}
-      <div style={styles.contentRowGrid}>
+      <div style={styles.contentRowGrid} className="drp-grid-collapse-lg">
         {/* Left Side: Theme-Based Support & Reachout Contact Section (Reduced width to match row grid) */}
         <div style={styles.contactHubCard}>
           <div style={styles.contactHubHeader}>
@@ -522,7 +522,7 @@ export default function ContractorDashboardPage() {
             </button>
           </div>
 
-          <div style={styles.contactGrid}>
+          <div style={styles.contactGrid} className="drp-grid-collapse">
             {/* Item 1: Direct Office (Theme Navy Outlined Card) */}
             <div style={{ ...styles.contactItemBox, border: '1.5px solid #1E3A63' }}>
               <div style={{ ...styles.contactCircleIcon, backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#1E3A63' }}>
@@ -744,6 +744,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '16px',
   },
   heroOverlay: {
     position: 'absolute',
@@ -759,7 +761,8 @@ const styles = {
     zIndex: 2,
     padding: '26px 30px',
     color: '#FFFFFF',
-    flex: 1,
+    flex: '1 1 min(100%, 300px)',
+    minWidth: 0,
   },
   bannerStickerWrap: {
     position: 'relative',
@@ -860,7 +863,7 @@ const styles = {
   // 2. Summary KPI Cards (Exactly 4 cards in a single row)
   kpiRowGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
   },
   kpiCard: {
@@ -913,7 +916,7 @@ const styles = {
   // Two-column layout rows (2fr left, 1fr right)
   contentRowGrid: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)',
+    gridTemplateColumns: 'minmax(0, 2fr) minmax(min(100%, 320px), 1fr)',
     gap: '24px',
     alignItems: 'stretch',
   },

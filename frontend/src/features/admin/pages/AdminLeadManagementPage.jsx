@@ -26,7 +26,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 import { API_BASE_URL } from '../../../api/client';
+import { getErrorMessage } from '../../../api/apiErrors';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { toast } from '../../../utils/toast';
 
 const TABS = [
   { id: 'hot', label: 'Hot Priority Requests' },
@@ -84,7 +86,7 @@ export default function AdminLeadManagementPage() {
       setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'in_progress' } : null);
       fetchLeads(false);
     } catch (err) {
-      alert(`Notice: ${err?.response?.data?.message || err.message}`);
+      toast.error(`Notice: ${getErrorMessage(err)}`);
     } finally {
       setAcceptingLead(false);
     }
@@ -221,7 +223,7 @@ export default function AdminLeadManagementPage() {
       </div>
 
       {/* 2. Tabs */}
-      <div style={styles.tabBar}>
+      <div className="drp-tab-scroll" style={styles.tabBar}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = getTabCount(tab.id);
@@ -383,7 +385,7 @@ export default function AdminLeadManagementPage() {
             </p>
           </div>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -564,10 +566,10 @@ export default function AdminLeadManagementPage() {
         };
 
         return (
-          <div style={styles.modalOverlay}>
-            <div style={{ ...styles.modalBoxLarge, maxWidth: '960px', width: '95vw', maxHeight: '92vh' }}>
+          <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay}>
+            <div className="drp-modal-card" style={{ ...styles.modalBoxLarge, maxWidth: '960px', width: '95vw', maxHeight: '92vh' }}>
               {/* Modal Header */}
-              <div style={styles.modalHeader}>
+              <div className="drp-flex-wrap-mobile" style={styles.modalHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
                     {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
@@ -1062,6 +1064,7 @@ const styles = {
   headerActions: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: '10px',
   },
   shinyExportBtn: {
@@ -1667,7 +1670,7 @@ const styles = {
   },
   twoColGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
     gap: '12px',
   },
   dossierItem: {

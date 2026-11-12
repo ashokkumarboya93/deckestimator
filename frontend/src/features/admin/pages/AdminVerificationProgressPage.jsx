@@ -12,6 +12,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
+import { resolveAssetUrl } from '../../../api/client';
+import { toast } from '../../../utils/toast';
 
 const TABS = [
   { id: 'verifications', label: 'Verifications' },
@@ -57,21 +59,31 @@ export default function AdminVerificationProgressPage() {
   const [savingProgress, setSavingProgress] = useState(false);
 
   useEffect(() => {
+    let lastLoadedAt = Date.now();
     loadTabData(false);
 
     const interval = setInterval(() => {
-      loadTabData(true);
-    }, 10000);
+      if (!document.hidden) {
+        lastLoadedAt = Date.now();
+        loadTabData(true);
+      }
+    }, 20000);
 
-    const handleFocus = () => {
+    const handleFocusOrVisibility = () => {
+      if (document.hidden) return;
+      const now = Date.now();
+      if (now - lastLoadedAt < 3000) return;
+      lastLoadedAt = now;
       loadTabData(true);
     };
 
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleFocusOrVisibility);
+    document.addEventListener('visibilitychange', handleFocusOrVisibility);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', handleFocusOrVisibility);
+      document.removeEventListener('visibilitychange', handleFocusOrVisibility);
     };
   }, [activeTab, verifFilter, docsFilter]);
 
@@ -136,7 +148,7 @@ export default function AdminVerificationProgressPage() {
 
   const handleConfirmReject = async () => {
     if (!verifActionModal.reason.trim()) {
-      alert('Please provide a mandatory rejection reason.');
+      toast.warning('Please provide a mandatory rejection reason.');
       return;
     }
     setLoading(true);
@@ -155,8 +167,8 @@ export default function AdminVerificationProgressPage() {
     try {
       const res = await adminApi.getVerificationHistory(contractorId);
       setVerifHistoryModal({ open: true, logs: res.data || [], contractorName: contractorName || 'Contractor' });
-    } catch (err) {
-      alert('Unable to retrieve verification history logs.');
+    } catch {
+      toast.error('Unable to retrieve verification history logs.');
     }
   };
 
@@ -258,7 +270,7 @@ export default function AdminVerificationProgressPage() {
       )}
 
       {/* Tabs */}
-      <div style={styles.tabContainer}>
+      <div className="drp-tab-scroll" style={styles.tabContainer}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -316,7 +328,7 @@ export default function AdminVerificationProgressPage() {
                 <p style={styles.emptySub}>All contractor submissions have been processed.</p>
               </div>
             ) : (
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -436,7 +448,7 @@ export default function AdminVerificationProgressPage() {
             <span style={styles.countBadge}>{customers.length} Customers</span>
           </div>
 
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -497,7 +509,7 @@ export default function AdminVerificationProgressPage() {
             <span style={styles.countBadge}>{contractors.length} Contractors</span>
           </div>
 
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -587,7 +599,7 @@ export default function AdminVerificationProgressPage() {
             </div>
           </div>
 
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -698,8 +710,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH LIVE PREVIEW */}
       {viewingDocModal && (
-        <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
+          <div className="drp-modal-card" style={{ ...styles.modalContent, maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={styles.modalTitle}>Document Live Inspection</h3>
@@ -720,7 +732,7 @@ export default function AdminVerificationProgressPage() {
               {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
               <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
                 {(() => {
-                  const docUrl = `/api/v1/contractors/documents/${viewingDocModal._id}/file`;
+                  const docUrl = resolveAssetUrl(`/api/v1/contractors/documents/${viewingDocModal._id}/file`);
                   const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
                   const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
 
@@ -760,7 +772,7 @@ export default function AdminVerificationProgressPage() {
                 })()}
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
                   <a
-                    href={`/api/v1/contractors/documents/${viewingDocModal._id}/file`}
+                    href={resolveAssetUrl(`/api/v1/contractors/documents/${viewingDocModal._id}/file`)}
                     target="_blank"
                     rel="noreferrer"
                     style={{ fontSize: '12px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
@@ -806,8 +818,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* CONTRACTOR DETAILS, DATE & LOCATION POPUP MODAL */}
       {viewContractorModal && (
-        <div style={styles.modalOverlay} onClick={() => setViewContractorModal(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setViewContractorModal(null)}>
+          <div className="drp-modal-card" style={{ ...styles.modalContent, maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={styles.modalTitle}>Contractor Verification Details</h3>
@@ -818,7 +830,7 @@ export default function AdminVerificationProgressPage() {
               <button onClick={() => setViewContractorModal(null)} style={styles.modalCloseBtn}>✕</button>
             </div>
             <div style={styles.modalBody}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: '#F8FAFC', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                 <div>
                   <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Contractor Name</span>
                   <strong style={{ fontSize: '14px', color: '#0F172A' }}>{viewContractorModal.contractorName || 'Contractor'}</strong>
@@ -907,8 +919,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* DOCUMENT REJECT REASON MODAL */}
       {docReviewModal.open && docReviewModal.doc && (
-        <div style={styles.modalOverlay} onClick={() => setDocReviewModal({ open: false, doc: null, action: '', notes: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setDocReviewModal({ open: false, doc: null, action: '', notes: '' })}>
+          <div className="drp-modal-card" style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Reject Verification Document</h3>
             <p style={styles.modalSub}>
               Specify why document {docReviewModal.doc.originalFileName} does not meet requirements.
@@ -948,8 +960,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* REJECT CONTRACTOR REASON MODAL */}
       {verifActionModal.open && verifActionModal.item && (
-        <div style={styles.modalOverlay} onClick={() => setVerifActionModal({ open: false, type: '', item: null, reason: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setVerifActionModal({ open: false, type: '', item: null, reason: '' })}>
+          <div className="drp-modal-card" style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Reject Contractor Registration</h3>
             <p style={styles.modalSub}>
               Please state the specific reason for rejecting {verifActionModal.item.contractorName}. This will be permanently recorded in the audit trail.
@@ -987,8 +999,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* VERIFICATION HISTORY MODAL */}
       {verifHistoryModal.open && (
-        <div style={styles.modalOverlay} onClick={() => setVerifHistoryModal({ open: false, logs: [], contractorName: '' })}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setVerifHistoryModal({ open: false, logs: [], contractorName: '' })}>
+          <div className="drp-modal-card" style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={styles.modalTitle}>Verification Audit History</h3>
@@ -1030,8 +1042,8 @@ export default function AdminVerificationProgressPage() {
 
       {/* UPDATE PROJECT PROGRESS MODAL */}
       {progressModal.open && progressModal.project && (
-        <div style={styles.modalOverlay} onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}>
+          <div className="drp-modal-card" style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Update Project Progress</h3>
             <p style={styles.modalSub}>{progressModal.project.title}</p>
 
@@ -1487,6 +1499,8 @@ const styles = {
     borderRadius: '12px',
     width: '100%',
     maxWidth: '480px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     padding: '24px',
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
   },
@@ -1660,7 +1674,7 @@ const styles = {
   },
   docInfoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
     gap: '10px',
     padding: '12px 16px',
     backgroundColor: '#f8fafc',

@@ -483,13 +483,15 @@ const styles = {
     flexWrap: 'wrap',
   },
   leftCol: {
-    flex: '1 1 650px',
+    flex: '1 1 min(100%, 650px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
+    minWidth: 0,
   },
   rightCol: {
-    flex: '1 1 340px',
+    flex: '1 1 min(100%, 340px)',
+    minWidth: 0,
   },
   card: {
     backgroundColor: '#ffffff',

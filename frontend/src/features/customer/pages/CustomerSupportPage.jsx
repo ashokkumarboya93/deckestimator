@@ -1163,7 +1163,7 @@ const styles = {
   // 2. Policy Cards Grid
   policyGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '18px',
   },
   policyCard: {
@@ -1297,12 +1297,12 @@ const styles = {
   },
   formRow2: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '16px',
   },
   formRow3: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
     gap: '16px',
   },
   fieldLabel: {
@@ -1392,7 +1392,7 @@ const styles = {
   // 5. Contact Hub
   contactCardGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 330px), 1fr))',
     gap: '16px',
     marginBottom: '20px',
   },

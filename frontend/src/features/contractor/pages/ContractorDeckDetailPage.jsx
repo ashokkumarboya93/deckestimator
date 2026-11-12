@@ -9,17 +9,20 @@
 // - Tabs: Overview | Specifications | Photos | Estimates | Notes & History
 // - Dynamic backend loading via getDeckById
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { getDeckById } from '../../customer/api/decksApi';
+import { getDeckById, uploadDeckImages } from '../../customer/api/decksApi';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorDeckDetailPage() {
   const navigate = useNavigate();
   const { deckId } = useParams();
+  const photoInputRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [deck, setDeck] = useState(null);
   const [loading, setLoading] = useState(Boolean(deckId && deckId.length === 24));
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [notes, setNotes] = useState([
     'Nov 3, 2026: Site survey completed. Measurements verified at 400 sq ft.',
     'Oct 28, 2026: Client requested semi-transparent cedar stain sample.',
@@ -116,7 +119,7 @@ export default function ContractorDeckDetailPage() {
       </div>
 
       {/* 3. TABS */}
-      <div style={styles.tabBar}>
+      <div style={styles.tabBar} className="drp-tab-scroll">
         {['overview', 'specifications', 'photos', 'estimates', 'notes'].map((tab) => (
           <button
             key={tab}
@@ -134,7 +137,7 @@ export default function ContractorDeckDetailPage() {
 
       {/* 4. TAB CONTENTS */}
       {activeTab === 'overview' && (
-        <div style={styles.contentGrid}>
+        <div style={styles.contentGrid} className="drp-grid-collapse-lg">
           {/* Main Left: Photo Showcase */}
           <div style={styles.leftCol}>
             <div style={styles.mainPhotoCard}>
@@ -232,14 +235,46 @@ export default function ContractorDeckDetailPage() {
 
       {activeTab === 'photos' && (
         <div style={styles.specCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>Photo Gallery</h3>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const files = Array.from(e.target.files || []);
+                e.target.value = '';
+                if (files.length === 0) return;
+                if (!deckId || deckId.length !== 24) {
+                  toast.info('Save or open a persisted deck project before uploading photos.');
+                  return;
+                }
+                const formData = new FormData();
+                files.forEach((f) => formData.append('images', f));
+                setUploadingPhotos(true);
+                try {
+                  const updatedImages = await uploadDeckImages(deckId, formData);
+                  setDeck((prev) => ({
+                    ...(prev || {}),
+                    photos: updatedImages || prev?.photos || [],
+                  }));
+                  toast.success(`${files.length} photo(s) uploaded to project.`);
+                } catch (err) {
+                  toast.error(err?.message || 'Failed to upload photos.');
+                } finally {
+                  setUploadingPhotos(false);
+                }
+              }}
+            />
             <button
               type="button"
-              onClick={() => alert('Photo uploader: select files to attach.')}
+              disabled={uploadingPhotos}
+              onClick={() => photoInputRef.current?.click()}
               style={styles.createEstBtn}
             >
-              + Upload Photos
+              {uploadingPhotos ? 'Uploading...' : '+ Upload Photos'}
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
@@ -485,7 +520,7 @@ const styles = {
   },
   specGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
     gap: '16px',
   },
   specItem: {

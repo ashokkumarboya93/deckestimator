@@ -14,6 +14,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { getEstimateById, deleteEstimate, updateEstimateStatus, requestProjectEstimate } from '../../customer/api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
+import { getErrorMessage } from '../../../api/apiErrors';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorProjectDetailPage() {
   const { projectId, estimateId } = useParams();
@@ -95,8 +97,8 @@ export default function ContractorProjectDetailPage() {
       setActionNotice('✓ Successfully converted! Project marked as REQUESTED and dispatched to Admin Leads as HOT priority.');
       setEstimate((prev) => ({ ...prev, estimateStatus: 'REQUESTED', status: 'REQUESTED' }));
     } catch (err) {
-      const errMsg = err.response?.data?.message || err.message || 'An error occurred while converting estimate to booking.';
-      alert(`Conversion notice: ${errMsg}`);
+      const errMsg = getErrorMessage(err, 'An error occurred while converting estimate to booking.');
+      toast.error(`Conversion notice: ${errMsg}`);
     } finally {
       setConverting(false);
     }
@@ -109,7 +111,7 @@ export default function ContractorProjectDetailPage() {
       await downloadEstimatePdf(estimate, user);
       setActionNotice(`✓ Official estimate PDF downloaded for ${estimate.estimateNumber || 'Project'}`);
     } catch (err) {
-      alert(`Could not download PDF report: ${err.message}`);
+      toast.error(`Could not download PDF report: ${err.message}`);
     }
   };
 
@@ -120,7 +122,7 @@ export default function ContractorProjectDetailPage() {
       downloadEstimateExcel(estimate, user);
       setActionNotice(`✓ Official Excel dossier downloaded for ${estimate.estimateNumber || 'Project'}`);
     } catch (err) {
-      alert(`Could not download Excel dossier: ${err.message}`);
+      toast.error(`Could not download Excel dossier: ${err.message}`);
     }
   };
 
@@ -134,7 +136,7 @@ export default function ContractorProjectDetailPage() {
         state: { message: `Project ${estimate.estimateNumber || ''} was successfully deleted.` },
       });
     } catch (err) {
-      alert(`Could not delete project: ${err.message}`);
+      toast.error(`Could not delete project: ${err.message}`);
       setDeleting(false);
       setShowDeleteModal(false);
     }
@@ -372,7 +374,7 @@ export default function ContractorProjectDetailPage() {
       </div>
 
       {/* 3. FINANCIAL QUOTED PRICE & OPERATIONAL METRICS */}
-      <div style={styles.pricingCard}>
+      <div style={styles.pricingCard} className="drp-grid-collapse">
         <div style={styles.priceLeftSection}>
           <span style={styles.priceHeaderLabel}>Contractor Guaranteed Estimator Price</span>
 
@@ -726,8 +728,8 @@ export default function ContractorProjectDetailPage() {
 
       {/* 5. DELETE CONFIRMATION MODAL */}
       {showDeleteModal && (
-        <div style={styles.modalOverlay} onClick={() => !deleting && setShowDeleteModal(false)}>
-          <div style={styles.modalBox} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="drp-modal-card" style={styles.modalBox} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1068,7 +1070,7 @@ const styles = {
   },
   priceMetricsGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
     gap: '14px',
   },
   metricItem: {
@@ -1093,7 +1095,7 @@ const styles = {
   },
   specificationsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
     gap: '18px',
   },
   specCard: {

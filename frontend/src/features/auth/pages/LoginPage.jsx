@@ -6,19 +6,33 @@
 import React from 'react';
 import { LoginForm } from '../components/LoginForm';
 import heroLogo from '../../../assets/images/MainLodo.png';
+import { useMediaQuery } from '../../../hooks/useViewport';
 
 export default function LoginPage() {
+  const isStacked = useMediaQuery('(max-width: 900px)');
+
   return (
-    <div style={styles.pageContainer}>
+    <div style={{ ...styles.pageContainer, flexDirection: isStacked ? 'column' : 'row' }}>
       {/* Left Column: Floating Form Card */}
-      <div style={styles.formColumn}>
+      <div
+        style={{
+          ...styles.formColumn,
+          minHeight: isStacked ? 'auto' : '100vh',
+          padding: isStacked ? '24px 16px' : '24px 20px',
+        }}
+      >
         <div style={styles.formWrapper}>
           <LoginForm />
         </div>
       </div>
 
       {/* Right Column: Hero Visual Showcase */}
-      <div style={styles.heroColumn}>
+      <div
+        style={{
+          ...styles.heroColumn,
+          padding: isStacked ? '36px 22px' : '60px 64px',
+        }}
+      >
         <div style={styles.heroOverlay} />
 
         {/* Decorative Wave Overlay at bottom right */}

@@ -29,6 +29,8 @@ import { contractorDiscountApi } from '../../contractor/api/contractorDiscountAp
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useViewport } from '../../../hooks/useViewport';
+import { toast } from '../../../utils/toast';
 
 // Helper to validate Mongo ObjectIds
 function isValidObjectId(id) {
@@ -795,7 +797,7 @@ function AuthPromptBanner({ message, onSignIn, style = {} }) {
         ...style,
       }}
     >
-      <div style={{ flex: 1, minWidth: '220px', lineHeight: 1.45 }}>
+      <div style={{ flex: 1, minWidth: 'min(100%, 220px)', lineHeight: 1.45 }}>
         <strong style={{ color: '#1E3A63' }}>Sign In to Save &amp; Submit:</strong> {message}
       </div>
       <button
@@ -827,6 +829,7 @@ export default function ContinuousEstimatorForm({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isMobile, isTablet } = useViewport();
   const [activeSavedDeckId, setActiveSavedDeckId] = useState(() => extractValidObjectId(deckId || initialData?.deckId));
   const [activeSavedEstimateId, setActiveSavedEstimateId] = useState(() => extractValidObjectId(initialData?.estimateId || initialData?._id || initialData?.id));
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
@@ -1282,7 +1285,7 @@ export default function ContinuousEstimatorForm({
     fileList.forEach((file) => {
       if (!file.type.startsWith('image/')) return;
       if (file.size > 10 * 1024 * 1024) {
-        alert(`File "${file.name}" exceeds the 10 MB limit.`);
+        toast.warning(`File "${file.name}" exceeds the 10 MB limit.`);
         return;
       }
       const reader = new FileReader();
@@ -1748,7 +1751,7 @@ export default function ContinuousEstimatorForm({
       if (isAuthError(err)) {
         setAuthNotice('Your session needs sign-in before submitting a booking inquiry.');
       } else {
-        alert(`Could not convert to lead: ${err.message}`);
+        toast.error(`Could not convert to lead: ${err.message}`);
       }
     } finally {
       setLeadLoading(false);
@@ -1853,11 +1856,32 @@ export default function ContinuousEstimatorForm({
   const currentWoodObj = WOOD_SPECIES.find((w) => w.id === woodSpecies) || null;
 
   return (
-    <div style={styles.estimatorPageContainer}>
-      {/* Top Application Section Status & Reach Out Bar (Single Unified Line) */}
-      <div style={styles.topBrandingBar}>
+    <div
+      style={{
+        ...styles.estimatorPageContainer,
+        padding: isMobile ? '12px' : '20px',
+      }}
+    >
+      {/* Top Application Section Status & Reach Out Bar */}
+      <div
+        style={{
+          ...styles.topBrandingBar,
+          padding: isMobile ? '10px 12px' : '10px 18px',
+          position: isMobile ? 'static' : 'sticky',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+        }}
+      >
         {/* Left: Section Boxes (Section 01 to Section 09) */}
-        <div style={styles.topSectionBoxesRow}>
+        <div
+          style={{
+            ...styles.topSectionBoxesRow,
+            flexWrap: isMobile ? 'nowrap' : 'wrap',
+            overflowX: isMobile ? 'auto' : 'visible',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: isMobile ? '4px' : 0,
+            minWidth: 0,
+          }}
+        >
           {sectionSteps.map((step) => {
             const isFilled = step.done;
             const formattedNum = step.num < 10 ? `0${step.num}` : step.num;
@@ -1914,7 +1938,14 @@ export default function ContinuousEstimatorForm({
       {/* ======================================================== */}
       {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + RIGHT SIDEBAR */}
       {/* ======================================================== */}
-      <div style={styles.contentLayoutRow}>
+      <div
+        style={{
+          ...styles.contentLayoutRow,
+          flexDirection: isTablet ? 'column' : 'row',
+          alignItems: isTablet ? 'stretch' : 'flex-start',
+          gap: isMobile ? '16px' : '24px',
+        }}
+      >
         {/* MIDDLE SCROLLABLE FORM */}
         <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
           <AuthPromptBanner message={authNotice} onSignIn={handleSignInRedirect} />
@@ -1967,6 +1998,7 @@ export default function ContinuousEstimatorForm({
                     )}
                     <div style={styles.cardImageFrame}>
                       <img
+                        decoding="async"
                         src={s.img}
                         alt={s.label}
                         style={s.isDiagram ? styles.cardCoverImageContain : styles.cardCoverImage}
@@ -1983,7 +2015,7 @@ export default function ContinuousEstimatorForm({
             </div>
 
             {/* Dimensions Inputs & Green Usable Area Highlight Box */}
-            <div style={styles.dimensionsFormRow}>
+            <div style={styles.dimensionsFormRow} className="drp-grid-collapse">
               <div style={styles.dimInputWrap}>
                 <label style={styles.inputLabel}>Length (ft) *</label>
                 <input
@@ -2071,7 +2103,7 @@ export default function ContinuousEstimatorForm({
                       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                     >
                       <div style={styles.componentThumbFrame}>
-                        <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
+                        <img loading="lazy" decoding="async" src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
                       </div>
                       <div style={styles.componentMetaRow}>
                         <input
@@ -2159,7 +2191,7 @@ export default function ContinuousEstimatorForm({
                       </div>
                     )}
                     <div style={styles.cardImageFrame}>
-                      <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
+                      <img loading="lazy" decoding="async" src={w.img} alt={w.name} style={styles.cardCoverImage} />
                     </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
@@ -2213,7 +2245,7 @@ export default function ContinuousEstimatorForm({
                       </div>
                     )}
                     <div style={styles.cardImageFrame}>
-                      <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
+                      <img loading="lazy" decoding="async" src={el.img} alt={el.label} style={styles.cardCoverImage} />
                     </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
@@ -2287,7 +2319,7 @@ export default function ContinuousEstimatorForm({
                       </div>
                     )}
                     <div style={styles.cardImageFrame}>
-                      <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
+                      <img loading="lazy" decoding="async" src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
                     </div>
                     <div style={styles.cardCaptionBox}>
                       <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
@@ -2346,7 +2378,7 @@ export default function ContinuousEstimatorForm({
                       </div>
                     )}
                     <div style={styles.cardImageFrame}>
-                      <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
+                      <img loading="lazy" decoding="async" src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
                     </div>
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2461,7 +2493,7 @@ export default function ContinuousEstimatorForm({
                       </div>
                     )}
                     <div style={styles.cardImageFrame}>
-                      <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
+                      <img loading="lazy" decoding="async" src={c.img} alt={c.label} style={styles.cardCoverImage} />
                     </div>
                     <div style={styles.cardCaptionBox}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2554,7 +2586,7 @@ export default function ContinuousEstimatorForm({
                     </div>
                   )}
                   {(conditions.includes('crack') && conditions.includes('loose_board')) && (
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
                       <label style={styles.inputLabel}>Both Cracked & Loose on Same Board (overlap qty):</label>
                       <input
                         type="number"
@@ -2694,7 +2726,7 @@ export default function ContinuousEstimatorForm({
               <div style={styles.uploadedPhotosGrid}>
                 {uploadedPhotos.map((photo) => (
                   <div key={photo.id} style={styles.photoPreviewCard}>
-                    <img src={photo.dataUrl} alt={photo.name} style={styles.photoPreviewImg} />
+                    <img loading="lazy" decoding="async" src={photo.dataUrl} alt={photo.name} style={styles.photoPreviewImg} />
                     <button
                       type="button"
                       onClick={(e) => {
@@ -2740,8 +2772,8 @@ export default function ContinuousEstimatorForm({
               </div>
             </div>
 
-            <div style={styles.projFormGrid}>
-              <div style={{ gridColumn: 'span 2' }}>
+            <div style={styles.projFormGrid} className="drp-grid-collapse">
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={styles.inputLabel}>Project / Deck Name *</label>
                 <input
                   type="text"
@@ -2752,7 +2784,7 @@ export default function ContinuousEstimatorForm({
                 />
               </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={styles.inputLabel}>Project Property Address (Optional)</label>
                 <input
                   type="text"
@@ -2785,7 +2817,7 @@ export default function ContinuousEstimatorForm({
                 />
               </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={styles.inputLabel}>Scope Notes (Optional)</label>
                 <textarea
                   rows={2}
@@ -3132,7 +3164,16 @@ export default function ContinuousEstimatorForm({
         {/* ======================================================== */}
         {/* RIGHT SIDEBAR: CIRCLE PROGRESS, PREVIEW, IMAGES & ESTIMATE */}
         {/* ======================================================== */}
-        <aside style={styles.fixedRightSidebar}>
+        <aside
+          id="estimator-live-summary"
+          style={{
+            ...styles.fixedRightSidebar,
+            width: isTablet ? '100%' : '360px',
+            position: isTablet ? 'static' : 'sticky',
+            maxHeight: isTablet ? 'none' : 'calc(100vh - 40px)',
+            overflowY: isTablet ? 'visible' : 'auto',
+          }}
+        >
           {/* 1. CIRCLE STEP PROGRESS CARD */}
           <div style={styles.sidebarCard}>
             <div style={styles.progressCircleRow}>
@@ -3447,8 +3488,18 @@ export default function ContinuousEstimatorForm({
       {/* REACH OUT / SPECIALIST SUPPORT MODAL */}
       {/* ======================================================== */}
       {reachOutOpen && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
+        <div
+          className="drp-modal-overlay"
+          style={styles.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Specialist Support and Project Inquiries"
+          onClick={() => {
+            setReachOutOpen(false);
+            setReachOutError(null);
+          }}
+        >
+          <div className="drp-modal-card" style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>Specialist Support & Project Inquiries</h3>
               <button
@@ -3509,7 +3560,7 @@ export default function ContinuousEstimatorForm({
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div className="drp-flex-wrap-mobile" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -3532,6 +3583,35 @@ export default function ContinuousEstimatorForm({
             )}
           </div>
         </div>
+      )}
+
+      {/* Mobile / Tablet Quick Summary Jump Pill */}
+      {isTablet && (
+        <button
+          type="button"
+          onClick={() => scrollToSection('estimator-live-summary')}
+          style={{
+            position: 'fixed',
+            bottom: '16px',
+            right: '16px',
+            zIndex: 80,
+            backgroundColor: '#034EA2',
+            color: '#FFFFFF',
+            border: '2px solid #FFFFFF',
+            borderRadius: '999px',
+            padding: '10px 16px',
+            fontSize: '12.5px',
+            fontWeight: '700',
+            boxShadow: '0 8px 24px rgba(3, 78, 162, 0.35)',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+          title="Jump to Live Summary & Estimate"
+        >
+          <span>Summary ({progressPercent}%) ↓</span>
+        </button>
       )}
     </div>
   );
@@ -4784,6 +4864,8 @@ const styles = {
     borderRadius: '12px',
     width: '100%',
     maxWidth: '520px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     padding: '24px',
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
   },

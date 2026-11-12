@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorVerificationPage() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function ContractorVerificationPage() {
   async function handleUploadDocument(e) {
     e.preventDefault();
     if (!selectedFile) {
-      alert('Please select a document file to upload.');
+      toast.warning('Please select a document file to upload.');
       return;
     }
     setUploading(true);
@@ -71,9 +72,9 @@ export default function ContractorVerificationPage() {
       await loadData();
       setShowUploadModal(false);
       setSelectedFile(null);
-      alert('Document uploaded successfully for administrator review!');
+      toast.success('Document uploaded successfully for administrator review!');
     } catch (err) {
-      alert(err.message || 'Failed to upload document.');
+      toast.error(err.message || 'Failed to upload document.');
     } finally {
       setUploading(false);
     }
@@ -89,9 +90,9 @@ export default function ContractorVerificationPage() {
       });
       await loadData();
       setShowEditProfileModal(false);
-      alert('Business profile updated successfully!');
+      toast.success('Business profile updated successfully!');
     } catch (err) {
-      alert(err.message || 'Failed to update profile.');
+      toast.error(err.message || 'Failed to update profile.');
     }
   }
 
@@ -235,7 +236,7 @@ export default function ContractorVerificationPage() {
           </button>
         </div>
 
-        <div style={styles.tableResponsive}>
+        <div className="drp-table-wrap" style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
               <tr>

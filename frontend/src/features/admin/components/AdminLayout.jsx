@@ -13,14 +13,18 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
 import { API_BASE_URL } from '../../../api/client';
 import mainLogo from '../../../assets/images/MainLodo.png';
+import { useMediaQuery } from '../../../hooks/useViewport';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isDrawerViewport = useMediaQuery('(max-width: 900px)');
+  const isCompactViewport = useMediaQuery('(max-width: 560px)');
 
-  // Sidebar always open by default, can toggle closed
+  // Sidebar always open by default on desktop; overlay drawer on mobile <=900px
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -30,9 +34,14 @@ export default function AdminLayout() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Real-time synchronization of notifications from MongoDB
-  const fetchRealNotifications = useCallback(async () => {
+  // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
+  const lastNotifFetchRef = useRef(0);
+  const fetchRealNotifications = useCallback(async (force = false) => {
     if (!user) return;
+    if (!force && document.hidden) return;
+    const now = Date.now();
+    if (!force && now - lastNotifFetchRef.current < 4000) return;
+    lastNotifFetchRef.current = now;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -43,12 +52,17 @@ export default function AdminLayout() {
   }, [user]);
 
   useEffect(() => {
-    fetchRealNotifications();
-    const interval = setInterval(fetchRealNotifications, 20000);
-    window.addEventListener('focus', fetchRealNotifications);
+    fetchRealNotifications(true);
+    const interval = setInterval(() => fetchRealNotifications(false), 30000);
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden) fetchRealNotifications(false);
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', fetchRealNotifications);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, [fetchRealNotifications]);
 
@@ -77,7 +91,7 @@ export default function AdminLayout() {
     setShowNotifications(false);
   };
 
-  // Click-outside listener
+  // Click-outside & Escape listener
   useEffect(() => {
     function handleClickOutside(event) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
@@ -87,13 +101,29 @@ export default function AdminLayout() {
         setShowProfileMenu(false);
       }
     }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+        setShowProfileMenu(false);
+        setIsMobileDrawerOpen(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
   const currentPath = location.pathname;
+  const effectiveDrawerOpen = isDrawerViewport && isMobileDrawerOpen;
+
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+    setShowNotifications(false);
+    setShowProfileMenu(false);
+  }, [currentPath]);
 
   // Load badge counts
   useEffect(() => {
@@ -257,24 +287,52 @@ export default function AdminLayout() {
 
   return (
     <div style={styles.container}>
-      {/* 1. SIDEBAR (250px by default, 68px collapsed) */}
+      {/* Mobile Drawer Backdrop */}
+      {effectiveDrawerOpen && (
+        <div
+          onClick={() => setIsMobileDrawerOpen(false)}
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.5)',
+            zIndex: 95,
+          }}
+        />
+      )}
+
+      {/* 1. SIDEBAR (250px by default, 68px collapsed; overlay drawer <=900px) */}
       <aside
+        id="admin-portal-sidebar"
+        aria-label="Admin Navigation"
+        onClick={(e) => {
+          if (isDrawerViewport && e.target.closest('a')) {
+            setIsMobileDrawerOpen(false);
+          }
+        }}
         style={{
           ...styles.sidebar,
-          width: isSidebarOpen ? '250px' : '68px',
+          width: isDrawerViewport ? '250px' : (isSidebarOpen ? '250px' : '68px'),
+          transform: isDrawerViewport
+            ? (effectiveDrawerOpen ? 'translateX(0)' : 'translateX(-100%)')
+            : 'translateX(0)',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.24s cubic-bezier(0.4, 0, 0.2, 1)',
+          visibility: isDrawerViewport && !effectiveDrawerOpen ? 'hidden' : 'visible',
+          pointerEvents: isDrawerViewport && !effectiveDrawerOpen ? 'none' : 'auto',
         }}
       >
         {/* Brand Header */}
-        {isSidebarOpen ? (
+        {(isSidebarOpen || isDrawerViewport) ? (
           <div style={styles.brandBox}>
             <Link to="/admin/dashboard" style={styles.brandLink}>
               <img src={mainLogo} alt="Deck Restoration Plus" style={styles.sidebarLogo} />
             </Link>
             <button
               type="button"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={() => (isDrawerViewport ? setIsMobileDrawerOpen(false) : setIsSidebarOpen(false))}
               style={styles.sidebarToggleBtn}
-              title="Collapse sidebar"
+              aria-label={isDrawerViewport ? 'Close navigation menu' : 'Collapse sidebar'}
+              title={isDrawerViewport ? 'Close menu' : 'Collapse sidebar'}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
@@ -302,25 +360,26 @@ export default function AdminLayout() {
         <nav style={styles.navScroll}>
           {menuItems.map((item) => {
             const active = isActive(item.path);
+            const showLabel = isSidebarOpen || isDrawerViewport;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                title={!isSidebarOpen ? item.label : undefined}
+                title={!showLabel ? item.label : undefined}
                 style={{
                   ...styles.navLink,
                   backgroundColor: active ? '#1d4ed8' : 'transparent',
                   color: active ? '#ffffff' : '#94a3b8',
-                  justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+                  justifyContent: showLabel ? 'flex-start' : 'center',
                 }}
               >
                 <div style={{ ...styles.linkIcon, color: active ? '#ffffff' : '#94a3b8' }}>
                   {item.icon}
                 </div>
-                {isSidebarOpen && (
+                {showLabel && (
                   <span style={styles.linkText}>{item.label}</span>
                 )}
-                {isSidebarOpen && item.badge && (
+                {showLabel && item.badge && (
                   <span
                     style={{
                       ...styles.badge,
@@ -339,12 +398,12 @@ export default function AdminLayout() {
           {/* Profile Item */}
           <Link
             to="/admin/profile"
-            title={!isSidebarOpen ? 'My Profile' : undefined}
+            title={!(isSidebarOpen || isDrawerViewport) ? 'My Profile' : undefined}
             style={{
               ...styles.navLink,
               backgroundColor: isActive('/admin/profile') ? '#1d4ed8' : 'transparent',
               color: isActive('/admin/profile') ? '#ffffff' : '#94a3b8',
-              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              justifyContent: (isSidebarOpen || isDrawerViewport) ? 'flex-start' : 'center',
             }}
           >
             <div style={styles.linkIcon}>
@@ -353,18 +412,18 @@ export default function AdminLayout() {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            {isSidebarOpen && <span style={styles.linkText}>My Profile</span>}
+            {(isSidebarOpen || isDrawerViewport) && <span style={styles.linkText}>My Profile</span>}
           </Link>
 
           {/* Logout Sidebar Action */}
           <button
             type="button"
             onClick={handleLogout}
-            title={!isSidebarOpen ? 'Logout' : undefined}
+            title={!(isSidebarOpen || isDrawerViewport) ? 'Logout' : undefined}
             style={{
               ...styles.navLink,
               ...styles.logoutSidebarBtn,
-              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              justifyContent: (isSidebarOpen || isDrawerViewport) ? 'flex-start' : 'center',
             }}
           >
             <div style={{ ...styles.linkIcon, color: '#f87171' }}>
@@ -374,7 +433,7 @@ export default function AdminLayout() {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </div>
-            {isSidebarOpen && <span style={{ ...styles.linkText, color: '#f87171' }}>Logout</span>}
+            {(isSidebarOpen || isDrawerViewport) && <span style={{ ...styles.linkText, color: '#f87171' }}>Logout</span>}
           </button>
         </nav>
       </aside>
@@ -383,19 +442,58 @@ export default function AdminLayout() {
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarOpen ? '250px' : '68px',
+          marginLeft: isDrawerViewport ? '0px' : (isSidebarOpen ? '250px' : '68px'),
         }}
       >
         {/* Top Navigation Bar */}
-        <header style={styles.header}>
-          <div style={styles.headerLeft}>
-            <div>
+        <header
+          style={{
+            ...styles.header,
+            padding: isCompactViewport ? '0 12px' : isDrawerViewport ? '0 16px' : '0 28px',
+            height: isCompactViewport ? 'auto' : '66px',
+            minHeight: '60px',
+            gap: '10px',
+          }}
+        >
+          <div style={{ ...styles.headerLeft, minWidth: 0, flex: 1, gap: isCompactViewport ? '10px' : '16px' }}>
+            {isDrawerViewport && (
+              <button
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded={effectiveDrawerOpen}
+                aria-controls="admin-portal-sidebar"
+                className="drp-touch-btn"
+                onClick={() => {
+                  const next = !isMobileDrawerOpen;
+                  setIsMobileDrawerOpen(next);
+                  if (next) setIsSidebarOpen(true);
+                }}
+                style={styles.hamburgerBtn}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
+            <div style={{ minWidth: 0 }}>
               <div style={styles.breadcrumbCategory}>{meta.category}</div>
-              <h1 style={styles.breadcrumbTitle}>{meta.title}</h1>
+              <h1
+                style={{
+                  ...styles.breadcrumbTitle,
+                  fontSize: isCompactViewport ? '1rem' : '1.18rem',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {meta.title}
+              </h1>
             </div>
           </div>
 
-          <div style={styles.headerRight}>
+          <div style={{ ...styles.headerRight, flexShrink: 0, gap: isCompactViewport ? '8px' : '14px' }}>
             {/* Admin Profile Dropdown Pill */}
             <div ref={profileRef} style={{ position: 'relative' }}>
               <button
@@ -406,10 +504,12 @@ export default function AdminLayout() {
                 <div style={styles.avatar}>
                   {user?.fullName ? user.fullName[0].toUpperCase() : 'A'}
                 </div>
-                <div style={styles.profileInfo}>
-                  <span style={styles.profileName}>{user?.fullName || 'Admin User'}</span>
-                  <span style={styles.profileRole}>Administrator</span>
-                </div>
+                {!isCompactViewport && (
+                  <div style={styles.profileInfo}>
+                    <span style={styles.profileName}>{user?.fullName || 'Admin User'}</span>
+                    <span style={styles.profileRole}>Administrator</span>
+                  </div>
+                )}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -448,20 +548,22 @@ export default function AdminLayout() {
               )}
             </div>
 
-            {/* Standalone Quick Logout Button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={styles.headerLogoutBtn}
-              title="Logout of Admin Portal"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              <span>Logout</span>
-            </button>
+            {/* Standalone Quick Logout Button (hidden on mobile <=900px) */}
+            {!isDrawerViewport && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={styles.headerLogoutBtn}
+                title="Logout of Admin Portal"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Logout</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -480,7 +582,7 @@ const styles = {
     minHeight: '100vh',
     width: '100%',
     maxWidth: '100vw',
-    overflowX: 'hidden',
+    overflowX: 'clip',
     backgroundColor: '#f8fafc',
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
     boxSizing: 'border-box',
@@ -611,7 +713,7 @@ const styles = {
     flexDirection: 'column',
     minWidth: 0,
     maxWidth: '100%',
-    overflowX: 'hidden',
+    overflowX: 'clip',
     boxSizing: 'border-box',
     transition: 'margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
   },

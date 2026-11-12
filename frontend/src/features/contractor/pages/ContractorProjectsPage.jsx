@@ -16,8 +16,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../../customer/api/estimatesApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { getErrorMessage } from '../../../api/apiErrors';
 import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorProjectsPage() {
   const navigate = useNavigate();
@@ -248,7 +250,7 @@ export default function ContractorProjectsPage() {
       setSuccessToast(`Project "${deleteConfirmEst.deckDetails?.projectName || 'Estimate'}" deleted successfully.`);
       setDeleteConfirmEst(null);
     } catch (err) {
-      alert(err.message || 'Failed to delete estimate record.');
+      toast.error(err.message || 'Failed to delete estimate record.');
     } finally {
       setDeletingId(null);
     }
@@ -303,7 +305,7 @@ export default function ContractorProjectsPage() {
       setSelectedIds([]);
       setShowBatchDeleteModal(false);
     } catch (err) {
-      alert(`Could not delete selected items: ${err.message}`);
+      toast.error(`Could not delete selected items: ${err.message}`);
     } finally {
       setBatchDeleting(false);
     }
@@ -329,8 +331,8 @@ export default function ContractorProjectsPage() {
       );
       setSuccessToast(`Enquiry submitted for ${est.deckDetails?.projectName || 'Project'}! Added to Admin Leads as HOT priority.`);
     } catch (err) {
-      const errMsg = err.response?.data?.message || err.message || 'An error occurred while submitting enquiry.';
-      alert(`Enquiry notice: ${errMsg}`);
+      const errMsg = getErrorMessage(err, 'An error occurred while submitting enquiry.');
+      toast.error(`Enquiry notice: ${errMsg}`);
     } finally {
       setConvertingId(null);
     }
@@ -511,7 +513,7 @@ export default function ContractorProjectsPage() {
       await downloadEstimatePdf(est, user);
       setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
     } catch (err) {
-      alert(`Could not download PDF report: ${err.message}`);
+      toast.error(`Could not download PDF report: ${err.message}`);
     }
   };
 
@@ -527,7 +529,7 @@ export default function ContractorProjectsPage() {
         setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
       }
     } catch (err) {
-      alert(`Export error: ${err.message}`);
+      toast.error(`Export error: ${err.message}`);
     }
   };
 
@@ -1249,7 +1251,7 @@ const styles = {
   },
   kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
     marginBottom: '20px',
   },
@@ -1302,8 +1304,8 @@ const styles = {
   },
   searchWrap: {
     position: 'relative',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    minWidth: 'min(100%, 300px)',
+    flex: '1 1 min(100%, 300px)',
     maxWidth: '560px',
   },
   checkboxInput: {
@@ -1759,7 +1761,7 @@ const styles = {
   },
   modalGrid2: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
   },
   modalBox: {

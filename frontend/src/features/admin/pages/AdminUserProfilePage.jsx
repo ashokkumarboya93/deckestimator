@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import mainLogo from '../../../assets/images/MainLodo.png';
+import { toast } from '../../../utils/toast';
 
 export default function AdminUserProfilePage() {
   const { id } = useParams();
@@ -75,7 +76,7 @@ export default function AdminUserProfilePage() {
     try {
       await adminApi.softDeleteUser(id, deleteReason || 'Admin deleted from profile dossier', isPermanentDelete);
       setIsDeleteModalOpen(false);
-      alert('User account has been successfully deleted.');
+      toast.success('User account has been successfully deleted.');
       navigate('/admin/users');
     } catch (err) {
       setError(err?.message || 'Failed to delete user.');
@@ -381,7 +382,7 @@ export default function AdminUserProfilePage() {
             {documents.length === 0 ? (
               <p style={styles.emptyNote}>No verification documents currently on file for this contractor.</p>
             ) : (
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -449,7 +450,7 @@ export default function AdminUserProfilePage() {
         {estimates.length === 0 && decks.length === 0 ? (
           <p style={styles.emptyNote}>No project or estimation activity recorded for this user yet.</p>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -512,7 +513,7 @@ export default function AdminUserProfilePage() {
         {enquiries.length === 0 ? (
           <p style={styles.emptyNote}>No inquiries or communication requests logged for this account.</p>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -926,7 +927,7 @@ const styles = {
   },
   gridFour: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
     gap: '18px',
   },
   infoBlock: {
@@ -1061,7 +1062,8 @@ const styles = {
     borderRadius: '16px',
     maxWidth: '520px',
     width: '100%',
-    overflow: 'hidden',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
   },
   modalHeader: {
@@ -1123,7 +1125,7 @@ const styles = {
   },
   docInfoGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
     gap: '10px',
     fontSize: '12px',
     color: '#334155',

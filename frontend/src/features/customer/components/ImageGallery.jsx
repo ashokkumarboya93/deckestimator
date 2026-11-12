@@ -102,9 +102,11 @@ export default function ImageGallery({ deckId, images = [], onDeleteSuccess }) {
             <button
               type="button"
               style={styles.modalCloseBtn}
+              className="drp-touch-btn"
+              aria-label="Close image preview"
               onClick={() =>setSelectedImage(null)}
             >
-              
+              &times;
             </button>
             <img
               src={getDeckImageUrl(deckId, selectedImage.id)}
@@ -171,7 +173,7 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 180px), 1fr))',
     gap: '16px',
   },
   card: {

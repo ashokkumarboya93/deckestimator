@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '../api/adminApi';
+import { toast } from '../../../utils/toast';
 
 // The 6 Approved Tabs (<= 6 tabs, contractor discounts on its own separate tab)
 const TABS = [
@@ -296,7 +297,7 @@ export default function AdminPricingDiscountsPage() {
   const handleSaveWoodSpecies = () => {
     const rawKey = woodModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
     if (!rawKey || !woodModal.label.trim()) {
-      alert('Please provide a valid species key and label.');
+      toast.warning('Please provide a valid species key and label.');
       return;
     }
     const updatedWood = {
@@ -326,7 +327,7 @@ export default function AdminPricingDiscountsPage() {
   const handleSaveComponent = () => {
     const rawKey = componentModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
     if (!rawKey || !componentModal.label.trim()) {
-      alert('Please provide a valid component key and title.');
+      toast.warning('Please provide a valid component key and title.');
       return;
     }
     const updatedAreas = {
@@ -357,7 +358,7 @@ export default function AdminPricingDiscountsPage() {
   const handleSaveService = () => {
     const rawKey = serviceModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
     if (!rawKey || !serviceModal.label.trim()) {
-      alert('Please provide a valid service key and name.');
+      toast.warning('Please provide a valid service key and name.');
       return;
     }
     const updatedProd = {
@@ -423,12 +424,12 @@ export default function AdminPricingDiscountsPage() {
   const handleSaveInlineContractorDiscount = async (contractorId) => {
     const rawVal = editingContractorDiscounts[contractorId];
     if (rawVal === undefined || rawVal === '') {
-      alert('Please enter a discount percentage.');
+      toast.warning('Please enter a discount percentage.');
       return;
     }
     const discountVal = Number(rawVal);
     if (isNaN(discountVal) || discountVal < 0 || discountVal > 50) {
-      alert('Discount rate must be between 0% and 50%.');
+      toast.warning('Discount rate must be between 0% and 50%.');
       return;
     }
     setSavingContractorId(contractorId);
@@ -452,7 +453,7 @@ export default function AdminPricingDiscountsPage() {
         };
       });
     } catch (err) {
-      alert(`Error updating contractor discount: ${err?.message || 'Failed to save'}`);
+      toast.error(`Error updating contractor discount: ${err?.message || 'Failed to save'}`);
     } finally {
       setSavingContractorId(null);
     }
@@ -725,7 +726,7 @@ export default function AdminPricingDiscountsPage() {
               <p style={styles.cardHelp}>
                 Distance threshold in minutes and flat mobilization fee charged when distance exceeds free radius.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '2px' }}>Free Travel:</span>
                   <input
@@ -934,7 +935,8 @@ export default function AdminPricingDiscountsPage() {
             </div>
           </div>
 
-          <table style={styles.dataTable}>
+          <div className="drp-table-wrap">
+            <table style={styles.dataTable}>
             <thead>
               <tr>
                 <th style={styles.tableTh}>Internal Key</th>
@@ -1012,6 +1014,7 @@ export default function AdminPricingDiscountsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -1044,7 +1047,8 @@ export default function AdminPricingDiscountsPage() {
             </div>
           </div>
 
-          <table style={styles.dataTable}>
+          <div className="drp-table-wrap">
+            <table style={styles.dataTable}>
             <thead>
               <tr>
                 <th style={styles.tableTh}>Component Key</th>
@@ -1115,6 +1119,7 @@ export default function AdminPricingDiscountsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -1147,7 +1152,8 @@ export default function AdminPricingDiscountsPage() {
             </div>
           </div>
 
-          <table style={styles.dataTable}>
+          <div className="drp-table-wrap">
+            <table style={styles.dataTable}>
             <thead>
               <tr>
                 <th style={styles.tableTh}>Service Key</th>
@@ -1218,6 +1224,7 @@ export default function AdminPricingDiscountsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -1277,7 +1284,8 @@ export default function AdminPricingDiscountsPage() {
             Registered Contractors & Custom Overrides ({discountData?.contractors?.length || 0})
           </h3>
 
-          <table style={styles.dataTable}>
+          <div className="drp-table-wrap">
+            <table style={styles.dataTable}>
             <thead>
               <tr>
                 <th style={styles.tableTh}>Contractor Name & Company</th>
@@ -1345,6 +1353,7 @@ export default function AdminPricingDiscountsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -1669,6 +1678,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    flexWrap: 'wrap',
     backgroundColor: '#FFFFFF',
     padding: '24px 28px',
     borderRadius: '12px',
@@ -1703,6 +1713,7 @@ const styles = {
   headerActions: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: '12px',
   },
   primarySaveBtn: {
@@ -1823,7 +1834,7 @@ const styles = {
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
     gap: '18px',
   },
   formCard: {
@@ -2091,6 +2102,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '16px',
     zIndex: 9999,
   },
   modalBox: {
@@ -2098,7 +2110,9 @@ const styles = {
     borderRadius: '12px',
     padding: '24px 28px',
     maxWidth: '480px',
-    width: '90%',
+    width: '92%',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
   },
   modalTitle: {

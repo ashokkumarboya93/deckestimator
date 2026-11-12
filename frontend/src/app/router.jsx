@@ -2,57 +2,12 @@
 // Deck Estimator — Route Definitions
 // =============================================
 
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from './App';
-import LoginPage from '../features/auth/pages/LoginPage';
-import RegisterPage from '../features/auth/pages/RegisterPage';
-import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardPage';
-import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
-import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
-import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
-import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
-import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
-import CustomerLayout from '../features/customer/components/CustomerLayout';
-import CustomerProfilePage from '../features/customer/pages/CustomerProfilePage';
-import CustomerSupportPage from '../features/customer/pages/CustomerSupportPage';
+import RouteLoadingFallback from '../components/RouteLoadingFallback';
 
-// Contractor Pages & Layout
-import ContractorLayout from '../features/contractor/components/ContractorLayout';
-import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
-import ContractorLeadsPage from '../features/contractor/pages/ContractorLeadsPage';
-import ContractorProjectsPage from '../features/contractor/pages/ContractorProjectsPage';
-import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
-import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
-import ContractorEstimatesPage from '../features/contractor/pages/ContractorEstimatesPage';
-import ContractorEstimateBuilderPage from '../features/contractor/pages/ContractorEstimateBuilderPage';
-import ContractorVerificationPage from '../features/contractor/pages/ContractorVerificationPage';
-import ContractorDocumentDetailPage from '../features/contractor/pages/ContractorDocumentDetailPage';
-import ContractorCommissionsPage from '../features/contractor/pages/ContractorCommissionsPage';
-import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
-import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
-import ContractorVerificationRequestPage from '../features/contractor/pages/ContractorVerificationRequestPage';
-import ContractorProfilePage from '../features/contractor/pages/ContractorProfilePage';
-import ContractorDiscountsEarningsPage from '../features/contractor/pages/ContractorDiscountsEarningsPage';
-import ContractorSupportPage from '../features/contractor/pages/ContractorSupportPage';
-import ContractorProjectDetailPage from '../features/contractor/pages/ContractorProjectDetailPage';
-
-// Admin Portal Pages & Layout
-import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
-import AdminLayout from '../features/admin/components/AdminLayout';
-import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import AdminUserManagementPage from '../features/admin/pages/AdminUserManagementPage';
-import AdminUserProfilePage from '../features/admin/pages/AdminUserProfilePage';
-import AdminVerificationProgressPage from '../features/admin/pages/AdminVerificationProgressPage';
-import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
-import AdminProjectsPage from '../features/admin/pages/AdminProjectsPage';
-import AdminPricingDiscountsPage from '../features/admin/pages/AdminPricingDiscountsPage';
-import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
-import AdminSettingsPage from '../features/admin/pages/AdminSettingsPage';
-import AdminGuidelinesPage from '../features/admin/pages/AdminGuidelinesPage';
-import AdminProfilePage from '../features/admin/pages/AdminProfilePage';
-import LandingPage from '../features/landing/pages/LandingPage';
-
-// Route Guards
+// Route Guards (lightweight sync wrappers)
 import {
   GuestOnly,
   RequireAuth,
@@ -60,8 +15,55 @@ import {
   RequireApprovedContractor,
   RequireAdminAuth,
   AdminGuestOnly,
-  RootRedirect,
 } from './routeGuards';
+
+const withSuspense = (element) => (
+  <Suspense fallback={<RouteLoadingFallback />}>{element}</Suspense>
+);
+
+// Public & Auth Pages (Lazy Loaded)
+const LandingPage = lazy(() => import('../features/landing/pages/LandingPage'));
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'));
+const AdminLoginPage = lazy(() => import('../features/admin/pages/AdminLoginPage'));
+
+// Customer Portal Layout & Pages (Lazy Loaded)
+const CustomerLayout = lazy(() => import('../features/customer/components/CustomerLayout'));
+const CustomerDashboardPage = lazy(() => import('../features/customer/pages/CustomerDashboardPage'));
+const DeckEstimatorPage = lazy(() => import('../features/customer/pages/DeckEstimatorPage'));
+const DeckDetailPage = lazy(() => import('../features/customer/pages/DeckDetailPage'));
+const CustomerEstimatesPage = lazy(() => import('../features/customer/pages/CustomerEstimatesPage'));
+const EstimateBuilderPage = lazy(() => import('../features/customer/pages/EstimateBuilderPage'));
+const EstimateDetailPage = lazy(() => import('../features/customer/pages/EstimateDetailPage'));
+const CustomerProfilePage = lazy(() => import('../features/customer/pages/CustomerProfilePage'));
+const CustomerSupportPage = lazy(() => import('../features/customer/pages/CustomerSupportPage'));
+
+// Contractor Portal Layout & Pages (Lazy Loaded)
+const ContractorLayout = lazy(() => import('../features/contractor/components/ContractorLayout'));
+const ContractorDashboardPage = lazy(() => import('../features/contractor/pages/ContractorDashboardPage'));
+const ContractorProjectsPage = lazy(() => import('../features/contractor/pages/ContractorProjectsPage'));
+const ContractorDeckEstimatorPage = lazy(() => import('../features/contractor/pages/ContractorDeckEstimatorPage'));
+const ContractorDeckDetailPage = lazy(() => import('../features/contractor/pages/ContractorDeckDetailPage'));
+const ContractorVerificationRequestPage = lazy(() => import('../features/contractor/pages/ContractorVerificationRequestPage'));
+const ContractorProfilePage = lazy(() => import('../features/contractor/pages/ContractorProfilePage'));
+const ContractorDiscountsEarningsPage = lazy(() => import('../features/contractor/pages/ContractorDiscountsEarningsPage'));
+const ContractorSupportPage = lazy(() => import('../features/contractor/pages/ContractorSupportPage'));
+const ContractorProjectDetailPage = lazy(() => import('../features/contractor/pages/ContractorProjectDetailPage'));
+
+// Admin Portal Layout & Pages (Lazy Loaded)
+const AdminLayout = lazy(() => import('../features/admin/components/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('../features/admin/pages/AdminDashboardPage'));
+const AdminUserManagementPage = lazy(() => import('../features/admin/pages/AdminUserManagementPage'));
+const AdminUserProfilePage = lazy(() => import('../features/admin/pages/AdminUserProfilePage'));
+const AdminVerificationProgressPage = lazy(() => import('../features/admin/pages/AdminVerificationProgressPage'));
+const AdminLeadManagementPage = lazy(() => import('../features/admin/pages/AdminLeadManagementPage'));
+const AdminProjectsPage = lazy(() => import('../features/admin/pages/AdminProjectsPage'));
+const AdminPricingDiscountsPage = lazy(() => import('../features/admin/pages/AdminPricingDiscountsPage'));
+const AdminReportsPage = lazy(() => import('../features/admin/pages/AdminReportsPage'));
+const AdminSettingsPage = lazy(() => import('../features/admin/pages/AdminSettingsPage'));
+const AdminGuidelinesPage = lazy(() => import('../features/admin/pages/AdminGuidelinesPage'));
+const AdminProfilePage = lazy(() => import('../features/admin/pages/AdminProfilePage'));
+const NotFoundPage = lazy(() => import('../components/NotFoundPage'));
 
 const router = createBrowserRouter([
   {
@@ -70,22 +72,22 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <LandingPage />,
+        element: withSuspense(<LandingPage />),
       },
       {
         path: 'landing',
-        element: <LandingPage />,
+        element: withSuspense(<LandingPage />),
       },
       {
         path: 'estimator',
-        element: <DeckEstimatorPage />,
+        element: withSuspense(<DeckEstimatorPage />),
       },
       // Customer & Contractor Login
       {
         path: 'login',
         element: (
           <GuestOnly>
-            <LoginPage />
+            {withSuspense(<LoginPage />)}
           </GuestOnly>
         ),
       },
@@ -93,7 +95,7 @@ const router = createBrowserRouter([
         path: 'register',
         element: (
           <GuestOnly>
-            <RegisterPage />
+            {withSuspense(<RegisterPage />)}
           </GuestOnly>
         ),
       },
@@ -102,7 +104,7 @@ const router = createBrowserRouter([
         path: 'admin/login',
         element: (
           <AdminGuestOnly>
-            <AdminLoginPage />
+            {withSuspense(<AdminLoginPage />)}
           </AdminGuestOnly>
         ),
       },
@@ -113,7 +115,7 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['customer', 'admin']}>
-              <CustomerLayout />
+              {withSuspense(<CustomerLayout />)}
             </RequireRole>
           </RequireAuth>
         ),
@@ -124,43 +126,43 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard',
-            element: <CustomerDashboardPage />,
+            element: withSuspense(<CustomerDashboardPage />),
           },
           {
             path: 'decks/new',
-            element: <DeckEstimatorPage />,
+            element: withSuspense(<DeckEstimatorPage />),
           },
           {
             path: 'decks/:deckId',
-            element: <DeckDetailPage />,
+            element: withSuspense(<DeckDetailPage />),
           },
           {
             path: 'decks/:deckId/edit',
-            element: <DeckEstimatorPage />,
+            element: withSuspense(<DeckEstimatorPage />),
           },
           {
             path: 'decks/:deckId/estimate/new',
-            element: <EstimateBuilderPage />,
+            element: withSuspense(<EstimateBuilderPage />),
           },
           {
             path: 'estimates',
-            element: <CustomerEstimatesPage />,
+            element: withSuspense(<CustomerEstimatesPage />),
           },
           {
             path: 'projects',
-            element: <CustomerEstimatesPage />,
+            element: withSuspense(<CustomerEstimatesPage />),
           },
           {
             path: 'estimates/:estimateId',
-            element: <EstimateDetailPage />,
+            element: withSuspense(<EstimateDetailPage />),
           },
           {
             path: 'profile',
-            element: <CustomerProfilePage />,
+            element: withSuspense(<CustomerProfilePage />),
           },
           {
             path: 'support',
-            element: <CustomerSupportPage />,
+            element: withSuspense(<CustomerSupportPage />),
           },
         ],
       },
@@ -171,7 +173,7 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
-              <ContractorLayout />
+              {withSuspense(<ContractorLayout />)}
             </RequireRole>
           </RequireAuth>
         ),
@@ -182,13 +184,13 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard',
-            element: <ContractorDashboardPage />,
+            element: withSuspense(<ContractorDashboardPage />),
           },
           {
             path: 'decks/new',
             element: (
               <RequireApprovedContractor>
-                <ContractorDeckEstimatorPage />
+                {withSuspense(<ContractorDeckEstimatorPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -196,7 +198,7 @@ const router = createBrowserRouter([
             path: 'projects',
             element: (
               <RequireApprovedContractor>
-                <ContractorProjectsPage />
+                {withSuspense(<ContractorProjectsPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -204,7 +206,7 @@ const router = createBrowserRouter([
             path: 'discounts-earnings',
             element: (
               <RequireApprovedContractor>
-                <ContractorDiscountsEarningsPage />
+                {withSuspense(<ContractorDiscountsEarningsPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -212,19 +214,19 @@ const router = createBrowserRouter([
             path: 'support',
             element: (
               <RequireApprovedContractor>
-                <ContractorSupportPage />
+                {withSuspense(<ContractorSupportPage />)}
               </RequireApprovedContractor>
             ),
           },
           {
             path: 'profile',
-            element: <ContractorProfilePage />,
+            element: withSuspense(<ContractorProfilePage />),
           },
           {
             path: 'decks/:deckId',
             element: (
               <RequireApprovedContractor>
-                <ContractorDeckDetailPage />
+                {withSuspense(<ContractorDeckDetailPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -232,7 +234,7 @@ const router = createBrowserRouter([
             path: 'decks/:deckId/edit',
             element: (
               <RequireApprovedContractor>
-                <ContractorDeckEstimatorPage />
+                {withSuspense(<ContractorDeckEstimatorPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -240,7 +242,7 @@ const router = createBrowserRouter([
             path: 'projects/:projectId',
             element: (
               <RequireApprovedContractor>
-                <ContractorProjectDetailPage />
+                {withSuspense(<ContractorProjectDetailPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -248,7 +250,7 @@ const router = createBrowserRouter([
             path: 'estimates/:estimateId',
             element: (
               <RequireApprovedContractor>
-                <ContractorProjectDetailPage />
+                {withSuspense(<ContractorProjectDetailPage />)}
               </RequireApprovedContractor>
             ),
           },
@@ -267,11 +269,11 @@ const router = createBrowserRouter([
           },
           {
             path: 'verification',
-            element: <ContractorVerificationRequestPage />,
+            element: withSuspense(<ContractorVerificationRequestPage />),
           },
           {
             path: 'verification-request',
-            element: <ContractorVerificationRequestPage />,
+            element: withSuspense(<ContractorVerificationRequestPage />),
           },
           {
             path: 'settings',
@@ -297,7 +299,7 @@ const router = createBrowserRouter([
         path: 'admin',
         element: (
           <RequireAdminAuth>
-            <AdminLayout />
+            {withSuspense(<AdminLayout />)}
           </RequireAdminAuth>
         ),
         children: [
@@ -308,56 +310,56 @@ const router = createBrowserRouter([
           // 1. Dashboard
           {
             path: 'dashboard',
-            element: <AdminDashboardPage />,
+            element: withSuspense(<AdminDashboardPage />),
           },
           // 2. User Management
           {
             path: 'users',
-            element: <AdminUserManagementPage />,
+            element: withSuspense(<AdminUserManagementPage />),
           },
           {
             path: 'users/:id',
-            element: <AdminUserProfilePage />,
+            element: withSuspense(<AdminUserProfilePage />),
           },
           // 3. Verification & Progress
           {
             path: 'verification-progress',
-            element: <AdminVerificationProgressPage />,
+            element: withSuspense(<AdminVerificationProgressPage />),
           },
           // 4. Lead Management
           {
             path: 'leads',
-            element: <AdminLeadManagementPage />,
+            element: withSuspense(<AdminLeadManagementPage />),
           },
           // 5. Projects
           {
             path: 'projects',
-            element: <AdminProjectsPage />,
+            element: withSuspense(<AdminProjectsPage />),
           },
           // 6. Pricing & Discounts Unified Engine
           {
             path: 'pricing',
-            element: <AdminPricingDiscountsPage />,
+            element: withSuspense(<AdminPricingDiscountsPage />),
           },
           // 7. Reports & Analytics
           {
             path: 'reports',
-            element: <AdminReportsPage />,
+            element: withSuspense(<AdminReportsPage />),
           },
           // 8. System Settings & Communications
           {
             path: 'settings',
-            element: <AdminSettingsPage />,
+            element: withSuspense(<AdminSettingsPage />),
           },
           // 9. Administrator Guidelines & SOP Manual
           {
             path: 'guidelines',
-            element: <AdminGuidelinesPage />,
+            element: withSuspense(<AdminGuidelinesPage />),
           },
           // My Profile
           {
             path: 'profile',
-            element: <AdminProfilePage />,
+            element: withSuspense(<AdminProfilePage />),
           },
           // Removed features / redirects
           {
@@ -387,7 +389,7 @@ const router = createBrowserRouter([
       // Fallback
       {
         path: '*',
-        element: <Navigate to="/" replace />,
+        element: withSuspense(<NotFoundPage />),
       },
     ],
   },

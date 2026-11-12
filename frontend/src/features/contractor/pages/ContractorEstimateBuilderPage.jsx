@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { getDeckById, getDecks } from '../../customer/api/decksApi';
 import { createEstimate } from '../../customer/api/estimatesApi';
+import { toast } from '../../../utils/toast';
 
 export default function ContractorEstimateBuilderPage() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export default function ContractorEstimateBuilderPage() {
     try {
       const targetDeckId = currentDeck?._id || (deckId && deckId.length === 24 ? deckId : null);
       if (!targetDeckId) {
-        alert('Please create or select a deck project before generating an estimate.');
+        toast.warning('Please create or select a deck project before generating an estimate.');
         navigate('/contractor/decks/new');
         return;
       }
@@ -79,10 +80,10 @@ export default function ContractorEstimateBuilderPage() {
         floorArea: area,
         notes: `Commercial quote: Subtotal $${subtotal.toFixed(2)}, Markup (${markupPercent}%) $${markupAmount.toFixed(2)}, Discount (${discountPercent}%) -$${discountAmount.toFixed(2)}, Total $${totalEstimate.toFixed(2)}`,
       });
-      alert('Commercial estimate generated and saved to database successfully!');
+      toast.success('Commercial estimate generated and saved to database successfully!');
       navigate('/contractor/estimates');
     } catch (err) {
-      alert(err?.message || 'Failed to generate estimate.');
+      toast.error(err?.message || 'Failed to generate estimate.');
     } finally {
       setSubmitting(false);
     }
@@ -126,17 +127,17 @@ export default function ContractorEstimateBuilderPage() {
       </div>
 
       {/* 3. PROJECT METADATA CARD */}
-      <div style={styles.projectMetaCard}>
+      <div className="drp-flex-wrap-mobile" style={{ ...styles.projectMetaCard, flexWrap: 'wrap', gap: '12px 28px' }}>
         <div><strong>Project:</strong> {currentDeck?.projectName || 'Riverside Deck Restoration'}</div>
         <div><strong>Deck Area:</strong> {area} sq ft</div>
       </div>
 
       {/* 4. TWO-COLUMN: ITEMIZED TABLE (LEFT) + ESTIMATE SUMMARY (RIGHT) */}
-      <div style={styles.mainGrid}>
+      <div className="drp-grid-collapse-lg" style={styles.mainGrid}>
         {/* Left: Estimate Breakdown */}
         <div style={styles.tableCard}>
           <h2 style={styles.cardHeading}>Estimate Breakdown</h2>
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>

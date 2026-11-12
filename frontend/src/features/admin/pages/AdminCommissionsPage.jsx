@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { adminCommissionApi } from '../api/adminCommissionApi';
 import { adminDiscountApi } from '../api/adminDiscountApi';
 import { adminVerificationApi } from '../api/adminVerificationApi';
+import { getErrorMessage } from '../../../api/apiErrors';
 
 export default function AdminCommissionsPage() {
   const [activeTab, setActiveTab] = useState('commissions'); // 'commissions' | 'commissionPolicies' | 'discountPolicies'
@@ -92,7 +93,7 @@ export default function AdminCommissionsPage() {
       setCommissions(data.data || []);
       setCommissionPagination(data.pagination || { page: 1, totalPages: 1, total: 0 });
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to load commissions.');
+      setError(getErrorMessage(err, 'Failed to load commissions.'));
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function AdminCommissionsPage() {
       const data = await adminCommissionApi.getPolicies();
       setCommPolicies(data.data || []);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to load commission policies.');
+      setError(getErrorMessage(err, 'Failed to load commission policies.'));
     } finally {
       setLoading(false);
     }
@@ -120,7 +121,7 @@ export default function AdminCommissionsPage() {
       const data = await adminDiscountApi.getPolicies();
       setDiscPolicies(data.data || []);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to load discount policies.');
+      setError(getErrorMessage(err, 'Failed to load discount policies.'));
     } finally {
       setLoading(false);
     }
@@ -143,7 +144,7 @@ export default function AdminCommissionsPage() {
       setSelectedCommission(null);
       loadCommissions(commissionPagination.page);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to review commission.');
+      setError(getErrorMessage(err, 'Failed to review commission.'));
     } finally {
       setLoading(false);
     }
@@ -167,7 +168,7 @@ export default function AdminCommissionsPage() {
       setPaymentNotes('');
       loadCommissions(commissionPagination.page);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to record payment.');
+      setError(getErrorMessage(err, 'Failed to record payment.'));
     } finally {
       setLoading(false);
     }
@@ -192,7 +193,7 @@ export default function AdminCommissionsPage() {
       setActionSuccess(`Commission policy marked ${newStatus}.`);
       loadCommissionPolicies();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to update commission policy.');
+      setError(getErrorMessage(err, 'Failed to update commission policy.'));
     }
   }
 
@@ -218,7 +219,7 @@ export default function AdminCommissionsPage() {
       setIsCreateCommPolicyModalOpen(false);
       loadCommissionPolicies();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to create commission policy.');
+      setError(getErrorMessage(err, 'Failed to create commission policy.'));
     } finally {
       setLoading(false);
     }
@@ -232,7 +233,7 @@ export default function AdminCommissionsPage() {
       setActionSuccess(`Discount policy marked ${newStatus}.`);
       loadDiscountPolicies();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to update discount policy.');
+      setError(getErrorMessage(err, 'Failed to update discount policy.'));
     }
   }
 
@@ -258,7 +259,7 @@ export default function AdminCommissionsPage() {
       setIsCreateDiscPolicyModalOpen(false);
       loadDiscountPolicies();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to create discount policy.');
+      setError(getErrorMessage(err, 'Failed to create discount policy.'));
     } finally {
       setLoading(false);
     }
@@ -297,7 +298,7 @@ export default function AdminCommissionsPage() {
       setSelectedContractorId('');
       setAssignNotes('');
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to assign policy.');
+      setError(getErrorMessage(err, 'Failed to assign policy.'));
     }
   }
 
@@ -310,7 +311,7 @@ export default function AdminCommissionsPage() {
       const res = await adminDiscountApi.getPolicyAssignments(assignPolicyId);
       setCurrentAssignments(res.data || []);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to remove assignment.');
+      setError(getErrorMessage(err, 'Failed to remove assignment.'));
     }
   }
 
@@ -437,7 +438,7 @@ export default function AdminCommissionsPage() {
           ) : commissions.length === 0 ? (
             <div style={styles.emptyBox}>No commission records found matching criteria.</div>
           ) : (
-            <div style={styles.card}>
+            <div className="drp-table-wrap" style={styles.card}>
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeader}>
@@ -548,7 +549,7 @@ export default function AdminCommissionsPage() {
             </button>
           </div>
 
-          <div style={styles.card}>
+          <div className="drp-table-wrap" style={styles.card}>
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeader}>
@@ -620,7 +621,7 @@ export default function AdminCommissionsPage() {
             </button>
           </div>
 
-          <div style={styles.card}>
+          <div className="drp-table-wrap" style={styles.card}>
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeader}>
@@ -817,10 +818,10 @@ export default function AdminCommissionsPage() {
 
       {/* MODAL 3: COMMISSION DETAILS & HISTORY */}
       {selectedCommission && !isReviewModalOpen && !isPaymentModalOpen && (
-        <div style={styles.modalOverlay}>
-          <div style={{ ...styles.modalBox, maxWidth: '640px' }}>
+        <div className="drp-modal-overlay" style={styles.modalOverlay}>
+          <div className="drp-modal-card" style={{ ...styles.modalBox, maxWidth: '640px' }}>
             <h3 style={styles.modalTitle}>Commission #{selectedCommission.commissionNumber}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', marginBottom: '16px' }}>
+            <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', marginBottom: '16px' }}>
               <div><strong>Status:</strong> {selectedCommission.status}</div>
               <div><strong>Calculated Amount:</strong> ${Number(selectedCommission.calculatedAmount || 0).toFixed(2)}</div>
               <div><strong>Basis Amount:</strong> ${Number(selectedCommission.basisAmount || 0).toFixed(2)}</div>

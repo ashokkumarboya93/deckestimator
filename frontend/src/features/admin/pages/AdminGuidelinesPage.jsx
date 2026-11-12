@@ -142,7 +142,7 @@ export default function AdminGuidelinesPage() {
       </div>
 
       {/* Main Two-Column Handbook Layout */}
-      <div style={styles.handbookGrid}>
+      <div className="drp-grid-collapse" style={styles.handbookGrid}>
         {/* Navigation Sidebar */}
         <aside style={styles.navCol}>
           <div style={styles.searchBox}>
@@ -364,7 +364,7 @@ export default function AdminGuidelinesPage() {
               </p>
 
               <h3 style={styles.sectionHeading}>Table Columns & Features</h3>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>

@@ -2,8 +2,9 @@
 // Deck Estimator — Customer Enquiry Modal (Phase 8)
 // =============================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { leadApi } from '../api/leadApi';
+import { getErrorMessage } from '../../../api/apiErrors';
 
 export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSuccess }) {
   const [subject, setSubject] = useState('');
@@ -13,6 +14,17 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
   const [additionalNotes, setAdditionalNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -45,71 +57,78 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
       }
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Failed to submit enquiry.');
+      setError(getErrorMessage(err, 'Failed to submit enquiry.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Request Professional Restoration
-            </h2>
-            <p className="text-xs text-slate-500">Submit your project enquiry to match with approved local deck contractors.
+    <div style={modalStyles.overlay} className="drp-modal-overlay" onClick={onClose}>
+      <div
+        style={modalStyles.card}
+        className="drp-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="enquiry-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={modalStyles.header}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h2 id="enquiry-modal-title" style={modalStyles.title}>Request Professional Restoration</h2>
+            <p style={modalStyles.subtitle}>
+              Submit your project enquiry to match with approved local deck contractors.
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+            aria-label="Close enquiry modal"
+            style={modalStyles.closeBtn}
+            className="drp-touch-btn"
           >
-            
+            &times;
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+          <div style={modalStyles.errorBanner}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Enquiry Subject *
-            </label>
+        <form onSubmit={handleSubmit} style={modalStyles.form}>
+          <div style={modalStyles.field}>
+            <label style={modalStyles.label}>Enquiry Subject *</label>
             <input
               type="text"
               value={subject}
-              onChange={(e) =>setSubject(e.target.value)}
+              onChange={(e) => setSubject(e.target.value)}
               placeholder="e.g. Cedar Deck Restoration & Power Washing"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              style={modalStyles.input}
               required
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Project Description & Requirements *
-            </label>
+          <div style={modalStyles.field}>
+            <label style={modalStyles.label}>Project Description &amp; Requirements *</label>
             <textarea
               rows={4}
               value={message}
-              onChange={(e) =>setMessage(e.target.value)}
+              onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe your timeline, desired finish, accessibility, or any questions for the contractor..."
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              style={modalStyles.textarea}
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Preferred Contact Method
-              </label>
+          <div style={modalStyles.twoColRow} className="drp-grid-collapse">
+            <div style={modalStyles.field}>
+              <label style={modalStyles.label}>Preferred Contact Method</label>
               <select
                 value={preferredContactMethod}
-                onChange={(e) =>setPreferredContactMethod(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                onChange={(e) => setPreferredContactMethod(e.target.value)}
+                style={modalStyles.input}
               >
                 <option value="any">Any (Phone or Email)</option>
                 <option value="phone">Phone Call</option>
@@ -117,43 +136,42 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Preferred Contact Time
-              </label>
+            <div style={modalStyles.field}>
+              <label style={modalStyles.label}>Preferred Contact Time</label>
               <input
                 type="text"
                 value={preferredContactTime}
-                onChange={(e) =>setPreferredContactTime(e.target.value)}
+                onChange={(e) => setPreferredContactTime(e.target.value)}
                 placeholder="e.g. Weekdays 2-5 PM"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                style={modalStyles.input}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Additional Notes (Optional)
-            </label>
+          <div style={modalStyles.field}>
+            <label style={modalStyles.label}>Additional Notes (Optional)</label>
             <input
               type="text"
               value={additionalNotes}
-              onChange={(e) =>setAdditionalNotes(e.target.value)}
+              onChange={(e) => setAdditionalNotes(e.target.value)}
               placeholder="Gate code, dogs on premises, parking notes, etc."
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              style={modalStyles.input}
             />
           </div>
 
-          <div className="mt-6 flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <div style={modalStyles.actions} className="drp-flex-wrap-mobile">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >Cancel
+              style={modalStyles.cancelBtn}
+            >
+              Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50"
+              style={{ ...modalStyles.submitBtn, opacity: loading ? 0.6 : 1 }}
             >
               {loading ? 'Submitting...' : 'Submit Enquiry'}
             </button>
@@ -163,4 +181,143 @@ export default function EnquiryModal({ isOpen, onClose, deckId, estimateId, onSu
     </div>
   );
 }
+
+const modalStyles = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 9999,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backdropFilter: 'blur(3px)',
+    padding: '16px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: '580px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    borderRadius: '14px',
+    backgroundColor: '#ffffff',
+    padding: '24px',
+    boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.28)',
+    border: '1px solid #e2e8f0',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '12px',
+    borderBottom: '1px solid #e2e8f0',
+    paddingBottom: '12px',
+  },
+  title: {
+    margin: 0,
+    fontSize: '1.15rem',
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  subtitle: {
+    margin: '4px 0 0',
+    fontSize: '0.82rem',
+    color: '#64748b',
+  },
+  closeBtn: {
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    color: '#475569',
+    width: '36px',
+    height: '36px',
+    fontSize: '20px',
+    lineHeight: '1',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  errorBanner: {
+    marginTop: '14px',
+    borderRadius: '8px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    padding: '10px 12px',
+    fontSize: '0.88rem',
+    color: '#b91c1c',
+  },
+  form: {
+    marginTop: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    minWidth: 0,
+  },
+  twoColRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '14px',
+  },
+  label: {
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: '#475569',
+  },
+  input: {
+    width: '100%',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    padding: '10px 12px',
+    fontSize: '0.9rem',
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+  },
+  textarea: {
+    width: '100%',
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    padding: '10px 12px',
+    fontSize: '0.9rem',
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+    resize: 'vertical',
+  },
+  actions: {
+    marginTop: '6px',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    borderTop: '1px solid #e2e8f0',
+    paddingTop: '14px',
+  },
+  cancelBtn: {
+    borderRadius: '8px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    color: '#334155',
+    padding: '9px 16px',
+    fontSize: '0.88rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  submitBtn: {
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: '#d97706',
+    color: '#ffffff',
+    padding: '9px 18px',
+    fontSize: '0.88rem',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+};
 

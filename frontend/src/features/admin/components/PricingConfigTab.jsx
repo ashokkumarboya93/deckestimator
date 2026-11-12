@@ -234,8 +234,9 @@ export default function PricingConfigTab() {
                 type="button"
                 onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
+                aria-label="Close modal"
               >
-                
+                &times;
               </button>
             </div>
 
@@ -592,10 +593,11 @@ const styles = {
   },
   row: {
     display: 'flex',
+    flexWrap: 'wrap',
     gap: '16px',
   },
   col: {
-    flex: 1,
+    flex: '1 1 min(100%, 220px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',

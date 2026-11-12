@@ -160,7 +160,7 @@ export default function ContractorEstimatesPage() {
             Create, manage, and track estimates for your deck projects.
           </p>
         </div>
-        <div style={styles.heroImageWrap}>
+        <div className="drp-hide-mobile" style={styles.heroImageWrap}>
           <img
             src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=500&q=80"
             alt="Estimates Desk"
@@ -170,7 +170,7 @@ export default function ContractorEstimatesPage() {
       </div>
 
       {/* 2. FOUR KPI CARDS */}
-      <div style={styles.kpiGrid}>
+      <div className="drp-grid-2-mobile" style={styles.kpiGrid}>
         <div style={styles.kpiCard}>
           <div style={styles.kpiIconBox}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -229,7 +229,7 @@ export default function ContractorEstimatesPage() {
       </div>
 
       {/* 3. CONTROLS BAR: SEARCH + STATUS + REFRESH */}
-      <div style={styles.controlsBar}>
+      <div className="drp-flex-wrap-mobile" style={styles.controlsBar}>
         <div style={styles.searchWrap}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
             <circle cx="11" cy="11" r="8" />
@@ -277,6 +277,7 @@ export default function ContractorEstimatesPage() {
             Loading estimates...
           </div>
         ) : (
+          <div className="drp-table-wrap">
           <table style={styles.table}>
             <thead>
               <tr style={styles.thRow}>
@@ -342,6 +343,7 @@ export default function ContractorEstimatesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* 5. PAGINATION FOOTER */}

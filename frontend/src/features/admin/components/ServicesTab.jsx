@@ -413,8 +413,9 @@ export default function ServicesTab() {
                 type="button"
                 onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
+                aria-label="Close modal"
               >
-                
+                &times;
               </button>
             </div>
 
@@ -423,7 +424,7 @@ export default function ServicesTab() {
             <form onSubmit={handleModalSubmit} style={styles.modalFormScrollable}>
               {/* Section 1: Identification */}
               <h4 style={styles.sectionHeader}>1. Service Identification</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Service Name <span style={{ color: '#d9534f' }}>*</span>
                   </label>
@@ -451,7 +452,7 @@ export default function ServicesTab() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Category <span style={{ color: '#d9534f' }}>*</span>
                   </label>
@@ -501,7 +502,7 @@ export default function ServicesTab() {
 
               {/* Section 2: Measurement */}
               <h4 style={styles.sectionHeader}>2. Unit & Operational Measurement</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Measurement Unit</label>
                   <select
@@ -557,7 +558,7 @@ export default function ServicesTab() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Preparation Instructions</label>
                   <textarea
@@ -839,6 +840,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '16px',
     zIndex: 9999,
   },
   modalContentLarge: {

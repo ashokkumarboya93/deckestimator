@@ -41,23 +41,33 @@ export default function AdminDashboardPage() {
   const [hoveredProjSlice, setHoveredProjSlice] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
 
-  // Initial load + Continuous Auto-Update (every 10s & on window focus)
+  // Initial load + Continuous Auto-Update (every 20s when visible & on window focus/return)
   useEffect(() => {
+    let lastLoadedAt = Date.now();
     loadDashboard(true);
 
     const interval = setInterval(() => {
-      loadDashboard(false);
-    }, 10000);
+      if (!document.hidden) {
+        lastLoadedAt = Date.now();
+        loadDashboard(false);
+      }
+    }, 20000);
 
-    const handleFocus = () => {
+    const handleFocusOrVisibility = () => {
+      if (document.hidden) return;
+      const now = Date.now();
+      if (now - lastLoadedAt < 3000) return;
+      lastLoadedAt = now;
       loadDashboard(false);
     };
 
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleFocusOrVisibility);
+    document.addEventListener('visibilitychange', handleFocusOrVisibility);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', handleFocusOrVisibility);
+      document.removeEventListener('visibilitychange', handleFocusOrVisibility);
     };
   }, [dateRange]);
 
@@ -278,9 +288,9 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div style={styles.container}>
+    <div className="drp-page-pad" style={styles.container}>
       {/* 1. TOP HEADER & DATE RANGE CONTROLS */}
-      <div style={styles.header}>
+      <div className="drp-flex-wrap-mobile" style={styles.header}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={styles.title}>Dashboard</h1>
@@ -525,7 +535,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 4. MIDDLE ROW: Business Activity Trend + Lead Overview */}
-      <div style={styles.middleRow}>
+      <div className="drp-grid-collapse-lg" style={styles.middleRow}>
         {/* Business Activity Trend (Interactive Multi-Line SVG Chart) */}
         <div style={styles.trendCard}>
           <div style={styles.sectionHeader}>
@@ -788,7 +798,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 5. ROW 4: Exactly 2 Components (Project Overview Plot + 🔥 Hot Priority Leads) */}
-      <div style={styles.rowTwoCol}>
+      <div className="drp-grid-collapse-lg" style={styles.rowTwoCol}>
         {/* Component 1: Project Overview (Interactive Donut Chart) */}
         <div style={styles.bottomProjectCard}>
           <div style={styles.sectionHeader}>
@@ -973,7 +983,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 6. ROW 5: Exactly 2 Components (Recent Activities + Interactive User Distribution Bar Plot) */}
-      <div style={styles.rowTwoColBottom}>
+      <div className="drp-grid-collapse-lg" style={styles.rowTwoColBottom}>
         {/* Component 1: Recent Activities Window */}
         <div style={styles.bottomActivityCard}>
           <div style={styles.sectionHeader}>
@@ -1250,13 +1260,14 @@ const styles = {
     width: '100%',
     maxWidth: '100%',
     boxSizing: 'border-box',
-    overflowX: 'hidden',
+    overflowX: 'clip',
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: '12px',
     marginBottom: '20px',
     width: '100%',
     boxSizing: 'border-box',
@@ -1330,7 +1341,7 @@ const styles = {
   },
   cardsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 215px), 1fr))',
     gap: '14px',
     marginBottom: '14px',
     width: '100%',

@@ -86,7 +86,7 @@ export default function ContractorDocumentDetailPage() {
       </div>
 
       {/* 3. TWO-COLUMN: PREVIEW CANVAS (LEFT) + INFO CARD (RIGHT) */}
-      <div style={styles.mainGrid}>
+      <div className="drp-grid-collapse-lg" style={styles.mainGrid}>
         {/* Left: Document Preview Canvas */}
         <div style={styles.previewCard}>
           <div style={styles.certBox}>

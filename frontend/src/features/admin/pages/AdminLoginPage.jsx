@@ -7,11 +7,14 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import mainLogo from '../../../assets/images/Main_Logo_v2.png';
+import { useMediaQuery } from '../../../hooks/useViewport';
 
 export default function AdminLoginPage() {
   const { adminLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isStacked = useMediaQuery('(max-width: 900px)');
+  const isCompact = useMediaQuery('(max-width: 480px)');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,11 +49,21 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={{ ...styles.pageContainer, flexDirection: isStacked ? 'column' : 'row' }}>
       {/* Left Column: Bright Executive Admin Card */}
-      <div style={styles.formColumn}>
+      <div
+        style={{
+          ...styles.formColumn,
+          padding: isCompact ? '24px 14px' : isStacked ? '28px 20px' : '40px 24px',
+        }}
+      >
         <div style={styles.formWrapper}>
-          <div style={styles.card}>
+          <div
+            style={{
+              ...styles.card,
+              padding: isCompact ? '26px 20px' : '38px 38px 34px 38px',
+            }}
+          >
             {/* Distinctive Orange Crown Accent Line */}
             <div style={styles.cardCrownAccent} />
 
@@ -210,7 +223,12 @@ export default function AdminLoginPage() {
       </div>
 
       {/* Right Column: Hero Visual Showcase */}
-      <div style={styles.heroColumn}>
+      <div
+        style={{
+          ...styles.heroColumn,
+          padding: isCompact ? '32px 20px' : isStacked ? '36px 24px' : '60px 64px',
+        }}
+      >
         <div style={styles.heroOverlay} />
 
         {/* Decorative Wave Overlay at bottom right */}

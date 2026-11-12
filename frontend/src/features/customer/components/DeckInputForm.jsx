@@ -1050,7 +1050,7 @@ const styles = {
   },
   grid2: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
   },
   errorText: {
@@ -1063,7 +1063,7 @@ const styles = {
   },
   shapeGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
     gap: '12px',
   },
   shapeCard: {
@@ -1118,7 +1118,7 @@ const styles = {
   },
   checkboxGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))',
     gap: '10px',
   },
   checkboxCard: {
@@ -1132,7 +1132,7 @@ const styles = {
   },
   conditionGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))',
     gap: '12px',
   },
   conditionCard: {

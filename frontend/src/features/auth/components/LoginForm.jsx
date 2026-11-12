@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getErrorMessage } from '../../../api/apiErrors';
+import { getErrorMessage, getErrorStatus } from '../../../api/apiErrors';
 import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export function LoginForm() {
@@ -85,7 +85,7 @@ export function LoginForm() {
       }, 500);
     } catch (err) {
       const msg = getErrorMessage(err);
-      if (err?.response?.status === 401) {
+      if (getErrorStatus(err) === 401) {
         setError('Invalid email or password. Please verify your credentials or register for an account.');
       } else {
         setError(msg);

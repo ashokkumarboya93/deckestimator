@@ -133,7 +133,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* 2. Tabs */}
-      <div style={styles.tabBar}>
+      <div className="drp-tab-scroll" style={styles.tabBar}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -358,7 +358,7 @@ export default function AdminReportsPage() {
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Revenue Breakdown & Margin Streams</h3>
               <p style={styles.cardSub}>Financial performance across materials, labor, and commission margins.</p>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -424,7 +424,7 @@ export default function AdminReportsPage() {
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Contractor Roster Activity</h3>
               <p style={styles.cardSub}>Productivity and completed deck restoration statistics.</p>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -460,7 +460,7 @@ export default function AdminReportsPage() {
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Lumber & Chemical Surface Demand</h3>
               <p style={styles.cardSub}>Wood species distribution aggregated across all active estimates.</p>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -494,7 +494,7 @@ export default function AdminReportsPage() {
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>Calculator Benchmark & Accuracy</h3>
               <p style={styles.cardSub}>Real-time platform pricing accuracy across active database estimates.</p>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -543,7 +543,7 @@ export default function AdminReportsPage() {
             <div style={styles.card}>
               <h3 style={styles.cardTitle}>System Audit Trail</h3>
               <p style={styles.cardSub}>Chronological log of administrative actions, pricing edits, and progress adjustments.</p>
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -705,7 +705,7 @@ const styles = {
   // Pastel Pill Summary Cards
   cardsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '14px',
     marginBottom: '20px',
   },
@@ -846,7 +846,7 @@ const styles = {
   // Chart Grid
   chartsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
     gap: '16px',
     marginBottom: '20px',
   },

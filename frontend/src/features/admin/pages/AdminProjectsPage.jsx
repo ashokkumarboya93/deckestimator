@@ -393,7 +393,7 @@ export default function AdminProjectsPage() {
             </p>
           </div>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -495,8 +495,8 @@ export default function AdminProjectsPage() {
 
       {/* 5. Update Life Cycle Stage Modal */}
       {stageModal.open && stageModal.project && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalBox}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay}>
+          <div className="drp-modal-card" style={styles.modalBox}>
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={styles.modalTitle}>Update Life Cycle Stage</h3>
@@ -591,9 +591,9 @@ export default function AdminProjectsPage() {
 
       {/* 6. View Details Modal (Expanded Comprehensive Report Preview) */}
       {isDetailsModalOpen && selectedProject && (
-        <div style={styles.modalOverlay}>
-          <div style={{ ...styles.modalBox, maxWidth: '960px', width: '95vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={styles.modalHeader}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay}>
+          <div className="drp-modal-card" style={{ ...styles.modalBox, maxWidth: '960px', width: '95vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="drp-flex-wrap-mobile" style={styles.modalHeader}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h3 style={styles.modalTitle}>{selectedProject.title || selectedProject.projectName}</h3>
@@ -1082,6 +1082,7 @@ const styles = {
   headerActions: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: '10px',
   },
   shinyExportBtn: {
@@ -1120,7 +1121,7 @@ const styles = {
   // Pastel Pill Summary Cards
   cardsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 215px), 1fr))',
     gap: '12px',
     marginBottom: '18px',
   },
@@ -1696,7 +1697,7 @@ const styles = {
   },
   stageChoiceGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
     gap: '10px',
   },
   stageChoiceCard: {

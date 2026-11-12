@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
+import { toast } from '../../../utils/toast';
 
 const TABS = [
   { id: 'fields', label: 'Estimator Form Fields' },
@@ -111,7 +112,7 @@ export default function AdminEstimatorConfigPage() {
 
   const handleSaveField = async () => {
     if (!fieldModal.data.fieldKey || !fieldModal.data.label) {
-      alert('Field Key and Label are required.');
+      toast.warning('Field Key and Label are required.');
       return;
     }
     setSaving(true);
@@ -166,7 +167,7 @@ export default function AdminEstimatorConfigPage() {
 
   const handleSaveDependency = async () => {
     if (!depModal.data.sourceField || !depModal.data.targetField) {
-      alert('Source and target fields are required.');
+      toast.warning('Source and target fields are required.');
       return;
     }
     setSaving(true);
@@ -271,7 +272,7 @@ export default function AdminEstimatorConfigPage() {
               <p style={styles.emptySub}>Click "+ Add Estimator Field" to set up input fields.</p>
             </div>
           ) : (
-            <div style={styles.tableResponsive}>
+            <div className="drp-table-wrap" style={styles.tableResponsive}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -346,7 +347,7 @@ export default function AdminEstimatorConfigPage() {
               <p style={styles.emptySub}>Define dynamic logic e.g., show/hide fields based on material or condition.</p>
             </div>
           ) : (
-            <div style={styles.tableResponsive}>
+            <div className="drp-table-wrap" style={styles.tableResponsive}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -409,14 +410,14 @@ export default function AdminEstimatorConfigPage() {
 
       {/* ADD / EDIT FIELD MODAL */}
       {fieldModal.open && (
-        <div style={styles.modalOverlay} onClick={() => setFieldModal({ open: false, isEdit: false, data: {} })}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setFieldModal({ open: false, isEdit: false, data: {} })}>
+          <div className="drp-modal-card" style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>{fieldModal.isEdit ? 'Edit Estimator Field' : 'Add New Estimator Field'}</h3>
               <button onClick={() => setFieldModal({ open: false, isEdit: false, data: {} })} style={styles.closeBtn}>✕</button>
             </div>
             <div style={styles.modalBody}>
-              <div style={styles.formRow}>
+              <div className="drp-grid-collapse" style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Field Key (Unique Identifier)</label>
                   <input
@@ -440,7 +441,7 @@ export default function AdminEstimatorConfigPage() {
                 </div>
               </div>
 
-              <div style={styles.formRow}>
+              <div className="drp-grid-collapse" style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Section</label>
                   <select
@@ -471,7 +472,7 @@ export default function AdminEstimatorConfigPage() {
                 </div>
               </div>
 
-              <div style={styles.formRow}>
+              <div className="drp-grid-collapse" style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Unit of Measure (Optional)</label>
                   <input
@@ -527,8 +528,8 @@ export default function AdminEstimatorConfigPage() {
 
       {/* ADD / EDIT DEPENDENCY MODAL */}
       {depModal.open && (
-        <div style={styles.modalOverlay} onClick={() => setDepModal({ open: false, isEdit: false, data: {} })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setDepModal({ open: false, isEdit: false, data: {} })}>
+          <div className="drp-modal-card" style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>{depModal.isEdit ? 'Edit Dependency Rule' : 'New Conditional Rule'}</h3>
               <button onClick={() => setDepModal({ open: false, isEdit: false, data: {} })} style={styles.closeBtn}>✕</button>

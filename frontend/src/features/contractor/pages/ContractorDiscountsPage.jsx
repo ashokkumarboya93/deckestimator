@@ -92,7 +92,7 @@ export default function ContractorDiscountsPage() {
       </div>
 
       {/* 2. THREE KPI CARDS */}
-      <div style={styles.kpiRow}>
+      <div className="drp-grid-collapse" style={styles.kpiRow}>
         <div style={styles.kpiCard}>
           <div style={styles.kpiIconBox}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,7 +138,7 @@ export default function ContractorDiscountsPage() {
       {/* 3. ACTIVE DISCOUNT POLICIES TABLE */}
       <div style={styles.tableCard}>
         <h2 style={styles.cardHeading}>Your Active Discount Policies</h2>
-        <div style={styles.tableResponsive}>
+        <div className="drp-table-wrap" style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
               <tr>

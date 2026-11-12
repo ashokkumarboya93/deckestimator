@@ -204,7 +204,7 @@ export default function AdminDiscountsPage() {
             <p style={styles.emptySub}>Approved contractors will appear here with project stats.</p>
           </div>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -272,7 +272,7 @@ export default function AdminDiscountsPage() {
             No discount policy changes recorded yet.
           </p>
         ) : (
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>

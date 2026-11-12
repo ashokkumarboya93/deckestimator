@@ -143,7 +143,7 @@ export default function ContractorCommissionsPage() {
       </div>
 
       {/* 2. FOUR KPI CARDS */}
-      <div style={styles.kpiRow}>
+      <div className="drp-grid-2-mobile" style={styles.kpiRow}>
         <div style={styles.kpiCard}>
           <div style={styles.kpiIconBox}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,7 +198,7 @@ export default function ContractorCommissionsPage() {
       </div>
 
       {/* 3. TABS */}
-      <div style={styles.tabBar}>
+      <div className="drp-tab-scroll" style={styles.tabBar}>
         <button
           type="button"
           onClick={() => setActiveTab('commission')}
@@ -216,7 +216,7 @@ export default function ContractorCommissionsPage() {
       </div>
 
       {/* 4. CONTROLS BAR */}
-      <div style={styles.controlsBar}>
+      <div className="drp-flex-wrap-mobile" style={styles.controlsBar}>
         <div style={styles.searchWrap}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -251,7 +251,7 @@ export default function ContractorCommissionsPage() {
 
       {/* 5. COMMISSIONS TABLE */}
       <div style={styles.tableCard}>
-        <div style={styles.tableResponsive}>
+        <div className="drp-table-wrap" style={styles.tableResponsive}>
           <table style={styles.table}>
             <thead>
               <tr>

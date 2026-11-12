@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getErrorMessage } from '../../../api/apiErrors';
+import { getErrorMessage, getErrorStatus } from '../../../api/apiErrors';
 import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
 export function RegistrationForm() {
@@ -180,7 +180,7 @@ export function RegistrationForm() {
         }
       }, 800);
     } catch (err) {
-      const status = err?.response?.status;
+      const status = getErrorStatus(err);
       const msg = getErrorMessage(err);
       if (status === 409) {
         setEmailConflict(true);
@@ -390,7 +390,7 @@ export function RegistrationForm() {
               {errors.businessName && <p style={styles.fieldErrorText}>{errors.businessName}</p>}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+            <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
               <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
                 <label style={styles.label}>License Number *</label>
                 <div

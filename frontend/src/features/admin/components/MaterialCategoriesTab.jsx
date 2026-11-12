@@ -274,8 +274,9 @@ export default function MaterialCategoriesTab() {
                 type="button"
                 onClick={() =>setIsModalOpen(false)}
                 style={styles.closeBtn}
+                aria-label="Close modal"
               >
-                
+                &times;
               </button>
             </div>
 
@@ -306,7 +307,7 @@ export default function MaterialCategoriesTab() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="drp-grid-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Display Order</label>
                   <input
@@ -558,6 +559,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '16px',
     zIndex: 9999,
   },
   modalContent: {
@@ -565,8 +567,9 @@ const styles = {
     borderRadius: '8px',
     width: '100%',
     maxWidth: '520px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-    overflow: 'hidden',
   },
   modalHeader: {
     padding: '16px 20px',

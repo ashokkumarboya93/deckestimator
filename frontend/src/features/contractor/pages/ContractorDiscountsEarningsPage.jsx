@@ -386,7 +386,7 @@ export default function ContractorDiscountsEarningsPage() {
       {/* 1. Header Banner — Very pale navy blue with shiny style, thin border & money bag graphic */}
       <div style={styles.headerCard}>
         <div style={styles.bannerInner}>
-          <div style={{ flex: 1, minWidth: '280px' }}>
+          <div style={{ flex: '1 1 min(100%, 240px)', minWidth: 0 }}>
             <div style={styles.portalBadge}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
@@ -474,7 +474,7 @@ export default function ContractorDiscountsEarningsPage() {
       </div>
 
       {/* 3. Improved Two Tabs Switcher with Bold Typography & Real Visible Badges */}
-      <div style={styles.tabContainer}>
+      <div style={styles.tabContainer} className="drp-tab-scroll">
         <button
           onClick={() => setActiveTab('discounts')}
           style={{
@@ -517,7 +517,7 @@ export default function ContractorDiscountsEarningsPage() {
           {/* Banner: Contractor Tier Discount Program (Pale shiny color, thin border, & upload docs highlight) */}
           <div style={styles.tierBanner}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1, minWidth: '300px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: '1 1 min(100%, 240px)', minWidth: 0 }}>
                 <div style={styles.tierIconBox}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -1142,7 +1142,7 @@ const styles = {
   // 2. Summary KPI Cards with thin borders
   kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
     marginBottom: '22px',
   },
@@ -1298,8 +1298,10 @@ const styles = {
     border: '1.5px dashed #0284C7',
     borderRadius: '10px',
     padding: '12px 16px',
-    maxWidth: '280px',
-    flexShrink: 0,
+    width: 'min(100%, 280px)',
+    maxWidth: '100%',
+    flexShrink: 1,
+    boxSizing: 'border-box',
     boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
   },
   uploadDocsBtn: {
@@ -1323,7 +1325,7 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1.5px solid #CBD5E1',
     borderRadius: '14px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
   },
   policiesTopBar: {
@@ -1350,8 +1352,8 @@ const styles = {
     border: '1.5px solid #CBD5E1',
     borderRadius: '9999px',
     padding: '8px 16px',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    minWidth: 'min(100%, 300px)',
+    flex: '1 1 min(100%, 300px)',
   },
   pillSearchInput: {
     border: 'none',
@@ -1428,7 +1430,7 @@ const styles = {
   // Bottom Section: Two Columns (Form + Guidelines)
   bottomSectionGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
     gap: '20px',
     marginTop: '6px',
   },
@@ -1657,8 +1659,8 @@ const styles = {
     borderRadius: '9999px',
     padding: '8px 16px',
     width: '100%',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    minWidth: 'min(100%, 300px)',
+    flex: '1 1 min(100%, 300px)',
     maxWidth: '560px',
   },
 

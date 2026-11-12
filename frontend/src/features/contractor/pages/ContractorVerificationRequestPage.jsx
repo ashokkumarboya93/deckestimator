@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { resolveAssetUrl } from '../../../api/client';
 import { getErrorMessage } from '../../../api/apiErrors';
 import mainLogo from '../../../assets/images/Main_Logo_v2.png';
 
@@ -405,7 +406,7 @@ export default function ContractorVerificationRequestPage() {
               </p>
 
               {documents.length > 0 ? (
-                <div style={styles.docTableWrapper}>
+                <div className="drp-table-wrap" style={styles.docTableWrapper}>
                   <table style={styles.table}>
                     <thead>
                       <tr style={styles.tableHeaderRow}>
@@ -438,7 +439,7 @@ export default function ContractorVerificationRequestPage() {
                           <td style={{ ...styles.td, textAlign: 'center' }}>
                             <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                               <a
-                                href={`/api/v1/contractors/documents/${doc.id || doc._id}/file`}
+                                href={resolveAssetUrl(`/api/v1/contractors/documents/${doc.id || doc._id}/file`)}
                                 target="_blank"
                                 rel="noreferrer"
                                 style={styles.viewLink}
@@ -661,7 +662,7 @@ export default function ContractorVerificationRequestPage() {
                 </p>
 
                 <div style={styles.formGrid}>
-                  <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
+                  <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
                     <label style={styles.label}>Street Address</label>
                     <input
                       type="text"
@@ -936,7 +937,7 @@ const styles = {
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '16px 20px',
   },
   fieldGroup: {
@@ -1093,7 +1094,7 @@ const styles = {
   },
   summaryGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
     gap: '12px',
     marginBottom: '24px',
   },
@@ -1136,7 +1137,7 @@ const styles = {
   docTableWrapper: {
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     marginBottom: '20px',
   },
   table: {

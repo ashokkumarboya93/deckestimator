@@ -97,7 +97,7 @@ export default function OperatingHoursBlock({ variant = 'cards', style = {} }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isStacked ? '1fr' : 'repeat(auto-fit, minmax(270px, 1fr))',
+        gridTemplateColumns: isStacked ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 270px), 1fr))',
         gap: isStacked ? '10px' : '14px',
         ...style,
       }}

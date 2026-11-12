@@ -282,7 +282,7 @@ export default function AdminCatalogPage() {
               </div>
 
               {/* Form Fields */}
-              <div style={styles.formRow}>
+              <div className="drp-grid-collapse" style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Title / Name</label>
                   <input
@@ -309,7 +309,7 @@ export default function AdminCatalogPage() {
                 </div>
               </div>
 
-              <div style={styles.formRow}>
+              <div className="drp-grid-collapse" style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Category / Type</label>
                   <input
@@ -444,7 +444,7 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
     gap: '20px',
   },
   itemCard: {

@@ -190,7 +190,7 @@ export default function AdminPricingPage() {
                 <h3 style={styles.cardSectionTitle}>Material Product Gallon Costs</h3>
                 <p style={styles.cardSectionSub}>Standard base supply costs factored into raw material calculations.</p>
 
-                <div style={styles.formGrid}>
+                <div className="drp-grid-collapse" style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.inputLabel}>Deck Stain ($/gallon)</label>
                     <input
@@ -246,7 +246,7 @@ export default function AdminPricingPage() {
                 <h3 style={styles.cardSectionTitle}>Labor & Productivity Rates</h3>
                 <p style={styles.cardSectionSub}>Crew efficiency rates used to estimate total work hours and prep labor.</p>
 
-                <div style={styles.formGrid}>
+                <div className="drp-grid-collapse" style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.inputLabel}>Hourly Labor Rate ($/hour)</label>
                     <input
@@ -304,7 +304,7 @@ export default function AdminPricingPage() {
                 <p style={styles.cardSectionSub}>Coefficients applied to base estimates based on complexity and substrate.</p>
 
                 <h4 style={{ margin: '16px 0 8px', fontSize: '14px', color: '#1e293b' }}>Wood Species Multipliers</h4>
-                <div style={styles.formGrid}>
+                <div className="drp-grid-collapse" style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.inputLabel}>Pressure Treated</label>
                     <input
@@ -372,7 +372,7 @@ export default function AdminPricingPage() {
                 </div>
 
                 <h4 style={{ margin: '20px 0 8px', fontSize: '14px', color: '#1e293b' }}>Condition Multipliers</h4>
-                <div style={styles.formGrid}>
+                <div className="drp-grid-collapse" style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.inputLabel}>Good Condition</label>
                     <input
@@ -428,7 +428,7 @@ export default function AdminPricingPage() {
                 <h3 style={styles.cardSectionTitle}>Quote Margins & Settings</h3>
                 <p style={styles.cardSectionSub}>Markup and margin controls defining quote profitability and safety buffers.</p>
 
-                <div style={styles.formGrid}>
+                <div className="drp-grid-collapse" style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.inputLabel}>Waste Factor (%)</label>
                     <input
@@ -598,11 +598,12 @@ const styles = {
     flexWrap: 'wrap',
   },
   leftCol: {
-    flex: '1 1 540px',
+    flex: '1 1 min(100%, 540px)',
+    minWidth: 0,
   },
   rightCol: {
-    flex: '0 0 340px',
-    minWidth: '300px',
+    flex: '1 1 min(100%, 320px)',
+    minWidth: 0,
   },
   tabBar: {
     display: 'flex',

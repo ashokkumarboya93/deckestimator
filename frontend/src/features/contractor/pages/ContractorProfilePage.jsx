@@ -746,7 +746,7 @@ export default function ContractorProfilePage() {
               />
             </div>
 
-            <div style={{ gridColumn: 'span 2' }}>
+            <div style={{ gridColumn: '1 / -1' }}>
               <label style={styles.label}>Primary Service ZIP Codes (Comma Separated)</label>
               <input
                 type="text"
@@ -761,7 +761,7 @@ export default function ContractorProfilePage() {
           <div style={{ marginTop: '16px' }}>
             <label style={styles.label}>Business Physical Operating Address</label>
             <div style={styles.grid2}>
-              <div style={{ gridColumn: 'span 2' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <input
                   type="text"
                   value={businessStreet}
@@ -779,7 +779,7 @@ export default function ContractorProfilePage() {
                   style={styles.input}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '10px' }}>
                 <input
                   type="text"
                   value={businessState}
@@ -936,7 +936,7 @@ export default function ContractorProfilePage() {
               )}
             </div>
 
-            <div style={styles.tableCard}>
+            <div className="drp-table-wrap" style={styles.tableCard}>
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
@@ -1117,9 +1117,12 @@ export default function ContractorProfilePage() {
 
 const styles = {
   page: {
+    width: '100%',
     maxWidth: '1200px',
     margin: '0 auto',
     padding: '24px 20px 60px 20px',
+    boxSizing: 'border-box',
+    minWidth: 0,
     fontFamily: "'Inter', sans-serif",
   },
   loadingContainer: {
@@ -1187,6 +1190,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    flexWrap: 'wrap',
   },
   cancelBtn: {
     padding: '9px 18px',
@@ -1317,7 +1321,7 @@ const styles = {
   },
   avatarControls: {
     flex: 1,
-    minWidth: '220px',
+    minWidth: 'min(100%, 220px)',
   },
   uploadBtn: {
     display: 'inline-flex',
@@ -1344,12 +1348,12 @@ const styles = {
   },
   grid2: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))',
     gap: '16px',
   },
   grid3: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
     gap: '16px',
   },
   label: {
@@ -1445,7 +1449,7 @@ const styles = {
   tableCard: {
     border: '1.5px solid #CBD5E1',
     borderRadius: '10px',
-    overflow: 'hidden',
+    overflowX: 'auto',
   },
   table: {
     width: '100%',

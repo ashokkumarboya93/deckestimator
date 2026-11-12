@@ -187,7 +187,7 @@ export default function AdminUserManagementPage() {
       )}
 
       {/* Tabs */}
-      <div style={styles.tabContainer}>
+      <div className="drp-tab-scroll" style={styles.tabContainer}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -319,7 +319,7 @@ export default function AdminUserManagementPage() {
             </div>
           </div>
 
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -391,7 +391,7 @@ export default function AdminUserManagementPage() {
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Recent User Moderation & Security Logs</h3>
           <p style={styles.cardSub}>Audit trail of account approvals, status transitions, blocks, and data modifications.</p>
-          <div style={styles.tableResponsive}>
+          <div className="drp-table-wrap" style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -464,7 +464,7 @@ export default function AdminUserManagementPage() {
                 <p style={styles.emptySub}>Try adjusting your search criteria or status filter.</p>
               </div>
             ) : (
-              <div style={styles.tableResponsive}>
+              <div className="drp-table-wrap" style={styles.tableResponsive}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -588,8 +588,8 @@ export default function AdminUserManagementPage() {
 
       {/* USER PROFILE MODAL */}
       {isProfileModalOpen && selectedUser && (
-        <div style={styles.modalOverlay} onClick={() => setIsProfileModalOpen(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setIsProfileModalOpen(false)}>
+          <div className="drp-modal-card" style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h2 style={styles.modalTitle}>User Profile Details</h2>
@@ -692,8 +692,8 @@ export default function AdminUserManagementPage() {
 
       {/* CONFIRMATION / REASON MODAL (BLOCK / UNBLOCK / DELETE) */}
       {actionModal.open && actionModal.user && (
-        <div style={styles.modalOverlay} onClick={() => setActionModal({ open: false, type: '', user: null, reason: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setActionModal({ open: false, type: '', user: null, reason: '' })}>
+          <div className="drp-modal-card" style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>
               {actionModal.type === 'delete'
                 ? 'Confirm Account Deletion'
@@ -740,8 +740,8 @@ export default function AdminUserManagementPage() {
 
       {/* USER REQUEST DETAILS & APPEAL REVIEW MODAL */}
       {requestModal.open && requestModal.request && (
-        <div style={styles.modalOverlay} onClick={() => setRequestModal({ open: false, request: null, notes: '' })}>
-          <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="drp-modal-overlay" role="dialog" aria-modal="true" style={styles.modalOverlay} onClick={() => setRequestModal({ open: false, request: null, notes: '' })}>
+          <div className="drp-modal-card" style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <div>
                 <h2 style={styles.modalTitle}>User Reactivation Appeal Details</h2>
@@ -975,8 +975,9 @@ const styles = {
   searchForm: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: '8px',
-    flex: '1 1 320px',
+    flex: '1 1 min(100%, 300px)',
   },
   searchBox: {
     display: 'flex',
@@ -1268,6 +1269,8 @@ const styles = {
     borderRadius: '12px',
     width: '100%',
     maxWidth: '480px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     padding: '24px',
     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
   },
@@ -1301,7 +1304,7 @@ const styles = {
   },
   profileGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
     gap: '16px',
   },
   profileField: {

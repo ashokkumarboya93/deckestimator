@@ -16,18 +16,19 @@ import { getMyNotifications, markNotificationRead, markAllNotificationsRead } fr
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
+import { useMediaQuery } from '../../../hooks/useViewport';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isDrawerViewport = useMediaQuery('(max-width: 900px)');
+  const isCompactViewport = useMediaQuery('(max-width: 560px)');
 
   const isBlocked = user?.accountStatus === 'blocked' || user?.status === 'blocked';
-  if (isBlocked) {
-    return <BlockedAccountPortal user={user} />;
-  }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -40,9 +41,14 @@ export default function ContractorLayout() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Real-time synchronization of notifications from MongoDB
-  const fetchRealNotifications = useCallback(async () => {
-    if (!user) return;
+  // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
+  const lastNotifFetchRef = useRef(0);
+  const fetchRealNotifications = useCallback(async (force = false) => {
+    if (!user || isBlocked) return;
+    if (!force && document.hidden) return;
+    const now = Date.now();
+    if (!force && now - lastNotifFetchRef.current < 4000) return;
+    lastNotifFetchRef.current = now;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -50,17 +56,23 @@ export default function ContractorLayout() {
     } catch {
       // Fallback silently
     }
-  }, [user]);
+  }, [user, isBlocked]);
 
   useEffect(() => {
-    fetchRealNotifications();
-    const interval = setInterval(fetchRealNotifications, 20000);
-    window.addEventListener('focus', fetchRealNotifications);
+    if (isBlocked) return undefined;
+    fetchRealNotifications(true);
+    const interval = setInterval(() => fetchRealNotifications(false), 30000);
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden) fetchRealNotifications(false);
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', fetchRealNotifications);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
-  }, [fetchRealNotifications]);
+  }, [fetchRealNotifications, isBlocked]);
 
   const handleClearAllNotifications = async () => {
     try {
@@ -87,8 +99,9 @@ export default function ContractorLayout() {
     setShowNotifications(false);
   };
 
-  // Click-outside listener
+  // Click-outside & Escape listener
   useEffect(() => {
+    if (isBlocked) return undefined;
     function handleClickOutside(event) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setShowNotifications(false);
@@ -97,14 +110,35 @@ export default function ContractorLayout() {
         setShowProfileMenu(false);
       }
     }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+        setShowProfileMenu(false);
+        setIsHelpOpen(false);
+        setIsMobileMenuOpen(false);
+        setIsSidebarHovered(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isBlocked]);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setShowNotifications(false);
+    setShowProfileMenu(false);
+    if (isDrawerViewport) {
+      setIsSidebarHovered(false);
+    }
+  }, [location.pathname, isDrawerViewport]);
 
   // Sync contractor profile data
   useEffect(() => {
+    if (!user || isBlocked) return undefined;
     let mounted = true;
     const fetchProfile = () => {
       contractorLeadApi.getProfile()
@@ -122,10 +156,11 @@ export default function ContractorLayout() {
       mounted = false;
       window.removeEventListener('contractor_profile_updated', fetchProfile);
     };
-  }, [user]);
+  }, [user, isBlocked]);
 
   // Sync project name updates from active estimator
   useEffect(() => {
+    if (isBlocked) return undefined;
     const handleProjectName = (e) => {
       if (e?.detail !== undefined) {
         setProjectName(e.detail);
@@ -135,14 +170,21 @@ export default function ContractorLayout() {
     return () => {
       window.removeEventListener('deck_project_name_updated', handleProjectName);
     };
-  }, []);
+  }, [isBlocked]);
 
   const currentPath = location.pathname;
   const isEstimatorPage = currentPath === '/contractor/decks/new' || currentPath.includes('/decks/');
   const isDashboardPage = currentPath === '/contractor' || currentPath === '/contractor/' || currentPath.includes('/dashboard');
 
+  const effectiveDrawerOpen = isDrawerViewport && isMobileMenuOpen;
+  const closeMobileDrawer = () => {
+    setIsMobileMenuOpen(false);
+    setIsSidebarHovered(false);
+  };
+
   // Load live lead counts for badge
   useEffect(() => {
+    if (!user || isBlocked) return undefined;
     let mounted = true;
     contractorLeadApi.getAssignedLeads({ limit: 1 })
       .then((res) => {
@@ -154,7 +196,11 @@ export default function ContractorLayout() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user, isBlocked]);
+
+  if (isBlocked) {
+    return <BlockedAccountPortal user={user} />;
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -183,26 +229,55 @@ export default function ContractorLayout() {
       }}
     >
       {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
+      {/* Mobile Drawer Backdrop */}
+      {effectiveDrawerOpen && (
+        <div
+          onClick={closeMobileDrawer}
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            zIndex: 95,
+          }}
+        />
+      )}
+
       <aside
-        onMouseEnter={() =>setIsSidebarHovered(true)}
-        onMouseLeave={() =>setIsSidebarHovered(false)}
+        id="contractor-portal-sidebar"
+        aria-label="Contractor Navigation"
+        onMouseEnter={() => { if (!isDrawerViewport) setIsSidebarHovered(true); }}
+        onMouseLeave={() => { if (!isDrawerViewport) setIsSidebarHovered(false); }}
+        onClick={(e) => {
+          if (isDrawerViewport && e.target.closest('a, button')) {
+            closeMobileDrawer();
+          }
+        }}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '240px' : '68px',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
+          width: isDrawerViewport ? '240px' : (isSidebarHovered ? '240px' : '68px'),
+          transform: isDrawerViewport
+            ? (effectiveDrawerOpen ? 'translateX(0)' : 'translateX(-100%)')
+            : 'translateX(0)',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.24s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: (isDrawerViewport ? effectiveDrawerOpen : isSidebarHovered)
+            ? '6px 0 28px rgba(15, 23, 42, 0.16)'
+            : 'none',
+          visibility: isDrawerViewport && !effectiveDrawerOpen ? 'hidden' : 'visible',
+          pointerEvents: isDrawerViewport && !effectiveDrawerOpen ? 'none' : 'auto',
+          zIndex: 100,
         }}
       >
         {/* Brand Header */}
-        <div style={styles.brandBox}>
-          {isSidebarHovered ? (
-            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%', padding: '0 4px' }}>
+        <div style={{ ...styles.brandBox, justifyContent: 'space-between', gap: '8px' }}>
+          {(isSidebarHovered || effectiveDrawerOpen) ? (
+            <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flex: 1, minWidth: 0, padding: '0 4px' }}>
               <img
                 src={mainLogo}
                 alt="Deck Restoration Plus"
                 style={{
-                  height: '56px',
-                  maxWidth: '210px',
+                  height: '48px',
+                  maxWidth: isDrawerViewport ? '168px' : '205px',
                   objectFit: 'contain',
                 }}
               />
@@ -220,6 +295,31 @@ export default function ContractorLayout() {
                 }}
               />
             </Link>
+          )}
+          {isDrawerViewport && (
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={closeMobileDrawer}
+              className="drp-touch-btn"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                color: '#ffffff',
+                fontSize: '18px',
+                lineHeight: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              &times;
+            </button>
           )}
         </div>
 
@@ -412,19 +512,65 @@ export default function ContractorLayout() {
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: '68px',
+          marginLeft: isDrawerViewport ? '0px' : '68px',
           minHeight: '100vh',
+          minWidth: 0,
         }}
       >
-        {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
-        <header style={styles.topHeader}>
-          {/* Left: Dynamic Page Title / Breadcrumbs */}
-          <div style={styles.headerLeft}>
+        {/* Top Header Bar */}
+        <header
+          style={{
+            ...styles.topHeader,
+            padding: isCompactViewport ? '8px 12px' : isDrawerViewport ? '0 16px' : '0 28px',
+            height: isCompactViewport ? 'auto' : '65px',
+            minHeight: '60px',
+            gap: '10px',
+          }}
+        >
+          {/* Left: Hamburger (mobile) + Dynamic Page Title / Breadcrumbs */}
+          <div style={{ ...styles.headerLeft, minWidth: 0, flex: 1 }}>
+            {isDrawerViewport && (
+              <button
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded={effectiveDrawerOpen}
+                aria-controls="contractor-portal-sidebar"
+                className="drp-touch-btn"
+                onClick={() => {
+                  const next = !isMobileMenuOpen;
+                  setIsMobileMenuOpen(next);
+                  setIsSidebarHovered(next);
+                }}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
             {isEstimatorPage ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isCompactViewport ? '6px' : '12px', minWidth: 0, flex: 1 }}>
                 <Link
                   to="/contractor/projects"
-                  style={styles.outlinedBackBtn}
+                  style={{
+                    ...styles.outlinedBackBtn,
+                    padding: isCompactViewport ? '6px 9px' : styles.outlinedBackBtn?.padding,
+                    fontSize: isCompactViewport ? '12px' : styles.outlinedBackBtn?.fontSize,
+                    flexShrink: 0,
+                  }}
                   title="← Back to Projects"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f1f5f9';
@@ -439,18 +585,38 @@ export default function ContractorLayout() {
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
-                  <span>Back</span>
+                  {!isCompactViewport && <span>Back</span>}
                 </Link>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
-                  <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactViewport ? '6px' : '10px', minWidth: 0, flex: 1 }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300', flexShrink: 0 }}>|</span>
+                  <span
+                    style={{
+                      fontSize: isCompactViewport ? '0.9rem' : '1.05rem',
+                      fontWeight: '700',
+                      color: '#0f172a',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                    }}
+                  >
                     {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
                   </span>
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h1 style={styles.headerTitle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                <h1
+                  style={{
+                    ...styles.headerTitle,
+                    fontSize: isCompactViewport ? '0.95rem' : styles.headerTitle?.fontSize,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                    margin: 0,
+                  }}
+                >
                   {currentPath.includes('/dashboard') || currentPath === '/contractor' || currentPath === '/contractor/'
                     ? 'Contractor Dashboard'
                     : currentPath.includes('/leads')
@@ -473,8 +639,8 @@ export default function ContractorLayout() {
             )}
           </div>
 
-          {/* Center: Search Bar (Hidden on Contractor Dashboard & Estimator) */}
-          {!isEstimatorPage && !isDashboardPage && (
+          {/* Center: Search Bar (Hidden on Contractor Dashboard, Estimator, and Mobile <=900px) */}
+          {!isEstimatorPage && !isDashboardPage && !isDrawerViewport && (
             <div style={styles.headerCenter}>
               <div style={styles.searchBox}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
@@ -496,11 +662,16 @@ export default function ContractorLayout() {
           )}
 
           {/* Right: Notifications, Profile, Logout */}
-          <div style={styles.headerRight}>
+          <div style={{ ...styles.headerRight, gap: isCompactViewport ? '8px' : '12px', flexShrink: 0 }}>
             {/* Quick Action Button for Contractor */}
             <Link
               to="/contractor/decks/new"
-              style={styles.primaryActionBtn}
+              style={{
+                ...styles.primaryActionBtn,
+                padding: isCompactViewport ? '7px 10px' : styles.primaryActionBtn?.padding,
+                fontSize: isCompactViewport ? '12px' : styles.primaryActionBtn?.fontSize,
+                whiteSpace: 'nowrap',
+              }}
               title="Start New Estimation"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#F0F7FF';
@@ -511,7 +682,7 @@ export default function ContractorLayout() {
                 e.currentTarget.style.borderColor = '#034EA2';
               }}
             >
-              <span>+ New Estimation</span>
+              <span>{isCompactViewport ? '+ New' : '+ New Estimation'}</span>
             </Link>
 
             {/* Notification Bell */}
@@ -532,7 +703,13 @@ export default function ContractorLayout() {
               </button>
 
               {showNotifications && (
-                <div style={styles.notifDropdown}>
+                <div
+                  style={{
+                    ...styles.notifDropdown,
+                    width: 'min(320px, calc(100vw - 24px))',
+                    right: isCompactViewport ? '-48px' : 0,
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid #F1F5F9' }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0F172A' }}>
                       Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
@@ -589,8 +766,11 @@ export default function ContractorLayout() {
 
             {/* Profile Dropdown Pill */}
             <div ref={profileRef} style={{ position: 'relative' }}>
-              <div
-                style={styles.profilePill}
+              <button
+                type="button"
+                aria-expanded={showProfileMenu}
+                aria-haspopup="menu"
+                style={{ ...styles.profilePill, fontFamily: 'inherit' }}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 {user?.avatar ? (
@@ -602,12 +782,14 @@ export default function ContractorLayout() {
                 ) : (
                   <div style={styles.avatarCircle}>{initials}</div>
                 )}
-                <div style={styles.profileText}>
-                  <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
-                  <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
-                </div>
+                {!isCompactViewport && (
+                  <div style={styles.profileText}>
+                    <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
+                    <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
+                  </div>
+                )}
                 <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
-              </div>
+              </button>
 
               {showProfileMenu && (
                 <div style={styles.profileDropdown}>
@@ -653,13 +835,15 @@ export default function ContractorLayout() {
               )}
             </div>
 
-            {/* Standalone Logout Button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-            >Logout
-            </button>
+            {/* Standalone Logout Button (hidden on mobile; available inside Profile dropdown & Drawer) */}
+            {!isDrawerViewport && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={styles.logoutBtn}
+              >Logout
+              </button>
+            )}
           </div>
         </header>
 
@@ -679,17 +863,25 @@ export default function ContractorLayout() {
 
       {/* 3. HELP & GUIDE MODAL */}
       {isHelpOpen && (
-        <div style={styles.modalOverlay} onClick={() =>setIsHelpOpen(false)}>
-          <div style={styles.modalCard} onClick={(e) =>e.stopPropagation()}>
+        <div
+          className="drp-modal-overlay"
+          style={styles.modalOverlay}
+          onClick={() => setIsHelpOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Contractor Portal Guide"
+        >
+          <div className="drp-modal-card" style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>Contractor Portal Guide &amp; Workflow
               </h3>
               <button
                 type="button"
-                onClick={() =>setIsHelpOpen(false)}
+                aria-label="Close Help modal"
+                onClick={() => setIsHelpOpen(false)}
                 style={styles.closeBtn}
               >
-                
+                &times;
               </button>
             </div>
             <div style={styles.modalBody}>

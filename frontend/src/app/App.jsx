@@ -29,20 +29,23 @@ function App() {
   return (
     <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header
+        className="drp-flex-wrap-mobile"
         style={{
-          padding: '0.75rem 2rem',
+          padding: '0.75rem 1.25rem',
           borderBottom: '1px solid #e2e8f0',
           backgroundColor: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
           position: 'sticky',
           top: 0,
           zIndex: 40,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', minWidth: 0 }}>
           <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.45rem', fontWeight: '900', letterSpacing: '-0.5px', color: '#0f172a' }}>
               DECK <span style={{ color: '#16a34a' }}>PRO</span>
@@ -64,7 +67,7 @@ function App() {
           </Link>
 
           {isAuthenticated && (
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {user?.role === 'customer' ? (
                 <>
                   <Link
