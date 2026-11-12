@@ -2,7 +2,7 @@
 // Deck Estimator — Auth Context & Hook
 // =============================================
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { authApi } from '../api/authApi';
 import { getErrorMessage } from '../../../api/apiErrors';
 
@@ -71,10 +71,15 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Sync auth state across tabs and recover cleanly when session cookie clears or expires
   useEffect(() => {
     const handleUnauthorized = () => {
-      if (user) {
+      if (userRef.current) {
         refreshUser();
       }
     };
@@ -89,7 +94,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('drp:unauthorized', handleUnauthorized);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [user, refreshUser]);
+  }, [refreshUser]);
 
   const login = useCallback(async (credentials) => {
     setError(null);
@@ -152,22 +157,25 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const value = {
-    user,
-    contractorProfile,
-    setContractorProfile,
-    loading,
-    error,
-    isAuthenticated: !!user,
-    isCustomer: user?.role === 'customer',
-    isContractor: user?.role === 'contractor',
-    isAdmin: user?.role === 'admin',
-    login,
-    adminLogin,
-    register,
-    logout,
-    refreshUser,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      contractorProfile,
+      setContractorProfile,
+      loading,
+      error,
+      isAuthenticated: !!user,
+      isCustomer: user?.role === 'customer',
+      isContractor: user?.role === 'contractor',
+      isAdmin: user?.role === 'admin',
+      login,
+      adminLogin,
+      register,
+      logout,
+      refreshUser,
+    }),
+    [user, contractorProfile, loading, error, login, adminLogin, register, logout, refreshUser]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

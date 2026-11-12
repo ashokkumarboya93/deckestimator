@@ -4,4 +4,17 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom') || id.includes('react-dom') || /node_modules[\\/]react[\\/]/.test(id)) {
+              return 'react-vendor';
+            }
+          }
+        },
+      },
+    },
+  },
 })

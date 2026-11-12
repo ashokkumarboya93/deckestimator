@@ -112,6 +112,10 @@ userSchema.statics.hashPassword = async function (plainPassword) {
   return bcrypt.hash(plainPassword, salt);
 };
 
+userSchema.index({ accountStatus: 1, role: 1, createdAt: -1 });
+userSchema.index({ role: 1, accountStatus: 1, createdAt: -1 });
+userSchema.index({ createdAt: -1 });
+
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

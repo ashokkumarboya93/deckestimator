@@ -5,6 +5,7 @@
 const PricingConfiguration = require('./pricingConfiguration.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const { NotFoundError } = require('../../shared/errors');
+const { normalizeLeanDoc, normalizeLeanDocs } = require('../../shared/utils/queryUtils');
 
 async function recordAuditLog({
   performedBy,
@@ -70,12 +71,13 @@ async function getPricingConfigurations(query = {}, user = null) {
       .populate('createdBy', 'fullName email')
       .sort({ effectiveFrom: -1, createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     PricingConfiguration.countDocuments(filter),
   ]);
 
   return {
-    configurations: items.map((c) => c.toJSON()),
+    configurations: normalizeLeanDocs(items, { keepUnderscoreId: true }),
     pagination: {
       total,
       page: Number(page),
@@ -86,19 +88,22 @@ async function getPricingConfigurations(query = {}, user = null) {
 }
 
 async function getPricingConfigurationById(id) {
-  const config = await PricingConfiguration.findById(id).populate('createdBy', 'fullName email');
+  const config = await PricingConfiguration.findById(id)
+    .populate('createdBy', 'fullName email')
+    .lean();
   if (!config) {
     throw new NotFoundError('Pricing configuration not found.');
   }
-  return config.toJSON();
+  return normalizeLeanDoc(config, { keepUnderscoreId: true });
 }
 
 async function getActivePricingConfiguration() {
   const config = await PricingConfiguration.findOne({ isActive: true })
-    .sort({ effectiveFrom: -1, createdAt: -1 });
+    .sort({ effectiveFrom: -1, createdAt: -1 })
+    .lean();
 
   if (config) {
-    return config.toJSON();
+    return normalizeLeanDoc(config, { keepUnderscoreId: true });
   }
 
   // Fallback to standard baseline if no configuration is yet created

@@ -3,51 +3,56 @@
 // =============================================
 // Validates request body, params, and query using Joi schemas.
 
+const Joi = require('joi');
+
+/**
+ * Normalize Joi validation error details into a consistent API shape.
+ */
+function mapJoiDetails(error, type) {
+  return error.details.map((d) => ({
+    field: d.path.join('.'),
+    message: d.message,
+    type,
+  }));
+}
+
 /**
  * Create validation middleware for a Joi schema.
- * @param {Object} schema - Joi schema object with optional keys:
- *   { body, params, query }
+ * Supports both structured { body, params, query } schema maps
+ * and single Joi schemas (validated against req[target || 'body']).
+ * @param {Object|import('joi').Schema} schema
+ * @param {'body'|'params'|'query'} [target]
  */
-function validate(schema) {
+function validate(schema, target = null) {
+  const resolved = Joi.isSchema(schema)
+    ? { [target || 'body']: schema }
+    : (schema || {});
+
   return (req, res, next) => {
     const errors = [];
 
-    if (schema.body) {
-      const { error } = schema.body.validate(req.body, { abortEarly: false });
+    if (resolved.body) {
+      const { error, value } = resolved.body.validate(req.body, { abortEarly: false });
       if (error) {
-        errors.push(
-          ...error.details.map((d) => ({
-            field: d.path.join('.'),
-            message: d.message,
-            type: 'body',
-          }))
-        );
+        errors.push(...mapJoiDetails(error, 'body'));
+      } else if (value !== undefined) {
+        req.body = value;
       }
     }
 
-    if (schema.params) {
-      const { error } = schema.params.validate(req.params, { abortEarly: false });
+    if (resolved.params) {
+      const { error, value } = resolved.params.validate(req.params, { abortEarly: false });
       if (error) {
-        errors.push(
-          ...error.details.map((d) => ({
-            field: d.path.join('.'),
-            message: d.message,
-            type: 'params',
-          }))
-        );
+        errors.push(...mapJoiDetails(error, 'params'));
+      } else if (value && typeof value === 'object') {
+        Object.assign(req.params, value);
       }
     }
 
-    if (schema.query) {
-      const { error } = schema.query.validate(req.query, { abortEarly: false });
+    if (resolved.query) {
+      const { error } = resolved.query.validate(req.query, { abortEarly: false });
       if (error) {
-        errors.push(
-          ...error.details.map((d) => ({
-            field: d.path.join('.'),
-            message: d.message,
-            type: 'query',
-          }))
-        );
+        errors.push(...mapJoiDetails(error, 'query'));
       }
     }
 

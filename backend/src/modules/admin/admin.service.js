@@ -33,6 +33,7 @@ const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
 
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../../shared/errors');
+const { normalizeLeanDoc, invalidateCachedKey } = require('../../shared/utils/queryUtils');
 
 // Helper to log audit events
 async function logAdminAction(adminUser, action, entityType, entityId, oldValue, newValue, metadata = {}) {
@@ -89,71 +90,108 @@ async function getDashboardSummary(dateRange = '30d') {
   const priorStart = new Date(startDate.getTime() - durationMs);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
-  // Parallel aggregations for live MongoDB metrics
+  // Consolidated parallel $facet aggregations + lean lists (reduces ~25 DB round-trips to 6)
   const [
-    totalUsers,
-    totalCustomers,
-    totalContractors,
-    totalLeads,
-    hotPriorityLeadsCount,
-    activeProjectsCount,
-    totalEstimates,
-    estimatesValueAgg,
-    completedRevenueAgg,
-    leadStatusCounts,
-    projectStatusCounts,
-    userStatusCounts,
+    [userStats = {}],
+    [leadStats = {}],
+    [estimateStats = {}],
+    [projectStats = {}],
     hotLeadsList,
     auditLogsList,
-    // Prior period counts for real dynamic growth rates
-    usersPrior,
-    usersCurrent,
-    customersPrior,
-    customersCurrent,
-    contractorsPrior,
-    contractorsCurrent,
-    leadsPrior,
-    leadsCurrent,
-    estimatesPrior,
-    estimatesCurrent,
-    projectsPrior,
-    projectsCurrent,
-    estValuePriorAgg,
-    estValueCurrentAgg,
   ] = await Promise.all([
-    User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }),
-    Lead.countDocuments(),
-    // Hot Priority: Leads with latest contact in last 30 days or priority HOT
-    Lead.countDocuments({
-      $or: [
-        { latestContactDate: { $gte: thirtyDaysAgo } },
-        { priority: { $in: ['hot', 'HOT', 'high', 'HIGH'] } },
-        { createdAt: { $gte: thirtyDaysAgo } },
-      ],
-    }),
-    Project.countDocuments({ status: { $in: ['in_progress', 'active'] } }),
-    Estimate.countDocuments(),
-    Estimate.aggregate([
-      { $match: { totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
-    Project.aggregate([
-      { $match: { status: 'completed' } },
-      { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
-      { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
-      { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
-    ]),
-    Lead.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
-    Project.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
     User.aggregate([
       { $match: { accountStatus: { $ne: 'disabled' } } },
-      { $group: { _id: '$accountStatus', count: { $sum: 1 } } },
+      {
+        $facet: {
+          totals: [{ $count: 'count' }],
+          byRole: [{ $group: { _id: '$role', count: { $sum: 1 } } }],
+          byStatus: [{ $group: { _id: '$accountStatus', count: { $sum: 1 } } }],
+          priorPeriod: [
+            { $match: { createdAt: { $gte: priorStart, $lt: startDate } } },
+            { $group: { _id: '$role', count: { $sum: 1 } } },
+          ],
+          currentPeriod: [
+            { $match: { createdAt: { $gte: startDate } } },
+            { $group: { _id: '$role', count: { $sum: 1 } } },
+          ],
+        },
+      },
+    ]),
+    Lead.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
+          hotCount: [
+            {
+              $match: {
+                $or: [
+                  { latestContactDate: { $gte: thirtyDaysAgo } },
+                  { priority: { $in: ['hot', 'HOT', 'high', 'HIGH'] } },
+                  { createdAt: { $gte: thirtyDaysAgo } },
+                ],
+              },
+            },
+            { $count: 'count' },
+          ],
+          byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+          priorPeriod: [
+            { $match: { createdAt: { $gte: priorStart, $lt: startDate } } },
+            { $count: 'count' },
+          ],
+          currentPeriod: [
+            { $match: { createdAt: { $gte: startDate } } },
+            { $count: 'count' },
+          ],
+        },
+      },
+    ]),
+    Estimate.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
+          totalValue: [
+            { $match: { totalAmount: { $gt: 0 } } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+          ],
+          priorCount: [
+            { $match: { createdAt: { $gte: priorStart, $lt: startDate } } },
+            { $count: 'count' },
+          ],
+          currentCount: [
+            { $match: { createdAt: { $gte: startDate } } },
+            { $count: 'count' },
+          ],
+          priorValue: [
+            { $match: { createdAt: { $gte: priorStart, $lt: startDate }, totalAmount: { $gt: 0 } } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+          ],
+          currentValue: [
+            { $match: { createdAt: { $gte: startDate }, totalAmount: { $gt: 0 } } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+          ],
+        },
+      },
+    ]),
+    Project.aggregate([
+      {
+        $facet: {
+          byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+          completedRevenue: [
+            { $match: { status: 'completed' } },
+            { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
+            { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
+            { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
+          ],
+          priorActive: [
+            { $match: { createdAt: { $gte: priorStart, $lt: startDate }, status: { $in: ['in_progress', 'active'] } } },
+            { $count: 'count' },
+          ],
+          currentActive: [
+            { $match: { createdAt: { $gte: startDate }, status: { $in: ['in_progress', 'active'] } } },
+            { $count: 'count' },
+          ],
+        },
+      },
     ]),
     Lead.find({
       $or: [
@@ -162,35 +200,50 @@ async function getDashboardSummary(dateRange = '30d') {
         { createdAt: { $gte: thirtyDaysAgo } },
       ],
     })
+      .select('leadNumber customerSnapshot customerId contractorId contactSource leadSource priority status latestContactDate createdAt name email')
       .sort({ latestContactDate: -1, createdAt: -1 })
       .limit(5)
-      .populate('customerId', 'fullName email phone'),
+      .populate('customerId', 'fullName email phone')
+      .lean(),
     AuditLog.find()
+      .select('createdAt entityType action performedBy metadata entityId')
       .sort({ createdAt: -1 })
       .limit(7)
-      .populate('performedBy', 'fullName email role'),
-    // Growth queries
-    User.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    Lead.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
-    Lead.countDocuments({ createdAt: { $gte: startDate } }),
-    Estimate.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
-    Estimate.countDocuments({ createdAt: { $gte: startDate } }),
-    Project.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, status: { $in: ['in_progress', 'active'] } }),
-    Project.countDocuments({ createdAt: { $gte: startDate }, status: { $in: ['in_progress', 'active'] } }),
-    Estimate.aggregate([
-      { $match: { createdAt: { $gte: priorStart, $lt: startDate }, totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
-    Estimate.aggregate([
-      { $match: { createdAt: { $gte: startDate }, totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
+      .populate('performedBy', 'fullName email role')
+      .lean(),
   ]);
+
+  const sumCounts = (arr) => (arr || []).reduce((acc, row) => acc + (row.count || 0), 0);
+  const roleCount = (arr, roleVal) => (arr || []).find((r) => r._id === roleVal)?.count || 0;
+
+  const totalUsers = userStats.totals?.[0]?.count || 0;
+  const totalCustomers = roleCount(userStats.byRole, ROLES.CUSTOMER);
+  const totalContractors = roleCount(userStats.byRole, ROLES.CONTRACTOR);
+  const userStatusCounts = userStats.byStatus || [];
+  const usersPrior = sumCounts(userStats.priorPeriod);
+  const usersCurrent = sumCounts(userStats.currentPeriod);
+  const customersPrior = roleCount(userStats.priorPeriod, ROLES.CUSTOMER);
+  const customersCurrent = roleCount(userStats.currentPeriod, ROLES.CUSTOMER);
+  const contractorsPrior = roleCount(userStats.priorPeriod, ROLES.CONTRACTOR);
+  const contractorsCurrent = roleCount(userStats.currentPeriod, ROLES.CONTRACTOR);
+
+  const totalLeads = leadStats.total?.[0]?.count || 0;
+  const hotPriorityLeadsCount = leadStats.hotCount?.[0]?.count || 0;
+  const leadStatusCounts = leadStats.byStatus || [];
+  const leadsPrior = leadStats.priorPeriod?.[0]?.count || 0;
+  const leadsCurrent = leadStats.currentPeriod?.[0]?.count || 0;
+
+  const totalEstimates = estimateStats.total?.[0]?.count || 0;
+  const estimatesValueAgg = estimateStats.totalValue || [];
+  const estimatesPrior = estimateStats.priorCount?.[0]?.count || 0;
+  const estimatesCurrent = estimateStats.currentCount?.[0]?.count || 0;
+  const estValuePriorAgg = estimateStats.priorValue || [];
+  const estValueCurrentAgg = estimateStats.currentValue || [];
+
+  const projectStatusCounts = projectStats.byStatus || [];
+  const completedRevenueAgg = projectStats.completedRevenue || [];
+  const projectsPrior = projectStats.priorActive?.[0]?.count || 0;
+  const projectsCurrent = projectStats.currentActive?.[0]?.count || 0;
 
   const estimatedValue = estimatesValueAgg?.[0]?.total ? Math.round(estimatesValueAgg[0].total) : 0;
   const totalRevenue = completedRevenueAgg?.[0]?.total ? Math.round(completedRevenueAgg[0].total) : 0;
@@ -274,7 +327,12 @@ async function getDashboardSummary(dateRange = '30d') {
   // Format Hot Priority Leads Panel from live DB records
   let activeHotLeads = hotLeadsList;
   if (!activeHotLeads || activeHotLeads.length === 0) {
-    activeHotLeads = await Lead.find().sort({ createdAt: -1 }).limit(5).populate('customerId', 'fullName email phone');
+    activeHotLeads = await Lead.find()
+      .select('leadNumber customerSnapshot customerId contractorId contactSource leadSource priority status latestContactDate createdAt name email')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('customerId', 'fullName email phone')
+      .lean();
   }
 
   const formattedHotLeads = activeHotLeads.map((l, idx) => ({
@@ -301,16 +359,16 @@ async function getDashboardSummary(dateRange = '30d') {
   // If AuditLog is empty, fetch live recent records from estimates, projects, users, and leads
   if (formattedActivities.length === 0) {
     const [recentEstimates, recentProjects, recentUsers, recentLeads] = await Promise.all([
-      Estimate.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName email'),
-      Project.find().sort({ updatedAt: -1, createdAt: -1 }).limit(3).populate('customerId contractorId', 'fullName'),
-      User.find().sort({ createdAt: -1 }).limit(3),
-      Lead.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName'),
+      Estimate.find().select('ownerId createdBy estimateNumber totalAmount createdAt').sort({ createdAt: -1 }).limit(3).populate('ownerId createdBy', 'fullName email').lean(),
+      Project.find().select('status projectName projectId progress updatedAt createdAt').sort({ updatedAt: -1, createdAt: -1 }).limit(3).lean(),
+      User.find().select('role fullName email createdAt').sort({ createdAt: -1 }).limit(3).lean(),
+      Lead.find().select('customerSnapshot customerId leadNumber status createdAt name').sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName').lean(),
     ]);
 
     const liveEvents = [];
 
     recentEstimates.forEach((e) => {
-      const custName = e.customerId?.fullName || 'Customer';
+      const custName = e.ownerId?.fullName || e.createdBy?.fullName || 'Customer';
       liveEvents.push({
         id: 'est-' + e._id,
         date: e.createdAt,
@@ -516,29 +574,44 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [users, total, counts] = await Promise.all([
-    User.find(query).sort(sortOption).skip(skip).limit(Number(limit)),
+  const [users, total, [userCountsAgg = {}]] = await Promise.all([
+    User.find(query).select('-passwordHash').sort(sortOption).skip(skip).limit(Number(limit)).lean(),
     User.countDocuments(query),
-    Promise.all([
-      User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ accountStatus: 'active' }),
-      User.countDocuments({ accountStatus: { $in: ['inactive', 'suspended', 'blocked', 'pending_verification'] } }),
+    User.aggregate([
+      {
+        $facet: {
+          totalUsers: [{ $match: { accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          totalCustomers: [{ $match: { role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          totalContractors: [{ $match: { role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          activeUsers: [{ $match: { accountStatus: 'active' } }, { $count: 'count' }],
+          inactiveUsers: [{ $match: { accountStatus: { $in: ['inactive', 'suspended', 'blocked', 'pending_verification'] } } }, { $count: 'count' }],
+        },
+      },
     ]),
   ]);
 
+  const counts = [
+    userCountsAgg.totalUsers?.[0]?.count || 0,
+    userCountsAgg.totalCustomers?.[0]?.count || 0,
+    userCountsAgg.totalContractors?.[0]?.count || 0,
+    userCountsAgg.activeUsers?.[0]?.count || 0,
+    userCountsAgg.inactiveUsers?.[0]?.count || 0,
+  ];
+
   const userIds = users.map((u) => u._id);
-  const [deckCounts, estimateCounts] = await Promise.all([
-    Deck.aggregate([
-      { $match: { ownerId: { $in: userIds } } },
-      { $group: { _id: '$ownerId', count: { $sum: 1 } } },
-    ]),
-    Estimate.aggregate([
-      { $match: { customerId: { $in: userIds } } },
-      { $group: { _id: '$customerId', count: { $sum: 1 } } },
-    ]),
-  ]);
+  const [deckCounts, estimateCounts, contractorProfiles] = userIds.length > 0
+    ? await Promise.all([
+        Deck.aggregate([
+          { $match: { ownerId: { $in: userIds } } },
+          { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+        ]),
+        Estimate.aggregate([
+          { $match: { ownerId: { $in: userIds } } },
+          { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+        ]),
+        ContractorProfile.find({ userId: { $in: userIds } }).lean(),
+      ])
+    : [[], [], []];
 
   const deckMap = {};
   deckCounts.forEach((d) => {
@@ -549,7 +622,6 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
     estMap[e._id.toString()] = e.count;
   });
 
-  const contractorProfiles = await ContractorProfile.find({ userId: { $in: userIds } }).lean();
   const profileMap = {};
   contractorProfiles.forEach((cp) => {
     profileMap[cp.userId.toString()] = cp;
@@ -558,8 +630,9 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
   const enrichedUsers = users.map((u) => {
     const idStr = u._id.toString();
     const cp = profileMap[idStr] || null;
+    const plainUser = normalizeLeanDoc(u);
     return {
-      ...u.toJSON(),
+      ...plainUser,
       userId: `U-${idStr.slice(-4).toUpperCase()}`,
       projectsCount: deckMap[idStr] || 0,
       estimatesCount: estMap[idStr] || 0,
@@ -2342,7 +2415,7 @@ const SETTINGS_KEY_MAP = {
 const SETTINGS_REV_MAP = Object.fromEntries(Object.entries(SETTINGS_KEY_MAP).map(([k, v]) => [v, k]));
 
 async function getSystemSettings() {
-  const settings = await PlatformSetting.find().sort({ category: 1, key: 1 });
+  const settings = await PlatformSetting.find().sort({ category: 1, key: 1 }).lean();
   const byCategory = {
     GENERAL: {},
     NOTIFICATION: {},
@@ -2413,6 +2486,7 @@ async function updateSystemSettings(adminUser, payload) {
     }
   }
 
+  invalidateCachedKey('public_platform_settings');
   await logAdminAction(adminUser, 'SYSTEM_SETTINGS_UPDATE', 'PlatformSetting', null, null, incoming);
   return getSystemSettings();
 }

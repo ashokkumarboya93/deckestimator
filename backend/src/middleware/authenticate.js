@@ -69,12 +69,43 @@ async function authenticate(req, res, next) {
       });
     }
 
+    if (user.accountStatus === ACCOUNT_STATUS.INACTIVE) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCOUNT_INACTIVE',
+          message: 'Your account is inactive. Please contact support.',
+        },
+      });
+    }
+
+    if (user.accountStatus === ACCOUNT_STATUS.BLOCKED) {
+      const fullPath = `${req.baseUrl || ''}${req.path || ''}`.replace(/\/+$/, '');
+      const allowedBlockedEndpoints = new Set([
+        '/api/v1/auth/me',
+        '/api/v1/auth/logout',
+        '/api/v1/users/unblock-request',
+        '/api/v1/users/unblock-request/status',
+      ]);
+
+      if (user.role === 'admin' || !allowedBlockedEndpoints.has(fullPath)) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCOUNT_BLOCKED',
+            message: 'Your account is blocked. Submit a reactivation appeal or contact support.',
+          },
+        });
+      }
+    }
+
     req.user = {
       id: user._id.toString(),
       role: user.role,
       email: user.email,
       fullName: user.fullName || '',
       phone: user.phone || '',
+      accountStatus: user.accountStatus,
     };
 
     next();

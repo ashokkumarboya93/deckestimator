@@ -7,6 +7,8 @@ const multer = require('multer');
 const { authenticate } = require('../../middleware/authenticate');
 const { authorize } = require('../../middleware/authorize');
 const { validate } = require('../../middleware/validate');
+const { uploadLimiter } = require('../../middleware/rateLimiters');
+const { BadRequestError } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
 const contractorController = require('./contractor.controller');
 const {
@@ -17,12 +19,30 @@ const {
 
 const router = express.Router();
 
+const ALLOWED_DOCUMENT_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
 // Document upload config
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
     files: 1,
+  },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_DOCUMENT_MIMES.has(file.mimetype)) {
+      return cb(
+        new BadRequestError(
+          `Unsupported file type '${file.mimetype}'. Supported types: PDF, JPEG, PNG, WebP.`,
+          'INVALID_FILE_TYPE'
+        )
+      );
+    }
+    return cb(null, true);
   },
 });
 
@@ -55,6 +75,7 @@ router.post(
 router.post(
   '/me/verification/documents',
   authorize(ROLES.CONTRACTOR),
+  uploadLimiter,
   upload.single('document'),
   contractorController.uploadDocument
 );

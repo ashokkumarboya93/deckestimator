@@ -72,5 +72,7 @@ const platformSettingSchema = new mongoose.Schema(
   }
 );
 
+platformSettingSchema.index({ isPublic: 1, category: 1 });
+
 module.exports = mongoose.model('PlatformSetting', platformSettingSchema);
 

@@ -1,4 +1,4 @@
-﻿// =============================================
+// =============================================
 // Deck Estimator — Server Entry Point
 // =============================================
 // Validates environment, connects to MongoDB, starts Express.
@@ -22,6 +22,9 @@ async function startServer() {
       console.log(`[Server] Deck Estimator API running on http://localhost:${env.PORT}`);
       console.log(`[Server] Health check: http://localhost:${env.PORT}/api/v1/health`);
     });
+    // Keep-alive longer than Railway/Envoy proxy idle timeout (~60s) to avoid reset 502s
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
 
     // Graceful shutdown
     const shutdown = async (signal) => {

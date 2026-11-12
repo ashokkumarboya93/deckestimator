@@ -82,11 +82,14 @@ async function downloadDocument(req, res, next) {
       req.params.documentId,
       req.user
     );
-    res.setHeader('Content-Type', fileInfo.mimeType);
+    const safeFilename = String(fileInfo.originalFileName || 'document')
+      .replace(/["\r\n\\]/g, '_');
+    res.setHeader('Content-Type', fileInfo.mimeType || 'application/octet-stream');
     res.setHeader(
       'Content-Disposition',
-      `inline; filename="${fileInfo.originalFileName}"`
+      `inline; filename="${safeFilename}"`
     );
+    res.setHeader('Cache-Control', 'private, no-store');
     res.sendFile(fileInfo.filePath);
   } catch (error) {
     next(error);

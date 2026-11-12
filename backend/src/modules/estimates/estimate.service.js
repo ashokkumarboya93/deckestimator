@@ -24,6 +24,7 @@ const {
   ForbiddenError,
 } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
+const { normalizeLeanDocs } = require('../../shared/utils/queryUtils');
 
 async function recordAuditLog({
   performedBy,
@@ -505,12 +506,13 @@ async function getEstimates(query = {}, user) {
       .populate('ownerId', 'fullName email')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     Estimate.countDocuments(filter),
   ]);
 
   return {
-    estimates: items.map((e) => e.toJSON()),
+    estimates: normalizeLeanDocs(items, { keepUnderscoreId: true }),
     pagination: {
       total,
       page: Number(page),
@@ -913,6 +915,9 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   if (!estimate) {
     throw new NotFoundError('Estimate not found.');
   }
+  assertEstimateAccess(estimate, user);
+
+  const userId = user.id || user._id;
 
   // 1. Update estimate status to REQUESTED
   estimate.estimateStatus = 'REQUESTED';
@@ -931,8 +936,8 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   if (!lead) {
     lead = new Lead({
       leadNumber: leadNum,
-      customerId: !isContractor ? user._id : null,
-      contractorId: isContractor ? user._id : null,
+      customerId: !isContractor ? userId : null,
+      contractorId: isContractor ? userId : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
       leadSource: isContractor ? 'contractor_portal' : 'customer_estimator',
@@ -982,13 +987,13 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 3. Create or update Project record
   let project = await Project.findOne({ estimateId: estimate._id });
-  const effectiveCustomerId = !isContractor ? user._id : (estimate.createdFor || estimate.ownerId || estimate.createdBy || user._id);
+  const effectiveCustomerId = !isContractor ? userId : (estimate.createdFor || estimate.ownerId || estimate.createdBy || userId);
   if (!project) {
     project = new Project({
       projectId: estimate.estimateNumber || estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
       projectName: estimate.deckDetails?.projectName || 'Deck Restoration Project',
       customerId: effectiveCustomerId,
-      contractorId: isContractor ? user._id : null,
+      contractorId: isContractor ? userId : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
       status: 'pending',

@@ -9,12 +9,21 @@ const path = require('path');
 const adminController = require('./admin.controller');
 const { authenticate } = require('../../middleware/authenticate');
 const { authorize } = require('../../middleware/authorize');
+const { uploadLimiter } = require('../../middleware/rateLimiters');
+const { BadRequestError } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
 
 const catalogUploadDir = path.join(__dirname, '../../../uploads/catalog');
 if (!fs.existsSync(catalogUploadDir)) {
   fs.mkdirSync(catalogUploadDir, { recursive: true });
 }
+
+const ALLOWED_CATALOG_IMAGE_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
 
 // Multer storage for catalog image uploads
 const storage = multer.diskStorage({
@@ -30,6 +39,17 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_CATALOG_IMAGE_MIMES.has(file.mimetype)) {
+      return cb(
+        new BadRequestError(
+          `Unsupported image type '${file.mimetype}'. Supported types: JPEG, PNG, WebP, GIF.`,
+          'INVALID_FILE_TYPE'
+        )
+      );
+    }
+    return cb(null, true);
+  },
 });
 
 const router = express.Router();
@@ -99,7 +119,7 @@ router.put('/catalog/services/:id', adminController.saveCatalogService);
 router.get('/catalog/coverage-rates', adminController.listCatalogCoverageRates);
 router.post('/catalog/coverage-rates', adminController.saveCatalogCoverageRate);
 router.put('/catalog/coverage-rates/:id', adminController.saveCatalogCoverageRate);
-router.post('/catalog/upload-image', upload.single('image'), adminController.uploadCatalogImage);
+router.post('/catalog/upload-image', uploadLimiter, upload.single('image'), adminController.uploadCatalogImage);
 
 // 8. Pricing Management
 router.get('/pricing', adminController.getPricingConfig);

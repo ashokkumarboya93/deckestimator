@@ -4,7 +4,6 @@
 // Includes dynamic inspection photos and architectural reference images
 // ====================================================================
 
-import html2pdf from 'html2pdf.js';
 import mainLogo from '../assets/images/Main_Logo_v2.png';
 import { ESTIMATOR_IMAGES } from '../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../constants/operatingHours';
@@ -487,6 +486,7 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
       })
     );
 
+    const { default: html2pdf } = await import('html2pdf.js');
     await html2pdf().from(reportElement).set(opt).save();
   } finally {
     if (document.body.contains(reportElement)) {

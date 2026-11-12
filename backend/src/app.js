@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
@@ -18,13 +19,19 @@ const { requestId } = require('./middleware/requestId');
 const { apiLimiter } = require('./middleware/rateLimiters');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
+const {
+  normalizeLeanDocs,
+  getCachedValue,
+  setCachedValue,
+} = require('./shared/utils/queryUtils');
 
 const app = express();
 
 // Trust Railway / reverse-proxy headers (X-Forwarded-For, X-Forwarded-Proto)
 app.set('trust proxy', 1);
 
-// --------------- Security middleware ---------------
+// --------------- Compression & Security middleware ---------------
+app.use(compression({ threshold: 1024 }));
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -38,7 +45,17 @@ app.use(cors(createCorsOptionsDelegate));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Only serve public catalog assets statically; private deck photos and contractor documents require authenticated API routes.
+app.use('/uploads/catalog', express.static(path.join(__dirname, '../uploads/catalog'), { maxAge: '1d', etag: true }));
+app.use(['/uploads/contractor-documents', '/uploads/decks'], (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Direct unauthenticated access to private uploaded files is forbidden.',
+    },
+  });
+});
 
 // --------------- Request tracing ---------------
 app.use(requestId);
@@ -121,8 +138,20 @@ const adminController = require('./modules/admin/admin.controller');
 
 app.get('/api/v1/settings/public', async (req, res, next) => {
   try {
+    if (!env.isTest) {
+      const cached = getCachedValue('public_platform_settings');
+      if (cached) {
+        return res.status(200).json({ success: true, data: cached });
+      }
+    }
     const PlatformSetting = require('./modules/admin/platformSetting.model');
-    const settings = await PlatformSetting.find({ isPublic: true });
+    const rawSettings = await PlatformSetting.find({ isPublic: true })
+      .select('key category label description valueType value isPublic isActive updatedAt')
+      .lean();
+    const settings = normalizeLeanDocs(rawSettings);
+    if (!env.isTest) {
+      setCachedValue('public_platform_settings', settings, 30000);
+    }
     res.status(200).json({ success: true, data: settings });
   } catch (err) {
     next(err);
@@ -156,7 +185,11 @@ app.use('/uploads', notFound);
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 const frontendIndexPath = path.join(frontendDistPath, 'index.html');
 if (!env.isTest && fs.existsSync(frontendIndexPath)) {
-  app.use(express.static(frontendDistPath, { index: false }));
+  const frontendAssetsPath = path.join(frontendDistPath, 'assets');
+  if (fs.existsSync(frontendAssetsPath)) {
+    app.use('/assets', express.static(frontendAssetsPath, { maxAge: '1y', immutable: true, etag: true }));
+  }
+  app.use(express.static(frontendDistPath, { index: false, maxAge: '1h', etag: true }));
   app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     res.sendFile(frontendIndexPath, (err) => {

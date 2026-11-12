@@ -326,7 +326,9 @@ estimateSchema.pre('validate', function () {
 
 estimateSchema.index({ ownerId: 1, createdAt: -1 });
 estimateSchema.index({ createdBy: 1, createdAt: -1 });
+estimateSchema.index({ createdFor: 1, createdAt: -1 });
 estimateSchema.index({ deckId: 1, createdAt: -1 });
+estimateSchema.index({ createdAt: -1 });
 
 const Estimate = mongoose.model('Estimate', estimateSchema, 'estimates');
 

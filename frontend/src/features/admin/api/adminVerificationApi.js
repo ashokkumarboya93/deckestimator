@@ -2,7 +2,7 @@
 // Deck Estimator — Admin Contractor Verification API (Phase 8)
 // =============================================
 
-import { client } from '../../../api/client';
+import { client, resolveAssetUrl } from '../../../api/client';
 import { ENDPOINTS } from '../../../api/endpoints';
 
 export const adminVerificationApi = {
@@ -22,7 +22,7 @@ export const adminVerificationApi = {
   },
 
   getDocumentFileUrl: (documentId) => {
-    return `/api/v1/contractors/documents/${documentId}/file`;
+    return resolveAssetUrl(`/api/v1/contractors/documents/${documentId}/file`);
   },
 };
 

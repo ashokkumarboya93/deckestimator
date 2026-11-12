@@ -4,6 +4,7 @@
 // Catches all errors and returns safe, consistent responses.
 // NEVER exposes stack traces, credentials, or internal details in production.
 
+const multer = require('multer');
 const { env } = require('../config/env');
 
 /**
@@ -84,6 +85,33 @@ function errorHandler(err, req, res, _next) {
           message: d.message,
         })),
       },
+    });
+  }
+
+  // Multer file upload errors
+  if (err instanceof multer.MulterError || err.name === 'MulterError') {
+    const multerCodeMap = {
+      LIMIT_FILE_SIZE: {
+        code: 'FILE_TOO_LARGE',
+        message: 'Uploaded file exceeds the maximum allowed size.',
+      },
+      LIMIT_FILE_COUNT: {
+        code: 'TOO_MANY_FILES',
+        message: 'Too many files uploaded in a single request.',
+      },
+      LIMIT_UNEXPECTED_FILE: {
+        code: 'INVALID_UPLOAD_FIELD',
+        message: 'Unexpected file upload field name.',
+      },
+    };
+    const mapped = multerCodeMap[err.code] || {
+      code: 'UPLOAD_ERROR',
+      message: err.message || 'File upload failed.',
+    };
+
+    return res.status(400).json({
+      success: false,
+      error: mapped,
     });
   }
 

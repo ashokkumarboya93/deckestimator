@@ -3,12 +3,14 @@
 // =============================================
 
 const Notification = require('./notification.model');
+const { ForbiddenError, NotFoundError } = require('../../shared/errors');
 
 /**
  * Get notifications for a user based on user ID and role.
  */
 async function getUserNotifications(user, query = {}) {
   const { limit = 25, unreadOnly = false } = query;
+  const unreadOnlyBool = unreadOnly === true || unreadOnly === 'true';
   const userId = user.id || user._id;
   const role = user.role;
 
@@ -22,11 +24,12 @@ async function getUserNotifications(user, query = {}) {
     ],
   };
 
-  if (unreadOnly) {
+  if (unreadOnlyBool) {
     filter.isRead = false;
   }
 
   const rawNotifications = await Notification.find(filter)
+    .select('-__v')
     .sort({ createdAt: -1 })
     .limit(Number(limit))
     .lean();
@@ -36,11 +39,12 @@ async function getUserNotifications(user, query = {}) {
     const isUserRead = n.isRead || (Array.isArray(n.readBy) && n.readBy.some((id) => String(id) === userIdStr));
     return {
       ...n,
+      id: n.id || (n._id ? n._id.toString() : ''),
       isRead: Boolean(isUserRead),
     };
   });
 
-  const finalNotifications = unreadOnly ? notifications.filter((n) => !n.isRead) : notifications;
+  const finalNotifications = unreadOnlyBool ? notifications.filter((n) => !n.isRead) : notifications;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
@@ -55,11 +59,24 @@ async function getUserNotifications(user, query = {}) {
 async function markAsRead(notificationId, user) {
   const userId = user.id || user._id;
   const notif = await Notification.findById(notificationId);
-  if (!notif) return null;
+  if (!notif) {
+    throw new NotFoundError('Notification not found.', 'NOTIFICATION_NOT_FOUND');
+  }
 
-  if (notif.userId && String(notif.userId) === String(userId)) {
+  if (notif.userId) {
+    if (String(notif.userId) !== String(userId)) {
+      throw new ForbiddenError('You are not authorized to access this notification.', 'FORBIDDEN');
+    }
     notif.isRead = true;
   } else {
+    const isBroadcastTarget =
+      notif.recipientType !== 'specific' &&
+      (['all', user.role].includes(notif.recipientType) || ['all', user.role].includes(notif.targetRole));
+
+    if (!isBroadcastTarget) {
+      throw new ForbiddenError('You are not authorized to access this notification.', 'FORBIDDEN');
+    }
+
     if (!notif.readBy) notif.readBy = [];
     if (!notif.readBy.some((id) => String(id) === String(userId))) {
       notif.readBy.push(userId);

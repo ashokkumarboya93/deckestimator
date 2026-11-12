@@ -15,6 +15,7 @@ const {
   ConflictError,
 } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
+const { normalizeLeanDoc, normalizeLeanDocs } = require('../../shared/utils/queryUtils');
 
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -117,27 +118,29 @@ async function getMaterialCategories(query = {}, user = null) {
     MaterialCategory.find(filter)
       .sort({ displayOrder: 1, name: 1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     MaterialCategory.countDocuments(filter),
   ]);
 
   // Include material counts
   const categoryIds = categories.map((c) => c._id);
-  const counts = await Material.aggregate([
-    { $match: { categoryId: { $in: categoryIds }, status: { $ne: 'archived' } } },
-    { $group: { _id: '$categoryId', count: { $sum: 1 } } },
-  ]);
+  const counts = categoryIds.length > 0
+    ? await Material.aggregate([
+        { $match: { categoryId: { $in: categoryIds }, status: { $ne: 'archived' } } },
+        { $group: { _id: '$categoryId', count: { $sum: 1 } } },
+      ])
+    : [];
 
   const countMap = counts.reduce((acc, curr) => {
     acc[curr._id.toString()] = curr.count;
     return acc;
   }, {});
 
-  const items = categories.map((c) => {
-    const json = c.toJSON();
-    json.materialsCount = countMap[c._id.toString()] || 0;
-    return json;
-  });
+  const items = categories.map((c) => ({
+    ...normalizeLeanDoc(c, { keepUnderscoreId: true }),
+    materialsCount: countMap[c._id.toString()] || 0,
+  }));
 
   return {
     categories: items,
@@ -320,12 +323,13 @@ async function getMaterials(query = {}, user = null) {
       .populate('categoryId', 'name slug status')
       .sort(sortOptions)
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     Material.countDocuments(filter),
   ]);
 
   return {
-    materials: materials.map((m) => m.toJSON()),
+    materials: normalizeLeanDocs(materials, { keepUnderscoreId: true }),
     pagination: {
       total,
       page: Number(page),
@@ -660,12 +664,13 @@ async function getServices(query = {}, user = null) {
       .populate('categoryId', 'name slug status')
       .sort(sortOptions)
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     Service.countDocuments(filter),
   ]);
 
   return {
-    services: services.map((s) => s.toJSON()),
+    services: normalizeLeanDocs(services, { keepUnderscoreId: true }),
     pagination: {
       total,
       page: Number(page),

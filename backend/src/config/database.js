@@ -24,6 +24,10 @@ async function connectDatabase() {
   try {
     await mongoose.connect(env.MONGODB_URI, {
       dbName: 'DECK_ESTIMATOR',
+      maxPoolSize: 20,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
     console.log(`[Database] Connected to MongoDB (${env.isDev ? 'development' : env.NODE_ENV})`);
   } catch (error) {

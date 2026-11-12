@@ -7,6 +7,7 @@ const DeckImage = require('../files/deckImage.model');
 const storageProvider = require('../files/storageProvider');
 const { NotFoundError, ForbiddenError } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
+const { normalizeLeanDocs } = require('../../shared/utils/queryUtils');
 
 /**
  * Calculate rectangle/square area automatically when dimensions are provided.
@@ -42,7 +43,7 @@ async function assertDeckAccess(deck, user, { readOnly = false } = {}) {
     const assignedLead = await Lead.findOne({
       deckId: deck._id,
       assignedContractorId: user.id,
-    });
+    }).select('_id').lean();
     if (assignedLead) return;
   }
 
@@ -75,7 +76,7 @@ async function getDecks(user, { page = 1, limit = 10 } = {}) {
     query = {};
   } else if (user.role === ROLES.CONTRACTOR) {
     const Lead = require('../leads/lead.model');
-    const assignedLeads = await Lead.find({ assignedContractorId: user.id }).select('deckId');
+    const assignedLeads = await Lead.find({ assignedContractorId: user.id }).select('deckId').lean();
     const assignedDeckIds = assignedLeads.map((l) => l.deckId).filter(Boolean);
     query = {
       $or: [
@@ -89,12 +90,17 @@ async function getDecks(user, { page = 1, limit = 10 } = {}) {
   const skip = (Math.max(1, page) - 1) * limit;
 
   const [decks, total] = await Promise.all([
-    Deck.find(query).populate('ownerId', 'fullName email').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Deck.find(query)
+      .populate('ownerId', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Deck.countDocuments(query),
   ]);
 
   return {
-    decks: decks.map((d) => d.toJSON()),
+    decks: normalizeLeanDocs(decks, { keepUnderscoreId: true }),
     pagination: {
       total,
       page: Number(page),
@@ -115,10 +121,10 @@ async function getDeckById(deckId, user) {
 
   await assertDeckAccess(deck, user, { readOnly: true });
 
-  const images = await DeckImage.find({ deckId }).sort({ createdAt: 1 });
+  const images = await DeckImage.find({ deckId }).sort({ createdAt: 1 }).lean();
 
   const result = deck.toJSON();
-  result.images = images.map((img) => img.toJSON());
+  result.images = normalizeLeanDocs(images, { keepUnderscoreId: true });
   return result;
 }
 

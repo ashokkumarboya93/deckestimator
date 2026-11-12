@@ -245,13 +245,19 @@ async function getContractorApplicableDiscounts(contractorUserId) {
   // Find general eligibility active policies or platform contractor policies
   const generalPolicies = await DiscountPolicy.find({
     status: DISCOUNT_POLICY_STATUS.ACTIVE,
-    $or: [
-      { isGeneralEligibility: true },
-      { code: 'CONTRACTOR_DEFAULT_10' },
-      { code: /^DISC_/i },
-    ],
     effectiveStartDate: { $lte: now },
-    $or: [{ effectiveEndDate: null }, { effectiveEndDate: { $gte: now } }],
+    $and: [
+      {
+        $or: [
+          { isGeneralEligibility: true },
+          { code: 'CONTRACTOR_DEFAULT_10' },
+          { code: /^DISC_/i },
+        ],
+      },
+      {
+        $or: [{ effectiveEndDate: null }, { effectiveEndDate: { $gte: now } }],
+      },
+    ],
   });
 
   // Find individual assigned policies

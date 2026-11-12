@@ -143,6 +143,12 @@ async function loginAdmin({ email, password }) {
   if (user.accountStatus === ACCOUNT_STATUS.DISABLED) {
     throw new ForbiddenError('Administrator account is disabled.');
   }
+  if (user.accountStatus === ACCOUNT_STATUS.INACTIVE) {
+    throw new ForbiddenError('Administrator account is inactive.');
+  }
+  if (user.accountStatus === ACCOUNT_STATUS.BLOCKED) {
+    throw new ForbiddenError('Administrator account is blocked.');
+  }
 
   user.lastLoginAt = new Date();
   await user.save({ validateBeforeSave: false });
@@ -183,6 +189,9 @@ async function loginUser({ email, password }) {
   }
   if (user.accountStatus === ACCOUNT_STATUS.DISABLED) {
     throw new ForbiddenError('Your account is disabled.');
+  }
+  if (user.accountStatus === ACCOUNT_STATUS.INACTIVE) {
+    throw new ForbiddenError('Your account is inactive. Please contact support.');
   }
 
   // Update last login timestamp

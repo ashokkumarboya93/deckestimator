@@ -205,6 +205,8 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ customerId: 1, createdAt: -1 });
 leadSchema.index({ assignedContractorId: 1, status: 1 });
 leadSchema.index({ status: 1, createdAt: -1 });
+leadSchema.index({ latestContactDate: -1, createdAt: -1 });
+leadSchema.index({ priority: 1, createdAt: -1 });
 
 const Lead = mongoose.model('Lead', leadSchema);
 

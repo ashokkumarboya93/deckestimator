@@ -17,6 +17,32 @@ export function resolveAssetUrl(url) {
 
 const BASE_URL = API_BASE_URL;
 
+const DEFAULT_TIMEOUT_MS = 30000;
+const LONG_RUNNING_TIMEOUT_MS = 120000;
+const LONG_RUNNING_PATH_PATTERNS = [
+  '/analysis',
+  '/condition-analysis',
+  '/images',
+  '/documents',
+  '/upload-image',
+  '/export',
+  '/recalculate',
+];
+
+function resolveRequestTimeout(endpoint, options) {
+  if (typeof options.timeoutMs === 'number') {
+    return options.timeoutMs;
+  }
+  if (options.body instanceof FormData) {
+    return LONG_RUNNING_TIMEOUT_MS;
+  }
+  const normalizedEndpoint = String(endpoint || '').toLowerCase();
+  if (LONG_RUNNING_PATH_PATTERNS.some((pattern) => normalizedEndpoint.includes(pattern))) {
+    return LONG_RUNNING_TIMEOUT_MS;
+  }
+  return DEFAULT_TIMEOUT_MS;
+}
+
 /**
  * Make an API request with consistent error handling.
  * @param {string} endpoint - API path (e.g., '/auth/login')
@@ -39,13 +65,22 @@ async function apiClient(endpoint, options = {}) {
     }
   }
 
+  const {
+    params: _params,
+    timeoutMs: _timeoutMs,
+    retry: retryOption,
+    signal: externalSignal,
+    headers: customHeaders,
+    ...restOptions
+  } = options;
+
   const config = {
     credentials: 'include', // Send cookies for session auth
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...customHeaders,
     },
-    ...options,
+    ...restOptions,
   };
 
   // Don't set Content-Type for FormData (file uploads)
@@ -53,13 +88,39 @@ async function apiClient(endpoint, options = {}) {
     delete config.headers['Content-Type'];
   }
 
-  // Resilient execution with auto-retry on brief network blips / backend reload
+  const method = (config.method || 'GET').toUpperCase();
+  const isSafeMethod = method === 'GET' || method === 'HEAD';
+  const maxAttempts = isSafeMethod && retryOption !== false ? 3 : 1;
+  const timeoutMs = resolveRequestTimeout(endpoint, options);
+
+  // Resilient execution: auto-retry safe GET/HEAD requests only on transient network drops
   let lastError = null;
-  const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    let timedOut = false;
+    let timeoutId = null;
+    let removeAbortListener = null;
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort(externalSignal.reason);
+      } else {
+        const onExternalAbort = () => controller.abort(externalSignal.reason);
+        externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+        removeAbortListener = () => externalSignal.removeEventListener('abort', onExternalAbort);
+      }
+    }
+
+    if (timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeoutMs);
+    }
+
     try {
-      const response = await fetch(url, config);
+      const response = await fetch(url, { ...config, signal: controller.signal });
       let data = {};
       try {
         data = await response.json();
@@ -76,20 +137,38 @@ async function apiClient(endpoint, options = {}) {
             })
           );
         }
-        const error = new Error(data?.error?.message || `Server error (${response.status})`);
+        const errorMessage =
+          data?.error?.message ||
+          data?.message ||
+          `Server error (${response.status})`;
+        const error = new Error(errorMessage);
         error.code = data?.error?.code || 'UNKNOWN_ERROR';
         error.status = response.status;
         error.details = data?.error?.details || [];
+        error.data = data;
         throw error;
       }
 
       return data;
     } catch (err) {
       lastError = err;
+
+      if (timedOut) {
+        const timeoutError = new Error('The request timed out. Please check your connection and try again.');
+        timeoutError.name = 'TimeoutError';
+        timeoutError.code = 'TIMEOUT_ERROR';
+        timeoutError.isTimeout = true;
+        throw timeoutError;
+      }
+
+      if (err.name === 'AbortError') {
+        throw err;
+      }
+
       const isNetworkError = err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch');
 
-      // Retry up to 2 times for transient network/connection drops
-      if (isNetworkError && attempt < maxAttempts) {
+      // Retry only safe GET/HEAD requests up to 2 times for transient network/connection drops
+      if (isSafeMethod && isNetworkError && attempt < maxAttempts) {
         await new Promise((r) => setTimeout(r, attempt * 350));
         continue;
       }
@@ -101,6 +180,9 @@ async function apiClient(endpoint, options = {}) {
       }
 
       throw err;
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (removeAbortListener) removeAbortListener();
     }
   }
 

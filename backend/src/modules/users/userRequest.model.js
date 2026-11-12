@@ -80,5 +80,8 @@ const userRequestSchema = new mongoose.Schema(
   }
 );
 
+userRequestSchema.index({ status: 1, createdAt: -1 });
+userRequestSchema.index({ userId: 1, status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('UserRequest', userRequestSchema);
 

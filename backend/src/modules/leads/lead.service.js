@@ -19,6 +19,7 @@ const {
   LEAD_ACTIVITY_TYPE,
   VERIFICATION_STATUS,
 } = require('../../shared/constants');
+const { normalizeLeanDocs } = require('../../shared/utils/queryUtils');
 
 /**
  * Generate a unique, readable lead number (e.g. LEAD-2026-004128).
@@ -182,12 +183,13 @@ async function getCustomerLeads(customerId, query = {}) {
       .populate('estimateId', 'estimateReference totalCost version')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum),
+      .limit(limitNum)
+      .lean(),
     Lead.countDocuments(filter),
   ]);
 
   return {
-    items,
+    items: normalizeLeanDocs(items, { keepUnderscoreId: true }),
     pagination: {
       page: pageNum,
       limit: limitNum,
@@ -286,12 +288,13 @@ async function getAdminLeads(query = {}) {
       .populate('assignedContractorProfileId', 'businessName licenseNumber')
       .sort({ [sortBy]: sortDirection })
       .skip(skip)
-      .limit(limitNum),
+      .limit(limitNum)
+      .lean(),
     Lead.countDocuments(filter),
   ]);
 
   return {
-    items,
+    items: normalizeLeanDocs(items, { keepUnderscoreId: true }),
     pagination: {
       page: pageNum,
       limit: limitNum,
