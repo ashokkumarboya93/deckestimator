@@ -62,16 +62,35 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 4: Duplicate & Empty Postman Directories
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original File / Folder Path | File Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `.postman/resources.yaml` | 353 B | **DELETED** | Permanently Removed | Auto-generated Postman workspace sync stub. Not used. |
+| `.postman/Deck_Estimator_API_Testing_Fix_Report.md` | 7.9 KB | **DELETED** | Permanently Removed | Exact duplicate of report in `CompletionReviews/`. |
+| `.postman/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder after removing the files above. |
+| `postman/globals/workspace.globals.yaml` | 27 B | **DELETED** | Permanently Removed | Empty Postman globals placeholder stub. |
+| `postman/collections/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/documents/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/environments/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/flows/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/mocks/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/specs/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder scaffold. |
+| `postman/` (Folder) | — | **DELETED** | Permanently Removed | Empty parent folder scaffold. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
 | **Batch 1** | Root Typo & Scrap Text Files | 3 files | 28.5 KB | **COMPLETED** |
 | **Batch 2** | Demo Video Files & Screen Recorders | 10 items | ~36.9 MB | **COMPLETED** |
 | **Batch 3** | Obsolete Root Scratch & Python Scripts | 21 items | ~207 KB | **COMPLETED** |
-| **Batch 4** | Duplicate & Empty Postman Folders | 9 items | ~8 KB | **NEXT UP** |
-| **Batch 5** | Duplicate & Legacy Review Folders | 16 items | ~485 KB | Queue |
+| **Batch 4** | Duplicate & Empty Postman Folders | 11 items | ~8.3 KB | **COMPLETED** |
+| **Batch 5** | Duplicate & Legacy Review Folders | 16 items | ~485 KB | **NEXT UP** |
 | **Batch 6** | Root vs Docs Duplicate Documentation | 4 items | ~109 KB | Queue |
 | **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | Queue |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185+ items | ~2.5 MB | Queue |
-| **TOTAL TO DATE** | **Batches 1, 2 & 3 Completed** | **34 items** | **~37.14 MB** | **CLEANED** |
+| **TOTAL TO DATE** | **Batches 1, 2, 3 & 4 Completed** | **45 items** | **~37.15 MB** | **CLEANED** |
 

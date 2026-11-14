@@ -91,22 +91,22 @@ Temporary scripts used during development phases for one-off regex replacements 
 
 ---
 
-### Category 4: Duplicate & Obsolete Postman Folders
-Two separate Postman directories exist (`.postman` and `postman`), both containing empty stubs or duplicate markdown files.
+### Category 4: Duplicate & Obsolete Postman Folders — [COMPLETED]
+Two separate Postman directories existed (`.postman` and `postman`), both containing empty stubs or duplicate markdown files.
 
-| File / Folder Path | Size | Reason / Analysis | Action |
+| File / Folder Path | Size | Reason / Analysis | Status |
 | :--- | :--- | :--- | :--- |
-| `.postman/Deck_Estimator_API_Testing_Fix_Report.md` | 7.9 KB | Duplicate of report in `CompletionReviews/`. | **DELETE** |
-| `.postman/resources.yaml` | 353 B | Unused empty Postman stub configuration. | **DELETE** |
-| `.postman/` (Folder) | — | Unused directory. | **DELETE FOLDER** |
-| `postman/collections/` | 0 B | Empty directory. | **DELETE** |
-| `postman/documents/` | 0 B | Empty directory. | **DELETE** |
-| `postman/environments/` | 0 B | Empty directory. | **DELETE** |
-| `postman/flows/` | 0 B | Empty directory. | **DELETE** |
-| `postman/mocks/` | 0 B | Empty directory. | **DELETE** |
-| `postman/specs/` | 0 B | Empty directory. | **DELETE** |
-| `postman/globals/workspace.globals.yaml` | 27 B | Default Postman template stub. | **DELETE** |
-| `postman/` (Folder) | — | Unused directory hierarchy. | **DELETE FOLDER** |
+| `.postman/Deck_Estimator_API_Testing_Fix_Report.md` | 7.9 KB | Duplicate of report in `CompletionReviews/`. | **DELETED** |
+| `.postman/resources.yaml` | 353 B | Unused empty Postman stub configuration. | **DELETED** |
+| `.postman/` (Folder) | — | Deleted folder. | **DELETED** |
+| `postman/collections/` | 0 B | Empty directory. | **DELETED** |
+| `postman/documents/` | 0 B | Empty directory. | **DELETED** |
+| `postman/environments/` | 0 B | Empty directory. | **DELETED** |
+| `postman/flows/` | 0 B | Empty directory. | **DELETED** |
+| `postman/mocks/` | 0 B | Empty directory. | **DELETED** |
+| `postman/specs/` | 0 B | Empty directory. | **DELETED** |
+| `postman/globals/workspace.globals.yaml` | 27 B | Default Postman template stub. | **DELETED** |
+| `postman/` (Folder) | — | Deleted directory hierarchy. | **DELETED** |
 
 ---
 
