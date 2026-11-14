@@ -136,33 +136,39 @@ Markdown documents in the root folder that were 100% duplicate copies of files i
 
 ---
 
-### Category 7: Empty Ghost Folders
-| Path | Reason / Analysis | Action |
+### Category 7: Empty Ghost Folders — [COMPLETED]
+| Path | Reason / Analysis | Status |
 | :--- | :--- | :--- |
-| `tests/` & `tests/e2e/` | Completely empty folder in project root. Actual test suite is in `backend/tests/`. | **DELETE FOLDER** |
+| `tests/` & `tests/e2e/` | Completely empty folder in project root. Actual test suite is in `backend/tests/`. | **DELETED** |
 
 ---
 
-### Category 8: Backend Test Artifacts & Dummy Uploads
-These are generated test artifacts inside `backend/`:
+### Category 8: Backend Test Artifacts & Dummy Uploads — [COMPLETED]
+Generated test artifacts inside `backend/` have been safely cleaned:
 
-| Path | File Count | Size | Reason / Analysis | Action |
+| Path | File Count | Size | Reason / Analysis | Status |
 | :--- | :---: | :---: | :--- | :--- |
-| `backend/scratch/check_photos.cjs` | 1 file | 1.1 KB | Ad-hoc scratch script. | **DELETE** |
-| `backend/scripts/batch1-results.json` | 1 file | 49.1 KB | Stale batch test output. | **DELETE** |
-| `backend/scripts/portal-verification-screenshots/` | 4 files | ~1.2 MB | Temporary test screenshots. | **DELETE** |
-| `backend/scripts/test-screenshots/` | 8 files | ~2.5 MB | Temporary test screenshots. | **DELETE** |
-| `backend/scripts/test-batch1-30-apis.js` ... `test-batch4-91-127-apis.js` | 4 files | ~60 KB | Old batch test files replaced by unified test suite. | **DELETE** |
-| `backend/scripts/verify-phase4-atlas.js` ... `verify-phase11-atlas.js` | 8 files | ~84 KB | One-off phase verification scripts. | **DELETE** |
-| `backend/scripts/fix_admin.js`, `inspect_*.js`, `test_proj_api.js`, etc. | 7 files | ~10 KB | One-off scratch scripts. | **DELETE** |
-| `backend/uploads/decks/` | 149 files | ~3 KB | Dummy 12-byte and 37-byte test files from mock uploads. | **CLEAN DUMMY FILES** |
+| `backend/scratch/check_photos.cjs` | 1 file | 1.1 KB | Ad-hoc scratch script. | **DELETED** |
+| `backend/scripts/batch1-results.json` | 1 file | 49.1 KB | Stale batch test output. | **DELETED** |
+| `backend/scripts/portal-verification-screenshots/` | 4 files | ~1.2 MB | Temporary test screenshots. | **DELETED** |
+| `backend/scripts/test-screenshots/` | 8 files | ~2.5 MB | Temporary test screenshots. | **DELETED** |
+| `backend/scripts/test-batch*.js` | 5 files | ~70 KB | Old batch test files; test suite in `backend/tests/`. | **DELETED** |
+| `backend/scripts/verify-phase*.js` | 8 files | ~84 KB | One-off phase verification scripts. | **DELETED** |
+| `backend/scripts/fix_admin.js`, `inspect_*.js`, `test_*.js`, etc. | 10 files | ~15 KB | One-off scratch scripts. | **DELETED** |
+| `backend/uploads/decks/` | 148 files | ~3 KB | Dummy 12-byte and 37-byte test files. Real images kept. | **DELETED** |
 
 > [!NOTE]
-> **Backend Seed Scripts to KEEP:**  
-> The following files in `backend/scripts` are valuable utility seeds and should **NOT** be deleted:
+> **Backend Seed Scripts KEPT & INTACT:**  
+> The following essential database auto-seeds and synchronization utilities in `backend/scripts/` are preserved:
 > - `backend/scripts/seed-admin.js`
 > - `backend/scripts/seed_admin_portal.js`
 > - `backend/scripts/seed_estimator_config.js`
+> - `backend/scripts/seed_platform_settings.js`
+> - `backend/scripts/sync_projects_db.js`
+> - `backend/scripts/sync-atlas-validators.js`
+> - `backend/scripts/update_users_validator.js`
+> - `backend/scripts/patch_admin_notifications.js`
+> - `backend/scripts/guide-data/`
 > - `backend/scripts/seed_platform_settings.js`
 > - `backend/scripts/sync_projects_db.js`
 > - `backend/scripts/sync-atlas-validators.js`

@@ -113,6 +113,29 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 7: Empty Ghost Directories
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original Folder Path | Content | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `tests/` & `tests/e2e/` | 0 files (Empty) | **DELETED** | Permanently Removed | Empty scaffold folder; real test suite is in `backend/tests/`. |
+
+---
+
+## Batch 8: Backend Scratch & Dummy Upload Stubs
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original Path | File Count / Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `backend/scratch/` | 1 file (1.1 KB) | **DELETED** | Permanently Removed | Ad-hoc scratch script (`check_photos.cjs`). |
+| `backend/scripts/portal-verification-screenshots/` | 4 PNGs (~1.2 MB) | **DELETED** | Permanently Removed | Stale test browser verification screenshots. |
+| `backend/scripts/test-screenshots/` | 8 PNGs (~2.5 MB) | **DELETED** | Permanently Removed | Stale step-by-step test screenshots. |
+| `backend/scripts/batch1-results.json` | 49 KB | **DELETED** | Permanently Removed | Stale automated test batch output log. |
+| `backend/scripts/` (obsolete batch test runners) | 23 JS files (~210 KB) | **DELETED** | Permanently Removed | One-off phase verification & inspection scripts. (All seed scripts preserved). |
+| `backend/uploads/decks/` | 148 dummy stubs | **DELETED** | Permanently Removed | 12-byte & 37-byte test upload stubs. Real images preserved. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
@@ -122,7 +145,7 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 4** | Duplicate & Empty Postman Folders | 11 items | ~8.3 KB | **COMPLETED** |
 | **Batch 5** | Duplicate & Legacy Review Folders | 19 items | ~545 KB | **COMPLETED** |
 | **Batch 6** | Root vs Docs Duplicate Documentation | 5 files | ~119 KB | **COMPLETED** |
-| **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | **NEXT UP** |
-| **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185+ items | ~2.5 MB | Queue |
-| **TOTAL TO DATE** | **Batches 1 to 6 Completed** | **69 items** | **~37.82 MB** | **CLEANED** |
+| **Batch 7** | Empty Ghost Directories | 1 folder | 0 B | **COMPLETED** |
+| **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185 items | ~4.0 MB | **COMPLETED** |
+| **TOTAL COMPLETED** | **All 8 Batches Fully Cleaned** | **255 items** | **~41.8 MB** | **CLEANED & OPTIMIZED** |
 
