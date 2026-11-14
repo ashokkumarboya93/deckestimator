@@ -218,15 +218,13 @@ export function RegistrationForm() {
       };
 
       const res = await register(payload);
-      setRegistrationSuccess('Account created successfully! Preparing your workspace...');
+      setRegistrationSuccess('Account created successfully!');
 
-      setTimeout(() => {
-        if (formData.role === 'contractor') {
-          navigate('/contractor/verification-request');
-        } else {
-          navigate('/customer/dashboard');
-        }
-      }, 800);
+      if (formData.role === 'contractor') {
+        navigate('/contractor/verification-request', { replace: true });
+      } else {
+        navigate('/customer/dashboard', { replace: true });
+      }
     } catch (err) {
       const status = err?.response?.status;
       const msg = getErrorMessage(err);

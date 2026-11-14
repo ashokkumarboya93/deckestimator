@@ -79,19 +79,17 @@ export function LoginForm() {
       });
 
       setLoginSuccess(
-        `Welcome back, ${data.user?.fullName || 'User'}! Redirecting...`
+        `Welcome back, ${data.user?.fullName || 'User'}!`
       );
 
-      setTimeout(() => {
-        if (data.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (data.user.role === 'contractor') {
-          const isApproved = data.contractorProfile?.verificationStatus === 'approved';
-          navigate(isApproved ? '/contractor/dashboard' : '/contractor/verification-request');
-        } else {
-          navigate('/customer/dashboard');
-        }
-      }, 500);
+      if (data.user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (data.user.role === 'contractor') {
+        const isApproved = data.contractorProfile?.verificationStatus === 'approved';
+        navigate(isApproved ? '/contractor/dashboard' : '/contractor/verification-request', { replace: true });
+      } else {
+        navigate('/customer/dashboard', { replace: true });
+      }
     } catch (err) {
       const msg = getErrorMessage(err);
       if (err?.response?.status === 401) {
