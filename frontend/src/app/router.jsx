@@ -87,7 +87,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'estimator',
-        element: <DeckEstimatorPage />,
+        element: <Navigate to="/login" replace />,
       },
       // Customer & Contractor Login
       {
