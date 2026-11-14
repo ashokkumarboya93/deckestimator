@@ -7,6 +7,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import mainLogo from '../../../assets/images/MainLodo.png';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 const SOCIAL_LINKS = [
   {
@@ -319,6 +320,8 @@ export default function ContractorFooter() {
                 </svg>
                 <span>info@deckrestorationplus.com</span>
               </a>
+
+              <OperatingHoursBlock variant="dark" />
             </div>
           </div>
 

@@ -47,6 +47,7 @@ export default function AdminLayout() {
 
   // Real-time synchronization of notifications from MongoDB
   const fetchRealNotifications = useCallback(async () => {
+    if (!user) return;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -54,7 +55,7 @@ export default function AdminLayout() {
     } catch {
       // Fallback silently
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchRealNotifications();

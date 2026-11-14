@@ -14,6 +14,15 @@ import {
 } from '../../../api/client';
 
 const AuthContext = createContext(null);
+const SESSION_SYNC_KEY = 'drp_session_sync';
+
+function broadcastSessionSync() {
+  try {
+    localStorage.setItem(SESSION_SYNC_KEY, String(Date.now()));
+  } catch {
+    // Ignore storage restriction
+  }
+}
 
 export function AuthProvider({ children }) {
   const initialToken = typeof window !== 'undefined' ? getStoredToken() : null;
@@ -71,6 +80,26 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Sync auth state across tabs and recover cleanly when session cookie clears or expires
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (user) {
+        refreshUser();
+      }
+    };
+    const handleStorage = (e) => {
+      if (e.key === SESSION_SYNC_KEY) {
+        refreshUser();
+      }
+    };
+    window.addEventListener('drp:unauthorized', handleUnauthorized);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('drp:unauthorized', handleUnauthorized);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [user, refreshUser]);
+
   const login = useCallback(async (credentials) => {
     setError(null);
     try {
@@ -82,6 +111,7 @@ export function AuthProvider({ children }) {
         setUser(response.data.user);
         setContractorProfile(response.data.contractorProfile || null);
         setStoredSession(response.data.user, response.data.contractorProfile || null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -102,6 +132,7 @@ export function AuthProvider({ children }) {
         setUser(response.data.user);
         setContractorProfile(null);
         setStoredSession(response.data.user, null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -122,6 +153,7 @@ export function AuthProvider({ children }) {
         setUser(response.data.user);
         setContractorProfile(response.data.contractorProfile || null);
         setStoredSession(response.data.user, response.data.contractorProfile || null);
+        broadcastSessionSync();
         return response.data;
       }
     } catch (err) {
@@ -138,6 +170,7 @@ export function AuthProvider({ children }) {
       clearStoredToken();
       setUser(null);
       setContractorProfile(null);
+      broadcastSessionSync();
     }
   }, []);
 
@@ -150,6 +183,7 @@ export function AuthProvider({ children }) {
         setContractorProfile(nextContractorProfile);
       }
       setStoredSession(nextUser, resolvedContractor || null);
+      broadcastSessionSync();
       return { user: nextUser, contractorProfile: resolvedContractor || null };
     }
 
@@ -166,7 +200,6 @@ export function AuthProvider({ children }) {
     }
     return null;
   }, [contractorProfile]);
-
   const value = {
     user,
     contractorProfile,

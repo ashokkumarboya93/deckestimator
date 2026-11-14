@@ -22,20 +22,73 @@ async function createDemoSession(videoTitle) {
   console.log('================================================================');
   console.log('Launching maximized Chrome with crystal-clear voiceover...');
 
+  const isHeadless = process.env.DEMO_HEADLESS === '1' || process.argv.includes('--headless') ? 'new' : false;
+  const isMuted = process.env.DEMO_MUTE === '1' || process.argv.includes('--mute');
+
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
-    headless: false,
-    defaultViewport: null,
+    headless: isHeadless,
+    defaultViewport: isHeadless ? { width: 1440, height: 900 } : null,
     args: [
       '--start-maximized',
       '--autoplay-policy=no-user-gesture-required',
       '--disable-notifications',
       '--no-default-browser-check',
       '--disable-infobars',
+      ...(isMuted ? ['--mute-audio'] : []),
     ],
   });
 
   const [page] = await browser.pages();
+  await page.bringToFront().catch(() => {});
+
+  // Bring Chrome above terminal/IDE on Windows desktop runs (retries while Chrome creates its window)
+  if (!isHeadless && process.platform === 'win32' && browser.process()?.pid) {
+    const { execFile } = require('child_process');
+    const chromePid = browser.process().pid;
+    const ps = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class DemoWinFocus {
+  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  public static bool Focus(uint pid) {
+    bool ok = false;
+    EnumWindows((hWnd, lParam) => {
+      if (!IsWindowVisible(hWnd)) return true;
+      uint wp; GetWindowThreadProcessId(hWnd, out wp);
+      if (wp == pid) {
+        ShowWindow(hWnd, 3);
+        SetWindowPos(hWnd, new IntPtr(-1), 0, 0, 0, 0, 0x0043);
+        SetWindowPos(hWnd, new IntPtr(-2), 0, 0, 0, 0, 0x0043);
+        SetForegroundWindow(hWnd);
+        ok = true;
+        return false;
+      }
+      return true;
+    }, IntPtr.Zero);
+    return ok;
+  }
+}
+"@
+for ($i = 0; $i -lt 15; $i++) {
+  if ([DemoWinFocus]::Focus(${chromePid})) { break }
+  Start-Sleep -Milliseconds 200
+}
+`;
+    execFile('powershell.exe', ['-NoProfile', '-Command', ps], () => {});
+  }
+
+  page.on('dialog', async (dialog) => {
+    console.log(`[Dialog Auto-Accepted] ${dialog.message()}`);
+    await dialog.accept().catch(() => {});
+  });
 
   // Inject cinema-grade lower-third presenter HUD
   async function setupCinemaHUD() {
@@ -236,12 +289,23 @@ async function createDemoSession(videoTitle) {
     await sleep(400);
   }
 
-  // Clear storage
+  // Clear storage & cookies so switching portals never retains prior user session
   async function clearSession() {
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
+    await page.evaluate(async () => {
+      try {
+        await fetch('http://localhost:5000/api/v1/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch {}
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
     });
+    try {
+      const client = await page.createCDPSession();
+      await client.send('Network.clearBrowserCookies');
+      await client.detach().catch(() => {});
+    } catch {}
     await sleep(300);
   }
 

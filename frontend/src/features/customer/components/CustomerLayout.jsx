@@ -68,6 +68,7 @@ export default function CustomerLayout() {
 
   // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
   const fetchRealNotifications = useCallback(async () => {
+    if (!user) return;
     if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const data = await getMyNotifications({ limit: 15 });
@@ -76,7 +77,7 @@ export default function CustomerLayout() {
     } catch {
       // Fallback silently without breaking UI
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchRealNotifications();

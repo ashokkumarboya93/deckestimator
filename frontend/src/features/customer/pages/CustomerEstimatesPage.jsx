@@ -20,6 +20,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, getEstimateById, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
+import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
 
 const DEFAULT_THUMBS = [
   ESTIMATOR_IMAGES.shapes.rectangle.references[1] || ESTIMATOR_IMAGES.shapes.rectangle.main,
@@ -469,6 +470,11 @@ export default function CustomerEstimatesPage() {
     } finally {
       setBatchDeleting(false);
     }
+  };
+
+  // Trigger Dedicated Print Action (Direct PDF download without browser print dialog)
+  const handlePrint = async (est) => {
+    return handleExport(est, 'pdf');
   };
 
   // Export / Download Official Report (PDF or Excel, lazy-loads heavy PDF bundle + full estimate data)

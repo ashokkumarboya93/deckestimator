@@ -13,6 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { leadApi } from '../api/leadApi';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 const POLICY_CARDS = [
   {
@@ -1284,6 +1285,41 @@ export default function CustomerSupportPage() {
               <span className="drp-sup-contact-sub">Shamong, NJ 08088 &bull; Sat 8 AM–2 PM</span>
             </div>
           </div>
+
+          {/* Contact Item 4: Business Hours */}
+          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #475569' }}>
+            <div style={{ ...styles.contactIconCircle, backgroundColor: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={styles.contactLabel}>Operating Hours</span>
+              <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Full Standard Hours of Operation (Contracting Services & Office Hours) */}
+        <OperatingHoursBlock variant="cards" style={{ marginBottom: '20px' }} />
+
+        {/* Credentials / Trust Banner */}
+        <div style={styles.credentialsBanner}>
+          <div style={styles.credentialsLeft}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <div>
+              <strong style={{ fontSize: '13.5px', color: '#1E3A63' }}>DRP Certified Contractor Network &bull; Fully Licensed &amp; Insured</strong>
+              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#475569' }}>
+                All restoration technicians undergo formal training in wood substrate chemical safety, low-pressure surface cleaning, and EPA compliance.
+              </p>
+            </div>
+          </div>
+          <Link to="/customer/decks/new" style={styles.bannerStartEstBtn}>
+            <span>Start New Estimate &rarr;</span>
+          </Link>
         </div>
       </section>
 

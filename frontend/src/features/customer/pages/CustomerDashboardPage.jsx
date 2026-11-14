@@ -14,6 +14,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getEstimates, getEstimateById } from '../api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { downloadEstimatePdf } from '../../../utils/reportExport';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 import deckProductsImg from '../../../assets/images/deck_products_highlight.webp';
 import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
@@ -1085,8 +1087,8 @@ export default function CustomerDashboardPage() {
               </a>
             </div>
 
-            <div style={styles.helpHours}>
-              <span>Mon &ndash; Fri: 8:00 AM &ndash; 6:00 PM EST</span>
+            <div style={{ marginTop: '4px' }}>
+              <OperatingHoursBlock variant="stacked" />
             </div>
           </div>
         </div>

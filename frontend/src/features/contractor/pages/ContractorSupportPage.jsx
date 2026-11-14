@@ -11,6 +11,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { leadApi } from '../../customer/api/leadApi';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 export default function ContractorSupportPage() {
   const { user } = useAuth();
@@ -360,13 +361,8 @@ export default function ContractorSupportPage() {
                 </span>
               </div>
               <span style={styles.contactLabel}>Operating Hours</span>
-              <div style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A63', marginTop: '3px' }}>
-                Mon – Fri: 7:30 AM – 6:00 PM
-              </div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginTop: '2px' }}>
-                Sat: 8:00 AM – 2:00 PM EST
-              </div>
-              <span style={styles.contactSub}>Live senior estimator dispatch</span>
+              <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
+              <span style={{ ...styles.contactSub, marginTop: '6px' }}>Live senior estimator dispatch</span>
             </div>
 
             <div style={{ marginTop: '12px' }}>
@@ -376,6 +372,8 @@ export default function ContractorSupportPage() {
             </div>
           </div>
         </div>
+
+        <OperatingHoursBlock variant="cards" style={{ marginTop: '18px' }} />
       </div>
 
       {/* Two-Column Layout: Support Ticket Form + FAQ Accordion */}
