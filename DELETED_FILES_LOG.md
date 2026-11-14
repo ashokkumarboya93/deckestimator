@@ -81,6 +81,25 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 5: Duplicate & Legacy Review Folders
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original File / Folder Path | File Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `completion/Admin_Portal_UI_and_Backend_Integration_Review.md` | 6.6 KB | **DELETED** | Permanently Removed | Byte-for-byte duplicate of `CompletionReviews/`. |
+| `completion/Full_Application_SaaS_UI_and_UX_Modernization_Review.md` | 5.2 KB | **DELETED** | Permanently Removed | Byte-for-byte duplicate of `CompletionReviews/`. |
+| `completion/Screenshot 2026-11-11 125132.png` | 370.9 KB | **DELETED** | Permanently Removed | Unreferenced temporary test screenshot image. |
+| `completion/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder after removing the files above. |
+| `CompletionReviews/Admin_Portal_UI_and_Backend_Integration_Review.md` | 6.6 KB | **DELETED** | Permanently Removed | User backed up internally. |
+| `CompletionReviews/Deck_Estimator_API_Testing_Fix_Report.md` | 7.9 KB | **DELETED** | Permanently Removed | Legacy API testing report; superseded by `docs/API-Manual-Testing-Guide.md`. |
+| `CompletionReviews/Full_Application_SaaS_UI_and_UX_Modernization_Review.md` | 5.2 KB | **DELETED** | Permanently Removed | User backed up internally. |
+| `CompletionReviews/MongoDB_Atlas_Connection_Review.md` | 3.7 KB | **DELETED** | Permanently Removed | User backed up internally. |
+| `CompletionReviews/Phase-01-Review.md` ... `Phase-11-Review.md` (11 files) | ~130 KB | **DELETED** | Permanently Removed | User backed up internally. |
+| `CompletionReviews/Project_Roadmap_Progress.md` | 16.8 KB | **DELETED** | Permanently Removed | User backed up internally. |
+| `CompletionReviews/` (Folder) | — | **DELETED** | Permanently Removed | Folder removed from root directory. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
@@ -88,9 +107,9 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 2** | Demo Video Files & Screen Recorders | 10 items | ~36.9 MB | **COMPLETED** |
 | **Batch 3** | Obsolete Root Scratch & Python Scripts | 21 items | ~207 KB | **COMPLETED** |
 | **Batch 4** | Duplicate & Empty Postman Folders | 11 items | ~8.3 KB | **COMPLETED** |
-| **Batch 5** | Duplicate & Legacy Review Folders | 16 items | ~485 KB | **NEXT UP** |
-| **Batch 6** | Root vs Docs Duplicate Documentation | 4 items | ~109 KB | Queue |
+| **Batch 5** | Duplicate & Legacy Review Folders | 19 items | ~545 KB | **COMPLETED** |
+| **Batch 6** | Root vs Docs Duplicate Documentation | 4 items | ~109 KB | **NEXT UP** |
 | **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | Queue |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185+ items | ~2.5 MB | Queue |
-| **TOTAL TO DATE** | **Batches 1, 2, 3 & 4 Completed** | **45 items** | **~37.15 MB** | **CLEANED** |
+| **TOTAL TO DATE** | **Batches 1 to 5 Completed** | **64 items** | **~37.70 MB** | **CLEANED** |
 
