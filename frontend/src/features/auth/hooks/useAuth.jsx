@@ -34,6 +34,33 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(Boolean(initialToken) && !initialSession?.user);
   const [error, setError] = useState(null);
 
+  const refreshUser = useCallback(async (nextUser = null, nextContractorProfile = undefined) => {
+    if (nextUser && typeof nextUser === 'object') {
+      const resolvedContractor =
+        nextContractorProfile !== undefined ? nextContractorProfile : contractorProfile;
+      setUser(nextUser);
+      if (nextContractorProfile !== undefined) {
+        setContractorProfile(nextContractorProfile);
+      }
+      setStoredSession(nextUser, resolvedContractor || null);
+      broadcastSessionSync();
+      return { user: nextUser, contractorProfile: resolvedContractor || null };
+    }
+
+    try {
+      const response = await authApi.getMe();
+      if (response?.data) {
+        setUser(response.data.user);
+        setContractorProfile(response.data.contractorProfile || null);
+        setStoredSession(response.data.user, response.data.contractorProfile || null);
+        return response.data;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }, [contractorProfile]);
+
   // Load / silently revalidate current session on mount
   useEffect(() => {
     let mounted = true;
@@ -174,32 +201,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const refreshUser = useCallback(async (nextUser = null, nextContractorProfile = undefined) => {
-    if (nextUser && typeof nextUser === 'object') {
-      const resolvedContractor =
-        nextContractorProfile !== undefined ? nextContractorProfile : contractorProfile;
-      setUser(nextUser);
-      if (nextContractorProfile !== undefined) {
-        setContractorProfile(nextContractorProfile);
-      }
-      setStoredSession(nextUser, resolvedContractor || null);
-      broadcastSessionSync();
-      return { user: nextUser, contractorProfile: resolvedContractor || null };
-    }
-
-    try {
-      const response = await authApi.getMe();
-      if (response?.data) {
-        setUser(response.data.user);
-        setContractorProfile(response.data.contractorProfile || null);
-        setStoredSession(response.data.user, response.data.contractorProfile || null);
-        return response.data;
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  }, [contractorProfile]);
   const value = {
     user,
     contractorProfile,
