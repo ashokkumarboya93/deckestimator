@@ -123,15 +123,16 @@ Development reviews were saved across two different folders: `completion/` and `
 
 ---
 
-### Category 6: Root vs. Docs Duplicates
-Several markdown documents in the root folder are 100% duplicate copies of files inside `docs/`.
+### Category 6: Root vs. Docs Duplicates — [COMPLETED]
+Markdown documents in the root folder that were 100% duplicate copies of files inside `docs/` or outdated test logs.
 
-| Root File Path | Size | Duplicate Path in `docs/` | Action |
+| Root File Path | Size | Duplicate Path in `docs/` | Status |
 | :--- | :--- | :--- | :--- |
-| `Architecture.md` | 37.4 KB | `docs/Phase_2_ARCHITECTURE.md` (Identical 37,395 B) | **DELETE ROOT COPY** |
-| `DECK_PRO_HLD_LLD.md` | 41.2 KB | `docs/Phase_1_HLD_LLD.md` (Identical 41,237 B) | **DELETE ROOT COPY** |
-| `Deck_Estimator_API_Fix_Report.md` | 19.7 KB | `docs/Deck_Estimator_API_Fix_Report.md` (Identical 19,732 B) | **DELETE ROOT COPY** |
-| `FRONTEND_TEST_REPORT.md` | 10.8 KB | Stale temporary test log. | **DELETE** |
+| `Architecture.md` | 37.4 KB | `docs/Phase_2_ARCHITECTURE.md` (Identical 37,395 B) | **DELETED ROOT COPY** |
+| `DECK_PRO_HLD_LLD.md` | 41.2 KB | `docs/Phase_1_HLD_LLD.md` (Identical 41,237 B) | **DELETED ROOT COPY** |
+| `Deck_Estimator_API_Fix_Report.md` | 19.7 KB | `docs/Deck_Estimator_API_Fix_Report.md` (Identical 19,732 B) | **DELETED ROOT COPY** |
+| `FRONTEND_TEST_REPORT.md` | 10.8 KB | Stale Nov 11 test log; issues resolved. | **DELETED** |
+| `SECURITY_REVIEW.md` | 9.5 KB | Stale Nov 11 security log; issues resolved. | **DELETED** |
 
 ---
 

@@ -100,6 +100,19 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 6: Root vs. Docs Duplicate Documentation & Legacy Audits
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original File Path | File Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `Architecture.md` | 37.4 KB | **DELETED** | Permanently Removed | Exact duplicate of `docs/Phase_2_ARCHITECTURE.md`. |
+| `DECK_PRO_HLD_LLD.md` | 41.2 KB | **DELETED** | Permanently Removed | Exact duplicate of `docs/Phase_1_HLD_LLD.md`. |
+| `Deck_Estimator_API_Fix_Report.md` | 19.7 KB | **DELETED** | Permanently Removed | Exact duplicate of `docs/Deck_Estimator_API_Fix_Report.md`. |
+| `FRONTEND_TEST_REPORT.md` | 10.8 KB | **DELETED** | Permanently Removed | Outdated Nov 11 audit log; all reported issues resolved. |
+| `SECURITY_REVIEW.md` | 9.5 KB | **DELETED** | Permanently Removed | Outdated Nov 11 audit log; all reported issues resolved. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
@@ -108,8 +121,8 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 3** | Obsolete Root Scratch & Python Scripts | 21 items | ~207 KB | **COMPLETED** |
 | **Batch 4** | Duplicate & Empty Postman Folders | 11 items | ~8.3 KB | **COMPLETED** |
 | **Batch 5** | Duplicate & Legacy Review Folders | 19 items | ~545 KB | **COMPLETED** |
-| **Batch 6** | Root vs Docs Duplicate Documentation | 4 items | ~109 KB | **NEXT UP** |
-| **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | Queue |
+| **Batch 6** | Root vs Docs Duplicate Documentation | 5 files | ~119 KB | **COMPLETED** |
+| **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | **NEXT UP** |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185+ items | ~2.5 MB | Queue |
-| **TOTAL TO DATE** | **Batches 1 to 5 Completed** | **64 items** | **~37.70 MB** | **CLEANED** |
+| **TOTAL TO DATE** | **Batches 1 to 6 Completed** | **69 items** | **~37.82 MB** | **CLEANED** |
 
