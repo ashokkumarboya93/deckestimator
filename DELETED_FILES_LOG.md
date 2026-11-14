@@ -33,16 +33,45 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 3: Obsolete Root `scratch/` & Root `scripts/`
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original File / Folder Path | File Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `scratch/fix_admin.js` | 558 B | **DELETED** | Permanently Removed | One-off admin bcrypt test; bug permanently solved in `auth.service.js`. |
+| `scratch/test_addr.js` | 660 B | **DELETED** | Permanently Removed | Ad-hoc user address schema query. Zero runtime dependency. |
+| `scratch/test_admin_speed.cjs` | 2.0 KB | **DELETED** | Permanently Removed | One-time admin latency benchmark script. |
+| `scratch/test_contractor_portal.js` | 15.7 KB | **DELETED** | Permanently Removed | Standalone contractor tester; superseded by `backend/tests/`. |
+| `scratch/test_contractor_speed.cjs` | 2.2 KB | **DELETED** | Permanently Removed | One-time contractor benchmark script. |
+| `scratch/test_customer_admin_sync.cjs` | 4.6 KB | **DELETED** | Permanently Removed | Ad-hoc lead sync test script. |
+| `scratch/test_endpoints.js` | 2.9 KB | **DELETED** | Permanently Removed | Manual REST smoke test script. |
+| `scratch/update_files.js` | 2.1 KB | **DELETED** | Permanently Removed | Migration script for `AdminUserProfilePage.jsx`; changes committed. |
+| `scratch/update_lead_page.js` | 14.6 KB | **DELETED** | Permanently Removed | Migration script for `AdminLeadManagementPage.jsx`; changes committed. |
+| `scratch/update_verification_page.js` | 81.9 KB | **DELETED** | Permanently Removed | 82 KB string literal duplicate of `AdminVerificationProgressPage.jsx`. |
+| `scratch/` (Folder) | — | **DELETED** | Permanently Removed | Empty folder after removing the 10 scratch files above. |
+| `scripts/add_admin_endpoints.py` | 1.1 KB | **DELETED** | Permanently Removed | Python regex updater for `endpoints.js`; routes are already in code. |
+| `scripts/clean_all_emojis.py` | 4.0 KB | **DELETED** | Permanently Removed | Python emoji cleaner; codebase is already 100% clean of emojis. |
+| `scripts/test_contractor_verification_e2e.js` | 11.1 KB | **DELETED** | Permanently Removed | Redundant contractor E2E tester; official tests live in `backend/tests/`. |
+| `scripts/update_continuous_estimator.py` | 1.6 KB | **DELETED** | Permanently Removed | Python updater for `ContinuousEstimatorForm.jsx`; changes committed. |
+| `scripts/update_customer_dash.py` | 6.6 KB | **DELETED** | Permanently Removed | Python updater for `CustomerDashboardPage.jsx`; changes committed. |
+| `scripts/update_cust_estimates.py` | 6.0 KB | **DELETED** | Permanently Removed | Python updater for `CustomerEstimatesPage.jsx`; changes committed. |
+| `scripts/update_layouts.py` | 2.2 KB | **DELETED** | Permanently Removed | Python updater for `AdminLayout.jsx`; changes committed. |
+| `scripts/update_reg_form.py` | 1.5 KB | **DELETED** | Permanently Removed | Python updater for `RegistrationForm.jsx`; changes committed. |
+| `scripts/upgrade_admin_dashboard.py` | 42.8 KB | **DELETED** | Permanently Removed | 43 KB Python generator for `AdminDashboardPage.jsx`; dashboard is live. |
+| `scripts/` (Folder) | — | **DELETED** | Permanently Removed | Root folder holding the 9 obsolete helper scripts above. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
 | **Batch 1** | Root Typo & Scrap Text Files | 3 files | 28.5 KB | **COMPLETED** |
-| **Batch 2** | Demo Video Files & Screen Recorders | 10 items | **~36.9 MB** | **COMPLETED** |
-| **Batch 3** | Obsolete Root Scratch & Python Scripts | 19 items | ~180 KB | **NEXT UP** |
-| **Batch 4** | Duplicate & Empty Postman Folders | 9 items | ~8 KB | Queue |
+| **Batch 2** | Demo Video Files & Screen Recorders | 10 items | ~36.9 MB | **COMPLETED** |
+| **Batch 3** | Obsolete Root Scratch & Python Scripts | 21 items | ~207 KB | **COMPLETED** |
+| **Batch 4** | Duplicate & Empty Postman Folders | 9 items | ~8 KB | **NEXT UP** |
 | **Batch 5** | Duplicate & Legacy Review Folders | 16 items | ~485 KB | Queue |
 | **Batch 6** | Root vs Docs Duplicate Documentation | 4 items | ~109 KB | Queue |
 | **Batch 7** | Empty Ghost Directories | 1 item | 0 KB | Queue |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185+ items | ~2.5 MB | Queue |
-| **TOTAL TO DATE** | **Batches 1 & 2 Completed** | **13 items** | **~36.93 MB** | **CLEANED** |
+| **TOTAL TO DATE** | **Batches 1, 2 & 3 Completed** | **34 items** | **~37.14 MB** | **CLEANED** |
 

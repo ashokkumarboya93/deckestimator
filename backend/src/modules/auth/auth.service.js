@@ -48,6 +48,12 @@ function generateToken(user) {
 async function registerUser(userData) {
   const normalizedEmail = userData.email.trim().toLowerCase();
 
+  // Fast indexed existence check
+  const existingUser = await User.exists({ email: normalizedEmail });
+  if (existingUser) {
+    throw new ConflictError('An account with this email already exists.');
+  }
+
   const role = userData.role || ROLES.CUSTOMER;
   const initialAccountStatus =
     role === ROLES.CONTRACTOR
@@ -57,7 +63,7 @@ async function registerUser(userData) {
   // Hash password
   const passwordHash = await User.hashPassword(userData.password);
 
-  // Create User atomically (relies on unique index on email for instant single round-trip validation)
+  // Create User
   let user;
   try {
     user = await User.create({
