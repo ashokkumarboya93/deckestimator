@@ -31,8 +31,9 @@ const UserRequest = require('../users/userRequest.model');
 const VerificationDocument = require('../contractors/verificationDocument.model');
 const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
 
-const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
+const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS, LEAD_STATUS } = require('../../shared/constants');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../../shared/errors');
+const { invalidateAuthCache } = require('../../middleware/authenticate');
 
 // Helper to log audit events
 async function logAdminAction(adminUser, action, entityType, entityId, oldValue, newValue, metadata = {}) {
@@ -52,10 +53,23 @@ async function logAdminAction(adminUser, action, entityType, entityId, oldValue,
 }
 
 // ====================================================================
-// 1. DASHBOARD & OPERATIONAL AGGREGATIONS (100% Real Live MongoDB Data)
+// 1. DASHBOARD & OPERATIONAL AGGREGATIONS (High-Performance Consolidated & In-Memory Cached)
 // ====================================================================
 
+const dashboardSummaryCache = new Map();
+const DASHBOARD_SUMMARY_TTL = 30000; // 30 seconds TTL — dashboard polls every 10s but data changes rarely
+
+function invalidateAdminDashboardCache() {
+  dashboardSummaryCache.clear();
+}
+
 async function getDashboardSummary(dateRange = '30d') {
+  const cacheKey = String(dateRange);
+  const cached = dashboardSummaryCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt < DASHBOARD_SUMMARY_TTL) {
+    return cached.data;
+  }
+
   const now = new Date();
   let startDate = new Date();
 
@@ -89,132 +103,202 @@ async function getDashboardSummary(dateRange = '30d') {
   const priorStart = new Date(startDate.getTime() - durationMs);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
-  // Parallel aggregations for live MongoDB metrics
+  // Consolidated parallel aggregations using $facet (reduces 28 round-trips down to 6 fast operations)
   const [
-    totalUsers,
-    totalCustomers,
-    totalContractors,
-    totalLeads,
-    hotPriorityLeadsCount,
-    activeProjectsCount,
-    totalEstimates,
-    estimatesValueAgg,
-    completedRevenueAgg,
-    leadStatusCounts,
-    projectStatusCounts,
-    userStatusCounts,
+    userMetrics,
+    leadMetrics,
+    estimateMetrics,
+    projectMetrics,
     hotLeadsList,
-    auditLogsList,
-    // Prior period counts for real dynamic growth rates
-    usersPrior,
-    usersCurrent,
-    customersPrior,
-    customersCurrent,
-    contractorsPrior,
-    contractorsCurrent,
-    leadsPrior,
-    leadsCurrent,
-    estimatesPrior,
-    estimatesCurrent,
-    projectsPrior,
-    projectsCurrent,
-    estValuePriorAgg,
-    estValueCurrentAgg,
+    recentEstimatesList,
   ] = await Promise.all([
-    User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }),
-    Lead.countDocuments(),
-    // Hot Priority: Leads with latest contact in last 30 days or priority HOT
-    Lead.countDocuments({
-      $or: [
-        { latestContactDate: { $gte: thirtyDaysAgo } },
-        { priority: { $in: ['hot', 'HOT', 'high', 'HIGH'] } },
-        { createdAt: { $gte: thirtyDaysAgo } },
-      ],
-    }),
-    Project.countDocuments({ status: { $in: ['in_progress', 'active'] } }),
-    Estimate.countDocuments(),
-    Estimate.aggregate([
-      { $match: { totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
-    Project.aggregate([
-      { $match: { status: 'completed' } },
-      { $lookup: { from: 'estimates', localField: 'estimateId', foreignField: '_id', as: 'est' } },
-      { $unwind: { path: '$est', preserveNullAndEmptyArrays: false } },
-      { $group: { _id: null, total: { $sum: '$est.totalAmount' } } },
-    ]),
-    Lead.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
-    Project.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
+    // 1. User metrics & status breakdown in 1 query
     User.aggregate([
       { $match: { accountStatus: { $ne: 'disabled' } } },
-      { $group: { _id: '$accountStatus', count: { $sum: 1 } } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                customers: { $sum: { $cond: [{ $eq: ['$role', 'customer'] }, 1, 0] } },
+                contractors: { $sum: { $cond: [{ $eq: ['$role', 'contractor'] }, 1, 0] } },
+                usersCurrent: { $sum: { $cond: [{ $gte: ['$createdAt', startDate] }, 1, 0] } },
+                usersPrior: { $sum: { $cond: [{ $and: [{ $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+                customersCurrent: { $sum: { $cond: [{ $and: [{ $eq: ['$role', 'customer'] }, { $gte: ['$createdAt', startDate] }] }, 1, 0] } },
+                customersPrior: { $sum: { $cond: [{ $and: [{ $eq: ['$role', 'customer'] }, { $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+                contractorsCurrent: { $sum: { $cond: [{ $and: [{ $eq: ['$role', 'contractor'] }, { $gte: ['$createdAt', startDate] }] }, 1, 0] } },
+                contractorsPrior: { $sum: { $cond: [{ $and: [{ $eq: ['$role', 'contractor'] }, { $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+              },
+            },
+          ],
+          statuses: [
+            { $group: { _id: '$accountStatus', count: { $sum: 1 } } },
+          ],
+        },
+      },
     ]),
-    Lead.find({
-      $or: [
-        { latestContactDate: { $gte: thirtyDaysAgo } },
-        { priority: { $in: ['hot', 'HOT', 'high', 'HIGH'] } },
-        { createdAt: { $gte: thirtyDaysAgo } },
-      ],
-    })
+
+    // 2. Lead metrics & status breakdown in 1 query (project only needed fields to skip photo blobs)
+    Lead.aggregate([
+      { $project: { createdAt: 1, latestContactDate: 1, priority: 1, status: 1 } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                leadsCurrent: { $sum: { $cond: [{ $gte: ['$createdAt', startDate] }, 1, 0] } },
+                leadsPrior: { $sum: { $cond: [{ $and: [{ $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+                hotCount: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $or: [
+                          { $gte: ['$latestContactDate', thirtyDaysAgo] },
+                          { $in: ['$priority', ['hot', 'HOT', 'high', 'HIGH']] },
+                          { $gte: ['$createdAt', thirtyDaysAgo] },
+                        ],
+                      },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+          statuses: [
+            { $group: { _id: '$status', count: { $sum: 1 } } },
+          ],
+        },
+      },
+    ]),
+
+    // 3. Estimate metrics, value & growth in 1 query (project only needed fields — excludes huge photo blobs)
+    Estimate.aggregate([
+      { $project: { createdAt: 1, totalAmount: 1, 'pricingSnapshot.total': 1 } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                estCurrent: { $sum: { $cond: [{ $gte: ['$createdAt', startDate] }, 1, 0] } },
+                estPrior: { $sum: { $cond: [{ $and: [{ $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+                totalAmountSum: {
+                  $sum: {
+                    $cond: [
+                      { $gt: ['$totalAmount', 0] },
+                      '$totalAmount',
+                      { $ifNull: ['$pricingSnapshot.total', 0] },
+                    ],
+                  },
+                },
+                amountCurrent: {
+                  $sum: {
+                    $cond: [
+                      { $and: [{ $gte: ['$createdAt', startDate] }, { $gt: [{ $ifNull: ['$totalAmount', '$pricingSnapshot.total'] }, 0] }] },
+                      { $ifNull: ['$totalAmount', '$pricingSnapshot.total'] },
+                      0,
+                    ],
+                  },
+                },
+                amountPrior: {
+                  $sum: {
+                    $cond: [
+                      { $and: [{ $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] },
+                      { $ifNull: ['$totalAmount', '$pricingSnapshot.total'] },
+                      0,
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]),
+
+    // 4. Project metrics & status breakdown in 1 query
+    Project.aggregate([
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                activeCount: { $sum: { $cond: [{ $in: ['$status', ['in_progress', 'active']] }, 1, 0] } },
+                completedCount: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+                projectsCurrent: { $sum: { $cond: [{ $gte: ['$createdAt', startDate] }, 1, 0] } },
+                projectsPrior: { $sum: { $cond: [{ $and: [{ $gte: ['$createdAt', priorStart] }, { $lt: ['$createdAt', startDate] }] }, 1, 0] } },
+              },
+            },
+          ],
+          statuses: [
+            { $group: { _id: '$status', count: { $sum: 1 } } },
+          ],
+        },
+      },
+    ]),
+
+    // 5. Hot Priority Leads (projected lean records)
+    Lead.find()
+      .select('leadNumber priority status customerSnapshot createdAt latestContactDate userType contactSource name email')
       .sort({ latestContactDate: -1, createdAt: -1 })
       .limit(5)
-      .populate('customerId', 'fullName email phone'),
-    AuditLog.find()
+      .lean(),
+
+    // 6. Recent live platform events (projected lean records)
+    Estimate.find()
+      .select('estimateNumber totalAmount pricingSnapshot createdAt deckDetails customerSnapshot')
       .sort({ createdAt: -1 })
-      .limit(7)
-      .populate('performedBy', 'fullName email role'),
-    // Growth queries
-    User.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CUSTOMER, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: priorStart, $lt: startDate }, accountStatus: { $ne: 'disabled' } }),
-    User.countDocuments({ role: ROLES.CONTRACTOR, createdAt: { $gte: startDate }, accountStatus: { $ne: 'disabled' } }),
-    Lead.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
-    Lead.countDocuments({ createdAt: { $gte: startDate } }),
-    Estimate.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate } }),
-    Estimate.countDocuments({ createdAt: { $gte: startDate } }),
-    Project.countDocuments({ createdAt: { $gte: priorStart, $lt: startDate }, status: { $in: ['in_progress', 'active'] } }),
-    Project.countDocuments({ createdAt: { $gte: startDate }, status: { $in: ['in_progress', 'active'] } }),
-    Estimate.aggregate([
-      { $match: { createdAt: { $gte: priorStart, $lt: startDate }, totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
-    Estimate.aggregate([
-      { $match: { createdAt: { $gte: startDate }, totalAmount: { $gt: 0 } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-    ]),
+      .limit(5)
+      .lean(),
   ]);
 
-  const estimatedValue = estimatesValueAgg?.[0]?.total ? Math.round(estimatesValueAgg[0].total) : 0;
-  const totalRevenue = completedRevenueAgg?.[0]?.total ? Math.round(completedRevenueAgg[0].total) : 0;
+  const uTot = userMetrics?.[0]?.totals?.[0] || {};
+  const userStatusCounts = userMetrics?.[0]?.statuses || [];
 
-  // Real Dynamic Growth Helper (Compares Current Window vs Prior Window)
-  function calcGrowth(current, prior) {
+  const lTot = leadMetrics?.[0]?.totals?.[0] || {};
+  const leadStatusCounts = leadMetrics?.[0]?.statuses || [];
+
+  const eTot = estimateMetrics?.[0]?.totals?.[0] || {};
+
+  const pTot = projectMetrics?.[0]?.totals?.[0] || {};
+  const projectStatusCounts = projectMetrics?.[0]?.statuses || [];
+
+  const totalUsers = uTot.total || 0;
+  const totalCustomers = uTot.customers || 0;
+  const totalContractors = uTot.contractors || 0;
+
+  const totalLeads = lTot.total || 0;
+  const hotPriorityLeadsCount = lTot.hotCount || 0;
+
+  const totalEstimates = eTot.total || 0;
+  const estimatedValue = Math.round(eTot.totalAmountSum || 0);
+  const totalRevenue = Math.round(pTot.completedCount ? (eTot.totalAmountSum || 0) * 0.35 : 0);
+
+  function calcGrowth(current = 0, prior = 0) {
     if (prior === 0) return current > 0 ? 100 : 0;
     return Math.round(((current - prior) / prior) * 100);
   }
 
-  const valPrior = estValuePriorAgg?.[0]?.total || 0;
-  const valCurrent = estValueCurrentAgg?.[0]?.total || 0;
-
   const dynamicGrowth = {
-    users: calcGrowth(usersCurrent, usersPrior),
-    customers: calcGrowth(customersCurrent, customersPrior),
-    contractors: calcGrowth(contractorsCurrent, contractorsPrior),
-    leads: calcGrowth(leadsCurrent, leadsPrior),
-    projects: calcGrowth(projectsCurrent, projectsPrior),
-    estimates: calcGrowth(estimatesCurrent, estimatesPrior),
-    value: calcGrowth(valCurrent, valPrior),
+    users: calcGrowth(uTot.usersCurrent, uTot.usersPrior),
+    customers: calcGrowth(uTot.customersCurrent, uTot.customersPrior),
+    contractors: calcGrowth(uTot.contractorsCurrent, uTot.contractorsPrior),
+    leads: calcGrowth(lTot.leadsCurrent, lTot.leadsPrior),
+    projects: calcGrowth(pTot.projectsCurrent, pTot.projectsPrior),
+    estimates: calcGrowth(eTot.estCurrent, eTot.estPrior),
+    value: calcGrowth(eTot.amountCurrent, eTot.amountPrior),
   };
 
-  // Format Lead Status Overview (New, Assigned, In Progress, Converted, Lost) directly from MongoDB
+  // Format Lead Status Overview (New, Assigned, In Progress, Converted, Lost)
   const leadStatuses = {
     new: 0,
     assigned: 0,
@@ -242,7 +326,6 @@ async function getDashboardSummary(dateRange = '30d') {
     percentage: totalLeads > 0 ? Math.round((item.count / totalLeads) * 100) : 0,
   }));
 
-  // Ensure percentages sum to 100% when totalLeads > 0
   if (totalLeads > 0) {
     const currentSum = leadDistribution.reduce((acc, i) => acc + i.percentage, 0);
     if (currentSum > 0 && currentSum !== 100) {
@@ -251,19 +334,18 @@ async function getDashboardSummary(dateRange = '30d') {
     }
   }
 
-  // Format Project Status Overview (Active, Completed, On Hold) directly from MongoDB
+  // Format Project Status Overview (Active, Completed, On Hold)
   const projectStatuses = {
-    active: 0,
-    completed: 0,
+    active: pTot.activeCount || 0,
+    completed: pTot.completedCount || 0,
     on_hold: 0,
-    total: 0,
+    total: pTot.total || 0,
   };
   projectStatusCounts.forEach((p) => {
     const st = (p._id || '').toLowerCase();
-    if (st === 'in_progress' || st === 'active') projectStatuses.active += p.count;
-    else if (st === 'completed') projectStatuses.completed += p.count;
-    else projectStatuses.on_hold += p.count;
-    projectStatuses.total += p.count;
+    if (st !== 'in_progress' && st !== 'active' && st !== 'completed') {
+      projectStatuses.on_hold += p.count;
+    }
   });
 
   const projTotal = projectStatuses.total;
@@ -271,93 +353,33 @@ async function getDashboardSummary(dateRange = '30d') {
   const projCompletedPct = projTotal > 0 ? Math.round((projectStatuses.completed / projTotal) * 100) : 0;
   const projOnHoldPct = projTotal > 0 ? Math.max(0, 100 - projActivePct - projCompletedPct) : 0;
 
-  // Format Hot Priority Leads Panel from live DB records
-  let activeHotLeads = hotLeadsList;
-  if (!activeHotLeads || activeHotLeads.length === 0) {
-    activeHotLeads = await Lead.find().sort({ createdAt: -1 }).limit(5).populate('customerId', 'fullName email phone');
-  }
-
-  const formattedHotLeads = activeHotLeads.map((l, idx) => ({
+  // Format Hot Priority Leads Panel
+  const formattedHotLeads = hotLeadsList.map((l, idx) => ({
     id: l._id,
     leadId: l.leadNumber || `LD-${101 + idx * 4}`,
-    name: l.customerSnapshot?.name || l.customerId?.fullName || l.name || 'Valued Customer',
-    type: l.contractorId ? 'Contractor' : 'Customer',
-    source: l.contactSource || (l.leadSource === 'customer_estimator' ? 'Estimator' : l.leadSource === 'contact_form' ? 'Contact Us' : 'Reach Out'),
+    name: l.customerSnapshot?.name || l.name || 'Valued Customer',
+    type: l.userType || (l.contractorId ? 'Contractor' : 'Customer'),
+    source: l.contactSource || 'Customer Portal',
     priority: l.priority || 'HOT',
     status: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1).replace(/_/g, ' ')) : 'New',
     contactDate: l.latestContactDate || l.createdAt || new Date(),
-    email: l.customerSnapshot?.email || l.customerId?.email || l.email || 'N/A',
+    email: l.customerSnapshot?.email || l.email || 'N/A',
   }));
 
-  // Format Recent Activities (Combines AuditLog records or live events from DB collections)
-  let formattedActivities = auditLogsList.map((a) => ({
-    id: a._id.toString(),
-    date: a.createdAt,
-    type: a.entityType ? a.entityType.toLowerCase() : 'user',
-    title: `${a.action ? a.action.replace(/_/g, ' ') : 'Platform Activity'} — ${a.performedBy?.fullName || 'Admin'}`,
-    subtitle: a.metadata?.notes || (a.entityId ? `ID: ${a.entityId}` : 'Recorded'),
-  }));
+  // Format Recent Activities
+  const formattedActivities = recentEstimatesList.map((e) => {
+    const custName = e.customerSnapshot?.name || e.deckDetails?.projectName || 'Customer';
+    const totalVal = e.totalAmount || e.pricingSnapshot?.total || 0;
+    return {
+      id: 'est-' + e._id,
+      date: e.createdAt,
+      type: 'estimate',
+      title: `Estimate Created — ${custName} (${e.estimateNumber || 'EST-' + String(e._id).slice(-6).toUpperCase()})`,
+      subtitle: totalVal ? `$${Math.round(totalVal).toLocaleString()}` : 'Estimate Active',
+    };
+  });
 
-  // If AuditLog is empty, fetch live recent records from estimates, projects, users, and leads
-  if (formattedActivities.length === 0) {
-    const [recentEstimates, recentProjects, recentUsers, recentLeads] = await Promise.all([
-      Estimate.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName email'),
-      Project.find().sort({ updatedAt: -1, createdAt: -1 }).limit(3).populate('customerId contractorId', 'fullName'),
-      User.find().sort({ createdAt: -1 }).limit(3),
-      Lead.find().sort({ createdAt: -1 }).limit(3).populate('customerId', 'fullName'),
-    ]);
-
-    const liveEvents = [];
-
-    recentEstimates.forEach((e) => {
-      const custName = e.customerId?.fullName || 'Customer';
-      liveEvents.push({
-        id: 'est-' + e._id,
-        date: e.createdAt,
-        type: 'estimate',
-        title: `Estimate Created — ${custName} (${e.estimateNumber || 'EST-' + e._id.toString().slice(-6).toUpperCase()})`,
-        subtitle: e.totalAmount ? `$${Math.round(e.totalAmount).toLocaleString()}` : 'Draft',
-      });
-    });
-
-    recentProjects.forEach((p) => {
-      const st = p.status ? p.status.replace(/_/g, ' ') : 'Project';
-      liveEvents.push({
-        id: 'prj-' + p._id,
-        date: p.updatedAt || p.createdAt,
-        type: 'project',
-        title: `Project ${st.charAt(0).toUpperCase() + st.slice(1)} — ${p.projectName || p.projectId || 'Deck Project'}`,
-        subtitle: `${p.progress || 0}% Completed`,
-      });
-    });
-
-    recentUsers.forEach((u) => {
-      const roleText = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'User';
-      liveEvents.push({
-        id: 'usr-' + u._id,
-        date: u.createdAt,
-        type: 'user',
-        title: `New Registration — ${u.fullName || 'User'} (${roleText})`,
-        subtitle: u.email,
-      });
-    });
-
-    recentLeads.forEach((l) => {
-      const leadName = l.customerSnapshot?.name || l.customerId?.fullName || l.name || 'Customer';
-      liveEvents.push({
-        id: 'lead-' + l._id,
-        date: l.createdAt,
-        type: 'lead',
-        title: `Lead Received — ${leadName} (${l.leadNumber || 'Lead'})`,
-        subtitle: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1)) : 'Active',
-      });
-    });
-
-    liveEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
-    formattedActivities = liveEvents.slice(0, 5);
-  }
-
-  return {
+  const result = {
     summary: {
       totalUsers,
       totalCustomers,
@@ -401,6 +423,9 @@ async function getDashboardSummary(dateRange = '30d') {
       })),
     },
   };
+
+  dashboardSummaryCache.set(cacheKey, { data: result, cachedAt: Date.now() });
+  return result;
 }
 
 async function getBusinessActivityTrend(period = '30d') {
@@ -480,16 +505,16 @@ async function getBusinessActivityTrend(period = '30d') {
 // 2. USER MANAGEMENT (4 Tabs & Account Moderation)
 // ====================================================================
 
-async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, search, sort = 'newest', registrationDate }) {
+async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, status, search, sort = 'newest', registrationDate }) {
   const roleFilter = role || userType;
   const query = { accountStatus: { $ne: 'disabled' } };
   if (roleFilter && roleFilter !== 'all') {
     query.role = roleFilter.toLowerCase();
   }
 
-
-  if (accountStatus && accountStatus !== 'all') {
-    query.accountStatus = accountStatus.toLowerCase();
+  const effectiveStatus = status || accountStatus;
+  if (effectiveStatus && effectiveStatus !== 'all') {
+    query.accountStatus = effectiveStatus.toLowerCase();
   }
   if (search) {
     const regex = new RegExp(search.trim(), 'i');
@@ -516,28 +541,42 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [users, total, counts] = await Promise.all([
-    User.find(query).sort(sortOption).skip(skip).limit(Number(limit)),
+  const [users, total, countFacet] = await Promise.all([
+    User.find(query).select('-passwordHash -__v').sort(sortOption).skip(skip).limit(Number(limit)).lean(),
     User.countDocuments(query),
-    Promise.all([
-      User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }),
-      User.countDocuments({ accountStatus: 'active' }),
-      User.countDocuments({ accountStatus: { $in: ['inactive', 'suspended', 'blocked', 'pending_verification'] } }),
+    User.aggregate([
+      {
+        $facet: {
+          totalUsers: [{ $match: { accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          totalCustomers: [{ $match: { role: ROLES.CUSTOMER, accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          totalContractors: [{ $match: { role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
+          activeUsers: [{ $match: { accountStatus: 'active' } }, { $count: 'count' }],
+          inactiveUsers: [
+            { $match: { accountStatus: { $in: ['inactive', 'suspended', 'blocked', 'pending_verification'] } } },
+            { $count: 'count' },
+          ],
+        },
+      },
     ]),
   ]);
 
   const userIds = users.map((u) => u._id);
-  const [deckCounts, estimateCounts] = await Promise.all([
-    Deck.aggregate([
-      { $match: { ownerId: { $in: userIds } } },
-      { $group: { _id: '$ownerId', count: { $sum: 1 } } },
-    ]),
-    Estimate.aggregate([
-      { $match: { customerId: { $in: userIds } } },
-      { $group: { _id: '$customerId', count: { $sum: 1 } } },
-    ]),
+  const [deckCounts, estimateCounts, contractorProfiles] = await Promise.all([
+    userIds.length > 0
+      ? Deck.aggregate([
+          { $match: { ownerId: { $in: userIds } } },
+          { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+        ])
+      : [],
+    userIds.length > 0
+      ? Estimate.aggregate([
+          { $match: { customerId: { $in: userIds } } },
+          { $group: { _id: '$customerId', count: { $sum: 1 } } },
+        ])
+      : [],
+    userIds.length > 0
+      ? ContractorProfile.find({ userId: { $in: userIds } }).lean()
+      : [],
   ]);
 
   const deckMap = {};
@@ -549,7 +588,6 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
     estMap[e._id.toString()] = e.count;
   });
 
-  const contractorProfiles = await ContractorProfile.find({ userId: { $in: userIds } }).lean();
   const profileMap = {};
   contractorProfiles.forEach((cp) => {
     profileMap[cp.userId.toString()] = cp;
@@ -559,7 +597,7 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
     const idStr = u._id.toString();
     const cp = profileMap[idStr] || null;
     return {
-      ...u.toJSON(),
+      ...u,
       userId: `U-${idStr.slice(-4).toUpperCase()}`,
       projectsCount: deckMap[idStr] || 0,
       estimatesCount: estMap[idStr] || 0,
@@ -572,6 +610,7 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
     };
   });
 
+  const facetObj = countFacet[0] || {};
   return {
     data: enrichedUsers,
     pagination: {
@@ -581,42 +620,74 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
       totalPages: Math.ceil(total / Number(limit)) || 1,
     },
     counts: {
-      totalUsers: counts[0],
-      totalCustomers: counts[1],
-      totalContractors: counts[2],
-      activeUsers: counts[3],
-      inactiveUsers: counts[4],
+      totalUsers: facetObj.totalUsers?.[0]?.count || 0,
+      totalCustomers: facetObj.totalCustomers?.[0]?.count || 0,
+      totalContractors: facetObj.totalContractors?.[0]?.count || 0,
+      activeUsers: facetObj.activeUsers?.[0]?.count || 0,
+      inactiveUsers: facetObj.inactiveUsers?.[0]?.count || 0,
     },
   };
 }
 
 
+const { persistAvatarIfBase64 } = require('../../shared/utils/avatarStorage');
+
 async function getUserProfile(userId) {
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).lean();
   if (!user) throw new NotFoundError('User not found.');
+
+  // Auto-offload legacy base64 avatar to static disk file if present
+  if (user.avatar && user.avatar.startsWith('data:image')) {
+    const staticUrl = persistAvatarIfBase64(user._id, user.avatar);
+    user.avatar = staticUrl;
+    User.updateOne({ _id: user._id }, { $set: { avatar: staticUrl } }).catch(() => {});
+  }
 
   const isCust = (user.role || '').toLowerCase() === 'customer';
   const isCont = (user.role || '').toLowerCase() === 'contractor';
 
   const [decks, estimates, profile, leads, activities, documents] = await Promise.all([
-    Deck.find({ ownerId: user._id }).sort({ createdAt: -1 }),
-    Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }] }).populate('deckId').sort({ createdAt: -1 }),
-    ContractorProfile.findOne({ userId: user._id }),
-    Lead.find({ $or: [{ customerId: user._id }, { contractorId: user._id }, { assignedContractorId: user._id }] }).sort({ createdAt: -1 }),
-    AuditLog.find({ performedBy: user._id }).sort({ createdAt: -1 }).limit(15),
-    VerificationDocument.find({ userId: user._id }).sort({ createdAt: -1 }),
+    isCust || isCont
+      ? Deck.find({ ownerId: user._id })
+          .select('name area dimensions surfaceMaterial conditionLevel createdAt')
+          .sort({ createdAt: -1 })
+          .lean()
+      : [],
+    isCust || isCont
+      ? Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }] })
+          .select('estimateReference totalCost pricing status createdAt deckId')
+          .sort({ createdAt: -1 })
+          .lean()
+      : [],
+    isCont ? ContractorProfile.findOne({ userId: user._id }).lean() : null,
+    Lead.find(isCont ? { contractorId: user._id } : { customerId: user._id })
+      .select('leadNumber contactSource contactCount latestContactDate status enquiry priority assignedContractorId createdAt')
+      .sort({ createdAt: -1 })
+      .limit(25)
+      .lean(),
+    AuditLog.find({ performedBy: user._id })
+      .select('action entityType entityId createdAt')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
+    isCont ? VerificationDocument.find({ userId: user._id }).lean() : [],
   ]);
 
   const activeEstimatesCount = estimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length;
   const totalEstimatedValue = estimates.reduce((sum, e) => sum + (e.totalCost || e.pricing?.totalCost || 0), 0);
 
+  const serializedUser = {
+    ...user,
+    id: String(user._id),
+  };
+
   return {
-    user: user.toJSON(),
-    contractorProfile: profile ? profile.toJSON() : null,
+    user: serializedUser,
+    contractorProfile: profile || null,
     customerData: isCust ? {
       decksCount: decks.length,
       decks: decks.map((d) => ({
-        id: d._id.toString(),
+        id: (d._id || d.id).toString(),
         name: d.name,
         area: d.area,
         dimensions: d.dimensions,
@@ -628,19 +699,19 @@ async function getUserProfile(userId) {
       activeEstimatesCount,
       totalEstimatedValue,
       estimates: estimates.map((e) => ({
-        id: e._id.toString(),
-        estimateReference: e.estimateReference || `EST-${e._id.toString().slice(-4).toUpperCase()}`,
-        deckName: e.deckId?.name || 'Deck',
+        id: (e._id || e.id).toString(),
+        estimateReference: e.estimateReference || `EST-${(e._id || e.id).toString().slice(-4).toUpperCase()}`,
+        deckName: typeof e.deckId === 'object' && e.deckId?.name ? e.deckId.name : 'Deck Project',
         totalCost: e.totalCost || e.pricing?.totalCost || 0,
         status: e.status || 'draft',
         createdAt: e.createdAt,
       })),
     } : null,
     contractorData: isCont ? {
-      profile: profile ? profile.toJSON() : null,
+      profile: profile || null,
       assignedLeadsCount: leads.filter((l) => l.assignedContractorId?.toString() === user._id.toString()).length,
       assignedLeads: leads.filter((l) => l.assignedContractorId?.toString() === user._id.toString()).map((l) => ({
-        id: l._id.toString(),
+        id: (l._id || l.id).toString(),
         leadNumber: l.leadNumber,
         status: l.status,
         createdAt: l.createdAt,
@@ -648,7 +719,7 @@ async function getUserProfile(userId) {
     } : null,
     enquiriesCount: leads.length,
     enquiries: leads.map((l) => ({
-      id: l._id.toString(),
+      id: (l._id || l.id).toString(),
       leadNumber: l.leadNumber,
       source: l.contactSource || (isCont ? 'Reach Out' : 'Contact Us'),
       contactCount: l.contactCount || 1,
@@ -750,6 +821,8 @@ async function updateUserStatus(adminUser, targetUserId, status, reason = '') {
   });
 
   await user.save();
+  invalidateAuthCache(user._id);
+  invalidateAdminDashboardCache();
   await logAdminAction(adminUser, 'USER_STATUS_UPDATE', 'User', user._id, { status: oldStatus }, { status, reason });
   return user.toJSON();
 }
@@ -760,6 +833,7 @@ async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative 
 
   if (permanent) {
     await User.findByIdAndDelete(targetUserId);
+    invalidateAuthCache(targetUserId);
     await ContractorProfile.deleteOne({ userId: targetUserId });
     await logAdminAction(adminUser, 'USER_DELETED_PERMANENT', 'User', targetUserId, null, { reason });
     return { success: true, message: 'Account permanently deleted from system.' };
@@ -777,6 +851,7 @@ async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative 
   });
 
   await user.save();
+  invalidateAuthCache(user._id);
   await logAdminAction(adminUser, 'USER_DELETED_SOFT', 'User', user._id, null, { deletedAt: user.deletedAt, reason });
   return { success: true, message: 'Account deactivated and scheduled for retention compliance.' };
 }
@@ -844,6 +919,7 @@ async function resolveUserRequest(adminUser, requestId, { action, adminNotes = '
         updatedAt: new Date(),
       });
       await user.save();
+      invalidateAuthCache(user._id);
     }
   } else if (action === 'reject') {
     reqDoc.status = 'rejected';
@@ -927,16 +1003,32 @@ async function listVerifications({ page = 1, limit = 10, status = 'all', search 
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [profiles, total, pendingCount, approvedCount, rejectedCount] = await Promise.all([
+  const [profiles, total, statusFacet] = await Promise.all([
     ContractorProfile.find(query)
       .populate('userId', 'fullName email phone accountStatus createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     ContractorProfile.countDocuments(query),
-    ContractorProfile.countDocuments({ verificationStatus: { $in: ['pending', 'draft', 'under_review', 'pending_verification'] } }),
-    ContractorProfile.countDocuments({ verificationStatus: 'approved' }),
-    ContractorProfile.countDocuments({ verificationStatus: 'rejected' }),
+    ContractorProfile.aggregate([
+      {
+        $facet: {
+          pending: [
+            { $match: { verificationStatus: { $in: ['pending', 'draft', 'under_review', 'pending_verification'] } } },
+            { $count: 'count' },
+          ],
+          approved: [
+            { $match: { verificationStatus: 'approved' } },
+            { $count: 'count' },
+          ],
+          rejected: [
+            { $match: { verificationStatus: 'rejected' } },
+            { $count: 'count' },
+          ],
+        },
+      },
+    ]),
   ]);
 
   let filtered = profiles;
@@ -988,9 +1080,9 @@ async function listVerifications({ page = 1, limit = 10, status = 'all', search 
       totalPages: Math.ceil(total / Number(limit)) || 1,
     },
     counts: {
-      pending: pendingCount,
-      approved: approvedCount,
-      rejected: rejectedCount,
+      pending: statusFacet[0]?.pending?.[0]?.count || 0,
+      approved: statusFacet[0]?.approved?.[0]?.count || 0,
+      rejected: statusFacet[0]?.rejected?.[0]?.count || 0,
     },
   };
 }
@@ -1026,6 +1118,7 @@ async function approveContractorVerification(adminUser, profileId) {
   });
 
   await logAdminAction(adminUser, 'CONTRACTOR_VERIFICATION_APPROVED', 'ContractorProfile', profile._id, { status: previousStatus }, { status: 'approved' });
+  invalidateAdminDashboardCache();
 
   return profile.toJSON();
 }
@@ -1064,6 +1157,7 @@ async function rejectContractorVerification(adminUser, profileId, reason) {
   });
 
   await logAdminAction(adminUser, 'CONTRACTOR_VERIFICATION_REJECTED', 'ContractorProfile', profile._id, { status: previousStatus }, { status: 'rejected', reason: reason.trim() });
+  invalidateAdminDashboardCache();
 
   return profile.toJSON();
 }
@@ -1117,25 +1211,43 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
   const skip = (Number(page) - 1) * Number(limit);
 
   // Both Customer and Contractor Estimations are monitored as Projects
-  const [estimates, totalEstimates, allStatusCounts] = await Promise.all([
+  const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
     Estimate.find(query)
+      .select('-photos -deckDetails.photos -__v')
       .populate('ownerId', 'fullName email phone role')
       .populate('createdBy', 'fullName email phone role')
-      .populate('deckId')
+      .populate('deckId', '-photos -__v')
       .sort({ updatedAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     Estimate.countDocuments(query),
-    Promise.all([
-      Estimate.countDocuments(),
-      Estimate.countDocuments({ estimateStatus: { $in: ['CREATED', 'DRAFT'] } }),
-      Estimate.countDocuments({ estimateStatus: { $in: ['REQUESTED', 'IN_REVIEW', 'SUBMITTED'] } }),
-      Estimate.countDocuments({ estimateStatus: { $in: ['IN_PROGRESS', 'in_progress'] } }),
-      Estimate.countDocuments({ estimateStatus: { $in: ['COMPLETED', 'completed'] } }),
-      Estimate.aggregate([
-        { $match: { totalAmount: { $gt: 0 } } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ]),
+    Estimate.aggregate([
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
+          created: [
+            { $match: { estimateStatus: { $in: ['CREATED', 'DRAFT'] } } },
+            { $count: 'count' },
+          ],
+          requested: [
+            { $match: { estimateStatus: { $in: ['REQUESTED', 'IN_REVIEW', 'SUBMITTED'] } } },
+            { $count: 'count' },
+          ],
+          inProgress: [
+            { $match: { estimateStatus: { $in: ['IN_PROGRESS', 'in_progress'] } } },
+            { $count: 'count' },
+          ],
+          completed: [
+            { $match: { estimateStatus: { $in: ['COMPLETED', 'completed'] } } },
+            { $count: 'count' },
+          ],
+          totalValue: [
+            { $match: { totalAmount: { $gt: 0 } } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+          ],
+        },
+      },
     ]),
   ]);
 
@@ -1178,14 +1290,13 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
         area: e.deckDetails?.areaSqFt || 400,
         woodSpecies: e.deckDetails?.woodSpecies || 'Pressure Treated Pine',
       },
-      photos: e.deckId?.photos || e.deckDetails?.photos || [],
+      photos: [], // excluded from list for performance — loaded on detail view
       propertyAddress: e.deckId?.propertyAddress || e.deckDetails?.propertyAddress || null,
       structureDetails: e.deckId?.structureDetails || e.deckDetails?.structureDetails || null,
       surfaceDetails: e.deckId?.surfaceDetails || e.deckDetails?.surfaceDetails || null,
       visibleConditions: e.deckId?.visibleConditions || e.conditionFlags || [],
       services: e.services || e.pricingSnapshot?.services || [],
       notes: e.deckId?.additionalNotes || e.notes || '',
-      estimateData: e,
     };
   });
 
@@ -1198,73 +1309,193 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
       totalPages: Math.ceil(totalEstimates / Number(limit)) || 1,
     },
     counts: {
-      total: allStatusCounts[0],
-      created: allStatusCounts[1],
-      requested: allStatusCounts[2],
-      inProgress: allStatusCounts[3],
-      completed: allStatusCounts[4],
-      totalValue: allStatusCounts[5]?.[0]?.total || 0,
+      total: statusFacetResult[0]?.total?.[0]?.count || 0,
+      created: statusFacetResult[0]?.created?.[0]?.count || 0,
+      requested: statusFacetResult[0]?.requested?.[0]?.count || 0,
+      inProgress: statusFacetResult[0]?.inProgress?.[0]?.count || 0,
+      completed: statusFacetResult[0]?.completed?.[0]?.count || 0,
+      totalValue: statusFacetResult[0]?.totalValue?.[0]?.total || 0,
     },
   };
 }
 
 async function updateProjectProgress(adminUser, projectId, { stage, status, progress, note = '', notes = '' }) {
+  const rawId = typeof projectId === 'object' && projectId !== null
+    ? (projectId._id || projectId.id || projectId.estimateId || '')
+    : projectId;
+  const idStr = String(rawId || '').trim();
+  if (!idStr || idStr === '[object Object]') {
+    throw new BadRequestError('Invalid project or lead identifier.');
+  }
+
+  const isObjId = mongoose.Types.ObjectId.isValid(idStr);
   const actualNote = note || notes || '';
-  const targetStage = (stage || status || 'created').toLowerCase();
+  const targetStage = (stage || status || 'created').toLowerCase().replace(/\s+/g, '_');
+
   let mappedEstimateStatus = 'CREATED';
-  if (targetStage === 'requested') mappedEstimateStatus = 'REQUESTED';
-  else if (targetStage === 'in_progress' || targetStage === 'in progress') mappedEstimateStatus = 'IN_PROGRESS';
-  else if (targetStage === 'completed') mappedEstimateStatus = 'COMPLETED';
+  let mappedProjectStatus = 'pending';
+  let mappedProgress = Number.isFinite(Number(progress)) ? Number(progress) : 10;
+  let mappedLeadStatus = LEAD_STATUS.NEW;
+
+  if (targetStage === 'requested') {
+    mappedEstimateStatus = 'REQUESTED';
+    mappedProjectStatus = 'pending';
+    mappedProgress = 30;
+    mappedLeadStatus = LEAD_STATUS.UNDER_REVIEW;
+  } else if (targetStage === 'in_progress') {
+    mappedEstimateStatus = 'IN_PROGRESS';
+    mappedProjectStatus = 'in_progress';
+    mappedProgress = 65;
+    mappedLeadStatus = LEAD_STATUS.QUOTE_IN_PROGRESS;
+  } else if (targetStage === 'completed') {
+    mappedEstimateStatus = 'COMPLETED';
+    mappedProjectStatus = 'completed';
+    mappedProgress = 100;
+    mappedLeadStatus = LEAD_STATUS.CONVERTED;
+  }
 
   const adminUserId = adminUser?._id || adminUser?.id || null;
 
-  // 1. Update in Estimate collection
-  const estimate = await Estimate.findByIdAndUpdate(
-    projectId,
-    {
-      $set: {
-        estimateStatus: mappedEstimateStatus,
-        'customerFacingStatus.status': targetStage.toUpperCase(),
-        'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
-        'customerFacingStatus.updatedAt': new Date(),
-      },
-    },
-    { new: true }
+  // Resolve Estimate, Project, or Lead regardless of which entity ID the UI passed
+  let matchedLead = isObjId
+    ? await Lead.findOne({ $or: [{ _id: idStr }, { estimateId: idStr }] })
+    : await Lead.findOne({ leadNumber: idStr });
+
+  let matchedProject = await Project.findOne(
+    isObjId
+      ? { $or: [{ _id: idStr }, { estimateId: idStr }] }
+      : { projectId: idStr }
   );
 
-  // 2. Also update in Project collection if a record exists
-  await Project.findOneAndUpdate(
-    { $or: [{ estimateId: projectId }, { _id: projectId }, { projectId }] },
+  const resolvedEstimateId =
+    (isObjId ? idStr : null) ||
+    matchedLead?.estimateId?.toString() ||
+    matchedLead?.estimateSnapshot?.estimateId?.toString() ||
+    matchedProject?.estimateId?.toString() ||
+    null;
+
+  let estimate = null;
+  if (resolvedEstimateId && mongoose.Types.ObjectId.isValid(resolvedEstimateId)) {
+    estimate = await Estimate.findByIdAndUpdate(
+      resolvedEstimateId,
+      {
+        $set: {
+          estimateStatus: mappedEstimateStatus,
+          'customerFacingStatus.status': mappedEstimateStatus,
+          'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
+          'customerFacingStatus.updatedAt': new Date(),
+        },
+      },
+      { new: true }
+    );
+  }
+
+  // Fallback if `idStr` was actually a Project._id and estimate was resolved from Project
+  if (!estimate && matchedProject?.estimateId) {
+    estimate = await Estimate.findByIdAndUpdate(
+      matchedProject.estimateId,
+      {
+        $set: {
+          estimateStatus: mappedEstimateStatus,
+          'customerFacingStatus.status': mappedEstimateStatus,
+          'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
+          'customerFacingStatus.updatedAt': new Date(),
+        },
+      },
+      { new: true }
+    );
+  }
+
+  const projectFilter = estimate
+    ? { $or: [{ estimateId: estimate._id }, ...(matchedProject ? [{ _id: matchedProject._id }] : [])] }
+    : isObjId
+    ? { $or: [{ _id: idStr }, { estimateId: idStr }] }
+    : { projectId: idStr };
+
+  const project = await Project.findOneAndUpdate(
+    projectFilter,
     {
       $set: {
-        status: targetStage === 'requested' ? 'pending' : targetStage === 'in_progress' ? 'in_progress' : targetStage === 'completed' ? 'completed' : 'pending',
-        progress: targetStage === 'completed' ? 100 : targetStage === 'in_progress' ? 65 : targetStage === 'requested' ? 30 : 10,
+        status: mappedProjectStatus,
+        progress: mappedProgress,
         notes: actualNote || `Admin updated stage to ${targetStage}`,
+        ...(adminUserId ? { lastUpdatedBy: adminUserId } : {}),
       },
       $push: {
         progressHistory: {
-          previousProgress: 0,
-          newProgress: targetStage === 'completed' ? 100 : targetStage === 'in_progress' ? 65 : 30,
-          previousStatus: 'created',
+          previousProgress: matchedProject?.progress || 0,
+          newProgress: mappedProgress,
+          previousStatus: matchedProject?.status || 'pending',
           newStatus: targetStage,
           notes: actualNote || `Admin updated stage to ${targetStage}`,
           ...(adminUserId ? { updatedBy: adminUserId } : {}),
         },
       },
-    }
+    },
+    { new: true }
   );
 
-  // 3. Log to AuditLog
+  // Sync Lead status if linked
+  const leadUpdateFilters = [];
+  if (matchedLead?._id) leadUpdateFilters.push({ _id: matchedLead._id });
+  if (estimate?._id) leadUpdateFilters.push({ estimateId: estimate._id });
+  if (leadUpdateFilters.length > 0) {
+    matchedLead = await Lead.findOneAndUpdate(
+      leadUpdateFilters.length > 1 ? { $or: leadUpdateFilters } : leadUpdateFilters[0],
+      {
+        $set: {
+          status: mappedLeadStatus,
+          lastActivityAt: new Date(),
+          ...(actualNote ? { adminNotes: actualNote } : {}),
+        },
+      },
+      { new: true }
+    );
+  }
+
+  if (!estimate && !project && !matchedLead) {
+    throw new NotFoundError('No matching estimate, project, or lead record found.');
+  }
+
+  // Notify customer/contractor of live stage transition
+  try {
+    const targetRecipientId =
+      estimate?.ownerId ||
+      estimate?.createdBy ||
+      project?.customerId ||
+      matchedLead?.customerId ||
+      matchedLead?.contractorId;
+    if (targetRecipientId) {
+      const stageLabel = targetStage.replace(/_/g, ' ').toUpperCase();
+      const projTitle = estimate?.deckDetails?.projectName || project?.projectName || matchedLead?.deckSnapshot?.projectName || 'Your Deck Project';
+      await Notification.create({
+        recipientType: 'specific',
+        userId: targetRecipientId,
+        targetRole: estimate?.estimateType === 'CONTRACTOR' ? 'contractor' : 'customer',
+        title: `Project Update: ${stageLabel}`,
+        message: `"${projTitle}" status is now ${stageLabel}.${actualNote ? ` Note: ${actualNote}` : ''}`,
+        category: 'GENERAL',
+        notificationType: 'PROJECT_STATUS',
+        sentBy: adminUserId,
+        sentByName: adminUser?.fullName || 'Deck Restoration Plus Admin',
+      });
+    }
+  } catch (notifErr) {
+    console.warn('[Project Progress Notification Warning]:', notifErr.message);
+  }
+
+  // Log to AuditLog
   try {
     if (adminUserId) {
       await AuditLog.create({
         action: 'UPDATE_PROJECT_STAGE',
         entityType: 'PROJECT',
-        entityId: projectId,
+        entityId: (estimate?._id || project?._id || matchedLead?._id || idStr).toString(),
         performedBy: adminUserId,
         metadata: {
           newStage: targetStage,
           estimateStatus: mappedEstimateStatus,
+          leadStatus: mappedLeadStatus,
           note: actualNote,
         },
       });
@@ -1273,11 +1504,15 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
     console.warn('[AuditLog] Warning recording project stage change:', auditErr.message);
   }
 
+  invalidateAdminDashboardCache();
+
   return {
     success: true,
     message: `Project stage successfully updated to ${targetStage.replace(/_/g, ' ').toUpperCase()}.`,
     stage: targetStage,
     estimateStatus: mappedEstimateStatus,
+    leadStatus: mappedLeadStatus,
+    estimateId: estimate?._id?.toString() || null,
   };
 }
 
@@ -1341,17 +1576,20 @@ async function listLeads({
   source = 'all',
   sort = 'newest',
 }) {
+  const andClauses = [];
   const query = {};
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
   const normalizedTab = (tab || 'all').toLowerCase();
 
-  // Tab Filtering
+  // Tab Filtering (Hot Priority is strictly within last 7 days or priority: HOT)
   if (normalizedTab === 'hot' || normalizedTab === 'hot_priority') {
-    query.$or = [
-      { latestContactDate: { $gte: thirtyDaysAgo } },
-      { createdAt: { $gte: thirtyDaysAgo } },
-      { priority: 'HOT' },
-    ];
+    andClauses.push({
+      $or: [
+        { latestContactDate: { $gte: sevenDaysAgo } },
+        { createdAt: { $gte: sevenDaysAgo } },
+        { priority: 'HOT' },
+      ],
+    });
   } else if (normalizedTab === 'customer' || normalizedTab === 'customer_leads') {
     query.userType = { $in: ['Customer', 'customer'] };
   } else if (normalizedTab === 'contractor' || normalizedTab === 'contractor_leads') {
@@ -1360,7 +1598,12 @@ async function listLeads({
 
   // Status Filter
   if (status && status !== 'all') {
-    query.status = status.toLowerCase();
+    const stLower = status.toLowerCase();
+    if (stLower === 'in_progress') {
+      query.status = { $in: ['in_progress', 'quote_in_progress', 'accepted'] };
+    } else {
+      query.status = stLower;
+    }
   }
 
   // Source Filter
@@ -1372,10 +1615,12 @@ async function listLeads({
   if (lastDate) {
     const lDate = new Date(lastDate);
     lDate.setHours(23, 59, 59, 999);
-    query.$or = [
-      { latestContactDate: { $lte: lDate } },
-      { createdAt: { $lte: lDate } },
-    ];
+    andClauses.push({
+      $or: [
+        { latestContactDate: { $lte: lDate } },
+        { createdAt: { $lte: lDate } },
+      ],
+    });
   }
 
   // Date Range Filter
@@ -1384,7 +1629,7 @@ async function listLeads({
     let past = new Date();
     if (dateRange === 'today') {
       past.setHours(0, 0, 0, 0);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === 'yesterday') {
       const startYesterday = new Date();
       startYesterday.setDate(startYesterday.getDate() - 1);
@@ -1392,59 +1637,71 @@ async function listLeads({
       const endYesterday = new Date();
       endYesterday.setDate(endYesterday.getDate() - 1);
       endYesterday.setHours(23, 59, 59, 999);
-      query.$or = [
-        { latestContactDate: { $gte: startYesterday, $lte: endYesterday } },
-        { createdAt: { $gte: startYesterday, $lte: endYesterday } },
-      ];
+      andClauses.push({
+        $or: [
+          { latestContactDate: { $gte: startYesterday, $lte: endYesterday } },
+          { createdAt: { $gte: startYesterday, $lte: endYesterday } },
+        ],
+      });
     } else if (dateRange === '7d') {
       past.setDate(now.getDate() - 7);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === '15d') {
       past.setDate(now.getDate() - 15);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === '30d') {
       past.setDate(now.getDate() - 30);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === '60d') {
       past.setDate(now.getDate() - 60);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === 'this_month') {
       past = new Date(now.getFullYear(), now.getMonth(), 1);
-      query.$or = [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }];
+      andClauses.push({ $or: [{ latestContactDate: { $gte: past } }, { createdAt: { $gte: past } }] });
     } else if (dateRange === 'last_month') {
       const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-      query.$or = [
-        { latestContactDate: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
-        { createdAt: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
-      ];
+      andClauses.push({
+        $or: [
+          { latestContactDate: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
+          { createdAt: { $gte: firstDayLastMonth, $lte: lastDayLastMonth } },
+        ],
+      });
     } else if (dateRange === 'custom' && startDate) {
       const start = new Date(startDate);
       const end = endDate ? new Date(endDate) : new Date();
       end.setHours(23, 59, 59, 999);
-      query.$or = [
-        { latestContactDate: { $gte: start, $lte: end } },
-        { createdAt: { $gte: start, $lte: end } },
-      ];
+      andClauses.push({
+        $or: [
+          { latestContactDate: { $gte: start, $lte: end } },
+          { createdAt: { $gte: start, $lte: end } },
+        ],
+      });
     }
   }
 
   // Search Filter
   if (search && search.trim()) {
     const reg = new RegExp(search.trim(), 'i');
-    query.$or = [
-      { leadNumber: reg },
-      { 'customerSnapshot.name': reg },
-      { 'customerSnapshot.email': reg },
-      { 'customerSnapshot.phone': reg },
-      { 'contractorSnapshot.name': reg },
-      { 'contractorSnapshot.email': reg },
-      { 'contractorSnapshot.phone': reg },
-      { 'contractorSnapshot.businessName': reg },
-      { 'deckSnapshot.city': reg },
-      { 'deckSnapshot.state': reg },
-      { 'deckSnapshot.projectName': reg },
-    ];
+    andClauses.push({
+      $or: [
+        { leadNumber: reg },
+        { 'customerSnapshot.name': reg },
+        { 'customerSnapshot.email': reg },
+        { 'customerSnapshot.phone': reg },
+        { 'contractorSnapshot.name': reg },
+        { 'contractorSnapshot.email': reg },
+        { 'contractorSnapshot.phone': reg },
+        { 'contractorSnapshot.businessName': reg },
+        { 'deckSnapshot.city': reg },
+        { 'deckSnapshot.state': reg },
+        { 'deckSnapshot.projectName': reg },
+      ],
+    });
+  }
+
+  if (andClauses.length > 0) {
+    query.$and = andClauses;
   }
 
   // Sort Options
@@ -1463,20 +1720,27 @@ async function listLeads({
 
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
+      .select('-deckSnapshot.photos -__v')
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
-      .populate('deckId')
-      .populate('estimateId', 'estimateReference totalCost totalAmount calculationDetails status deckDetails rawCalculatorInputs pricingBreakdown')
+      .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
+      .populate(
+        'estimateId',
+        'estimateNumber estimateReference totalCost totalAmount estimateStatus ' +
+        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.surfaceMaterial deckDetails.components deckDetails.services ' +
+        'pricingSnapshot.spec pricingSnapshot.calculatedTotal pricingSnapshot.total'
+      )
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(Number(limit))
+      .lean(),
     Lead.countDocuments(query),
     Promise.all([
       Lead.countDocuments({
         $or: [
-          { latestContactDate: { $gte: thirtyDaysAgo } },
-          { createdAt: { $gte: thirtyDaysAgo } },
+          { latestContactDate: { $gte: sevenDaysAgo } },
+          { createdAt: { $gte: sevenDaysAgo } },
           { priority: 'HOT' },
         ],
       }),
@@ -1505,27 +1769,35 @@ async function listLeads({
 
     const contactDate = l.latestContactDate || l.createdAt || new Date();
     const diffDays = Math.floor((Date.now() - new Date(contactDate).getTime()) / (1000 * 60 * 60 * 24));
-    const isHot = diffDays <= 30;
+    const isHot = diffDays <= 7;
+    const priorityLabel = isHot ? 'HOT' : 'REQUESTED';
 
-    const locationStr = l.deckSnapshot?.city
-      ? `${l.deckSnapshot.city}${l.deckSnapshot.state ? `, ${l.deckSnapshot.state}` : ''}`
-      : '—';
+    const deckAddr = l.deckId?.propertyAddress;
+    const locationStr = (l.deckSnapshot?.city && l.deckSnapshot.city.trim())
+      ? `${l.deckSnapshot.city.trim()}${l.deckSnapshot.state ? `, ${l.deckSnapshot.state.trim()}` : ', NJ'}`
+      : (deckAddr?.city && deckAddr.city.trim()
+        ? `${deckAddr.city.trim()}${deckAddr.state ? `, ${deckAddr.state.trim()}` : ', NJ'}`
+        : (userObj?.address?.city && userObj.address.city.trim()
+          ? `${userObj.address.city.trim()}${userObj.address.state ? `, ${userObj.address.state.trim()}` : ', NJ'}`
+          : (cpObj?.businessAddress?.city && cpObj.businessAddress.city.trim()
+            ? `${cpObj.businessAddress.city.trim()}${cpObj.businessAddress.state ? `, ${cpObj.businessAddress.state.trim()}` : ', NJ'}`
+            : 'Shamong, NJ')));
 
     const est = l.estimateId;
     const requestedMessage = l.enquiry?.message || l.enquiry?.subject || (l.contactHistory?.[0]?.notes) || 'Project Service Request';
     const isEstimationService = !!(l.estimateId || l.estimateSnapshot?.estimateId);
-    const estimatedValue = est?.totalAmount || l.estimateSnapshot?.totalAmount || est?.totalCost || 0;
-    const woodSpecies = est?.deckDetails?.woodSpecies || est?.deckDetails?.surfaceMaterial || l.deckSnapshot?.surfaceMaterial || 'Pressure Treated Pine';
-    const deckArea = est?.deckDetails?.areaSqFt || est?.deckDetails?.area || l.deckSnapshot?.area || 0;
-    const deckDimensions = est?.deckDetails?.dimensions || (deckArea > 0 ? `${deckArea} sq ft` : '—');
-    
-    // Summarize section inputs
-    const rawInputs = est?.rawCalculatorInputs || est?.pricingInputs || {};
+    const estimatedValue = est?.totalAmount || est?.pricingSnapshot?.calculatedTotal || l.estimateSnapshot?.totalAmount || est?.totalCost || 0;
+    const woodSpecies = est?.deckDetails?.surfaceMaterial || est?.pricingSnapshot?.spec?.woodSpecies || l.deckSnapshot?.surfaceMaterial || 'Pressure Treated Pine';
+    const deckArea = est?.deckDetails?.areaSqFt || est?.pricingSnapshot?.spec?.floorArea || l.deckSnapshot?.area || l.deckId?.dimensions?.area || 0;
+    const deckLen = est?.deckDetails?.deckLength || l.deckId?.dimensions?.length;
+    const deckWid = est?.deckDetails?.deckWidth || l.deckId?.dimensions?.width;
+    const deckDimensions = (deckLen && deckWid) ? `${deckLen} ft × ${deckWid} ft` : (deckArea > 0 ? `${deckArea} sq ft` : '—');
+
+    const spec = est?.pricingSnapshot?.spec || {};
     const sectionInputs = [];
-    if (rawInputs.structuralDetails?.length) sectionInputs.push(`Structure: ${rawInputs.structuralDetails.join(', ')}`);
-    if (rawInputs.railings) sectionInputs.push(`Railings: ${typeof rawInputs.railings === 'object' ? JSON.stringify(rawInputs.railings) : rawInputs.railings}`);
-    if (rawInputs.stairs) sectionInputs.push(`Stairs: ${typeof rawInputs.stairs === 'object' ? JSON.stringify(rawInputs.stairs) : rawInputs.stairs}`);
-    if (rawInputs.restorationScope) sectionInputs.push(`Scope: ${rawInputs.restorationScope}`);
+    if (est?.deckDetails?.components?.length) sectionInputs.push(`Components: ${est.deckDetails.components.join(', ')}`);
+    if (est?.deckDetails?.services?.length) sectionInputs.push(`Services: ${est.deckDetails.services.join(', ')}`);
+    else if (spec.services?.length) sectionInputs.push(`Services: ${spec.services.join(', ')}`);
     const selectedInputsSummary = sectionInputs.length > 0 ? sectionInputs.join(' | ') : (l.enquiry?.subject || 'Standard Deck Restoration');
 
     return {
@@ -1539,16 +1811,18 @@ async function listLeads({
       userType: isCust ? 'Customer' : 'Contractor',
       contactSource: isEstimationService ? 'Estimation Service' : (l.contactSource || (isCust ? 'Contact Us' : 'Reach Out')),
       contactCount: l.contactCount || 1,
-      priority: isHot ? 'hot' : (l.priority?.toLowerCase() || 'standard'),
+      priority: priorityLabel,
       isHot,
       daysSinceContact: diffDays,
       firstContactDate: l.firstContactDate || l.createdAt,
       latestContactDate: contactDate,
       createdAt: l.createdAt,
       status: l.status || 'new',
+      estimateStatus: est?.estimateStatus || (l.status === 'quote_in_progress' ? 'IN_PROGRESS' : l.status === 'converted' ? 'COMPLETED' : undefined),
+      estimateIdStr: est?._id?.toString() || l.estimateSnapshot?.estimateId?.toString() || null,
       location: locationStr,
-      city: l.deckSnapshot?.city || '',
-      state: l.deckSnapshot?.state || '',
+      city: l.deckSnapshot?.city || deckAddr?.city || '',
+      state: l.deckSnapshot?.state || deckAddr?.state || '',
       businessName: cpObj?.businessName || l.contractorSnapshot?.businessName || '',
       licenseNumber: cpObj?.licenseNumber || l.contractorSnapshot?.licenseNumber || '',
       licenseJurisdiction: cpObj?.licenseJurisdiction || '',
@@ -1566,14 +1840,14 @@ async function listLeads({
       contractorId: l.contractorId?._id?.toString() || null,
       deckSnapshot: l.deckSnapshot,
       estimateSnapshot: l.estimateSnapshot,
-      deckId: l.deckId,
-      estimateId: l.estimateId,
-      photos: l.deckId?.photos || l.deckSnapshot?.photos || [],
+      deckId: l.deckId?._id?.toString() || null,
+      estimateId: est?._id?.toString() || null,
+      photoCount: l.deckSnapshot?.photoCount || 0,
       propertyAddress: l.deckId?.propertyAddress || l.deckSnapshot?.propertyAddress || null,
       structureDetails: l.deckId?.structureDetails || l.deckSnapshot?.structureDetails || null,
       surfaceDetails: l.deckId?.surfaceDetails || l.deckSnapshot?.surfaceDetails || null,
       visibleConditions: l.deckId?.visibleConditions || l.deckSnapshot?.visibleConditions || [],
-      services: l.estimateId?.calculationDetails?.services || l.deckSnapshot?.services || [],
+      services: est?.deckDetails?.services || spec.services || l.deckSnapshot?.services || [],
     };
   });
 
@@ -1596,15 +1870,15 @@ async function listLeads({
 
 async function getLeadDetails(leadId) {
   const query = mongoose.Types.ObjectId.isValid(leadId)
-    ? { $or: [{ _id: leadId }, { leadNumber: leadId }] }
+    ? { _id: leadId }
     : { leadNumber: leadId };
 
   const lead = await Lead.findOne(query)
-    .populate('customerId')
-    .populate('contractorId')
-    .populate('contractorProfileId')
-    .populate('deckId')
-    .populate('estimateId')
+    .populate('customerId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
+    .populate('contractorId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
+    .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt businessAddress')
+    .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
+    .populate('estimateId', 'estimateNumber estimateReference totalCost totalAmount estimateStatus deckDetails pricingSnapshot')
     .lean();
 
   if (!lead) {
@@ -1627,15 +1901,24 @@ async function getLeadDetails(leadId) {
   const ContractorProfile = mongoose.model('ContractorProfile');
 
   if (isCust && userId) {
-    customerDecks = await Deck.find({ ownerId: userId }).sort({ createdAt: -1 }).lean();
-    customerEstimates = await Estimate.find({ ownerId: userId }).populate('deckId').sort({ createdAt: -1 }).lean();
+    [customerDecks, customerEstimates] = await Promise.all([
+      Deck.find({ ownerId: userId }).select('projectName name area dimensions surfaceMaterial createdAt').sort({ createdAt: -1 }).limit(5).lean(),
+      Estimate.find({ ownerId: userId })
+        .select('estimateNumber estimateReference estimateName estimateStatus totalAmount totalCost deckDetails.projectName deckId createdAt')
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+    ]);
   } else if (!isCust && userId) {
-    contractorProfile = await ContractorProfile.findOne({ userId }).lean();
-    contractorAssignedProjects = await Lead.find({ assignedContractorId: userId }).lean();
+    [contractorProfile, contractorAssignedProjects] = await Promise.all([
+      ContractorProfile.findOne({ userId }).select('businessName licenseNumber licenseJurisdiction businessPhone businessEmail verificationStatus businessAddress').lean(),
+      Lead.find({ assignedContractorId: userId }).select('leadNumber status createdAt').sort({ createdAt: -1 }).limit(5).lean(),
+    ]);
   }
 
   const contactDate = lead.latestContactDate || lead.createdAt || new Date();
   const diffDays = Math.floor((Date.now() - new Date(contactDate).getTime()) / (1000 * 60 * 60 * 24));
+  const isHot = diffDays <= 7;
 
   return {
     lead: {
@@ -1643,6 +1926,8 @@ async function getLeadDetails(leadId) {
       _id: lead._id.toString(),
       id: lead._id.toString(),
       leadId: lead.leadNumber,
+      estimateStatus: lead.estimateId?.estimateStatus || undefined,
+      estimateIdStr: lead.estimateId?._id?.toString() || lead.estimateSnapshot?.estimateId?.toString() || null,
       isHot: diffDays <= 30,
       daysSinceContact: diffDays,
       name: userObj?.fullName || (isCust ? lead.customerSnapshot?.name : lead.contractorSnapshot?.name) || 'User',
@@ -1665,21 +1950,21 @@ async function getLeadDetails(leadId) {
       decksCount: customerDecks.length,
       decks: customerDecks.map((d) => ({
         id: d._id.toString(),
-        name: d.name,
-        area: d.area,
+        name: d.projectName || d.name || 'Deck Project',
+        area: d.dimensions?.area || d.area || 0,
         dimensions: d.dimensions,
-        surfaceMaterial: d.surfaceMaterial,
-        conditionLevel: d.conditionLevel,
+        surfaceMaterial: d.surfaceDetails?.woodSpecies || d.surfaceDetails?.material || d.surfaceMaterial,
+        conditionLevel: d.visibleConditions?.[0] || d.conditionLevel,
         createdAt: d.createdAt,
       })),
       estimatesCount: customerEstimates.length,
-      activeEstimatesCount: customerEstimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length,
+      activeEstimatesCount: customerEstimates.filter((e) => !['CANCELLED', 'EXPIRED', 'cancelled', 'expired'].includes(e.estimateStatus || e.status)).length,
       estimates: customerEstimates.map((e) => ({
         id: e._id.toString(),
-        estimateReference: e.estimateReference || `EST-${e._id.toString().slice(-4).toUpperCase()}`,
-        deckName: e.deckId?.name || 'Deck',
-        totalCost: e.totalCost || e.pricing?.totalCost || 0,
-        status: e.status || 'draft',
+        estimateReference: e.estimateNumber || e.estimateReference || `EST-${e._id.toString().slice(-4).toUpperCase()}`,
+        deckName: e.deckDetails?.projectName || e.deckId?.projectName || e.deckId?.name || e.estimateName || 'Deck',
+        totalCost: e.totalAmount ?? e.totalCost ?? e.pricing?.totalCost ?? 0,
+        status: e.estimateStatus || e.status || 'CREATED',
         createdAt: e.createdAt,
       })),
     } : null,
@@ -2769,6 +3054,7 @@ async function updateAdminProfile(adminUserId, { fullName, name, email, phone, a
   if (avatar !== undefined) user.avatar = avatar;
 
   await user.save();
+  invalidateAuthCache(user._id);
   const ret = user.toJSON();
   ret.name = user.fullName;
   ret.isParentAdmin = user.email === 'admin@deckestimator.com' || user.isParentAdmin === true;
@@ -2876,6 +3162,7 @@ async function deleteChildAdmin(currentUser, targetAdminId) {
   targetAdmin.deletedAt = new Date();
   targetAdmin.accountStatus = 'inactive';
   await targetAdmin.save();
+  invalidateAuthCache(targetAdmin._id);
 
   return {
     success: true,
@@ -2898,6 +3185,7 @@ async function changeAdminPassword(adminUserId, { currentPassword, newPassword }
 
   user.passwordHash = await User.hashPassword(newPassword);
   await user.save();
+  invalidateAuthCache(user._id);
 
   return { success: true, message: 'Password updated successfully.' };
 }

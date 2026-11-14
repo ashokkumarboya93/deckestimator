@@ -37,27 +37,36 @@ export function LoginForm() {
 
   const fieldErrors = useMemo(() => {
     const errs = {};
+    const trimmedEmail = formData.email.trim();
     if (touched.email) {
-      if (!formData.email.trim()) {
+      if (!trimmedEmail) {
         errs.email = 'Email address is required.';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      } else if (trimmedEmail.length > 254) {
+        errs.email = 'Email address must not exceed 254 characters.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
         errs.email = 'Please enter a valid email address.';
       }
     }
-    if (touched.password && !formData.password) {
-      errs.password = 'Password is required.';
+    if (touched.password) {
+      if (!formData.password) {
+        errs.password = 'Password is required.';
+      } else if (formData.password.length > 128) {
+        errs.password = 'Password must not exceed 128 characters.';
+      }
     }
     return errs;
   }, [formData, touched]);
 
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const trimmedEmail = formData.email.trim();
+  const isValidEmail =
+    trimmedEmail.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setTouched({ email: true, password: true });
 
-    if (!formData.email.trim() || !isValidEmail || !formData.password) {
+    if (!trimmedEmail || !isValidEmail || !formData.password || formData.password.length > 128) {
       return;
     }
 
@@ -96,28 +105,29 @@ export function LoginForm() {
   };
 
   return (
-    <div style={styles.card}>
+    <div style={styles.card} className="auth-card">
       {/* Decorative Wave Gradient at bottom inside card */}
       <div style={styles.cardBottomWave} />
 
       {/* Brand Header */}
-      <div style={styles.header}>
-        <div style={styles.logoWrap}>
+      <div style={styles.header} className="auth-header">
+        <div style={styles.logoWrap} className="auth-logo-wrap">
           <img
             src={mainLogo}
             alt="Deck Restoration Plus"
             style={styles.logoImg}
+            className="auth-logo-img"
           />
         </div>
-        <h1 style={styles.title}>Sign in to your account</h1>
-        <p style={styles.subtitle}>
+        <h1 style={styles.title} className="auth-title">Sign in to your account</h1>
+        <p style={styles.subtitle} className="auth-subtitle">
           Access your interactive estimates, blueprints, and project portal.
         </p>
       </div>
 
       {/* Success Notification Banner */}
       {loginSuccess && (
-        <div style={styles.successBanner}>
+        <div style={styles.successBanner} className="auth-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -127,7 +137,7 @@ export function LoginForm() {
 
       {/* Error Alert Banner */}
       {error && !loginSuccess && (
-        <div style={styles.errorBanner}>
+        <div style={styles.errorBanner} className="auth-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -138,67 +148,77 @@ export function LoginForm() {
       )}
 
       {/* Real-time Login Form */}
-      <form onSubmit={handleSubmit} noValidate style={styles.form}>
+      <form onSubmit={handleSubmit} noValidate style={styles.form} className="auth-form">
         {/* Email Field */}
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Email Address *</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <label htmlFor="login-email" style={styles.label} className="auth-label">Email Address *</label>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: fieldErrors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
             <input
+              id="login-email"
               type="email"
               name="email"
               autoComplete="email"
+              maxLength={254}
               value={formData.email}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="name@example.com"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
           </div>
           {fieldErrors.email && (
-            <p style={styles.fieldErrorText}>{fieldErrors.email}</p>
+            <p style={styles.fieldErrorText} className="auth-field-error">{fieldErrors.email}</p>
           )}
         </div>
 
         {/* Password Field */}
-        <div style={styles.fieldGroup}>
-          <div style={styles.labelRow}>
-            <label style={styles.label}>Password *</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <div style={styles.labelRow} className="auth-label-row">
+            <label htmlFor="login-password" style={styles.label} className="auth-label">Password *</label>
           </div>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: fieldErrors.password ? '#ef4444' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             <input
+              id="login-password"
               type={showPassword ? 'text' : 'password'}
               name="password"
               autoComplete="current-password"
+              maxLength={128}
               value={formData.password}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="••••••••••••"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               style={styles.eyeBtn}
+              className="auth-eye-btn"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
               title={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -216,7 +236,7 @@ export function LoginForm() {
             </button>
           </div>
           {fieldErrors.password && (
-            <p style={styles.fieldErrorText}>{fieldErrors.password}</p>
+            <p style={styles.fieldErrorText} className="auth-field-error">{fieldErrors.password}</p>
           )}
         </div>
 
@@ -224,6 +244,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={submitting || Boolean(loginSuccess)}
+          className="auth-submit-btn"
           style={{
             ...styles.submitBtn,
             opacity: submitting || loginSuccess ? 0.75 : 1,
@@ -248,7 +269,7 @@ export function LoginForm() {
       </form>
 
       {/* Bottom Switch Link */}
-      <div style={styles.footerLinkWrap}>
+      <div style={styles.footerLinkWrap} className="auth-footer-link-wrap">
         <span style={styles.footerPrompt}>Don't have an account? </span>
         <Link to="/register" style={styles.footerLink}>
           Create Account

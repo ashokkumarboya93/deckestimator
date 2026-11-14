@@ -7,10 +7,12 @@
 // - Deep Navy theme (#0a1628, #1d4ed8 active, #ffffff text)
 // - Top bar with hamburger toggle, title/breadcrumb, search, notifications, profile pill, and logout
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { adminApi } from '../api/adminApi';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
+import RouteLoadingFallback from '../../../components/common/RouteLoadingFallback';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
 export default function AdminLayout() {
@@ -18,7 +20,21 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Sidebar always open by default, can toggle closed
+  // Responsive state for mobile, tablets, laptops, desktops
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sidebar always open by default on desktop, can toggle closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -96,8 +112,8 @@ export default function AdminLayout() {
   // Load badge counts
   useEffect(() => {
     let mounted = true;
-    fetch('http://localhost:5000/api/v1/admin/dashboard/summary', { credentials: 'include' })
-      .then((r) => r.json())
+    adminApi
+      .getDashboardSummary()
       .then((res) => {
         if (mounted && res?.data?.summary) {
           setHotLeadsCount(res.data.summary.hotPriorityLeads || 0);
@@ -105,8 +121,8 @@ export default function AdminLayout() {
       })
       .catch(() => {});
 
-    fetch('http://localhost:5000/api/v1/admin/verifications?status=pending', { credentials: 'include' })
-      .then((r) => r.json())
+    adminApi
+      .getVerifications({ status: 'pending' })
       .then((res) => {
         if (mounted && res?.counts?.pending !== undefined) {
           setPendingVerifications(res.counts.pending);
@@ -255,15 +271,49 @@ export default function AdminLayout() {
 
   return (
     <div style={styles.container}>
-      {/* 1. SIDEBAR (250px by default, 68px collapsed) */}
+      {/* Mobile Drawer Backdrop */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 99,
+          }}
+        />
+      )}
+
+      {/* 1. SIDEBAR (250px by default, 68px collapsed, slide drawer on mobile) */}
       <aside
         style={{
           ...styles.sidebar,
-          width: isSidebarOpen ? '250px' : '68px',
+          width: isMobile ? '260px' : (isSidebarOpen ? '250px' : '68px'),
+          transform: isMobile ? (mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          boxShadow: isMobile && mobileMenuOpen ? '4px 0 24px rgba(0,0,0,0.45)' : 'none',
+          transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {/* Brand Header */}
-        {isSidebarOpen ? (
+        {isMobile ? (
+          <div style={styles.brandBox}>
+            <Link to="/admin/dashboard" style={styles.brandLink} onClick={() => setMobileMenuOpen(false)}>
+              <img src={mainLogo} alt="Deck Restoration Plus" style={styles.sidebarLogo} />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              style={styles.sidebarToggleBtn}
+              title="Close menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ) : isSidebarOpen ? (
           <div style={styles.brandBox}>
             <Link to="/admin/dashboard" style={styles.brandLink}>
               <img src={mainLogo} alt="Deck Restoration Plus" style={styles.sidebarLogo} />
@@ -300,25 +350,29 @@ export default function AdminLayout() {
         <nav style={styles.navScroll}>
           {menuItems.map((item) => {
             const active = isActive(item.path);
+            const isSidebarExpanded = isMobile || isSidebarOpen;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                title={!isSidebarOpen ? item.label : undefined}
+                onClick={() => {
+                  if (isMobile) setMobileMenuOpen(false);
+                }}
+                title={!isSidebarExpanded ? item.label : undefined}
                 style={{
                   ...styles.navLink,
                   backgroundColor: active ? '#1d4ed8' : 'transparent',
                   color: active ? '#ffffff' : '#94a3b8',
-                  justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+                  justifyContent: isSidebarExpanded ? 'flex-start' : 'center',
                 }}
               >
                 <div style={{ ...styles.linkIcon, color: active ? '#ffffff' : '#94a3b8' }}>
                   {item.icon}
                 </div>
-                {isSidebarOpen && (
+                {isSidebarExpanded && (
                   <span style={styles.linkText}>{item.label}</span>
                 )}
-                {isSidebarOpen && item.badge && (
+                {isSidebarExpanded && item.badge && (
                   <span
                     style={{
                       ...styles.badge,
@@ -337,12 +391,15 @@ export default function AdminLayout() {
           {/* Profile Item */}
           <Link
             to="/admin/profile"
-            title={!isSidebarOpen ? 'My Profile' : undefined}
+            onClick={() => {
+              if (isMobile) setMobileMenuOpen(false);
+            }}
+            title={!isMobile && !isSidebarOpen ? 'My Profile' : undefined}
             style={{
               ...styles.navLink,
               backgroundColor: isActive('/admin/profile') ? '#1d4ed8' : 'transparent',
               color: isActive('/admin/profile') ? '#ffffff' : '#94a3b8',
-              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              justifyContent: isMobile || isSidebarOpen ? 'flex-start' : 'center',
             }}
           >
             <div style={styles.linkIcon}>
@@ -351,18 +408,21 @@ export default function AdminLayout() {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            {isSidebarOpen && <span style={styles.linkText}>My Profile</span>}
+            {(isMobile || isSidebarOpen) && <span style={styles.linkText}>My Profile</span>}
           </Link>
 
           {/* Logout Sidebar Action */}
           <button
             type="button"
-            onClick={handleLogout}
-            title={!isSidebarOpen ? 'Logout' : undefined}
+            onClick={() => {
+              if (isMobile) setMobileMenuOpen(false);
+              handleLogout();
+            }}
+            title={!isMobile && !isSidebarOpen ? 'Logout' : undefined}
             style={{
               ...styles.navLink,
               ...styles.logoutSidebarBtn,
-              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              justifyContent: isMobile || isSidebarOpen ? 'flex-start' : 'center',
             }}
           >
             <div style={{ ...styles.linkIcon, color: '#f87171' }}>
@@ -372,7 +432,7 @@ export default function AdminLayout() {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </div>
-            {isSidebarOpen && <span style={{ ...styles.linkText, color: '#f87171' }}>Logout</span>}
+            {(isMobile || isSidebarOpen) && <span style={{ ...styles.linkText, color: '#f87171' }}>Logout</span>}
           </button>
         </nav>
       </aside>
@@ -381,33 +441,50 @@ export default function AdminLayout() {
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: isSidebarOpen ? '250px' : '68px',
+          marginLeft: isMobile ? 0 : (isSidebarOpen ? '250px' : '68px'),
+          width: isMobile ? '100%' : `calc(100% - ${isSidebarOpen ? '250px' : '68px'})`,
         }}
       >
         {/* Top Navigation Bar */}
-        <header style={styles.header}>
+        <header style={{ ...styles.header, padding: isMobile ? '0 14px' : '0 28px' }}>
           <div style={styles.headerLeft}>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                style={styles.hamburgerBtn}
+                title="Open navigation menu"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a1628" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
             <div>
               <div style={styles.breadcrumbCategory}>{meta.category}</div>
-              <h1 style={styles.breadcrumbTitle}>{meta.title}</h1>
+              <h1 style={{ ...styles.breadcrumbTitle, fontSize: isMobile ? '1rem' : '1.18rem' }}>{meta.title}</h1>
             </div>
           </div>
 
-          <div style={styles.headerRight}>
+          <div style={{ ...styles.headerRight, gap: isMobile ? '8px' : '14px' }}>
             {/* Admin Profile Dropdown Pill */}
             <div ref={profileRef} style={{ position: 'relative' }}>
               <button
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                style={styles.profilePill}
+                style={{ ...styles.profilePill, padding: isMobile ? '4px 6px' : '6px 12px' }}
               >
                 <div style={styles.avatar}>
                   {user?.fullName ? user.fullName[0].toUpperCase() : 'A'}
                 </div>
-                <div style={styles.profileInfo}>
-                  <span style={styles.profileName}>{user?.fullName || 'Admin User'}</span>
-                  <span style={styles.profileRole}>Administrator</span>
-                </div>
+                {!isMobile && (
+                  <div style={styles.profileInfo}>
+                    <span style={styles.profileName}>{user?.fullName || 'Admin User'}</span>
+                    <span style={styles.profileRole}>Administrator</span>
+                  </div>
+                )}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -450,7 +527,7 @@ export default function AdminLayout() {
             <button
               type="button"
               onClick={handleLogout}
-              style={styles.headerLogoutBtn}
+              style={{ ...styles.headerLogoutBtn, padding: isMobile ? '7px 10px' : '7px 14px' }}
               title="Logout of Admin Portal"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -458,14 +535,16 @@ export default function AdminLayout() {
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-              <span>Logout</span>
+              {!isMobile && <span>Logout</span>}
             </button>
           </div>
         </header>
 
         {/* Page Content Viewport */}
         <main style={styles.mainContent}>
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

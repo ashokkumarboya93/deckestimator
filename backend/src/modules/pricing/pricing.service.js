@@ -6,6 +6,13 @@ const PricingConfiguration = require('./pricingConfiguration.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const { NotFoundError } = require('../../shared/errors');
 
+const ACTIVE_PRICING_TTL_MS = 60 * 1000;
+let activePricingCache = { value: null, expiresAt: 0 };
+
+function invalidateActivePricingCache() {
+  activePricingCache = { value: null, expiresAt: 0 };
+}
+
 async function recordAuditLog({
   performedBy,
   action,
@@ -43,6 +50,8 @@ async function createPricingConfiguration(data, user, ipAddress) {
     createdBy: user.id || user._id,
     updatedBy: user.id || user._id,
   });
+
+  invalidateActivePricingCache();
 
   await recordAuditLog({
     performedBy: user.id || user._id,
@@ -94,25 +103,43 @@ async function getPricingConfigurationById(id) {
 }
 
 async function getActivePricingConfiguration() {
-  const config = await PricingConfiguration.findOne({ isActive: true })
-    .sort({ effectiveFrom: -1, createdAt: -1 });
-
-  if (config) {
-    return config.toJSON();
+  const now = Date.now();
+  if (activePricingCache.value && now < activePricingCache.expiresAt) {
+    return activePricingCache.value;
   }
 
-  // Fallback to standard baseline if no configuration is yet created
-  return {
-    minimumJobPrice: 0,
-    basePricePerSqFt: 0.5,
-    additionalCoatingPrice: 0,
-    travelCharge: 0,
-    laborRate: 0,
-    wastePercentage: 10,
-    taxPercentage: 0,
-    taxName: 'Sales Tax',
-    isActive: true,
-  };
+  const config = await PricingConfiguration.findOne({ isActive: true })
+    .sort({ effectiveFrom: -1, createdAt: -1 })
+    .lean();
+
+  let result;
+  if (config) {
+    const id = config._id ? String(config._id) : config.id;
+    result = { ...config, id };
+    delete result._id;
+    delete result.__v;
+  } else {
+    // Fallback to standard baseline if no configuration is yet created
+    result = {
+      minimumJobPrice: 0,
+      basePricePerSqFt: 0.5,
+      additionalCoatingPrice: 0,
+      travelCharge: 0,
+      laborRate: 0,
+      wastePercentage: 10,
+      taxPercentage: 0,
+      taxName: 'Sales Tax',
+      isActive: true,
+    };
+  }
+
+  activePricingCache = { value: result, expiresAt: now + ACTIVE_PRICING_TTL_MS };
+  return result;
+}
+
+async function getActiveRestorationPricing() {
+  const cfg = await getActivePricingConfiguration();
+  return cfg?.restorationPricing || null;
 }
 
 async function updatePricingConfiguration(id, data, user, ipAddress) {
@@ -133,6 +160,7 @@ async function updatePricingConfiguration(id, data, user, ipAddress) {
 
   Object.assign(config, data, { updatedBy: user.id || user._id });
   await config.save();
+  invalidateActivePricingCache();
 
   await recordAuditLog({
     performedBy: user.id || user._id,
@@ -155,6 +183,8 @@ module.exports = {
   getPricingConfigurations,
   getPricingConfigurationById,
   getActivePricingConfiguration,
+  getActiveRestorationPricing,
+  invalidateActivePricingCache,
   updatePricingConfiguration,
   togglePricingConfigurationStatus,
 };

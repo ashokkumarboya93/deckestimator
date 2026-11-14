@@ -4,251 +4,251 @@
 // ====================================================================
 
 // --- SECTION 1: DECK FOOTPRINT & SHAPES ---
-import rectangleMain from './section1/Rectangle/1.Recatangle_Main.png';
-import rectangle01 from './section1/Rectangle/1.Rectangle01.jpg';
-import rectangle02 from './section1/Rectangle/1.Rectangle02.jpg';
-import rectangle03 from './section1/Rectangle/1.Rectangle03.jpg';
+import rectangleMain from './section1/Rectangle/1.Recatangle_Main.webp';
+import rectangle01 from './section1/Rectangle/1.Rectangle01.webp';
+import rectangle02 from './section1/Rectangle/1.Rectangle02.webp';
+import rectangle03 from './section1/Rectangle/1.Rectangle03.webp';
 
-import squareMain from './section1/Square/2.Square_main.png';
-import square01 from './section1/Square/2.Square01.jpg';
-import square02 from './section1/Square/2.Square02.jpg';
-import square03 from './section1/Square/2.Square03.jpg';
+import squareMain from './section1/Square/2.Square_main.webp';
+import square01 from './section1/Square/2.Square01.webp';
+import square02 from './section1/Square/2.Square02.webp';
+import square03 from './section1/Square/2.Square03.webp';
 
-import lShapeMain from './section1/L-Shape/3.L-Shape_main.jpg';
-import lShape01 from './section1/L-Shape/3.L-Shape01.jpg';
-import lShape02 from './section1/L-Shape/3.L-Shape_02.jpg';
-import lShape03 from './section1/L-Shape/3.L-Shape03.jpg';
+import lShapeMain from './section1/L-Shape/3.L-Shape_main.webp';
+import lShape01 from './section1/L-Shape/3.L-Shape01.webp';
+import lShape02 from './section1/L-Shape/3.L-Shape_02.webp';
+import lShape03 from './section1/L-Shape/3.L-Shape03.webp';
 
-import customMain from '../Round Wooden Deck with Wicker Seating.png';
-import custom01 from './section1/Custom/5.Custom01.jpg';
-import custom02 from './section1/Custom/5.Custom02.jpg';
-import custom03 from './section1/Custom/5.Custom03.jpg';
+import customMain from '../Round Wooden Deck with Wicker Seating.webp';
+import custom01 from './section1/Custom/5.Custom01.webp';
+import custom02 from './section1/Custom/5.Custom02.webp';
+import custom03 from './section1/Custom/5.Custom03.webp';
 
 // --- SECTION 2: ARCHITECTURAL COMPONENTS ---
-import railingsMain from './section2/Perimeter Railing/perimeter Railing_Main.jpg';
-import railings01 from './section2/Perimeter Railing/perimeter Railing01.jpg';
-import railings02 from './section2/Perimeter Railing/perimeter Railing02.jpg';
-import railings03 from './section2/Perimeter Railing/perimeter Railing03.jpg';
+import railingsMain from './section2/Perimeter Railing/perimeter Railing_Main.webp';
+import railings01 from './section2/Perimeter Railing/perimeter Railing01.webp';
+import railings02 from './section2/Perimeter Railing/perimeter Railing02.webp';
+import railings03 from './section2/Perimeter Railing/perimeter Railing03.webp';
 
-import stairsMain from './section2/Stair steps/stair steps_Main.jpg';
-import stairs01 from './section2/Stair steps/stair steps01.jpg';
-import stairs02 from './section2/Stair steps/stair steps02.jpg';
-import stairs03 from './section2/Stair steps/stair steps03.jpg';
+import stairsMain from './section2/Stair steps/stair steps_Main.webp';
+import stairs01 from './section2/Stair steps/stair steps01.webp';
+import stairs02 from './section2/Stair steps/stair steps02.webp';
+import stairs03 from './section2/Stair steps/stair steps03.webp';
 
-import pergolaMain from './section2/1.Pergola_Main.jpg';
-import pergola01 from './section2/1.Pergola01.jpg';
-import pergola02 from './section2/1.Pergola02.jpg';
-import pergola03 from './section2/1.Pergola03.jpg';
+import pergolaMain from './section2/1.Pergola_Main.webp';
+import pergola01 from './section2/1.Pergola01.webp';
+import pergola02 from './section2/1.Pergola02.webp';
+import pergola03 from './section2/1.Pergola03.webp';
 
-import fencingMain from './section2/2.Fencing_Main.jpg';
-import fencing01 from './section2/2.Fencing01.jpg';
-import fencing02 from './section2/2.Fencing02.jpg';
-import fencing03 from './section2/2.Fencing03.jpg';
+import fencingMain from './section2/2.Fencing_Main.webp';
+import fencing01 from './section2/2.Fencing01.webp';
+import fencing02 from './section2/2.Fencing02.webp';
+import fencing03 from './section2/2.Fencing03.webp';
 
-import sidingMain from './section2/3.Siding_Main.jpg';
-import siding01 from './section2/3.Siding01.jpg';
-import siding02 from './section2/3.Siding02.jpg';
-import siding03 from './section2/3.Siding03.jpg';
+import sidingMain from './section2/3.Siding_Main.webp';
+import siding01 from './section2/3.Siding01.webp';
+import siding02 from './section2/3.Siding02.webp';
+import siding03 from './section2/3.Siding03.webp';
 
-import fasciaMain from './section2/4.Fascia_Main.jpg';
-import fascia01 from './section2/4.Fascia01.jpg';
-import fascia02 from './section2/4.Fascia02.jpg';
-import fascia03 from './section2/4.Fascia03.jpg';
+import fasciaMain from './section2/4.Fascia_Main.webp';
+import fascia01 from './section2/4.Fascia01.webp';
+import fascia02 from './section2/4.Fascia02.webp';
+import fascia03 from './section2/4.Fascia03.webp';
 
-import undersideMain from './section2/5.Underside_Main.jpg';
-import underside01 from './section2/5.Underside01.jpg';
-import underside02 from './section2/5.Underside02.jpg';
-import underside03 from './section2/5.Underside03.jpg';
+import undersideMain from './section2/5.Underside_Main.webp';
+import underside01 from './section2/5.Underside01.webp';
+import underside02 from './section2/5.Underside02.webp';
+import underside03 from './section2/5.Underside03.webp';
 
 // --- SECTION 3: WOOD SPECIES & SUBSTRATES ---
-import teakMain from './section3/Burmese-Teak/Teak_Main.jpg';
-import teak01 from './section3/Burmese-Teak/Teak01.jpg';
-import teak02 from './section3/Burmese-Teak/Teak02.jpg';
-import teak03 from './section3/Burmese-Teak/Teak03.jpg';
+import teakMain from './section3/Burmese-Teak/Teak_Main.webp';
+import teak01 from './section3/Burmese-Teak/Teak01.webp';
+import teak02 from './section3/Burmese-Teak/Teak02.webp';
+import teak03 from './section3/Burmese-Teak/Teak03.webp';
 
-import redwoodMain from './section3/California-Redwood/Redwood_Main.jpg';
-import redwood01 from './section3/California-Redwood/Redwood01.jpg';
-import redwood02 from './section3/California-Redwood/Redwood02.jpg';
-import redwood03 from './section3/California-Redwood/Redwood03.jpg';
+import redwoodMain from './section3/California-Redwood/Redwood_Main.webp';
+import redwood01 from './section3/California-Redwood/Redwood01.webp';
+import redwood02 from './section3/California-Redwood/Redwood02.webp';
+import redwood03 from './section3/California-Redwood/Redwood03.webp';
 
-import compositeMain from './section3/Composite-trex/Composite-trex_Main.jpg';
-import composite01 from './section3/Composite-trex/Composite-trex01.jpg';
-import composite02 from './section3/Composite-trex/Composite-trex02.jpg';
-import composite03 from './section3/Composite-trex/Composite-trex03.jpg';
+import compositeMain from './section3/Composite-trex/Composite-trex_Main.webp';
+import composite01 from './section3/Composite-trex/Composite-trex01.webp';
+import composite02 from './section3/Composite-trex/Composite-trex02.webp';
+import composite03 from './section3/Composite-trex/Composite-trex03.webp';
 
-import mahoganyMain from './section3/Honduran-Mahogany/Mahogany_Main.jpg';
-import mahogany01 from './section3/Honduran-Mahogany/Mahogany01.jpg';
-import mahogany02 from './section3/Honduran-Mahogany/Mahogany02.jpg';
-import mahogany03 from './section3/Honduran-Mahogany/Mahogany03.jpg';
+import mahoganyMain from './section3/Honduran-Mahogany/Mahogany_Main.webp';
+import mahogany01 from './section3/Honduran-Mahogany/Mahogany01.webp';
+import mahogany02 from './section3/Honduran-Mahogany/Mahogany02.webp';
+import mahogany03 from './section3/Honduran-Mahogany/Mahogany03.webp';
 
-import merantiMain from './section3/Meranti-Hardwood/Meranti_Main.jpg';
-import meranti01 from './section3/Meranti-Hardwood/Meranti01.jpg';
-import meranti02 from './section3/Meranti-Hardwood/Meranti02.jpg';
-import meranti03 from './section3/Meranti-Hardwood/Meranti03.jpg';
+import merantiMain from './section3/Meranti-Hardwood/Meranti_Main.webp';
+import meranti01 from './section3/Meranti-Hardwood/Meranti01.webp';
+import meranti02 from './section3/Meranti-Hardwood/Meranti02.webp';
+import meranti03 from './section3/Meranti-Hardwood/Meranti03.webp';
 
-import ptPineMain from './section3/Presurre-treated/Presurre-treated_Main.jpg';
-import ptPine01 from './section3/Presurre-treated/Presurre-treated01.jpg';
-import ptPine02 from './section3/Presurre-treated/Presurre-treated02.jpg';
-import ptPine03 from './section3/Presurre-treated/Presurre-treated03.jpg';
+import ptPineMain from './section3/Presurre-treated/Presurre-treated_Main.webp';
+import ptPine01 from './section3/Presurre-treated/Presurre-treated01.webp';
+import ptPine02 from './section3/Presurre-treated/Presurre-treated02.webp';
+import ptPine03 from './section3/Presurre-treated/Presurre-treated03.webp';
 
-import tigerwoodMain from './section3/Tiger-wood/Tiger-wood_Main.jpg';
-import tigerwood01 from './section3/Tiger-wood/Tiger-wood01.jpg';
-import tigerwood02 from './section3/Tiger-wood/Tiger-wood02.jpg';
-import tigerwood03 from './section3/Tiger-wood/Tiger-wood03.jpg';
+import tigerwoodMain from './section3/Tiger-wood/Tiger-wood_Main.webp';
+import tigerwood01 from './section3/Tiger-wood/Tiger-wood01.webp';
+import tigerwood02 from './section3/Tiger-wood/Tiger-wood02.webp';
+import tigerwood03 from './section3/Tiger-wood/Tiger-wood03.webp';
 
-import cedarMain from './section3/Western-Red-Cedar/Cedar_Main.jpg';
-import cedar01 from './section3/Western-Red-Cedar/Cedar01.jpg';
-import cedar02 from './section3/Western-Red-Cedar/Cedar02.jpg';
-import cedar03 from './section3/Western-Red-Cedar/Cedar03.jpg';
+import cedarMain from './section3/Western-Red-Cedar/Cedar_Main.webp';
+import cedar01 from './section3/Western-Red-Cedar/Cedar01.webp';
+import cedar02 from './section3/Western-Red-Cedar/Cedar02.webp';
+import cedar03 from './section3/Western-Red-Cedar/Cedar03.webp';
 
 // --- SECTION 4: SITE ACCESSIBILITY & ELEVATION ---
-import groundMain from './section4/Ground-Level/Ground-Level_Main.jpg';
-import ground01 from './section4/Ground-Level/Ground-Level01.jpg';
-import ground02 from './section4/Ground-Level/Ground-Level02.jpg';
-import ground03 from './section4/Ground-Level/Ground-Level03.jpg';
+import groundMain from './section4/Ground-Level/Ground-Level_Main.webp';
+import ground01 from './section4/Ground-Level/Ground-Level01.webp';
+import ground02 from './section4/Ground-Level/Ground-Level02.webp';
+import ground03 from './section4/Ground-Level/Ground-Level03.webp';
 
-import lowElevationMain from './section4/Low-Elevation/Low-Elevation_Main.jpg';
-import lowElevation01 from './section4/Low-Elevation/Low-Elevation01.jpg';
-import lowElevation02 from './section4/Low-Elevation/Low-Elevation02.jpg';
-import lowElevation03 from './section4/Low-Elevation/Low-Elevation03.jpg';
+import lowElevationMain from './section4/Low-Elevation/Low-Elevation_Main.webp';
+import lowElevation01 from './section4/Low-Elevation/Low-Elevation01.webp';
+import lowElevation02 from './section4/Low-Elevation/Low-Elevation02.webp';
+import lowElevation03 from './section4/Low-Elevation/Low-Elevation03.webp';
 
-import firstStoryMain from './section4/First-Story/First-Story_Main.jpg';
-import firstStory01 from './section4/First-Story/First-Story01.jpg';
-import firstStory02 from './section4/First-Story/First-Story02.jpg';
-import firstStory03 from './section4/First-Story/First-Story03.jpg';
+import firstStoryMain from './section4/First-Story/First-Story_Main.webp';
+import firstStory01 from './section4/First-Story/First-Story01.webp';
+import firstStory02 from './section4/First-Story/First-Story02.webp';
+import firstStory03 from './section4/First-Story/First-Story03.webp';
 
-import secondStoryMain from './section4/Second-Story/Second-Story_Main.jpg';
-import secondStory01 from './section4/Second-Story/Second-Story01.jpg';
-import secondStory02 from './section4/Second-Story/Second-Story02.jpg';
-import secondStory03 from './section4/Second-Story/Second-Story03.jpg';
+import secondStoryMain from './section4/Second-Story/Second-Story_Main.webp';
+import secondStory01 from './section4/Second-Story/Second-Story01.webp';
+import secondStory02 from './section4/Second-Story/Second-Story02.webp';
+import secondStory03 from './section4/Second-Story/Second-Story03.webp';
 
-import roofMain from './section4/Roof Staging/Roof Staging_Main.jpg';
-import roof01 from './section4/Roof Staging/Roof Staging01.jpg';
-import roof02 from './section4/Roof Staging/Roof Staging02.jpg';
-import roof03 from './section4/Roof Staging/Roof Staging03.jpg';
+import roofMain from './section4/Roof Staging/Roof Staging_Main.webp';
+import roof01 from './section4/Roof Staging/Roof Staging01.webp';
+import roof02 from './section4/Roof Staging/Roof Staging02.webp';
+import roof03 from './section4/Roof Staging/Roof Staging03.webp';
 
 // --- SECTION 5: EXISTING DECK FINISH & COATING ---
-import bareWoodMain from './section5/Bare Wood/Bare wood_Main.jpg';
-import bareWood01 from './section5/Bare Wood/Bare Wood01.jpg';
-import bareWood02 from './section5/Bare Wood/Bare Wood02.jpg';
-import bareWood03 from './section5/Bare Wood/Bare Wood03.jpg';
+import bareWoodMain from './section5/Bare Wood/Bare wood_Main.webp';
+import bareWood01 from './section5/Bare Wood/Bare Wood01.webp';
+import bareWood02 from './section5/Bare Wood/Bare Wood02.webp';
+import bareWood03 from './section5/Bare Wood/Bare Wood03.webp';
 
-import clearSealerMain from './section5/Clear sealer/Clear sealer.jpg';
+import clearSealerMain from './section5/Clear sealer/Clear sealer.webp';
 import clearSealer01 from './section5/Clear sealer/Clear sealer01.webp';
-import clearSealer02 from './section5/Clear sealer/Clear Sealer02.jpeg';
-import clearSealer03 from './section5/Clear sealer/Clear sealer03.jpg';
+import clearSealer02 from './section5/Clear sealer/Clear Sealer02.webp';
+import clearSealer03 from './section5/Clear sealer/Clear sealer03.webp';
 
-import transparentStainMain from './section5/Transparent Stain/Transparent_Main.jpg';
-import transparentStain01 from './section5/Transparent Stain/Transparent01.jpg';
-import transparentStain02 from './section5/Transparent Stain/Transparent02.jpg';
-import transparentStain03 from './section5/Transparent Stain/Transparent03.jpg';
+import transparentStainMain from './section5/Transparent Stain/Transparent_Main.webp';
+import transparentStain01 from './section5/Transparent Stain/Transparent01.webp';
+import transparentStain02 from './section5/Transparent Stain/Transparent02.webp';
+import transparentStain03 from './section5/Transparent Stain/Transparent03.webp';
 
-import semiTransparentMain from './section5/Semi-Transparent Stain/Semi Transparent_Main.jpg';
-import semiTransparent01 from './section5/Semi-Transparent Stain/Semi transparent01.jpg';
-import semiTransparent02 from './section5/Semi-Transparent Stain/Semi Transparent02.jpg';
-import semiTransparent03 from './section5/Semi-Transparent Stain/Semi Transparent03.jpg';
+import semiTransparentMain from './section5/Semi-Transparent Stain/Semi Transparent_Main.webp';
+import semiTransparent01 from './section5/Semi-Transparent Stain/Semi transparent01.webp';
+import semiTransparent02 from './section5/Semi-Transparent Stain/Semi Transparent02.webp';
+import semiTransparent03 from './section5/Semi-Transparent Stain/Semi Transparent03.webp';
 
-import solidStainMain from './section5/Solid color stain/Solid Color stain_Main.jpg';
-import solidStain01 from './section5/Solid color stain/Solid Color stain01.jpg';
-import solidStain02 from './section5/Solid color stain/Solid Color stain02.jpg';
-import solidStain03 from './section5/Solid color stain/Solid Color stain03.jpg';
+import solidStainMain from './section5/Solid color stain/Solid Color stain_Main.webp';
+import solidStain01 from './section5/Solid color stain/Solid Color stain01.webp';
+import solidStain02 from './section5/Solid color stain/Solid Color stain02.webp';
+import solidStain03 from './section5/Solid color stain/Solid Color stain03.webp';
 
-import exteriorPaintMain from './section5/Exterior Paint/Exterior Paint_Main.jpg';
-import exteriorPaint01 from './section5/Exterior Paint/Exterior Paint01.jpg';
+import exteriorPaintMain from './section5/Exterior Paint/Exterior Paint_Main.webp';
+import exteriorPaint01 from './section5/Exterior Paint/Exterior Paint01.webp';
 import exteriorPaint02 from './section5/Exterior Paint/Exterior Paint02.webp';
-import exteriorPaint03 from './section5/Exterior Paint/Exterior paint03.jpg';
+import exteriorPaint03 from './section5/Exterior Paint/Exterior paint03.webp';
 
 // --- SECTION 6: RESTORATION SCOPE OF WORK (SERVICES) ---
-import cleaningMain from './section6/Deep Cleaning/Deep Cleaning_Main.jpg';
-import cleaning01 from './section6/Deep Cleaning/Deep Cleaning01.jpg';
-import cleaning02 from './section6/Deep Cleaning/Deep Cleaning02.jpg';
-import cleaning03 from './section6/Deep Cleaning/Deep Cleaning03.jpg';
+import cleaningMain from './section6/Deep Cleaning/Deep Cleaning_Main.webp';
+import cleaning01 from './section6/Deep Cleaning/Deep Cleaning01.webp';
+import cleaning02 from './section6/Deep Cleaning/Deep Cleaning02.webp';
+import cleaning03 from './section6/Deep Cleaning/Deep Cleaning03.webp';
 
-import strippingMain from './section6/Deck Stripping (Stain Stripping)/Deck Stripping_main.jpg';
-import stripping01 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping01.jpg';
-import stripping02 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping02.jpg';
-import stripping03 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping03.jpg';
+import strippingMain from './section6/Deck Stripping (Stain Stripping)/Deck Stripping_main.webp';
+import stripping01 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping01.webp';
+import stripping02 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping02.webp';
+import stripping03 from './section6/Deck Stripping (Stain Stripping)/Deck Stripping03.webp';
 
-import sandingMain from './section6/Deck Sanding (Floor & Railing)/Deck Sanding_Main.jpg';
-import sanding01 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding01.jpg';
-import sanding02 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding02.jpg';
-import sanding03 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding03.jpg';
+import sandingMain from './section6/Deck Sanding (Floor & Railing)/Deck Sanding_Main.webp';
+import sanding01 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding01.webp';
+import sanding02 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding02.webp';
+import sanding03 from './section6/Deck Sanding (Floor & Railing)/Deck Sanding03.webp';
 
-import stainingMain from './section6/Deck Staining (Conditioning)/Deck Staining_Main.jpg';
-import staining01 from './section6/Deck Staining (Conditioning)/Deck Staining01.jpg';
-import staining02 from './section6/Deck Staining (Conditioning)/Deck Staining02.jpg';
-import staining03 from './section6/Deck Staining (Conditioning)/Deck Staining03.jpg';
+import stainingMain from './section6/Deck Staining (Conditioning)/Deck Staining_Main.webp';
+import staining01 from './section6/Deck Staining (Conditioning)/Deck Staining01.webp';
+import staining02 from './section6/Deck Staining (Conditioning)/Deck Staining02.webp';
+import staining03 from './section6/Deck Staining (Conditioning)/Deck Staining03.webp';
 
-import sealingMain from './section6/Deck Sealing (Clear Sealing)/Deck Sealing_Main.jpg';
-import sealing01 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing01.jpg';
-import sealing02 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing02.jpg';
-import sealing03 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing03.jpg';
+import sealingMain from './section6/Deck Sealing (Clear Sealing)/Deck Sealing_Main.webp';
+import sealing01 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing01.webp';
+import sealing02 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing02.webp';
+import sealing03 from './section6/Deck Sealing (Clear Sealing)/Deck Sealing03.webp';
 
-import repairMain from './section6/Deck Board Repair or Replacement/Deck Board Repair_Main.jpg';
-import repair01 from './section6/Deck Board Repair or Replacement/Deck Board Repair01.jpg';
-import repair02 from './section6/Deck Board Repair or Replacement/Deck Board Repair02.jpg';
-import repair03 from './section6/Deck Board Repair or Replacement/Deck Board Repair03.jpg';
+import repairMain from './section6/Deck Board Repair or Replacement/Deck Board Repair_Main.webp';
+import repair01 from './section6/Deck Board Repair or Replacement/Deck Board Repair01.webp';
+import repair02 from './section6/Deck Board Repair or Replacement/Deck Board Repair02.webp';
+import repair03 from './section6/Deck Board Repair or Replacement/Deck Board Repair03.webp';
 
-import brighteningMain from './section6/Wood Brightening/Wood Brightening_Main.jpg';
-import brightening01 from './section6/Wood Brightening/Wood Brightening01.jpg';
-import brightening02 from './section6/Wood Brightening/Wood Brightening02.jpg';
-import brightening03 from './section6/Wood Brightening/Wood Brightening03.jpg';
+import brighteningMain from './section6/Wood Brightening/Wood Brightening_Main.webp';
+import brightening01 from './section6/Wood Brightening/Wood Brightening01.webp';
+import brightening02 from './section6/Wood Brightening/Wood Brightening02.webp';
+import brightening03 from './section6/Wood Brightening/Wood Brightening03.webp';
 
-import waterproofingMain from './section6/Waterproofing Barrier/Waterproofing Barrier_Main.jpg';
-import waterproofing01 from './section6/Waterproofing Barrier/Waterproofing Barrier01.jpg';
-import waterproofing02 from './section6/Waterproofing Barrier/Waterproofing Barrier02.jpg';
-import waterproofing03 from './section6/Waterproofing Barrier/Waterproofing Barrier03.jpg';
+import waterproofingMain from './section6/Waterproofing Barrier/Waterproofing Barrier_Main.webp';
+import waterproofing01 from './section6/Waterproofing Barrier/Waterproofing Barrier01.webp';
+import waterproofing02 from './section6/Waterproofing Barrier/Waterproofing Barrier02.webp';
+import waterproofing03 from './section6/Waterproofing Barrier/Waterproofing Barrier03.webp';
 
-import noCoatingMain from './section6/No Coating  Natural Bare Finish/No coating_Main.jpg';
-import noCoating01 from './section6/No Coating  Natural Bare Finish/No coating01.jpg';
-import noCoating02 from './section6/No Coating  Natural Bare Finish/No coating02.jpg';
-import noCoating03 from './section6/No Coating  Natural Bare Finish/No coating03.jpg';
+import noCoatingMain from './section6/No Coating  Natural Bare Finish/No coating_Main.webp';
+import noCoating01 from './section6/No Coating  Natural Bare Finish/No coating01.webp';
+import noCoating02 from './section6/No Coating  Natural Bare Finish/No coating02.webp';
+import noCoating03 from './section6/No Coating  Natural Bare Finish/No coating03.webp';
 
 // --- SECTION 7: DECK PHYSICAL CONDITION ---
-import goodConditionMain from './section7/1.Good-Condition/Good-Condition_Main.jpg';
-import goodCondition01 from './section7/1.Good-Condition/Good-Condition01.jpg';
-import goodCondition02 from './section7/1.Good-Condition/Good-Condition02.jpg';
-import goodCondition03 from './section7/1.Good-Condition/Good-Condition03.jpg';
+import goodConditionMain from './section7/1.Good-Condition/Good-Condition_Main.webp';
+import goodCondition01 from './section7/1.Good-Condition/Good-Condition01.webp';
+import goodCondition02 from './section7/1.Good-Condition/Good-Condition02.webp';
+import goodCondition03 from './section7/1.Good-Condition/Good-Condition03.webp';
 
-import weatheredMain from './section7/2.Weathered/Weathered_Main.jpg';
-import weathered01 from './section7/2.Weathered/Weathered01.jpg';
-import weathered02 from './section7/2.Weathered/Weathered02.jpg';
-import weathered03 from './section7/2.Weathered/Weathered03.jpg';
+import weatheredMain from './section7/2.Weathered/Weathered_Main.webp';
+import weathered01 from './section7/2.Weathered/Weathered01.webp';
+import weathered02 from './section7/2.Weathered/Weathered02.webp';
+import weathered03 from './section7/2.Weathered/Weathered03.webp';
 
-import cracksMain from './section7/3.Cracks&Checks/Cracks_main.jpg';
-import cracks01 from './section7/3.Cracks&Checks/Cracks01.jpg';
-import cracks02 from './section7/3.Cracks&Checks/Cracks02.jpg';
-import cracks03 from './section7/3.Cracks&Checks/Cracks03.jpg';
+import cracksMain from './section7/3.Cracks&Checks/Cracks_main.webp';
+import cracks01 from './section7/3.Cracks&Checks/Cracks01.webp';
+import cracks02 from './section7/3.Cracks&Checks/Cracks02.webp';
+import cracks03 from './section7/3.Cracks&Checks/Cracks03.webp';
 
-import rottedMain from './section7/4.Rotted-Boards/Rotted_Main.jpg';
-import rotted01 from './section7/4.Rotted-Boards/Rotted01.jpg';
-import rotted02 from './section7/4.Rotted-Boards/Rotted02.jpg';
-import rotted03 from './section7/4.Rotted-Boards/Rotted03.jpg';
+import rottedMain from './section7/4.Rotted-Boards/Rotted_Main.webp';
+import rotted01 from './section7/4.Rotted-Boards/Rotted01.webp';
+import rotted02 from './section7/4.Rotted-Boards/Rotted02.webp';
+import rotted03 from './section7/4.Rotted-Boards/Rotted03.webp';
 
-import moldMain from './section7/5.Heavy-Mold&mildew/Mold_main.jpg';
-import mold01 from './section7/5.Heavy-Mold&mildew/Mold01.jpg';
-import mold02 from './section7/5.Heavy-Mold&mildew/Mold02.jpg';
-import mold03 from './section7/5.Heavy-Mold&mildew/Mold03.jpg';
+import moldMain from './section7/5.Heavy-Mold&mildew/Mold_main.webp';
+import mold01 from './section7/5.Heavy-Mold&mildew/Mold01.webp';
+import mold02 from './section7/5.Heavy-Mold&mildew/Mold02.webp';
+import mold03 from './section7/5.Heavy-Mold&mildew/Mold03.webp';
 
-import peelingMain from './section7/6.Peeling Coating/Peeling_Main.jpg';
-import peeling01 from './section7/6.Peeling Coating/Peeling01.jpg';
-import peeling02 from './section7/6.Peeling Coating/Peeling02.jpg';
-import peeling03 from './section7/6.Peeling Coating/Peeling03.jpg';
+import peelingMain from './section7/6.Peeling Coating/Peeling_Main.webp';
+import peeling01 from './section7/6.Peeling Coating/Peeling01.webp';
+import peeling02 from './section7/6.Peeling Coating/Peeling02.webp';
+import peeling03 from './section7/6.Peeling Coating/Peeling03.webp';
 
-import waterDamagedMain from './section7/7.Water Damaged/Water Damaged_Main.jpg';
-import waterDamaged01 from './section7/7.Water Damaged/Water Damaged01.jpg';
-import waterDamaged02 from './section7/7.Water Damaged/Water Damaged02.jpg';
-import waterDamaged03 from './section7/7.Water Damaged/Water Damaged03.jpg';
+import waterDamagedMain from './section7/7.Water Damaged/Water Damaged_Main.webp';
+import waterDamaged01 from './section7/7.Water Damaged/Water Damaged01.webp';
+import waterDamaged02 from './section7/7.Water Damaged/Water Damaged02.webp';
+import waterDamaged03 from './section7/7.Water Damaged/Water Damaged03.webp';
 
-import warpedMain from './section7/8.Warped Boards/Warped_Main.jpg';
-import warped01 from './section7/8.Warped Boards/Warped01n.jpg';
-import warped02 from './section7/8.Warped Boards/Warped02.jpg';
-import warped03 from './section7/8.Warped Boards/Warped03.jpg';
+import warpedMain from './section7/8.Warped Boards/Warped_Main.webp';
+import warped01 from './section7/8.Warped Boards/Warped01n.webp';
+import warped02 from './section7/8.Warped Boards/Warped02.webp';
+import warped03 from './section7/8.Warped Boards/Warped03.webp';
 
-import looseDeckMain from './section7/9.Loose Deck Boards/Loose Deck_Main.jpg';
-import looseDeck01 from './section7/9.Loose Deck Boards/Loose Deck01.jpg';
-import looseDeck02 from './section7/9.Loose Deck Boards/Loose Deck02.jpg';
-import looseDeck03 from './section7/9.Loose Deck Boards/Loose Deck03.jpg';
+import looseDeckMain from './section7/9.Loose Deck Boards/Loose Deck_Main.webp';
+import looseDeck01 from './section7/9.Loose Deck Boards/Loose Deck01.webp';
+import looseDeck02 from './section7/9.Loose Deck Boards/Loose Deck02.webp';
+import looseDeck03 from './section7/9.Loose Deck Boards/Loose Deck03.webp';
 
 export const ESTIMATOR_IMAGES = {
   // Section 1: Deck Footprint & Dimensions

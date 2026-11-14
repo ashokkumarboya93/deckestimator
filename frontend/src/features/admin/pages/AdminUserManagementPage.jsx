@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 const TABS = [
   { id: 'all', label: 'All Users' },
@@ -23,11 +24,26 @@ const TABS = [
 export default function AdminUserManagementPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(() => {
+    try {
+      const cached = localStorage.getItem('drp_admin_users_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [userRequests, setUserRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => users.length === 0);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 900 : false));
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,8 +100,16 @@ export default function AdminUserManagementPage() {
       else if (activeTab === 'contractor') params.role = 'contractor';
 
       const res = await adminApi.getUsers(params);
-      setUsers(res.data || []);
-      setPagination(res.pagination || { page: 1, totalPages: 1, total: 0 });
+      const userList = res.data || [];
+      setUsers(userList);
+      if (activeTab === 'all' && !searchTerm.trim() && statusFilter === 'all' && page === 1) {
+        try {
+          localStorage.setItem('drp_admin_users_cache', JSON.stringify(userList));
+        } catch {
+          // Ignore
+        }
+      }
+      setPagination(res.pagination || { page: 1, totalPages: 1, total: userList.length });
     } catch (err) {
       setError(err?.message || 'Failed to load users');
     } finally {
@@ -209,8 +233,8 @@ export default function AdminUserManagementPage() {
       </div>
 
       {/* Universal Auto-Search, Filter & Refresh Bar (Rendered for ALL Tabs) */}
-      <div style={styles.filterBar}>
-        <div style={{ ...styles.searchBox, flex: 1, maxWidth: '480px' }}>
+      <div style={{ ...styles.filterBar, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '10px' : '16px' }}>
+        <div style={{ ...styles.searchBox, flex: isMobile ? '0 0 auto' : 1, width: isMobile ? '100%' : 'auto', maxWidth: isMobile ? '100%' : '480px' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -244,7 +268,7 @@ export default function AdminUserManagementPage() {
           )}
         </div>
 
-        <div style={styles.filterRight}>
+        <div style={{ ...styles.filterRight, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end', flexWrap: 'wrap', gap: isMobile ? '8px' : '12px' }}>
           <label style={styles.filterLabel}>Status:</label>
           <select
             value={statusFilter}
@@ -486,7 +510,16 @@ export default function AdminUserManagementPage() {
                         <td style={styles.td}>
                           <div style={styles.userCell}>
                             <div style={styles.avatarPill}>
-                              {userName.charAt(0).toUpperCase()}
+                              {u.avatar ? (
+                                <img
+                                  src={resolveAvatarUrl(u.avatar)}
+                                  alt={userName}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : (
+                                userName.charAt(0).toUpperCase()
+                              )}
                             </div>
                             <div>
                               <div style={styles.userName}>{userName}</div>
@@ -1111,6 +1144,8 @@ const styles = {
     fontWeight: '700',
     fontSize: '14px',
     flexShrink: 0,
+    overflow: 'hidden',
+    position: 'relative',
   },
   userName: {
     fontWeight: '600',

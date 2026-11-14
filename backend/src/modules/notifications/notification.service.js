@@ -13,6 +13,7 @@ async function getUserNotifications(user, query = {}) {
   const role = user.role;
 
   const filter = {
+    clearedBy: { $ne: userId },
     $or: [
       { userId },
       { recipientType: 'all' },
@@ -36,6 +37,7 @@ async function getUserNotifications(user, query = {}) {
     const isUserRead = n.isRead || (Array.isArray(n.readBy) && n.readBy.some((id) => String(id) === userIdStr));
     return {
       ...n,
+      id: n._id ? String(n._id) : '',
       isRead: Boolean(isUserRead),
     };
   });
@@ -100,8 +102,36 @@ async function markAllAsRead(user) {
   return { success: true };
 }
 
+/**
+ * Clear (dismiss) all notifications for this user.
+ * Deletes direct user notifications and hides broadcast notifications for this user.
+ */
+async function clearAllNotifications(user) {
+  const userId = user.id || user._id;
+  const role = user.role;
+
+  await Promise.all([
+    Notification.deleteMany({ userId }),
+    Notification.updateMany(
+      {
+        $or: [
+          { recipientType: 'all' },
+          { targetRole: 'all' },
+          { recipientType: role },
+          { targetRole: role },
+        ],
+        clearedBy: { $ne: userId },
+      },
+      { $addToSet: { clearedBy: userId, readBy: userId } }
+    ),
+  ]);
+
+  return { success: true };
+}
+
 module.exports = {
   getUserNotifications,
   markAsRead,
   markAllAsRead,
+  clearAllNotifications,
 };

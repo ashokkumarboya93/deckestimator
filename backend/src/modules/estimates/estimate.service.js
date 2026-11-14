@@ -13,7 +13,6 @@ const MaterialServiceCompatibility = require('../catalogs/materialServiceCompati
 const DiscountPolicy = require('../discounts/discountPolicy.model');
 const DiscountAssignment = require('../discounts/discountAssignment.model');
 const pricingService = require('../pricing/pricing.service');
-const PricingConfiguration = require('../pricing/pricingConfiguration.model');
 const pricingEngine = require('../pricing/pricingEngine');
 const AuditLog = require('../../shared/models/auditLog.model');
 const Lead = require('../leads/lead.model');
@@ -22,8 +21,54 @@ const {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
+  ConflictError,
 } = require('../../shared/errors');
 const { ROLES } = require('../../shared/constants');
+
+function escapeRegex(str = '') {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function assertUniqueProjectTitle(rawTitle, user, excludeEstimateId = null) {
+  const cleanTitle = (rawTitle || '').trim();
+  if (!cleanTitle) return;
+
+  const userId = user.id || user._id;
+  const userObjId = mongoose.Types.ObjectId.isValid(userId)
+    ? new mongoose.Types.ObjectId(userId)
+    : userId;
+
+  const titleRegex = new RegExp(`^${escapeRegex(cleanTitle)}$`, 'i');
+  const query = {
+    $and: [
+      {
+        $or: [
+          { ownerId: userObjId },
+          { createdBy: userObjId },
+          { createdFor: userObjId },
+        ],
+      },
+      {
+        $or: [
+          { 'deckDetails.projectName': titleRegex },
+          { estimateName: titleRegex },
+        ],
+      },
+      { estimateStatus: { $nin: ['CANCELLED', 'EXPIRED'] } },
+    ],
+  };
+
+  if (excludeEstimateId && mongoose.Types.ObjectId.isValid(excludeEstimateId)) {
+    query.$and.push({ _id: { $ne: new mongoose.Types.ObjectId(excludeEstimateId) } });
+  }
+
+  const duplicate = await Estimate.findOne(query).select('_id estimateNumber deckDetails.projectName').lean();
+  if (duplicate) {
+    throw new ConflictError(
+      `A project named "${cleanTitle}" already exists (Ref: ${duplicate.estimateNumber || 'Existing Project'}). Please enter a unique project title.`
+    );
+  }
+}
 
 async function recordAuditLog({
   performedBy,
@@ -102,6 +147,9 @@ async function createEstimate(data, user, ipAddress) {
   }
   assertDeckAccess(deck, user);
 
+  const canonicalProjectTitle = (data.projectName || deck.projectName || '').trim();
+  await assertUniqueProjectTitle(canonicalProjectTitle, user);
+
   const isClientRestoration = Boolean(
     data.restorationDetails ||
     data.woodSpecies ||
@@ -174,8 +222,7 @@ async function createEstimate(data, user, ipAddress) {
       ...(data.restorationDetails || {}),
     };
 
-    const activePricing = await PricingConfiguration.findOne({ isActive: true });
-    const customCfg = activePricing?.restorationPricing || null;
+    const customCfg = await pricingService.getActiveRestorationPricing();
     const clientCalc = pricingEngine.calculateRestorationEstimate(clientParams, customCfg);
 
     selectedMaterialsItems = [
@@ -471,51 +518,117 @@ async function createEstimate(data, user, ipAddress) {
 }
 
 async function getEstimates(query = {}, user) {
-  const { page = 1, limit = 10, deckId, status } = query;
+  const { page = 1, limit = 10, deckId, status, compact } = query;
   const filter = {};
+  const isCompact = compact === '1' || compact === 'true';
 
-  if (deckId) filter.deckId = deckId;
+  if (deckId) {
+    filter.deckId = mongoose.Types.ObjectId.isValid(deckId)
+      ? new mongoose.Types.ObjectId(deckId)
+      : deckId;
+  }
   if (status) filter.estimateStatus = status.toUpperCase();
 
-  // Access isolation
+  // Access isolation (strictly using indexed ObjectId fields for fast index scans)
   if (user.role === ROLES.CUSTOMER) {
-    const userId = user.id || user._id;
+    const rawId = user.id || user._id;
+    const userObjId = mongoose.Types.ObjectId.isValid(rawId)
+      ? new mongoose.Types.ObjectId(rawId)
+      : rawId;
     filter.$or = [
-      { ownerId: userId },
-      { createdBy: userId },
-      { createdFor: userId },
-      { customerId: userId },
+      { ownerId: userObjId },
+      { createdBy: userObjId },
+      { createdFor: userObjId },
     ];
   } else if (user.role === ROLES.CONTRACTOR) {
-    const userId = user.id || user._id;
+    const rawId = user.id || user._id;
+    const userObjId = mongoose.Types.ObjectId.isValid(rawId)
+      ? new mongoose.Types.ObjectId(rawId)
+      : rawId;
     filter.$or = [
-      { createdBy: userId },
-      { ownerId: userId },
-      { createdFor: userId },
-      { customerId: userId },
+      { createdBy: userObjId },
+      { ownerId: userObjId },
+      { createdFor: userObjId },
     ];
   }
 
-  const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
+  const parsedLimit = Math.max(1, Math.min(100, Number(limit) || 10));
+  const parsedPage = Math.max(1, Number(page) || 1);
+  const skip = (parsedPage - 1) * parsedLimit;
 
-  const [items, total] = await Promise.all([
-    Estimate.find(filter)
-      .populate('deckId')
+  let listQuery = Estimate.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parsedLimit);
+
+  if (isCompact) {
+    // Lightweight projection for Dashboard & My Projects list: excludes massive photo payloads
+    listQuery = listQuery
+      .select(
+        'estimateNumber estimateName estimateType estimateStatus deckId createdBy ownerId subtotal preTaxTotal totalAmount ' +
+        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.deckShape deckDetails.surfaceMaterial deckDetails.deckType deckDetails.deckCondition deckDetails.location deckDetails.components deckDetails.services deckDetails.visibleConditions ' +
+        'selectedServices.serviceName selectedMaterials.materialName selectedMaterials.subtotal laborBreakdown.totalHours ' +
+        'pricingSnapshot.billableArea pricingSnapshot.displayQuote pricingSnapshot.calculatedTotal pricingSnapshot.total pricingSnapshot.spec pricingSnapshot.prep pricingSnapshot.finish pricingSnapshot.shape pricingSnapshot.baseHours pricingSnapshot.woodHours pricingSnapshot.accessHours pricingSnapshot.materialsCost pricingSnapshot.wood ' +
+        'notes version createdAt updatedAt'
+      )
+      .populate('deckId', 'projectName areaSqFt deckArea deckShape dimensions surfaceDetails structureDetails visibleConditions status')
+      .lean();
+  } else {
+    listQuery = listQuery
+      .select('-photos -deckDetails.photos')
+      .populate('deckId', '-photos')
       .populate('createdBy', 'fullName email role')
       .populate('ownerId', 'fullName email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit)),
+      .lean();
+  }
+
+  // Compute real total & status breakdown in parallel (without extra full scans)
+  const summaryPipeline = [
+    { $match: filter },
+    {
+      $group: {
+        _id: { $toUpper: { $ifNull: ['$estimateStatus', 'CREATED'] } },
+        count: { $sum: 1 },
+      },
+    },
+  ];
+
+  const [rawItems, total, statusGroups] = await Promise.all([
+    listQuery,
     Estimate.countDocuments(filter),
+    isCompact ? Estimate.aggregate(summaryPipeline) : Promise.resolve(null),
   ]);
 
+  const estimates = rawItems.map((doc) => {
+    const id = doc._id ? String(doc._id) : doc.id || '';
+    const formatted = { ...doc, id };
+    delete formatted._id;
+    delete formatted.__v;
+    return formatted;
+  });
+
+  let summary = undefined;
+  if (Array.isArray(statusGroups)) {
+    const counts = { total, created: 0, completed: 0, inProgress: 0 };
+    for (const grp of statusGroups) {
+      const st = grp._id || 'CREATED';
+      if (st === 'CREATED' || st === 'DRAFT') counts.created += grp.count;
+      else if (st === 'COMPLETED' || st === 'APPROVED') counts.completed += grp.count;
+      else if (st === 'IN_PROGRESS' || st === 'REQUESTED' || st === 'IN_REVIEW' || st === 'SUBMITTED') {
+        counts.inProgress += grp.count;
+      }
+    }
+    summary = counts;
+  }
+
   return {
-    estimates: items.map((e) => e.toJSON()),
+    estimates,
+    ...(summary ? { summary } : {}),
     pagination: {
       total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
+      page: parsedPage,
+      limit: parsedLimit,
+      totalPages: Math.ceil(total / parsedLimit),
     },
   };
 }
@@ -725,11 +838,15 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
 
   assertEstimateAccess(estimate, user);
 
+  const requestedTitle = (payload.projectName || payload.deckDetails?.projectName || '').trim();
+  if (requestedTitle) {
+    await assertUniqueProjectTitle(requestedTitle, user, estimate._id);
+  }
+
   const oldValues = estimate.toJSON();
 
   const floorVal = Number(payload.floorArea || estimate.deckDetails?.areaSqFt || 400);
-  const activePricing = await PricingConfiguration.findOne({ isActive: true });
-  const customCfg = activePricing?.restorationPricing || null;
+  const customCfg = await pricingService.getActiveRestorationPricing();
   const clientCalc = pricingEngine.calculateRestorationEstimate({
     deckArea: floorVal,
     woodSpecies: payload.woodSpecies || estimate.deckDetails?.surfaceMaterial || 'pressure_treated_pine',
@@ -778,6 +895,7 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
 
   estimate.deckDetails = {
     ...estimate.deckDetails,
+    ...(requestedTitle ? { projectName: requestedTitle } : {}),
     areaSqFt: floorVal,
     deckLength: specData.length,
     deckWidth: specData.width,
@@ -908,11 +1026,12 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
   return estimate.toJSON();
 }
 
-async function requestProjectEstimate(estimateId, body, user, ipAddress) {
+async function requestProjectEstimate(estimateId, body = {}, user, ipAddress) {
   const estimate = await Estimate.findById(estimateId);
   if (!estimate) {
     throw new NotFoundError('Estimate not found.');
   }
+  assertEstimateAccess(estimate, user);
 
   // 1. Update estimate status to REQUESTED
   estimate.estimateStatus = 'REQUESTED';
@@ -924,23 +1043,27 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   await estimate.save();
 
   // 2. Create or sync a Hot Priority Lead
+  const userId = user._id || user.id;
   const isContractor = user.role === ROLES.CONTRACTOR;
-  const leadNum = `LD-${estimate.estimateNumber || estimate.estimateReference || Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+  const estRef = estimate.estimateNumber || estimate.estimateReference || '';
+  const leadNum = `LD-${estRef || Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
   let lead = await Lead.findOne({ estimateId: estimate._id });
   if (!lead) {
     lead = new Lead({
       leadNumber: leadNum,
-      customerId: !isContractor ? user._id : null,
-      contractorId: isContractor ? user._id : null,
+      customerId: !isContractor ? userId : (estimate.createdFor || estimate.ownerId || estimate.createdBy || null),
+      contractorId: isContractor ? userId : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
+      userType: isContractor ? 'Contractor' : 'Customer',
+      contactSource: 'Estimation Service',
       leadSource: isContractor ? 'contractor_portal' : 'customer_estimator',
       priority: 'HOT',
       status: 'new',
       enquiry: {
         subject: body.subject || `Project Service Request (${estimate.deckDetails?.projectName || 'Deck Project'})`,
-        message: body.message || `User requested booking / reach-out for estimation ${estimate.estimateReference || ''} ($${estimate.totalAmount || 0})`,
+        message: body.message || `User requested booking / reach-out for estimation ${estRef} ($${estimate.totalAmount || 0})`.trim(),
         preferredContactMethod: body.preferredContactMethod || 'any',
         preferredContactTime: body.preferredContactTime || 'any',
       },
@@ -956,14 +1079,17 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
       } : {},
       deckSnapshot: {
         projectName: estimate.deckDetails?.projectName || 'Project Deck',
-        city: estimate.deckDetails?.city || '',
-        state: estimate.deckDetails?.state || '',
+        city: estimate.deckDetails?.location?.city || estimate.deckDetails?.city || '',
+        state: estimate.deckDetails?.location?.state || estimate.deckDetails?.state || '',
+        postalCode: estimate.deckDetails?.location?.zipCode || '',
         area: estimate.deckDetails?.areaSqFt || estimate.deckDetails?.area || 0,
+        shape: estimate.deckDetails?.deckShape || 'rectangle',
         surfaceMaterial: estimate.deckDetails?.woodSpecies || estimate.deckDetails?.surfaceMaterial || '',
+        photoCount: Array.isArray(estimate.photos) ? estimate.photos.length : (Array.isArray(estimate.deckDetails?.photos) ? estimate.deckDetails.photos.length : 0),
       },
       estimateSnapshot: {
         estimateId: estimate._id,
-        estimateReference: estimate.estimateReference || '',
+        estimateReference: estRef,
         totalAmount: estimate.totalAmount || 0,
       },
       latestContactDate: new Date(),
@@ -972,6 +1098,8 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   } else {
     lead.priority = 'HOT';
     lead.status = 'new';
+    lead.userType = isContractor ? 'Contractor' : 'Customer';
+    lead.contactSource = 'Estimation Service';
     lead.latestContactDate = new Date();
     if (body.message) {
       lead.enquiry = lead.enquiry || {};
@@ -982,13 +1110,16 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
 
   // 3. Create or update Project record
   let project = await Project.findOne({ estimateId: estimate._id });
-  const effectiveCustomerId = !isContractor ? user._id : (estimate.createdFor || estimate.ownerId || estimate.createdBy || user._id);
+  const effectiveCustomerId = !isContractor
+    ? userId
+    : (estimate.createdFor || estimate.ownerId || estimate.createdBy || userId);
+
   if (!project) {
     project = new Project({
       projectId: estimate.estimateNumber || estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
       projectName: estimate.deckDetails?.projectName || 'Deck Restoration Project',
       customerId: effectiveCustomerId,
-      contractorId: isContractor ? user._id : null,
+      contractorId: isContractor ? userId : null,
       deckId: estimate.deckId,
       estimateId: estimate._id,
       status: 'pending',
@@ -999,7 +1130,7 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
   } else {
     project.status = 'pending';
     project.progress = 30;
-    if (!project.customerId) {
+    if (!project.customerId && effectiveCustomerId) {
       project.customerId = effectiveCustomerId;
     }
     await project.save();
@@ -1013,6 +1144,11 @@ async function requestProjectEstimate(estimateId, body, user, ipAddress) {
     newValue: { estimateStatus: 'REQUESTED', leadId: lead._id, projectId: project._id },
     ipAddress,
   });
+
+  try {
+    const { invalidateAdminDashboardCache } = require('../admin/admin.service');
+    invalidateAdminDashboardCache();
+  } catch {}
 
   return {
     estimate: estimate.toJSON(),

@@ -23,9 +23,9 @@
 //     * In-modal Export CSV / Excel
 // - Export functionality exports currently filtered records with section-wise inputs and amounts
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../api/adminApi';
-import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { BASE_URL } from '../../../api/client';
 
 const TABS = [
   { id: 'hot', label: 'Hot Priority Requests' },
@@ -57,6 +57,7 @@ export default function AdminLeadManagementPage() {
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [lastDateFilter, setLastDateFilter] = useState(''); // Specific to All Leads tab
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
 
   // View Details Modal State
   const [selectedLead, setSelectedLead] = useState(null);
@@ -66,25 +67,82 @@ export default function AdminLeadManagementPage() {
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [acceptingLead, setAcceptingLead] = useState(false);
   const [acceptSuccessNotice, setAcceptSuccessNotice] = useState(null);
+  const [acceptErrorNotice, setAcceptErrorNotice] = useState(null);
+  const [exportingFormat, setExportingFormat] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const resolveLeadTargetId = (lead) => {
+    if (!lead) return '';
+    if (lead.estimateIdStr) return String(lead.estimateIdStr);
+    if (typeof lead.estimateId === 'string' && lead.estimateId) return lead.estimateId;
+    if (lead.estimateId && typeof lead.estimateId === 'object') {
+      const nested = lead.estimateId._id || lead.estimateId.id;
+      if (nested) return String(nested);
+    }
+    if (lead.estimateSnapshot?.estimateId) return String(lead.estimateSnapshot.estimateId);
+    if (leadDossier?.estimateDetails?.estimateId) return String(leadDossier.estimateDetails.estimateId);
+    if (leadDossier?.lead?.estimateIdStr) return String(leadDossier.lead.estimateIdStr);
+    if (typeof leadDossier?.lead?.estimateId === 'string') return leadDossier.lead.estimateId;
+    return String(lead._id || lead.id || '');
+  };
 
   const handleAcceptLeadRequest = async (lead) => {
-    if (!lead) return;
+    if (!lead || acceptingLead) return;
     setAcceptingLead(true);
     setAcceptSuccessNotice(null);
+    setAcceptErrorNotice(null);
     try {
-      const estId = lead.estimateId || lead.estimateSnapshot?.estimateId || leadDossier?.estimateDetails?.estimateId || lead._id;
-      await adminApi.updateProjectProgress(estId, {
+      const targetId = resolveLeadTargetId(lead);
+      if (!targetId) {
+        throw new Error('Could not resolve an Estimate, Project, or Lead ID for this request.');
+      }
+      await adminApi.updateProjectProgress(targetId, {
         stage: 'in_progress',
         status: 'in_progress',
         note: `Admin accepted lead booking request for ${lead.name || 'Client'}. Project status transitioned to IN PROGRESS.`,
       });
       setAcceptSuccessNotice('✓ Lead booking request accepted! Project status transitioned to IN PROGRESS.');
-      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'in_progress' } : null);
-      fetchLeads(false);
+      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'quote_in_progress' } : null);
+      setLeadDossier((prev) =>
+        prev
+          ? {
+              ...prev,
+              lead: prev.lead ? { ...prev.lead, status: 'quote_in_progress' } : prev.lead,
+              estimateDetails: prev.estimateDetails
+                ? { ...prev.estimateDetails, estimateStatus: 'IN_PROGRESS' }
+                : prev.estimateDetails,
+            }
+          : prev
+      );
+      await fetchLeads(pagination.page || 1);
     } catch (err) {
-      alert(`Notice: ${err?.response?.data?.message || err.message}`);
+      setAcceptErrorNotice(err?.response?.data?.message || err.message || 'Failed to accept request.');
     } finally {
       setAcceptingLead(false);
+    }
+  };
+
+  const handleExportDossier = async (format, combinedLead, custMeta) => {
+    if (exportingFormat) return;
+    setExportingFormat(format);
+    setAcceptErrorNotice(null);
+    try {
+      const { downloadEstimatePdf, downloadEstimateExcel } = await import('../../../utils/reportExport');
+      if (format === 'excel') {
+        downloadEstimateExcel(combinedLead, custMeta);
+      } else {
+        await downloadEstimatePdf(combinedLead, custMeta);
+      }
+    } catch (err) {
+      setAcceptErrorNotice(err?.message || `Failed to generate ${format.toUpperCase()} export.`);
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -92,7 +150,8 @@ export default function AdminLeadManagementPage() {
     fetchLeads(1);
   }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter]);
 
-  const fetchLeads = async (pageToFetch = pagination.page) => {
+  const fetchLeads = useCallback(async (pageToFetch = pagination.page) => {
+    const safePage = Number(pageToFetch) > 0 ? Number(pageToFetch) : 1;
     setLoading(true);
     setIsRefreshing(true);
     setError(null);
@@ -103,7 +162,7 @@ export default function AdminLeadManagementPage() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
         lastDate: activeTab === 'all' && lastDateFilter ? lastDateFilter : undefined,
-        page: pageToFetch,
+        page: safePage,
         limit: 15,
       });
 
@@ -116,7 +175,7 @@ export default function AdminLeadManagementPage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter, searchTerm, pagination.page]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -136,6 +195,8 @@ export default function AdminLeadManagementPage() {
     setSelectedLead(lead);
     setLoadingDossier(true);
     setDossierError(null);
+    setAcceptSuccessNotice(null);
+    setAcceptErrorNotice(null);
 
     try {
       const dossierRes = await adminApi.getLeadDetails(lead.id || lead._id || lead.leadNumber);
@@ -150,6 +211,8 @@ export default function AdminLeadManagementPage() {
   const handleCloseModal = () => {
     setSelectedLead(null);
     setLeadDossier(null);
+    setAcceptSuccessNotice(null);
+    setAcceptErrorNotice(null);
   };
 
   const getTabCount = (tabId) => {
@@ -159,6 +222,81 @@ export default function AdminLeadManagementPage() {
     return counts.allLeads || 0;
   };
 
+
+  const handleDirectExportExcel = (format = 'excel') => {
+    const recordsToExport = selectedLeadIds.length > 0
+      ? leads.filter((l) => selectedLeadIds.includes(l._id || l.id))
+      : leads;
+
+    if (recordsToExport.length === 0) {
+      alert('No leads available to export in current queue.');
+      return;
+    }
+
+    const headers = [
+      'Lead #',
+      'Contact Person',
+      'Email',
+      'Phone',
+      'Company / Business',
+      'Type',
+      'Source',
+      'Requested Message',
+      'Estimated Value ($)',
+      'Priority',
+      'Date',
+      'Time',
+      'Location',
+      'Status',
+    ];
+
+    const rows = recordsToExport.map((l) => {
+      const contactTime = new Date(l.latestContactDate || l.createdAt || Date.now());
+      const daysDiff = Math.floor((Date.now() - contactTime.getTime()) / (1000 * 60 * 60 * 24));
+      const priorityText = daysDiff <= 7 ? 'HOT' : 'REQUESTED';
+      const locText = (l.location && l.location !== '—' && l.location !== '-') ? l.location : 'Shamong, NJ';
+      const dateText = contactTime.toLocaleDateString('en-US');
+      const timeText = contactTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const estValue = l.estimatedValue > 0 ? `${Number(l.estimatedValue).toFixed(2)}` : '$0.00';
+
+      return [
+        l.leadNumber || l.leadId || '',
+        l.name || '',
+        l.email || '',
+        l.phone || '',
+        l.businessName || '',
+        (l.userType || 'Customer').toUpperCase(),
+        l.contactSource || (l.isEstimationService ? 'Estimation Service' : 'Direct Inquiry'),
+        l.requestedMessage || l.enquiry?.message || '',
+        estValue,
+        priorityText,
+        dateText,
+        timeText,
+        locText,
+        (l.status || 'New').toUpperCase(),
+      ];
+    });
+
+    const csvContent =
+      '\uFEFF' +
+      [headers, ...rows]
+        .map((row) =>
+          row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+        )
+        .join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const countTag = selectedLeadIds.length > 0 ? `Selected-${selectedLeadIds.length}` : `All-${recordsToExport.length}`;
+    link.download = `DeckRestorationPlus-Leads-${activeTab}-${countTag}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Export filtered visible leads
   const getExportUrl = (format) => {
     const params = new URLSearchParams();
@@ -166,11 +304,11 @@ export default function AdminLeadManagementPage() {
     if (dateRangeFilter !== 'all') params.append('dateRange', dateRangeFilter);
     if (activeTab === 'all' && lastDateFilter) params.append('lastDate', lastDateFilter);
     if (searchTerm.trim()) params.append('search', searchTerm.trim());
-    return `http://localhost:5000/api/v1/admin/leads/export?format=${format}&tab=${activeTab}&${params.toString()}`;
+    return `${BASE_URL}/admin/leads/export?format=${format}&tab=${activeTab}&${params.toString()}`;
   };
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, padding: isMobile ? '12px' : '24px' }}>
       {/* 1. Header with Title & Shiny Export Actions */}
       <div style={styles.header}>
         <div>
@@ -181,31 +319,27 @@ export default function AdminLeadManagementPage() {
               Live MongoDB Leads
             </span>
           </div>
-          <p style={styles.subtitle}>
-            Monitor customer reach-out requests, contractor project bookings, and estimation inquiries in real time.
-          </p>
+          
         </div>
         <div style={styles.headerActions}>
-          <a
-            href={getExportUrl('csv')}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => handleDirectExportExcel('csv')}
             style={styles.shinyExportBtn}
-            title="Export current filtered view to CSV"
+            title="Download CSV of current queue or selected leads"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Export CSV
-          </a>
-          <a
-            href={getExportUrl('excel')}
-            target="_blank"
-            rel="noreferrer"
+            Export CSV{selectedLeadIds.length > 0 ? ` (${selectedLeadIds.length})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDirectExportExcel('excel')}
             style={styles.shinyExportGreenBtn}
-            title="Export current filtered view to Excel"
+            title="Download Excel spreadsheet of current queue or selected leads"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -213,8 +347,8 @@ export default function AdminLeadManagementPage() {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            Export Excel
-          </a>
+            Export Excel{selectedLeadIds.length > 0 ? ` (${selectedLeadIds.length})` : ''}
+          </button>
         </div>
       </div>
 
@@ -227,7 +361,7 @@ export default function AdminLeadManagementPage() {
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id);
+                setActiveTab(tab.id); setSelectedLeadIds([]);
               }}
               style={{
                 ...styles.tabBtn,
@@ -403,6 +537,7 @@ export default function AdminLeadManagementPage() {
                   // Type & Source label
                   const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
                   const typeSourceText = isEstimation ? 'Estimation Service' : (l.contactSource || (isCust ? 'Customer Reach Out' : 'Contractor Portal'));
+                  const leadLocation = (l.location && l.location !== '—' && l.location !== '-') ? l.location : (l.address?.city ? `${l.address.city}, ${l.address.state || ''}` : 'Shamong, NJ');
 
                   return (
                     <tr key={l._id || l.id} style={styles.tr}>
@@ -483,7 +618,7 @@ export default function AdminLeadManagementPage() {
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                             <circle cx="12" cy="10" r="3" />
                           </svg>
-                          {l.location || 'New Jersey, USA'}
+                          {leadLocation}
                         </div>
                       </td>
 
@@ -561,31 +696,38 @@ export default function AdminLeadManagementPage() {
           location: selectedLead.location,
         };
 
+        const isAcceptedInProgress =
+          selectedLead.estimateStatus === 'IN_PROGRESS' ||
+          leadDossier?.estimateDetails?.estimateStatus === 'IN_PROGRESS' ||
+          selectedLead.status === 'quote_in_progress' ||
+          selectedLead.status === 'in_progress';
+
         return (
-          <div style={styles.modalOverlay}>
-            <div style={{ ...styles.modalBoxLarge, maxWidth: '960px', width: '95vw', maxHeight: '92vh' }}>
+          <div style={{ ...styles.modalOverlay, padding: isMobile ? '8px' : '16px' }}>
+            <div style={{ ...styles.modalBoxLarge, maxWidth: '960px', width: isMobile ? '96vw' : '95vw', maxHeight: '92vh' }}>
               {/* Modal Header */}
-              <div style={styles.modalHeader}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ ...styles.modalHeader, flexWrap: 'wrap', gap: '10px', padding: isMobile ? '12px 14px' : '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 220px' }}>
                   <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
                     {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h3 style={styles.modalTitle}>{selectedLead.name}</h3>
                       <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#e2e8f0', fontWeight: '700', color: '#1e293b' }}>
                         Lead #{selectedLead.leadNumber || selectedLead.leadId}
                       </span>
                     </div>
-                    <p style={styles.modalSub}>
+                    <p style={{ ...styles.modalSub, wordBreak: 'break-word' }}>
                       {(selectedLead.userType || 'Customer').toUpperCase()} • Contact Date: {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()} • {selectedLead.location || 'New Jersey'}
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => downloadEstimatePdf(combinedLead, custMeta)}
+                    onClick={() => handleExportDossier('pdf', combinedLead, custMeta)}
+                    disabled={exportingFormat === 'pdf'}
                     style={styles.modalBtnExportPdf}
                     title="Download Official PDF Report"
                   >
@@ -596,11 +738,12 @@ export default function AdminLeadManagementPage() {
                       <line x1="16" y1="17" x2="8" y2="17" />
                       <polyline points="10 9 9 9 8 9" />
                     </svg>
-                    <span>Export PDF</span>
+                    <span>{exportingFormat === 'pdf' ? 'Exporting...' : 'Export PDF'}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => downloadEstimateExcel(combinedLead, custMeta)}
+                    onClick={() => handleExportDossier('excel', combinedLead, custMeta)}
+                    disabled={exportingFormat === 'excel'}
                     style={styles.modalBtnExportExcel}
                     title="Export Data as Excel / CSV"
                   >
@@ -610,7 +753,7 @@ export default function AdminLeadManagementPage() {
                       <line x1="8" y1="13" x2="16" y2="17" />
                       <line x1="16" y1="13" x2="8" y2="17" />
                     </svg>
-                    <span>Export Excel</span>
+                    <span>{exportingFormat === 'excel' ? 'Exporting...' : 'Export Excel'}</span>
                   </button>
                   <button onClick={handleCloseModal} style={styles.closeBtn}>✕</button>
                 </div>
@@ -630,7 +773,7 @@ export default function AdminLeadManagementPage() {
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Lead Priority</span>
                         <span style={selectedLead.isHot ? styles.bannerValHot : styles.bannerValStandard}>
-                          {selectedLead.isHot ? 'HOT PRIORITY' : 'Standard'}
+                          {selectedLead.isHot ? 'HOT' : 'REQUESTED'}
                         </span>
                       </div>
                       <div style={styles.bannerItem}>
@@ -865,47 +1008,54 @@ export default function AdminLeadManagementPage() {
                 )}
               </div>
 
-              {/* Accept Success Notice */}
+              {/* Accept Success / Error Notice */}
               {acceptSuccessNotice && (
                 <div style={{ padding: '10px 16px', backgroundColor: '#ECFDF5', color: '#15803D', borderTop: '1px solid #A7F3D0', fontWeight: '700', fontSize: '13px' }}>
                   {acceptSuccessNotice}
                 </div>
               )}
+              {acceptErrorNotice && (
+                <div style={{ padding: '10px 16px', backgroundColor: '#FEF2F2', color: '#B91C1C', borderTop: '1px solid #FECACA', fontWeight: '700', fontSize: '13px' }}>
+                  {acceptErrorNotice}
+                </div>
+              )}
 
               {/* Modal Footer */}
-              <div style={styles.modalFooter}>
+              <div style={{ ...styles.modalFooter, flexWrap: 'wrap', gap: '10px', padding: isMobile ? '12px' : '12px 20px' }}>
                 <div style={{ display: 'flex', gap: '8px', marginRight: 'auto', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => downloadEstimatePdf(combinedLead, custMeta)}
+                    onClick={() => handleExportDossier('pdf', combinedLead, custMeta)}
+                    disabled={exportingFormat === 'pdf'}
                     style={styles.modalBtnExportPdf}
                   >
-                    Download PDF Report
+                    {exportingFormat === 'pdf' ? 'Exporting PDF...' : 'Download PDF Report'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => downloadEstimateExcel(combinedLead, custMeta)}
+                    onClick={() => handleExportDossier('excel', combinedLead, custMeta)}
+                    disabled={exportingFormat === 'excel'}
                     style={styles.modalBtnExportExcel}
                   >
-                    Download Excel
+                    {exportingFormat === 'excel' ? 'Exporting Excel...' : 'Download Excel'}
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   {/* Accept Request Button */}
                   <button
                     type="button"
                     onClick={() => handleAcceptLeadRequest(selectedLead)}
-                    disabled={acceptingLead || selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress'}
+                    disabled={acceptingLead || isAcceptedInProgress}
                     style={{
                       padding: '9px 18px',
-                      backgroundColor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? '#166534' : '#15803D',
+                      backgroundColor: isAcceptedInProgress ? '#166534' : '#15803D',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
                       fontSize: '13px',
                       fontWeight: '700',
-                      cursor: (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress') ? 'default' : 'pointer',
+                      cursor: isAcceptedInProgress ? 'default' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
@@ -919,7 +1069,7 @@ export default function AdminLeadManagementPage() {
                     <span>
                       {acceptingLead
                         ? 'Accepting...'
-                        : (selectedLead.estimateStatus === 'IN_PROGRESS' || selectedLead.status === 'in_progress')
+                        : isAcceptedInProgress
                         ? '✓ Request Accepted (IN PROGRESS)'
                         : 'Accept Request (Start In Progress)'}
                     </span>
@@ -1665,7 +1815,7 @@ const styles = {
   },
   twoColGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
     gap: '12px',
   },
   dossierItem: {

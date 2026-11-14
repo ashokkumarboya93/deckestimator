@@ -9,13 +9,26 @@
 // - Header actions: Back, Delete User, Block/Unblock Toggle, Export PDF
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
+import { downloadUserProfilePdf } from '../../../utils/reportExport';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 import mainLogo from '../../../assets/images/MainLodo.png';
 
 export default function AdminUserProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.from) {
+      navigate(location.state.from, { state: { tab: location.state.fromTab } });
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/admin/verification-progress');
+    }
+  };
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,10 +36,24 @@ export default function AdminUserProfilePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
 
+  // Responsiveness
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 900 : false));
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   // Delete Confirmation Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
   const [isPermanentDelete, setIsPermanentDelete] = useState(false);
+
+  // Block Confirmation Modal
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Document Viewer Modal
   const [viewingDoc, setViewingDoc] = useState(null);
@@ -49,19 +76,25 @@ export default function AdminUserProfilePage() {
     }
   };
 
-  const handleToggleBlock = async () => {
+  const handleOpenBlockModal = () => {
+    setBlockReason('');
+    setIsBlockModalOpen(true);
+  };
+
+  const handleConfirmBlockToggle = async () => {
     if (!profileData?.user) return;
     const currentStatus = profileData.user.accountStatus || 'active';
     const newStatus = currentStatus === 'blocked' ? 'active' : 'blocked';
-    const confirmPrompt = window.confirm(
-      `Are you sure you want to ${newStatus === 'blocked' ? 'BLOCK' : 'UNBLOCK'} this user account?`
-    );
-    if (!confirmPrompt) return;
 
     setActionLoading(true);
     try {
-      await adminApi.updateUserStatus(id, newStatus, `Admin manual ${newStatus} from profile`);
+      await adminApi.updateUserStatus(
+        id,
+        newStatus,
+        blockReason || `Admin manual ${newStatus} from profile dossier`
+      );
       setSuccessMsg(`User status successfully updated to ${newStatus.toUpperCase()}`);
+      setIsBlockModalOpen(false);
       fetchProfile();
     } catch (err) {
       setError(err?.message || 'Failed to update account status.');
@@ -84,8 +117,18 @@ export default function AdminUserProfilePage() {
     }
   };
 
-  const handlePrintPdf = () => {
-    window.print();
+  const handleDownloadDossierPdf = async () => {
+    if (!profileData) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadUserProfilePdf(profileData);
+      setSuccessMsg('Executive Profile PDF dossier successfully downloaded.');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      setError(err?.message || 'Failed to download PDF dossier.');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   if (loading) {
@@ -112,7 +155,7 @@ export default function AdminUserProfilePage() {
             <h3 style={{ margin: 0, fontSize: '15px', color: '#991b1b' }}>Unable to load dossier</h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#b91c1c' }}>{error || 'User not found'}</p>
           </div>
-          <button onClick={() => navigate(-1)} style={styles.backBtnInline}>
+          <button onClick={handleBack} style={styles.backBtnInline}>
             Back
           </button>
         </div>
@@ -161,21 +204,21 @@ export default function AdminUserProfilePage() {
       <div style={styles.topBar} className="no-print">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           style={styles.backButton}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
-          <span>Back</span>
+          <span>{location.state?.fromTitle || 'Back'}</span>
         </button>
 
-        <div style={styles.actionsRight}>
+        <div style={{ ...styles.actionsRight, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'stretch' : 'flex-end', gap: isMobile ? '8px' : '10px' }}>
           {/* Block / Unblock Button */}
           <button
             type="button"
-            onClick={handleToggleBlock}
+            onClick={handleOpenBlockModal}
             disabled={actionLoading}
             style={u.accountStatus === 'blocked' ? styles.unblockBtn : styles.blockBtn}
           >
@@ -185,7 +228,8 @@ export default function AdminUserProfilePage() {
           {/* Export PDF Button */}
           <button
             type="button"
-            onClick={handlePrintPdf}
+            onClick={handleDownloadDossierPdf}
+            disabled={isExportingPdf}
             style={styles.exportBtn}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -193,7 +237,7 @@ export default function AdminUserProfilePage() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Export Profile (PDF)</span>
+            <span>{isExportingPdf ? 'Generating PDF...' : 'Export Profile (PDF)'}</span>
           </button>
 
           {/* Delete User Button */}
@@ -222,10 +266,19 @@ export default function AdminUserProfilePage() {
       )}
 
       {/* Hero Header Card */}
-      <div style={styles.heroCard} className="dossier-card">
-        <div style={styles.heroLeft}>
+      <div style={{ ...styles.heroCard, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '24px 28px' }} className="dossier-card">
+        <div style={{ ...styles.heroLeft, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '12px' : '18px' }}>
           <div style={styles.avatarLarge}>
-            {u.fullName ? u.fullName[0].toUpperCase() : 'U'}
+            {resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) && !avatarError ? (
+              <img
+                src={resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl)}
+                alt={u.fullName || 'User'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              u.fullName ? u.fullName[0].toUpperCase() : 'U'
+            )}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -590,6 +643,55 @@ export default function AdminUserProfilePage() {
         )}
       </div>
 
+            {/* MODAL: Block / Unblock Confirmation */}
+      {isBlockModalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <div style={styles.modalHeader}>
+              <h3 style={{ margin: 0, fontSize: '17px', color: u.accountStatus === 'blocked' ? '#15803d' : '#991b1b', fontWeight: '800' }}>
+                {u.accountStatus === 'blocked' ? 'Confirm Account Unblock' : 'Confirm Account Block'}
+              </h3>
+              <button onClick={() => setIsBlockModalOpen(false)} style={styles.modalCloseBtn}>?</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                Are you sure you want to {u.accountStatus === 'blocked' ? 'UNBLOCK' : 'BLOCK'} user account <strong>{u.fullName}</strong> ({u.email})?
+              </p>
+              <div style={{ marginTop: '16px' }}>
+                <label style={styles.modalLabel}>Audit / Action Reason</label>
+                <input
+                  type="text"
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="e.g., Requested review, compliance flag, payment verification"
+                  style={styles.modalInput}
+                />
+              </div>
+              <div style={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={() => setIsBlockModalOpen(false)}
+                  style={styles.cancelBtn}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBlockToggle}
+                  disabled={actionLoading}
+                  style={{
+                    ...styles.confirmDeleteBtn,
+                    backgroundColor: u.accountStatus === 'blocked' ? '#16a34a' : '#be123c',
+                  }}
+                >
+                  {actionLoading ? 'Updating...' : u.accountStatus === 'blocked' ? 'Confirm Unblock User' : 'Confirm Block User'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: Delete Confirmation */}
       {isDeleteModalOpen && (
         <div style={styles.modalOverlay}>
@@ -859,6 +961,9 @@ const styles = {
     justifyContent: 'center',
     fontSize: '26px',
     fontWeight: '800',
+    overflow: 'hidden',
+    position: 'relative',
+    flexShrink: 0,
     boxShadow: '0 4px 12px rgba(29, 78, 216, 0.35)',
   },
   heroName: {

@@ -2,8 +2,10 @@
 // Deck Estimator — Root Application Component
 // =============================================
 
+import { Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
+import RouteLoadingFallback from '../components/common/RouteLoadingFallback';
 
 function App() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -23,7 +25,11 @@ function App() {
 
   // Dedicated Portal Experience for Customer, Contractor, Admin, Auth, and Landing routes
   if (isCustomerRoute || isContractorRoute || isAdminRoute || isAuthRoute || isLandingRoute) {
-    return <Outlet />;
+    return (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Outlet />
+      </Suspense>
+    );
   }
 
   return (
@@ -302,7 +308,9 @@ function App() {
       </header>
 
       <main style={{ flex: 1, backgroundColor: '#f8fafc', paddingBottom: '40px' }}>
-        <Outlet />
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

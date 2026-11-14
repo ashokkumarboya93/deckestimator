@@ -21,8 +21,14 @@ export async function markAllNotificationsRead() {
   return res?.data || res;
 }
 
+export async function clearAllNotifications() {
+  const res = await apiClient('/notifications/clear-all', { method: 'DELETE' });
+  return res?.data || res;
+}
+
 export const notificationsApi = {
   getMyNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  clearAllNotifications,
 };

@@ -8,6 +8,38 @@ const { env } = require('../config/env');
 const User = require('../modules/users/users.model');
 const { ACCOUNT_STATUS } = require('../shared/constants');
 
+const AUTH_CACHE_TTL_MS = 15 * 1000;
+const MAX_AUTH_CACHE_SIZE = 2000;
+const authUserCache = new Map();
+
+function invalidateAuthCache(userId) {
+  if (!userId) return;
+  authUserCache.delete(String(userId));
+}
+
+function getCachedAuthUser(userId) {
+  const key = String(userId);
+  const entry = authUserCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    authUserCache.delete(key);
+    return null;
+  }
+  return entry.user;
+}
+
+function setCachedAuthUser(user) {
+  const key = String(user._id);
+  if (authUserCache.size >= MAX_AUTH_CACHE_SIZE) {
+    const firstKey = authUserCache.keys().next().value;
+    if (firstKey) authUserCache.delete(firstKey);
+  }
+  authUserCache.set(key, {
+    user,
+    expiresAt: Date.now() + AUTH_CACHE_TTL_MS,
+  });
+}
+
 /**
  * Authenticate the current request by verifying the JWT token
  * and asserting the user's active account status in MongoDB.
@@ -23,6 +55,8 @@ async function authenticate(req, res, next) {
       token = authHeader.split(' ')[1];
     } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
     }
 
     if (!token) {
@@ -37,8 +71,16 @@ async function authenticate(req, res, next) {
 
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
-    // Verify user exists and account status is active
-    const user = await User.findById(decoded.id).select('accountStatus role email fullName phone');
+    // Check short-lived in-memory cache before hitting MongoDB
+    let user = getCachedAuthUser(decoded.id);
+    if (!user) {
+      user = await User.findById(decoded.id)
+        .select('accountStatus role email fullName phone')
+        .lean();
+      if (user) {
+        setCachedAuthUser(user);
+      }
+    }
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -70,6 +112,7 @@ async function authenticate(req, res, next) {
     }
 
     req.user = {
+      _id: user._id,
       id: user._id.toString(),
       role: user.role,
       email: user.email,
@@ -115,13 +158,15 @@ async function optionalAuth(req, res, next) {
       token = authHeader.split(' ')[1];
     } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
     }
 
     if (token) {
       const decoded = jwt.verify(token, env.JWT_SECRET);
       const user = await User.findById(decoded.id).select('accountStatus role email');
       if (user && user.accountStatus === ACCOUNT_STATUS.ACTIVE) {
-        req.user = { id: user._id.toString(), role: user.role, email: user.email };
+        req.user = { _id: user._id, id: user._id.toString(), role: user.role, email: user.email };
       } else {
         req.user = null;
       }
@@ -133,4 +178,4 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, optionalAuth };
+module.exports = { authenticate, optionalAuth, invalidateAuthCache };

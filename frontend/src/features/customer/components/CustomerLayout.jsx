@@ -8,10 +8,16 @@
 // - Zero emojis; clean SVG line icons throughout
 // - Dynamic top navigation with breadcrumbs, notifications dropdown, user avatar, and logout
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getMyNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notificationsApi';
+import {
+  getMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  clearAllNotifications,
+} from '../api/notificationsApi';
+import RouteLoadingFallback from '../../../components/common/RouteLoadingFallback';
 import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
@@ -27,9 +33,13 @@ export default function CustomerLayout() {
     return <BlockedAccountPortal user={user} />;
   }
 
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
+  const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 640 : false));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notifActionLoading, setNotifActionLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -38,8 +48,27 @@ export default function CustomerLayout() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Real-time synchronization of notifications from MongoDB
+  // Auto-detect mobile / tablet / iPad resize
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const mobile = w < 1024;
+      setIsMobile(mobile);
+      setIsSmallMobile(w < 640);
+      if (!mobile) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close drawer on path change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
   const fetchRealNotifications = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -52,20 +81,44 @@ export default function CustomerLayout() {
   useEffect(() => {
     fetchRealNotifications();
     const interval = setInterval(fetchRealNotifications, 20000);
+    const onVisible = () => {
+      if (!document.hidden) fetchRealNotifications();
+    };
     window.addEventListener('focus', fetchRealNotifications);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', fetchRealNotifications);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [fetchRealNotifications]);
 
-  const handleClearAllNotifications = async () => {
+  const handleMarkAllNotificationsRead = async () => {
+    if (notifActionLoading || unreadNotifications === 0) return;
+    setNotifActionLoading(true);
     try {
       await markAllNotificationsRead();
       setUnreadNotifications(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
+      // Keep graceful UI
+    } finally {
+      setNotifActionLoading(false);
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    if (notifActionLoading || notifications.length === 0) return;
+    setNotifActionLoading(true);
+    try {
+      await clearAllNotifications();
+      setNotifications([]);
       setUnreadNotifications(0);
+    } catch {
+      // Reload synced state on failure
+      fetchRealNotifications();
+    } finally {
+      setNotifActionLoading(false);
     }
   };
 
@@ -165,31 +218,68 @@ export default function CustomerLayout() {
         minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
+      {/* Mobile Drawer Backdrop */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(10, 30, 63, 0.72)',
+            zIndex: 199,
+            backdropFilter: 'blur(3px)',
+            transition: 'opacity 0.2s ease',
+          }}
+        />
+      )}
+
+      {/* 1. COLLAPSIBLE HOVER / MOBILE DRAWER LEFT SIDEBAR */}
       <aside
-        onMouseEnter={() => setIsSidebarHovered(true)}
-        onMouseLeave={() => setIsSidebarHovered(false)}
+        onMouseEnter={() => !isMobile && setIsSidebarHovered(true)}
+        onMouseLeave={() => !isMobile && setIsSidebarHovered(false)}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '240px' : '68px',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
+          width: isMobile ? '260px' : (isSidebarHovered ? '240px' : '68px'),
+          transform: isMobile ? (mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          transition: 'all 0.24s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: (isMobile && mobileMenuOpen) || (!isMobile && isSidebarHovered) ? '6px 0 28px rgba(15, 23, 42, 0.28)' : 'none',
+          zIndex: 200,
         }}
       >
         {/* Brand Header */}
-        <div style={styles.brandBox}>
-          {isSidebarHovered ? (
-            <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%' }}>
-              <img
-                src={mainLogoDeck}
-                alt="Deck Restoration Plus"
-                style={{
-                  height: '52px',
-                  maxWidth: '215px',
-                  objectFit: 'contain',
-                }}
-              />
-            </Link>
+        <div style={{ ...styles.brandBox, justifyContent: 'space-between' }}>
+          {isSidebarHovered || isMobile ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Link to="/customer/dashboard" onClick={() => isMobile && setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                <img
+                  src={mainLogoDeck}
+                  alt="Deck Restoration Plus"
+                  style={{
+                    height: '46px',
+                    maxWidth: '185px',
+                    objectFit: 'contain',
+                  }}
+                />
+              </Link>
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    padding: '4px 6px',
+                    lineHeight: 1,
+                  }}
+                  title="Close navigation"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
           ) : (
             <Link to="/customer/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
               <div style={styles.brandLogoIcon}>
@@ -202,11 +292,12 @@ export default function CustomerLayout() {
           )}
         </div>
 
-        {/* Navigation Menu (Home, Create Estimate, My Projects, Help & Support) */}
+        {/* Navigation Menu: Home, Create Estimate, My Projects, Profile Settings, Help & Support */}
         <nav style={styles.navMenu}>
           {/* 1. Home */}
           <Link
             to="/customer/dashboard"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
             style={{
               ...styles.navItem,
               ...(isActive('/customer/dashboard') ? styles.navItemActive : {}),
@@ -219,7 +310,7 @@ export default function CustomerLayout() {
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel }}>
               Home
             </span>
           </Link>
@@ -227,6 +318,7 @@ export default function CustomerLayout() {
           {/* 2. Create Estimate */}
           <Link
             to="/customer/decks/new"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
             style={{
               ...styles.navItem,
               ...(currentPath === '/customer/decks/new' ? styles.navItemActive : {}),
@@ -240,7 +332,7 @@ export default function CustomerLayout() {
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel }}>
               Create Estimate
             </span>
           </Link>
@@ -248,6 +340,7 @@ export default function CustomerLayout() {
           {/* 3. My Projects (Navigates to /customer/estimates) */}
           <Link
             to="/customer/estimates"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
             style={{
               ...styles.navItem,
               ...(currentPath.includes('/customer/estimates') || currentPath.includes('/customer/projects') ? styles.navItemActive : {}),
@@ -262,16 +355,38 @@ export default function CustomerLayout() {
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel }}>
               My Projects
+            </span>
+          </Link>
+
+          {/* 4. Profile Settings */}
+          <Link
+            to="/customer/profile"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
+            style={{
+              ...styles.navItem,
+              ...(currentPath.includes('/customer/profile') ? styles.navItemActive : {}),
+            }}
+            title="Profile Settings"
+          >
+            <span style={styles.navIcon}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </span>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel }}>
+              Profile Settings
             </span>
           </Link>
 
           <div style={styles.navDivider} />
 
-          {/* 4. Help & Support */}
+          {/* 5. Help & Support */}
           <Link
             to="/customer/support"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
             style={{
               ...styles.navItem,
               ...(currentPath.includes('/customer/support') ? styles.navItemActive : {}),
@@ -285,7 +400,7 @@ export default function CustomerLayout() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel }}>
               Help &amp; Support
             </span>
           </Link>
@@ -306,33 +421,62 @@ export default function CustomerLayout() {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel, color: '#ef4444', fontWeight: '700' }}>
+            <span style={{ opacity: isSidebarHovered || isMobile ? 1 : 0, ...styles.navLabel, color: '#ef4444', fontWeight: '700' }}>
               Sign Out
             </span>
           </button>
         </div>
       </aside>
 
-      {/* 2. MAIN VIEW AREA (Fixed at 68px: Zero adjustment effect, page stays stable) */}
+      {/* 2. MAIN VIEW AREA (Adapts to 0 margin on mobile, 68px on desktop) */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: '68px',
+          marginLeft: isMobile ? 0 : '68px',
+          width: isMobile ? '100%' : 'calc(100% - 68px)',
         }}
       >
-        {/* TOP NAVIGATION BAR (Normal Natural Flow — Not Sticky) */}
-        <header style={styles.topHeader}>
-          {/* Left: Dynamic Back Button / Project Name / Brand Logo */}
-          <div style={styles.headerLeft}>
+        {/* TOP NAVIGATION BAR */}
+        <header style={{
+          ...styles.topHeader,
+          height: isSmallMobile ? '58px' : '65px',
+          padding: isMobile ? '0 12px' : '0 24px',
+        }}>
+          {/* Left: Hamburger (mobile) + Dynamic Back Button / Project Name / Brand Logo */}
+          <div style={{ ...styles.headerLeft, gap: isSmallMobile ? '6px' : '12px', minWidth: 0 }}>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px 6px 6px 0',
+                  color: '#1E3A63',
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                }}
+                aria-label="Open navigation menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
+
             {currentPath === '/customer/dashboard' ? (
               !isSidebarHovered ? (
-                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                <Link to="/customer/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', minWidth: 0 }}>
                   <img
                     src={mainLogoV2}
                     alt="Deck Restoration Plus"
                     style={{
-                      height: '50px',
-                      maxWidth: '240px',
+                      height: isSmallMobile ? '34px' : (isMobile ? '40px' : '50px'),
+                      maxWidth: isSmallMobile ? '115px' : (isMobile ? '160px' : '240px'),
                       objectFit: 'contain',
                     }}
                   />
@@ -341,36 +485,28 @@ export default function CustomerLayout() {
                 <div style={{ height: '50px', width: '240px', visibility: 'hidden' }} />
               )
             ) : isEstimatorPage ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? '6px' : '8px', minWidth: 0, flex: 1 }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.history.length > 1) {
-                      navigate(-1);
-                    } else {
-                      navigate('/customer/dashboard');
-                    }
+                  onClick={() => navigate('/customer/dashboard')}
+                  style={{
+                    ...styles.outlinedBackBtn,
+                    padding: isSmallMobile ? '5px 10px' : '7px 14px',
+                    fontSize: isSmallMobile ? '12.5px' : '13.5px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}
-                  style={styles.outlinedBackBtn}
-                  title="← Back to Dashboard / Previous Page"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }}
+                  title="Back to Dashboard"
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
                   <span>Back</span>
                 </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
-                  <span style={styles.headerProjectName}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isSmallMobile ? '6px' : '8px', minWidth: 0, overflow: 'hidden' }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '15px', flexShrink: 0 }}>|</span>
+                  <span style={{ ...styles.headerProjectName, fontSize: isMobile ? '13px' : '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
                   </span>
                 </div>
@@ -379,60 +515,71 @@ export default function CustomerLayout() {
               <button
                 type="button"
                 onClick={() => {
-                  if (window.history.length > 1) {
-                    navigate(-1);
-                  } else {
-                    navigate('/customer/dashboard');
-                  }
+                  const backTarget = /^\/customer\/estimates\/[^/]+/.test(currentPath)
+                    ? '/customer/estimates'
+                    : '/customer/dashboard';
+                  navigate(backTarget);
                 }}
-                style={styles.headerBackBtn}
-                title="← Back to Dashboard / Previous Page"
+                style={{ ...styles.headerBackBtn, minWidth: 0, padding: isSmallMobile ? '4px' : '4px 8px' }}
+                title={/^\/customer\/estimates\/[^/]+/.test(currentPath) ? 'Back to My Projects' : 'Back to Dashboard'}
               >
-                <div style={styles.backIconCircle}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <div style={{ ...styles.backIconCircle, width: isSmallMobile ? '30px' : '36px', height: isSmallMobile ? '30px' : '36px' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
                 </div>
-                <div style={{ textAlign: 'left' }}>
-                  {!currentPath.includes('/customer/profile') && (
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  {!isMobile && !currentPath.includes('/customer/profile') && (
                     <div style={styles.breadcrumbText}>
                       <span style={{ color: '#1E3A63', fontWeight: '700' }}>← </span>
                       {pageInfo.breadcrumb}
                     </div>
                   )}
-                  <h1 style={styles.headerTitle}>{pageInfo.title}</h1>
+                  <h1 style={{ ...styles.headerTitle, fontSize: isSmallMobile ? '14px' : (isMobile ? '15.5px' : '1.15rem'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pageInfo.title}</h1>
                 </div>
               </button>
             )}
           </div>
 
           {/* Right: Notifications, Profile, Logout */}
-          <div style={styles.headerRight}>
-            {/* Quick Action Button */}
-            <Link
-              to="/customer/decks/new"
-              style={styles.primaryActionBtn}
-              title="Start New Estimation"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#274A7C';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#1E3A63';
-              }}
-            >
-              <span>+ New Estimation</span>
-            </Link>
+          <div style={{ ...styles.headerRight, gap: isSmallMobile ? '6px' : (isMobile ? '8px' : '14px'), flexShrink: 0 }}>
+            {/* Quick Action Button — hidden inside mobile estimator for clean single-row layout */}
+            {!(isMobile && isEstimatorPage) && (
+              <Link
+                to="/customer/decks/new"
+                style={{
+                  ...styles.primaryActionBtn,
+                  padding: isSmallMobile ? '6px 9px' : (isMobile ? '7px 12px' : '8px 18px'),
+                  fontSize: isSmallMobile ? '11.5px' : (isMobile ? '12.5px' : '13.5px'),
+                  whiteSpace: 'nowrap',
+                }}
+                title="Start New Estimation"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#274A7C';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1E3A63';
+                }}
+              >
+                <span>{isSmallMobile ? '+ Estimate' : '+ New Estimation'}</span>
+              </Link>
+            )}
 
             {/* Notification Bell */}
             <div ref={notifRef} style={{ position: 'relative' }}>
               <button
                 type="button"
                 onClick={() => setShowNotifications((prev) => !prev)}
-                style={styles.iconButton}
+                style={{
+                  ...styles.iconButton,
+                  width: isSmallMobile ? '34px' : '38px',
+                  height: isSmallMobile ? '34px' : '38px',
+                }}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
@@ -442,20 +589,39 @@ export default function CustomerLayout() {
               </button>
 
               {showNotifications && (
-                <div style={styles.notifDropdown}>
+                <div
+                  style={{
+                    ...styles.notifDropdown,
+                    width: isSmallMobile ? 'min(320px, calc(100vw - 24px))' : '336px',
+                    right: isSmallMobile ? '-42px' : 0,
+                  }}
+                >
                   <div style={styles.dropdownHeader}>
-                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
+                    <span style={{ fontWeight: '800', fontSize: '12.5px', color: '#0f172a' }}>
                       Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
                     </span>
-                    {unreadNotifications > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleClearAllNotifications}
-                        style={styles.textBtn}
-                      >
-                        Mark all read
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {unreadNotifications > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllNotificationsRead}
+                          disabled={notifActionLoading}
+                          style={styles.textBtn}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearAllNotifications}
+                          disabled={notifActionLoading}
+                          style={{ ...styles.textBtn, color: '#dc2626' }}
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div style={styles.notifList}>
                     {notifications && notifications.length > 0 ? (
@@ -475,12 +641,12 @@ export default function CustomerLayout() {
                             }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
                               <p style={{ ...styles.notifTitle, fontWeight: n.isRead ? '600' : '800' }}>
                                 {n.title}
                               </p>
                               {n.category && (
-                                <span style={{ fontSize: '9px', fontWeight: '700', color: '#0284C7', textTransform: 'uppercase' }}>
+                                <span style={{ fontSize: '9px', fontWeight: '700', color: '#0284C7', textTransform: 'uppercase', flexShrink: 0 }}>
                                   {n.category}
                                 </span>
                               )}
@@ -493,7 +659,7 @@ export default function CustomerLayout() {
                         </div>
                       ))
                     ) : (
-                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
                         No new notifications
                       </div>
                     )}
@@ -507,38 +673,49 @@ export default function CustomerLayout() {
               <button
                 type="button"
                 onClick={() => setShowProfileMenu((prev) => !prev)}
-                style={styles.profileBtn}
+                style={{
+                  ...styles.profileBtn,
+                  padding: isSmallMobile ? '3px' : '4px 12px 4px 5px',
+                }}
+                aria-label="User Profile Menu"
               >
                 {user?.avatar ? (
                   <img
                     src={user.avatar}
                     alt={user.fullName || 'User'}
                     style={{
-                      width: '32px',
-                      height: '32px',
+                      width: isSmallMobile ? '28px' : '32px',
+                      height: isSmallMobile ? '28px' : '32px',
                       borderRadius: '50%',
                       objectFit: 'cover',
                       border: '1.5px solid #E2E8F0',
                     }}
                   />
                 ) : (
-                  <div style={styles.avatar}>{initials}</div>
+                  <div style={{
+                    ...styles.avatar,
+                    width: isSmallMobile ? '28px' : '32px',
+                    height: isSmallMobile ? '28px' : '32px',
+                    fontSize: isSmallMobile ? '11px' : '12px',
+                  }}>{initials}</div>
                 )}
-                <div style={styles.profileText}>
-                  <span style={styles.profileName}>{user?.fullName || 'Jane Homeowner'}</span>
+                <div style={{ ...styles.profileText, display: isMobile ? 'none' : 'block' }}>
+                  <span style={styles.profileName}>{user?.fullName || 'Customer'}</span>
                 </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                {!isMobile && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                )}
               </button>
 
               {showProfileMenu && (
                 <div style={styles.profileMenu}>
                   <div style={styles.profileMenuHeader}>
                     <p style={{ fontWeight: '700', fontSize: '13.5px', margin: 0, color: '#0f172a' }}>
-                      {user?.fullName || 'Jane Homeowner'}
+                      {user?.fullName || 'Customer'}
                     </p>
-                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0', wordBreak: 'break-all' }}>
                       {user?.email || 'customer@example.com'}
                     </p>
                   </div>
@@ -585,20 +762,24 @@ export default function CustomerLayout() {
               )}
             </div>
 
-            {/* Direct Logout Button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-            >
-              Logout
-            </button>
+            {/* Direct Logout Button (Hidden on ultra-small mobile to prevent header squeeze; available in profile dropdown & drawer) */}
+            {!isSmallMobile && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={styles.logoutBtn}
+              >
+                Logout
+              </button>
+            )}
           </div>
         </header>
 
         {/* PAGE CONTENT OUTLET */}
         <main style={styles.pageContent}>
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
 
         {/* FOOTER: Included for every page */}
@@ -1157,8 +1338,11 @@ const styles = {
   modalContent: {
     backgroundColor: '#ffffff',
     borderRadius: '16px',
-    width: '90%',
+    width: '92%',
     maxWidth: '560px',
+    maxHeight: '88vh',
+    display: 'flex',
+    flexDirection: 'column',
     boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
     overflow: 'hidden',
   },
@@ -1166,8 +1350,9 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 24px',
+    padding: '16px 20px',
     borderBottom: '1px solid #f1f5f9',
+    flexShrink: 0,
   },
   modalIconBox: {
     width: '36px',
@@ -1177,10 +1362,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   modalTitle: {
     margin: 0,
-    fontSize: '1.1rem',
+    fontSize: '1.05rem',
     fontWeight: '700',
     color: '#0f172a',
   },
@@ -1193,10 +1379,11 @@ const styles = {
     padding: '4px',
   },
   modalBody: {
-    padding: '20px 24px',
+    padding: '18px 20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '14px',
+    overflowY: 'auto',
   },
   guideStep: {
     display: 'flex',

@@ -46,48 +46,63 @@ export function RegistrationForm() {
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
-  // Password rules checklist — requires at least 1 Caps and at least 1 Number
+  // Password rules checklist — requires 2–128 chars, at least 1 Caps and at least 1 Number
   const passwordCheck = useMemo(() => {
     const p = formData.password || '';
     return {
+      length: p.length >= 2 && p.length <= 128,
       upper: /[A-Z]/.test(p),
       number: /[0-9]/.test(p),
     };
   }, [formData.password]);
 
-  const isPasswordValid = Boolean(passwordCheck.upper && passwordCheck.number);
+  const isPasswordValid = Boolean(passwordCheck.length && passwordCheck.upper && passwordCheck.number);
 
   const errors = useMemo(() => {
     const errs = {};
+    const trimmedName = formData.fullName.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedBusiness = formData.businessName.trim();
+    const trimmedLicense = formData.licenseNumber.trim();
+    const trimmedJurisdiction = formData.licenseJurisdiction.trim();
 
     if (touched.fullName) {
-      if (!formData.fullName.trim()) {
+      if (!trimmedName) {
         errs.fullName = 'Full name is required.';
-      } else if (formData.fullName.trim().length < 2) {
+      } else if (trimmedName.length < 2) {
         errs.fullName = 'Full name must be at least 2 characters.';
+      } else if (trimmedName.length > 100) {
+        errs.fullName = 'Full name must not exceed 100 characters.';
       }
     }
 
     if (touched.email || emailConflict) {
-      if (!formData.email.trim()) {
+      if (!trimmedEmail) {
         errs.email = 'Email address is required.';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      } else if (trimmedEmail.length > 254) {
+        errs.email = 'Email address must not exceed 254 characters.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
         errs.email = 'Please enter a valid email address.';
       } else if (emailConflict) {
         errs.email = 'This email is already registered. Please sign in or use another email.';
       }
     }
 
-    if (touched.phone && formData.phone.trim()) {
-      const cleanPhone = formData.phone.replace(/[\s\-().+]/g, '');
-      if (cleanPhone.length < 10) {
-        errs.phone = 'Please enter a valid 10-digit phone number.';
+    if (touched.phone && trimmedPhone) {
+      const cleanPhone = trimmedPhone.replace(/[\s\-().+]/g, '');
+      if (trimmedPhone.length > 20) {
+        errs.phone = 'Phone number must not exceed 20 characters.';
+      } else if (!/^\d{10,15}$/.test(cleanPhone)) {
+        errs.phone = 'Please enter a valid 10 to 15 digit phone number.';
       }
     }
 
     if (touched.password && !isPasswordValid) {
       if (!formData.password) {
         errs.password = 'Password is required.';
+      } else if (formData.password.length < 2 || formData.password.length > 128) {
+        errs.password = 'Password must be between 2 and 128 characters.';
       } else if (!passwordCheck.upper && !passwordCheck.number) {
         errs.password = 'Password requires at least one uppercase letter (Caps) and at least one number.';
       } else if (!passwordCheck.upper) {
@@ -106,19 +121,40 @@ export function RegistrationForm() {
     }
 
     if (formData.role === 'contractor') {
-      if (touched.businessName && !formData.businessName.trim()) {
-        errs.businessName = 'Business name is required for contractor registration.';
+      if (touched.businessName) {
+        if (!trimmedBusiness) {
+          errs.businessName = 'Business name is required for contractor registration.';
+        } else if (trimmedBusiness.length < 2) {
+          errs.businessName = 'Business name must be at least 2 characters.';
+        } else if (trimmedBusiness.length > 150) {
+          errs.businessName = 'Business name must not exceed 150 characters.';
+        }
       }
-      if (touched.licenseNumber && !formData.licenseNumber.trim()) {
-        errs.licenseNumber = 'Contractor license number is required.';
+      if (touched.licenseNumber) {
+        if (!trimmedLicense) {
+          errs.licenseNumber = 'Contractor license number is required.';
+        } else if (trimmedLicense.length < 2) {
+          errs.licenseNumber = 'License number must be at least 2 characters.';
+        } else if (trimmedLicense.length > 100) {
+          errs.licenseNumber = 'License number must not exceed 100 characters.';
+        }
+      }
+      if (touched.licenseJurisdiction && trimmedJurisdiction.length > 100) {
+        errs.licenseJurisdiction = 'Jurisdiction must not exceed 100 characters.';
       }
     }
 
     return errs;
-  }, [formData, touched, isPasswordValid, emailConflict]);
+  }, [formData, touched, isPasswordValid, passwordCheck, emailConflict]);
 
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()) && !emailConflict;
-  const isPasswordsMatching = formData.confirmPassword && formData.confirmPassword === formData.password;
+  const trimmedEmail = formData.email.trim();
+  const isValidEmail =
+    trimmedEmail.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) &&
+    !emailConflict;
+  const isPasswordsMatching = Boolean(
+    formData.confirmPassword && formData.confirmPassword === formData.password
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,18 +171,30 @@ export function RegistrationForm() {
       licenseJurisdiction: true,
     });
 
+    const trimmedName = formData.fullName.trim();
+    const trimmedPhone = formData.phone.trim();
+    const cleanPhone = trimmedPhone.replace(/[\s\-().+]/g, '');
+    const isPhoneValid = !trimmedPhone || (trimmedPhone.length <= 20 && /^\d{10,15}$/.test(cleanPhone));
+
     if (
-      !formData.fullName.trim() ||
-      !formData.email.trim() ||
+      trimmedName.length < 2 ||
+      trimmedName.length > 100 ||
+      !trimmedEmail ||
       !isValidEmail ||
+      !isPhoneValid ||
       !isPasswordValid ||
       !isPasswordsMatching
     ) {
       return;
     }
 
-    if (formData.role === 'contractor' && (!formData.businessName.trim() || !formData.licenseNumber.trim())) {
-      return;
+    if (formData.role === 'contractor') {
+      const bName = formData.businessName.trim();
+      const lNum = formData.licenseNumber.trim();
+      const lJur = formData.licenseJurisdiction.trim();
+      if (bName.length < 2 || bName.length > 150 || lNum.length < 2 || lNum.length > 100 || lJur.length > 100) {
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -194,30 +242,32 @@ export function RegistrationForm() {
   };
 
   return (
-    <div style={styles.card}>
+    <div style={styles.card} className="auth-card">
       {/* Decorative Wave Gradient at bottom inside card */}
       <div style={styles.cardBottomWave} />
 
       {/* Brand Header */}
-      <div style={styles.header}>
-        <div style={styles.logoWrap}>
+      <div style={styles.header} className="auth-header">
+        <div style={styles.logoWrap} className="auth-logo-wrap">
           <img
             src={mainLogo}
             alt="Deck Restoration Plus"
             style={styles.logoImg}
+            className="auth-logo-img"
           />
         </div>
-        <h1 style={styles.title}>Create your account</h1>
-        <p style={styles.subtitle}>
+        <h1 style={styles.title} className="auth-title">Create your account</h1>
+        <p style={styles.subtitle} className="auth-subtitle">
           Get started with precision deck estimations and contractor workflows.
         </p>
       </div>
 
       {/* Role Selection Tabs */}
-      <div style={styles.roleTabsWrap}>
+      <div style={styles.roleTabsWrap} className="auth-role-tabs">
         <button
           type="button"
           onClick={() => setFormData((prev) => ({ ...prev, role: 'customer' }))}
+          className="auth-role-tab"
           style={{
             ...styles.roleTab,
             ...(formData.role === 'customer' ? styles.roleTabActive : styles.roleTabInactive),
@@ -233,6 +283,7 @@ export function RegistrationForm() {
         <button
           type="button"
           onClick={() => setFormData((prev) => ({ ...prev, role: 'contractor' }))}
+          className="auth-role-tab"
           style={{
             ...styles.roleTab,
             ...(formData.role === 'contractor' ? styles.roleTabActive : styles.roleTabInactive),
@@ -249,7 +300,7 @@ export function RegistrationForm() {
 
       {/* Success Notification Banner */}
       {registrationSuccess && (
-        <div style={styles.successBanner}>
+        <div style={styles.successBanner} className="auth-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -259,7 +310,7 @@ export function RegistrationForm() {
 
       {/* Error Alert Banner */}
       {serverError && !registrationSuccess && (
-        <div style={styles.errorBanner}>
+        <div style={styles.errorBanner} className="auth-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -270,207 +321,253 @@ export function RegistrationForm() {
       )}
 
       {/* Registration Form */}
-      <form onSubmit={handleSubmit} noValidate style={styles.form}>
+      <form onSubmit={handleSubmit} noValidate style={styles.form} className="auth-form">
         {/* Full Name */}
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Full Name *</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <div style={styles.labelRow} className="auth-label-row">
+            <label htmlFor="reg-fullName" style={styles.label} className="auth-label">Full Name *</label>
+            <span style={styles.labelHint} className="auth-label-hint">2–100 chars</span>
+          </div>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.fullName ? '#ef4444' : touched.fullName && formData.fullName.trim() ? '#22c55e' : '#D0E1F9',
+              borderColor: errors.fullName ? '#ef4444' : touched.fullName && formData.fullName.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
             <input
+              id="reg-fullName"
               type="text"
               name="fullName"
               autoComplete="name"
+              minLength={2}
+              maxLength={100}
               value={formData.fullName}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="e.g. John Doe"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
           </div>
-          {errors.fullName && <p style={styles.fieldErrorText}>{errors.fullName}</p>}
+          {errors.fullName && <p style={styles.fieldErrorText} className="auth-field-error">{errors.fullName}</p>}
         </div>
 
         {/* Email Address */}
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Email Address *</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <label htmlFor="reg-email" style={styles.label} className="auth-label">Email Address *</label>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: errors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
             <input
+              id="reg-email"
               type="email"
               name="email"
               autoComplete="email"
+              maxLength={254}
               value={formData.email}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="name@example.com"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
           </div>
-          {errors.email && <p style={styles.fieldErrorText}>{errors.email}</p>}
+          {errors.email && <p style={styles.fieldErrorText} className="auth-field-error">{errors.email}</p>}
         </div>
 
         {/* Phone Number */}
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Phone Number</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <div style={styles.labelRow} className="auth-label-row">
+            <label htmlFor="reg-phone" style={styles.label} className="auth-label">Phone Number</label>
+            <span style={styles.labelHint} className="auth-label-hint">Optional (10–15 digits)</span>
+          </div>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: errors.phone ? '#ef4444' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
             <input
+              id="reg-phone"
               type="tel"
               name="phone"
               autoComplete="tel"
+              maxLength={20}
               value={formData.phone}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="(555) 000-0000"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
           </div>
-          {errors.phone && <p style={styles.fieldErrorText}>{errors.phone}</p>}
+          {errors.phone && <p style={styles.fieldErrorText} className="auth-field-error">{errors.phone}</p>}
         </div>
 
         {/* Contractor Specific Fields */}
         {formData.role === 'contractor' && (
-          <div style={styles.contractorSection}>
-            <div style={styles.contractorSectionHeader}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div style={styles.contractorSection} className="auth-contractor-box">
+            <div style={styles.contractorSectionHeader} className="auth-contractor-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
               <span>Contractor Verification Details</span>
             </div>
 
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Business / Company Name *</label>
+            <div style={styles.fieldGroup} className="auth-field-group">
+              <div style={styles.labelRow} className="auth-label-row">
+                <label htmlFor="reg-businessName" style={styles.label} className="auth-label">Business / Company Name *</label>
+                <span style={styles.labelHint} className="auth-label-hint">2–150 chars</span>
+              </div>
               <div
+                className="auth-input-wrap"
                 style={{
                   ...styles.inputWrap,
-                  borderColor: errors.businessName ? '#ef4444' : '#D0E1F9',
+                  borderColor: errors.businessName ? '#ef4444' : touched.businessName && formData.businessName.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
                 }}
               >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
                   <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                   <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                 </svg>
                 <input
+                  id="reg-businessName"
                   type="text"
                   name="businessName"
+                  minLength={2}
+                  maxLength={150}
                   value={formData.businessName}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   placeholder="Apex Decks LLC"
                   style={styles.input}
+                  className="auth-input"
                   disabled={submitting}
                 />
               </div>
-              {errors.businessName && <p style={styles.fieldErrorText}>{errors.businessName}</p>}
+              {errors.businessName && <p style={styles.fieldErrorText} className="auth-field-error">{errors.businessName}</p>}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                <label style={styles.label}>License Number *</label>
+            <div className="auth-grid-2col" style={{ width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }} className="auth-field-group">
+                <label htmlFor="reg-licenseNumber" style={styles.label} className="auth-label">License Number *</label>
                 <div
+                  className="auth-input-wrap"
                   style={{
                     ...styles.inputWrap,
-                    borderColor: errors.licenseNumber ? '#ef4444' : '#D0E1F9',
+                    borderColor: errors.licenseNumber ? '#ef4444' : touched.licenseNumber && formData.licenseNumber.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                   <input
+                    id="reg-licenseNumber"
                     type="text"
                     name="licenseNumber"
+                    minLength={2}
+                    maxLength={100}
                     value={formData.licenseNumber}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     placeholder="LIC-123456"
                     style={styles.input}
+                    className="auth-input"
                     disabled={submitting}
                   />
                 </div>
-                {errors.licenseNumber && <p style={styles.fieldErrorText}>{errors.licenseNumber}</p>}
+                {errors.licenseNumber && <p style={styles.fieldErrorText} className="auth-field-error">{errors.licenseNumber}</p>}
               </div>
 
-              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                <label style={styles.label}>Jurisdiction / State</label>
-                <div style={styles.inputWrap}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+              <div style={{ ...styles.fieldGroup, minWidth: 0, width: '100%', boxSizing: 'border-box' }} className="auth-field-group">
+                <label htmlFor="reg-licenseJurisdiction" style={styles.label} className="auth-label">Jurisdiction / State</label>
+                <div className="auth-input-wrap" style={styles.inputWrap}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
                   <input
+                    id="reg-licenseJurisdiction"
                     type="text"
                     name="licenseJurisdiction"
+                    maxLength={100}
                     value={formData.licenseJurisdiction}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="e.g. New Jersey"
                     style={styles.input}
+                    className="auth-input"
                     disabled={submitting}
                   />
                 </div>
+                {errors.licenseJurisdiction && <p style={styles.fieldErrorText} className="auth-field-error">{errors.licenseJurisdiction}</p>}
               </div>
             </div>
           </div>
         )}
 
         {/* Password */}
-        <div style={styles.fieldGroup}>
-          <div style={styles.labelRow}>
-            <label style={styles.label}>Password *</label>
-            {isPasswordValid && (
-              <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>✓ Strong</span>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <div style={styles.labelRow} className="auth-label-row">
+            <label htmlFor="reg-password" style={styles.label} className="auth-label">Password *</label>
+            {isPasswordValid ? (
+              <span style={{ fontSize: '11.5px', color: '#16a34a', fontWeight: '700' }}>✓ Strong</span>
+            ) : (
+              <span style={styles.labelHint} className="auth-label-hint">2–128 chars</span>
             )}
           </div>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: errors.password ? '#ef4444' : isPasswordValid ? '#22c55e' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             <input
+              id="reg-password"
               type={showPassword ? 'text' : 'password'}
               name="password"
               autoComplete="new-password"
+              minLength={2}
+              maxLength={128}
               value={formData.password}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Create secure password"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               style={styles.eyeBtn}
+              className="auth-eye-btn"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
               title={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -488,52 +585,63 @@ export function RegistrationForm() {
             </button>
           </div>
 
-          {/* Real-time Checklist: Only 1 Caps and 1 Number required */}
-          <div style={styles.passwordRulesBox}>
-            <span style={{ color: passwordCheck.upper ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800' }}>{passwordCheck.upper ? '✓' : '○'}</span>
-              <span>At least 1 Uppercase (Caps)</span>
+          {/* Real-time Checklist: 2–128 chars, 1 Caps, and 1 Number required */}
+          <div style={styles.passwordRulesBox} className="auth-password-rules">
+            <span style={{ color: passwordCheck.length ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: '800' }}>{passwordCheck.length ? '✓' : '○'}</span>
+              <span>2–128 Chars</span>
             </span>
-            <span style={{ color: passwordCheck.number ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800' }}>{passwordCheck.number ? '✓' : '○'}</span>
-              <span>At least 1 Number</span>
+            <span style={{ color: passwordCheck.upper ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: '800' }}>{passwordCheck.upper ? '✓' : '○'}</span>
+              <span>1+ Uppercase (Caps)</span>
+            </span>
+            <span style={{ color: passwordCheck.number ? '#16a34a' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: '800' }}>{passwordCheck.number ? '✓' : '○'}</span>
+              <span>1+ Number</span>
             </span>
           </div>
+          {errors.password && <p style={styles.fieldErrorText} className="auth-field-error">{errors.password}</p>}
         </div>
 
         {/* Confirm Password */}
-        <div style={styles.fieldGroup}>
-          <div style={styles.labelRow}>
-            <label style={styles.label}>Confirm Password *</label>
+        <div style={styles.fieldGroup} className="auth-field-group">
+          <div style={styles.labelRow} className="auth-label-row">
+            <label htmlFor="reg-confirmPassword" style={styles.label} className="auth-label">Confirm Password *</label>
             {isPasswordsMatching && (
-              <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>✓ Matches</span>
+              <span style={{ fontSize: '11.5px', color: '#16a34a', fontWeight: '700' }}>✓ Matches</span>
             )}
           </div>
           <div
+            className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
               borderColor: errors.confirmPassword ? '#ef4444' : isPasswordsMatching ? '#22c55e' : '#D0E1F9',
             }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             <input
+              id="reg-confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               name="confirmPassword"
               autoComplete="new-password"
+              maxLength={128}
               value={formData.confirmPassword}
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Re-enter password"
               style={styles.input}
+              className="auth-input"
               disabled={submitting}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
               style={styles.eyeBtn}
+              className="auth-eye-btn"
+              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
               title={showConfirmPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -550,13 +658,14 @@ export function RegistrationForm() {
               )}
             </button>
           </div>
-          {errors.confirmPassword && <p style={styles.fieldErrorText}>{errors.confirmPassword}</p>}
+          {errors.confirmPassword && <p style={styles.fieldErrorText} className="auth-field-error">{errors.confirmPassword}</p>}
         </div>
 
         {/* Shiny Royal Navy Blue Submit Button */}
         <button
           type="submit"
           disabled={submitting || Boolean(registrationSuccess)}
+          className="auth-submit-btn"
           style={{
             ...styles.submitBtn,
             opacity: submitting || registrationSuccess ? 0.75 : 1,
@@ -581,7 +690,7 @@ export function RegistrationForm() {
       </form>
 
       {/* Bottom Switch Link */}
-      <div style={styles.footerLinkWrap}>
+      <div style={styles.footerLinkWrap} className="auth-footer-link-wrap">
         <span style={styles.footerPrompt}>Already have an account? </span>
         <Link to="/login" style={styles.footerLink}>
           Sign In
@@ -594,9 +703,9 @@ export function RegistrationForm() {
 const styles = {
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '24px',
+    borderRadius: '22px',
     boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)',
-    padding: '38px 36px 34px 36px',
+    padding: '28px 30px 24px 30px',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
@@ -608,36 +717,36 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    height: '42px',
+    height: '36px',
     background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.55) 100%)',
     pointerEvents: 'none',
-    borderBottomLeftRadius: '24px',
-    borderBottomRightRadius: '24px',
+    borderBottomLeftRadius: '22px',
+    borderBottomRightRadius: '22px',
   },
   header: {
-    marginBottom: '22px',
+    marginBottom: '16px',
     textAlign: 'center',
   },
   logoWrap: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '18px',
+    marginBottom: '12px',
     width: '100%',
   },
   logoImg: {
-    maxHeight: '75px',
-    maxWidth: '260px',
+    maxHeight: '58px',
+    maxWidth: '220px',
     width: 'auto',
     objectFit: 'contain',
     display: 'block',
     margin: '0 auto',
   },
   title: {
-    fontSize: '23px',
+    fontSize: '22px',
     fontWeight: '800',
     color: '#0F172A',
-    margin: '0 0 6px 0',
+    margin: '0 0 5px 0',
     letterSpacing: '-0.3px',
     lineHeight: 1.25,
   },
@@ -645,13 +754,13 @@ const styles = {
     fontSize: '13px',
     color: '#64748B',
     margin: 0,
-    lineHeight: 1.5,
+    lineHeight: 1.45,
   },
   roleTabsWrap: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '10px',
-    marginBottom: '20px',
+    gap: '8px',
+    marginBottom: '16px',
     backgroundColor: '#F8FAFC',
     padding: '5px',
     borderRadius: '14px',
@@ -660,7 +769,7 @@ const styles = {
     boxSizing: 'border-box',
   },
   roleTab: {
-    padding: '10px 12px',
+    padding: '9px 10px',
     borderRadius: '10px',
     border: 'none',
     fontSize: '13px',
@@ -669,8 +778,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
+    gap: '7px',
     transition: 'all 0.15s ease',
+    minWidth: 0,
   },
   roleTabActive: {
     background: 'linear-gradient(180deg, #0A58CA 0%, #033B85 100%)',
@@ -685,10 +795,10 @@ const styles = {
     backgroundColor: '#F8FAFC',
     border: '1px solid #E2E8F0',
     borderRadius: '14px',
-    padding: '16px',
+    padding: '13px 14px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
     width: '100%',
     boxSizing: 'border-box',
     overflow: 'hidden',
@@ -714,7 +824,7 @@ const styles = {
     color: '#065F46',
     fontSize: '13px',
     fontWeight: '500',
-    marginBottom: '18px',
+    marginBottom: '16px',
   },
   errorBanner: {
     display: 'flex',
@@ -727,12 +837,12 @@ const styles = {
     color: '#991B1B',
     fontSize: '13px',
     fontWeight: '500',
-    marginBottom: '18px',
+    marginBottom: '16px',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '15px',
+    gap: '13px',
     position: 'relative',
     zIndex: 2,
   },
@@ -747,12 +857,19 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '8px',
   },
   label: {
     fontSize: '12.5px',
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom: '6px',
+    marginBottom: '5px',
+  },
+  labelHint: {
+    fontSize: '11px',
+    fontWeight: '500',
+    color: '#94A3B8',
+    flexShrink: 0,
   },
   inputWrap: {
     display: 'flex',

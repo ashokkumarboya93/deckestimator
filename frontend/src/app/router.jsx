@@ -2,55 +2,63 @@
 // Deck Estimator — Route Definitions
 // =============================================
 
+import { lazy } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from './App';
-import LoginPage from '../features/auth/pages/LoginPage';
-import RegisterPage from '../features/auth/pages/RegisterPage';
-import CustomerDashboardPage from '../features/customer/pages/CustomerDashboardPage';
-import DeckEstimatorPage from '../features/customer/pages/DeckEstimatorPage';
-import DeckDetailPage from '../features/customer/pages/DeckDetailPage';
-import CustomerEstimatesPage from '../features/customer/pages/CustomerEstimatesPage';
-import EstimateBuilderPage from '../features/customer/pages/EstimateBuilderPage';
-import EstimateDetailPage from '../features/customer/pages/EstimateDetailPage';
+import RouteErrorBoundary from '../components/common/RouteErrorBoundary';
+
+// Layouts
 import CustomerLayout from '../features/customer/components/CustomerLayout';
-import CustomerProfilePage from '../features/customer/pages/CustomerProfilePage';
-import CustomerSupportPage from '../features/customer/pages/CustomerSupportPage';
-
-// Contractor Pages & Layout
 import ContractorLayout from '../features/contractor/components/ContractorLayout';
-import ContractorDashboardPage from '../features/contractor/pages/ContractorDashboardPage';
-import ContractorLeadsPage from '../features/contractor/pages/ContractorLeadsPage';
-import ContractorProjectsPage from '../features/contractor/pages/ContractorProjectsPage';
-import ContractorDeckEstimatorPage from '../features/contractor/pages/ContractorDeckEstimatorPage';
-import ContractorDeckDetailPage from '../features/contractor/pages/ContractorDeckDetailPage';
-import ContractorEstimatesPage from '../features/contractor/pages/ContractorEstimatesPage';
-import ContractorEstimateBuilderPage from '../features/contractor/pages/ContractorEstimateBuilderPage';
-import ContractorVerificationPage from '../features/contractor/pages/ContractorVerificationPage';
-import ContractorDocumentDetailPage from '../features/contractor/pages/ContractorDocumentDetailPage';
-import ContractorCommissionsPage from '../features/contractor/pages/ContractorCommissionsPage';
-import ContractorCommissionDetailPage from '../features/contractor/pages/ContractorCommissionDetailPage';
-import ContractorDiscountsPage from '../features/contractor/pages/ContractorDiscountsPage';
-import ContractorVerificationRequestPage from '../features/contractor/pages/ContractorVerificationRequestPage';
-import ContractorProfilePage from '../features/contractor/pages/ContractorProfilePage';
-import ContractorDiscountsEarningsPage from '../features/contractor/pages/ContractorDiscountsEarningsPage';
-import ContractorSupportPage from '../features/contractor/pages/ContractorSupportPage';
-import ContractorProjectDetailPage from '../features/contractor/pages/ContractorProjectDetailPage';
-
-// Admin Portal Pages & Layout
-import AdminLoginPage from '../features/admin/pages/AdminLoginPage';
 import AdminLayout from '../features/admin/components/AdminLayout';
-import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
-import AdminUserManagementPage from '../features/admin/pages/AdminUserManagementPage';
-import AdminUserProfilePage from '../features/admin/pages/AdminUserProfilePage';
-import AdminVerificationProgressPage from '../features/admin/pages/AdminVerificationProgressPage';
-import AdminLeadManagementPage from '../features/admin/pages/AdminLeadManagementPage';
-import AdminProjectsPage from '../features/admin/pages/AdminProjectsPage';
-import AdminPricingDiscountsPage from '../features/admin/pages/AdminPricingDiscountsPage';
-import AdminReportsPage from '../features/admin/pages/AdminReportsPage';
-import AdminSettingsPage from '../features/admin/pages/AdminSettingsPage';
-import AdminGuidelinesPage from '../features/admin/pages/AdminGuidelinesPage';
-import AdminProfilePage from '../features/admin/pages/AdminProfilePage';
-import LandingPage from '../features/landing/pages/LandingPage';
+
+// Core & Auth Pages (Lazy Loaded)
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'));
+const LandingPage = lazy(() => import('../features/landing/pages/LandingPage'));
+
+// Customer Pages (Lazy Loaded)
+const CustomerDashboardPage = lazy(() => import('../features/customer/pages/CustomerDashboardPage'));
+const DeckEstimatorPage = lazy(() => import('../features/customer/pages/DeckEstimatorPage'));
+const DeckDetailPage = lazy(() => import('../features/customer/pages/DeckDetailPage'));
+const CustomerEstimatesPage = lazy(() => import('../features/customer/pages/CustomerEstimatesPage'));
+const EstimateBuilderPage = lazy(() => import('../features/customer/pages/EstimateBuilderPage'));
+const EstimateDetailPage = lazy(() => import('../features/customer/pages/EstimateDetailPage'));
+const CustomerProfilePage = lazy(() => import('../features/customer/pages/CustomerProfilePage'));
+const CustomerSupportPage = lazy(() => import('../features/customer/pages/CustomerSupportPage'));
+
+// Contractor Pages (Lazy Loaded)
+const ContractorDashboardPage = lazy(() => import('../features/contractor/pages/ContractorDashboardPage'));
+const ContractorLeadsPage = lazy(() => import('../features/contractor/pages/ContractorLeadsPage'));
+const ContractorProjectsPage = lazy(() => import('../features/contractor/pages/ContractorProjectsPage'));
+const ContractorDeckEstimatorPage = lazy(() => import('../features/contractor/pages/ContractorDeckEstimatorPage'));
+const ContractorDeckDetailPage = lazy(() => import('../features/contractor/pages/ContractorDeckDetailPage'));
+const ContractorEstimatesPage = lazy(() => import('../features/contractor/pages/ContractorEstimatesPage'));
+const ContractorEstimateBuilderPage = lazy(() => import('../features/contractor/pages/ContractorEstimateBuilderPage'));
+const ContractorVerificationPage = lazy(() => import('../features/contractor/pages/ContractorVerificationPage'));
+const ContractorDocumentDetailPage = lazy(() => import('../features/contractor/pages/ContractorDocumentDetailPage'));
+const ContractorCommissionsPage = lazy(() => import('../features/contractor/pages/ContractorCommissionsPage'));
+const ContractorCommissionDetailPage = lazy(() => import('../features/contractor/pages/ContractorCommissionDetailPage'));
+const ContractorDiscountsPage = lazy(() => import('../features/contractor/pages/ContractorDiscountsPage'));
+const ContractorVerificationRequestPage = lazy(() => import('../features/contractor/pages/ContractorVerificationRequestPage'));
+const ContractorProfilePage = lazy(() => import('../features/contractor/pages/ContractorProfilePage'));
+const ContractorDiscountsEarningsPage = lazy(() => import('../features/contractor/pages/ContractorDiscountsEarningsPage'));
+const ContractorSupportPage = lazy(() => import('../features/contractor/pages/ContractorSupportPage'));
+const ContractorProjectDetailPage = lazy(() => import('../features/contractor/pages/ContractorProjectDetailPage'));
+
+// Admin Portal Pages (Lazy Loaded)
+const AdminLoginPage = lazy(() => import('../features/admin/pages/AdminLoginPage'));
+const AdminDashboardPage = lazy(() => import('../features/admin/pages/AdminDashboardPage'));
+const AdminUserManagementPage = lazy(() => import('../features/admin/pages/AdminUserManagementPage'));
+const AdminUserProfilePage = lazy(() => import('../features/admin/pages/AdminUserProfilePage'));
+const AdminVerificationProgressPage = lazy(() => import('../features/admin/pages/AdminVerificationProgressPage'));
+const AdminLeadManagementPage = lazy(() => import('../features/admin/pages/AdminLeadManagementPage'));
+const AdminProjectsPage = lazy(() => import('../features/admin/pages/AdminProjectsPage'));
+const AdminPricingDiscountsPage = lazy(() => import('../features/admin/pages/AdminPricingDiscountsPage'));
+const AdminReportsPage = lazy(() => import('../features/admin/pages/AdminReportsPage'));
+const AdminSettingsPage = lazy(() => import('../features/admin/pages/AdminSettingsPage'));
+const AdminGuidelinesPage = lazy(() => import('../features/admin/pages/AdminGuidelinesPage'));
+const AdminProfilePage = lazy(() => import('../features/admin/pages/AdminProfilePage'));
 
 // Route Guards
 import {
@@ -67,6 +75,7 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         index: true,
@@ -110,6 +119,7 @@ const router = createBrowserRouter([
       // Customer Routes
       {
         path: 'customer',
+        errorElement: <RouteErrorBoundary />,
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['customer', 'admin']}>
@@ -168,6 +178,7 @@ const router = createBrowserRouter([
       // Contractor Routes
       {
         path: 'contractor',
+        errorElement: <RouteErrorBoundary />,
         element: (
           <RequireAuth>
             <RequireRole allowedRoles={['contractor', 'admin']}>
@@ -295,6 +306,7 @@ const router = createBrowserRouter([
       // Admin Portal Routes (Strict sequence: 11 Pages + Profile + Aliases)
       {
         path: 'admin',
+        errorElement: <RouteErrorBoundary />,
         element: (
           <RequireAdminAuth>
             <AdminLayout />

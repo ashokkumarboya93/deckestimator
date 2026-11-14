@@ -204,8 +204,8 @@ export default function EstimateBuilderPage() {
     return (
       <div style={styles.container}>
         <div style={styles.errorBox}>{error}</div>
-        <button type="button" onClick={() => navigate(-1)} style={styles.secondaryBtn}>
-          ← Go Back
+        <button type="button" onClick={() => navigate('/customer/dashboard')} style={styles.secondaryBtn}>
+          ← Back to Dashboard
         </button>
       </div>
     );
@@ -213,7 +213,7 @@ export default function EstimateBuilderPage() {
 
   return (
     <div style={styles.container}>
-      <button type="button" onClick={() => navigate(-1)} style={styles.secondaryBtn}>
+      <button type="button" onClick={() => navigate(deck ? `/customer/decks/${deck.id || deck._id}` : '/customer/dashboard')} style={styles.secondaryBtn}>
         ← Back to Project Details
       </button>
 

@@ -37,9 +37,20 @@ router.get(
   authorize(ROLES.CONTRACTOR),
   contractorController.getProfile
 );
+router.get(
+  '/profile',
+  authorize(ROLES.CONTRACTOR),
+  contractorController.getProfile
+);
 
 router.patch(
   '/me',
+  authorize(ROLES.CONTRACTOR),
+  validate(updateProfileSchema),
+  contractorController.updateProfile
+);
+router.patch(
+  '/profile',
   authorize(ROLES.CONTRACTOR),
   validate(updateProfileSchema),
   contractorController.updateProfile

@@ -217,13 +217,13 @@ export default function ContractorProjectDetailPage() {
         <div style={styles.topContactBox}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>Contractor Hotline:</span>
-            <a href="tel:8566783325" style={styles.topPhoneLink}>
-              (856) 678-3325
+            <a href="tel:8664403325" style={styles.topPhoneLink}>
+              (866) 440-DECK
             </a>
           </div>
           <span style={{ color: '#CBD5E1' }}>•</span>
           <a
-            href="mailto:estimates@deckrestorationplus.com?subject=Contractor%20Project%20Assistance"
+            href="mailto:info@deckrestorationplus.com?subject=Contractor%20Project%20Assistance"
             style={styles.topEmailLink}
           >
             Senior Estimator Dispatch

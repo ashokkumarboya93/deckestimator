@@ -1,677 +1,1078 @@
 // ========================================================
-// Deck Estimator — Customer Help & Support Documentation
+// Deck Estimator — Customer Help & Support Hub
 // ========================================================
-// Comprehensive Guide:
-// - Mobilization Minimum ($2,500) & Travel Thresholds (>45 mins = $3,000)
-// - Step-by-Step Calculator Inputs & Architectural Specifications
-// - Interactive Reach Out & Inquiry Form (Synced with DB via leadApi.submitReachOut)
-// - Highlighted Business Contact Information & Operating Hours
-// - Frequently Asked Questions (FAQ) with Interactive Accordion
-// - Vector SVGs only (Strictly No Emojis)
+// Concise, Mobile-First & High-Contrast Bordered Layout:
+// - Quick Policies Summary ($2,500 Floor / $3,000 >45m / 8ft+ / Warranty)
+// - Interactive 9-Step Calculator Quick Reference Tabs
+// - Direct Reach Out Inquiry Form (Synced with Admin /admin/leads + Notifications)
+// - Official DRP Contact Hub (Shamong HQ, Phone Lines, Copyable Email)
+// - Concise 7-Item FAQ Accordion
 // ========================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { leadApi } from '../api/leadApi';
 
+const POLICY_CARDS = [
+  {
+    id: 'base-min',
+    pill: 'Standard Floor',
+    amount: '$2,500',
+    accent: '#1E3A63',
+    pillBg: '#EFF6FF',
+    pillColor: '#1E3A63',
+    title: 'Base Mobilization Minimum',
+    bullets: [
+      'Covers certified multi-tech crew & commercial wash rigs.',
+      'Applies automatically when calculated scope is under $2,500.',
+    ],
+  },
+  {
+    id: 'travel-min',
+    pill: '>45 Min Travel',
+    amount: '$3,000',
+    accent: '#D97706',
+    pillBg: '#FFFBEB',
+    pillColor: '#92400E',
+    title: 'Extended Distance Floor',
+    bullets: [
+      'Applies beyond a 45-minute drive from Shamong, NJ.',
+      'Covers multi-visit transit & drying window scheduling.',
+    ],
+  },
+  {
+    id: 'elevation',
+    pill: 'Safety & Rigging',
+    amount: '8ft+ Height',
+    accent: '#475569',
+    pillBg: '#F1F5F9',
+    pillColor: '#334155',
+    title: 'Elevated Deck Staging',
+    bullets: [
+      'Requires ladder stabilization & fall-protection gear.',
+      'Factored transparently inside Elevation selection.',
+    ],
+  },
+  {
+    id: 'warranty',
+    pill: 'Protection',
+    amount: '1-Year',
+    accent: '#15803D',
+    pillBg: '#DCFCE7',
+    pillColor: '#15803D',
+    title: 'Workmanship Warranty',
+    bullets: [
+      'Protects penetrating coats against peeling or flaking.',
+      'Backed directly by DRP certified inspection crews.',
+    ],
+  },
+];
+
+const CALCULATOR_STEPS = [
+  {
+    step: '01',
+    title: 'Shape & Dimensions',
+    tag: 'Usable Area (L × W)',
+    summary: 'Pick Rectangle, Square, L-Shape, Multi-Level, or Custom and type exact length & width in feet.',
+    points: [
+      'Square auto-matches Width to Length for quick entry.',
+      'Direct numeric inputs prevent accidental scroll-wheel changes.',
+    ],
+  },
+  {
+    step: '02',
+    title: 'Elevation & Access',
+    tag: 'Vertical Staging',
+    summary: 'Select Ground (0–4 ft), One-Story (4–8 ft), or Multi-Story (8+ ft) based on deck height off grade.',
+    points: [
+      'Ground access uses standard perimeter setup.',
+      '8+ ft decks include multi-tier ladder & underside staging.',
+    ],
+  },
+  {
+    step: '03',
+    title: 'Wood / Material Type',
+    tag: 'Substrate Science',
+    summary: 'Choose Pressure-Treated Pine, Cedar/Redwood, Hardwoods (Ipe/Mahogany), or Composite (Trex).',
+    points: [
+      'Dense hardwoods require specialized oil prep.',
+      'Composite decks lock to safe bio-wash cleaning only (Trex Lock Rule).',
+    ],
+  },
+  {
+    step: '04',
+    title: 'Board Condition',
+    tag: 'Prep Intensity',
+    summary: 'Match your wood’s current state: Good, Weathered/Gray, Peeling Solid Stain, or Heavy Mold/Algae.',
+    points: [
+      'Previous peeling film adds chemical stripping & sanding labor.',
+      'Lighter gray weathering only needs wash & brightening.',
+    ],
+  },
+  {
+    step: '05',
+    title: 'Stairs, Rails & Extras',
+    tag: 'Architectural Add-Ons',
+    summary: 'Add staircase steps, linear feet of railing, spindles, benches, pergolas, or privacy screens.',
+    points: [
+      'Each step calculates ~12 sq ft covering tread, riser & stringers.',
+      'Skip optional structures cleanly if your deck has none.',
+    ],
+  },
+  {
+    step: '06',
+    title: 'Service Scope',
+    tag: 'Wash • Seal • Stain',
+    summary: 'Choose Clean & Brighten, Clean & Clear Seal, or Full Clean & Penetrating Stain System.',
+    points: [
+      'Cleaning starts around $2.50/sq ft base tier.',
+      'Sealing or oil staining adds UV pigment & moisture protection.',
+    ],
+  },
+  {
+    step: '07',
+    title: 'Photos & Notes',
+    tag: 'Visual Review',
+    summary: 'Optionally upload deck photos or note loose boards, railing repairs, or gate access details.',
+    points: [
+      'Photos help senior estimators verify scope faster.',
+      'Images are automatically compressed for quick upload.',
+    ],
+  },
+  {
+    step: '08',
+    title: 'Property Location',
+    tag: 'Travel Radius Check',
+    summary: 'Name your project and optionally enter property address & ZIP for local dispatch review.',
+    points: [
+      'Only a unique Project Name is required to save.',
+      'Addresses >45 mins from Shamong, NJ apply the $3,000 travel floor.',
+    ],
+  },
+  {
+    step: '09',
+    title: 'Official Quote & Inquiry',
+    tag: 'PDF • Save • Send',
+    summary: 'Review your instant itemized total, download an official printable copy, or click Inquiry to submit.',
+    points: [
+      'Submitting sends your project straight to DRP Admins for review.',
+      'Track live status anytime inside My Projects.',
+    ],
+  },
+];
+
+const FAQS = [
+  {
+    q: 'Why is there a $2,500 standard project minimum?',
+    a: 'Every project deploys a certified multi-technician crew, commercial wash equipment, neutralizers, sanders, and warranty backing—requiring a $2,500 base floor (or $3,000 beyond a 45-minute drive from Shamong, NJ).',
+  },
+  {
+    q: 'Can Trex or composite decks be stained?',
+    a: 'No. Applying film-forming stains voids composite warranties. Our estimator enforces the Trex Lock Rule so composite decks automatically receive safe wash & bio-treatment pricing only.',
+  },
+  {
+    q: 'What is the difference between sealing and staining?',
+    a: 'Cleaning strips dirt and mildew; clear sealing blocks water intrusion; penetrating oil staining adds UV pigment to stop graying while nourishing the wood grain.',
+  },
+  {
+    q: 'What happens after I submit an estimate inquiry?',
+    a: 'Your project switches to Requested status and notifies DRP Admins immediately. An estimator reviews your dimensions/photos and follows up to confirm on-site scheduling.',
+  },
+  {
+    q: 'How are stairs and railings billed?',
+    a: 'Steps calculate at ~12 sq ft per step (tread, riser, and stringer edges). Railings calculate by total linear footage covering top/bottom rails and balusters.',
+  },
+  {
+    q: 'What weather is needed for restoration work?',
+    a: 'Sealing and staining require wood moisture under 15%, dry forecasts for 24–48 hours, and temperatures above 50°F (10°C).',
+  },
+  {
+    q: 'How do I download my official estimate PDF?',
+    a: 'Open My Projects (or the final estimator screen) and click the View or Download icon under Actions to export a formatted printable copy.',
+  },
+];
+
 export default function CustomerSupportPage() {
   const { user } = useAuth();
 
-  // Inquiry Form State
+  const [activeStepIdx, setActiveStepIdx] = useState(0);
+  const [activeFaq, setActiveFaq] = useState(0);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
     phone: user?.phone || user?.phoneNumber || '',
     subject: 'Estimator & Scope Guidance',
-    message: '',
     deckSize: '',
     woodType: 'pressure_treated_pine',
+    message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  // Active FAQ Accordion Index (allows toggling)
-  const [activeFaq, setActiveFaq] = useState(null);
+  // Backfill profile defaults once auth finishes hydrating if fields are still untouched
+  useEffect(() => {
+    if (!user) return;
+    setFormData((prev) => ({
+      ...prev,
+      fullName: prev.fullName || user.fullName || '',
+      email: prev.email || user.email || '',
+      phone: prev.phone || user.phone || user.phoneNumber || '',
+    }));
+  }, [user]);
 
-  // Quick Copy Feedback State
-  const [copiedEmail, setCopiedEmail] = useState(false);
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleCopyEmail = (e) => {
     e.preventDefault();
-    e.stopPropagation();
     if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText('estimates@deckrestorationplus.com');
+      navigator.clipboard.writeText('info@deckrestorationplus.com').catch(() => {});
     }
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
   };
 
-  // Quick navigation scroll helper
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   const handleInputChange = (field, val) => {
+    setSubmitError(null);
     setFormData((prev) => ({ ...prev, [field]: val }));
   };
 
   const handleSubmitInquiry = async (e) => {
     e.preventDefault();
-    if (!formData.message.trim()) {
-      setSubmitError('Please enter a brief message or question describing your request.');
+    const trimmedName = formData.fullName.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedMsg = formData.message.trim();
+
+    if (!trimmedName) {
+      setSubmitError('Please enter your full name.');
+      return;
+    }
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setSubmitError('Please enter a valid email address so our team can reply.');
+      return;
+    }
+    if (trimmedMsg.length < 5) {
+      setSubmitError('Please enter a short message (at least 5 characters) describing how we can help.');
       return;
     }
 
     setIsSubmitting(true);
     setSubmitError(null);
+    setSubmitSuccess(null);
+
     try {
-      await leadApi.submitReachOut({
-        contactSource: 'Customer Support Documentation Portal',
+      const response = await leadApi.submitReachOut({
+        fullName: trimmedName,
+        email: trimmedEmail,
+        phone: formData.phone.trim(),
+        contactSource: 'Customer Support Portal',
         subject: formData.subject,
-        message: formData.message.trim(),
-        additionalNotes: `Customer: ${formData.fullName} | Email: ${formData.email} | Phone: ${formData.phone || 'N/A'} | Deck Details: ${formData.deckSize || 'Unspecified sqft'}, Wood: ${formData.woodType}`,
+        deckSize: formData.deckSize.trim(),
+        woodType: formData.woodType,
+        message: trimmedMsg,
+        additionalNotes: `Deck Size: ${formData.deckSize.trim() || 'Unspecified'} | Wood: ${formData.woodType}`,
       });
-      setSubmitSuccess(true);
-      setFormData((prev) => ({ ...prev, message: '' }));
-      setTimeout(() => {
-        setSubmitSuccess(false);
-      }, 7000);
+
+      const leadRef = response?.data?.leadNumber || response?.leadNumber || '';
+      setSubmitSuccess(
+        leadRef
+          ? `Inquiry sent (${leadRef}). Our Admin & Estimating team has been notified.`
+          : 'Inquiry sent successfully. Our Admin & Estimating team will respond shortly.'
+      );
+      setFormData((prev) => ({ ...prev, message: '', deckSize: '' }));
     } catch (err) {
-      setSubmitError(err.message || 'Unable to submit inquiry. Please try again or call our office.');
+      const serverMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Unable to send inquiry right now. Please try again or call (866) 440-DECK.';
+      setSubmitError(serverMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const toggleFaq = (idx) => {
-    setActiveFaq((prev) => (prev === idx ? null : idx));
-  };
-
-  const faqs = [
-    {
-      q: 'How does the Deck Restoration Plus continuous estimator calculate prices?',
-      a: 'Our calculation engine uses a certified mathematical rate matrix based on actual usable square footage, vertical elevation staging, wood density resistance, and restorative operations. Base washing starts at $2.50 per square foot, with incremental material coatings (semi-transparent penetrating oil or solid body stain) adding standard $1.00/sq.ft tiers. All labor hours, commercial-grade chemical neutralizers, orbital abrasives, and travel mobilization are factored transparently.',
-    },
-    {
-      q: 'Why is there a $2,500 standard mobilization minimum?',
-      a: 'Every Deck Restoration Plus project deployment requires a multi-technician certified crew, commercial pressure washing and chemical regulation rigs, specialized orbital sanders, multi-coat penetrating supplies, and comprehensive job site protection. The $2,500 mobilization floor guarantees that even smaller platforms receive the full commercial-grade treatment, preparation rigor, and our 1-year certified warranty.',
-    },
-    {
-      q: 'How does the 45-minute travel threshold ($3,000 minimum) work?',
-      a: 'For properties situated beyond a 45-minute drive from our Shamong, NJ dispatch headquarters, crew travel, fuel logistics, and multi-trip staging require an elevated mobilization minimum of $3,000. When calculating your estimate, entering an address outside this radius will automatically account for transit mobilization.',
-    },
-    {
-      q: 'Can composite or Trex decks be restored, stained, or sealed?',
-      a: 'Composite materials like Trex require specialized chemical-free thermal cleaning and bio-spore removal to prevent voiding manufacturer warranties. Our estimator automatically enforces the "Trex Lock Rule": composite decks are restricted to certified cleaning and maintenance treatments, preventing incompatible stains or chemical stripping agents.',
-    },
-    {
-      q: 'What is the difference between deck cleaning, sealing, and staining?',
-      a: 'Cleaning removes accumulated mildew, algae, gray oxidized wood fibers, and atmospheric grime. Sealing provides a water-repellent barrier that keeps liquid moisture from penetrating into the grain. Staining introduces ultraviolet-blocking pigments that protect wood lignin from sun degradation while enhancing the architectural natural grain color.',
-    },
-    {
-      q: 'What happens when I click "Inquiry this Estimation"?',
-      a: 'Clicking "Inquiry this Estimation" immediately converts your calculated estimate into an active project inquiry in our central management portal. A senior Deck Restoration Plus estimator is assigned to review your parameters, verify uploaded photos, confirm your site address, and schedule an on-site inspection.',
-    },
-    {
-      q: 'What weather conditions are required for deck restoration?',
-      a: 'Deep chemical washing and orbital sanding require dry wood with moisture content below 15%. Penetrating oil stains and sealers require 24 to 48 hours of rain-free forecast with temperatures consistently above 50°F (10°C). Our dispatch team constantly monitors local meteorological radar before staging crews.',
-    },
-    {
-      q: 'What does the 1-Year Workmanship Warranty cover?',
-      a: 'Our standard 1-year warranty covers all multi-coat penetrating applications against peeling, premature fading, blistering, or flaking under standard residential usage. Should any substrate issue develop, a certified technician will inspect and remedy the treated area promptly.',
-    },
-    {
-      q: 'How are stairs, railings, and pergolas calculated?',
-      a: 'Stairs are billed dynamically at 12 square feet per step (accounting for the tread, vertical riser, stringers, and perimeter edging). Railings are computed based on linear footage covering top rails, bottom rails, and multi-sided balusters. Pergolas and privacy walls factor multi-faceted surface exposures.',
-    },
-    {
-      q: 'How do I download or print my official estimate document?',
-      a: 'On the estimator results box, or within the My Projects page under "Actions", click the "Export" or "Print" button. This dynamically compiles an official, print-ready HTML/PDF document containing your complete project specifications, customer details, guarantee badges, and company contact information.',
-    },
-  ];
+  const activeStep = CALCULATOR_STEPS[activeStepIdx] || CALCULATOR_STEPS[0];
 
   return (
-    <div style={styles.pageContainer}>
-      {/* ======================================================== */}
-      {/* 1. HERO BANNER & QUICK JUMP BAR */}
-      {/* ======================================================== */}
-      <section style={styles.heroBanner}>
-        <div style={styles.heroContent}>
-          <div style={styles.heroBadgeRow}>
-            <span style={styles.heroBadge}>Deck Restoration Plus</span>
-            <span style={styles.heroSubBadge}>Customer Guidance &amp; Reference Hub</span>
-          </div>
-          <h1 style={styles.heroTitle}>Estimator Documentation &amp; Support</h1>
-          <p style={styles.heroDescription}>
-            Explore our architectural calculator guide, wood substrate science, standard mobilization policies, and direct contractor consultation channels.
-          </p>
+    <div className="drp-sup-page">
+      <style>{`
+        .drp-sup-page {
+          max-width: 1140px;
+          margin: 0 auto;
+          padding: 18px 20px 44px;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          color: #0F172A;
+          box-sizing: border-box;
+        }
+        .drp-sup-page * {
+          box-sizing: border-box;
+        }
+        /* Top Nav Row */
+        .drp-sup-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-bottom: 14px;
+        }
+        .drp-sup-back-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 12px;
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 8px;
+          color: #1E3A63;
+          font-size: 12.5px;
+          font-weight: 700;
+          text-decoration: none;
+          transition: border-color 0.15s, background-color 0.15s;
+        }
+        .drp-sup-back-link:hover {
+          border-color: #1E3A63;
+          background: #F8FAFC;
+        }
+        .drp-sup-new-est-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          background: #E08131;
+          border: 1.5px solid #C2671D;
+          border-radius: 8px;
+          color: #FFFFFF;
+          font-size: 12.5px;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .drp-sup-new-est-link:hover {
+          background: #C96E22;
+        }
 
-          {/* Quick Jump Buttons */}
-          <div style={styles.jumpButtonsRow}>
-            <button type="button" onClick={() => scrollToSection('rates-policies')} style={styles.jumpBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-              <span>Rates &amp; Mobilization</span>
-            </button>
-            <button type="button" onClick={() => scrollToSection('calculator-guide')} style={styles.jumpBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="2" width="16" height="20" rx="2" />
-                <line x1="8" y1="6" x2="16" y2="6" />
-                <line x1="8" y1="10" x2="16" y2="10" />
-                <line x1="8" y1="14" x2="16" y2="14" />
-                <line x1="8" y1="18" x2="12" y2="18" />
-              </svg>
-              <span>Calculator Steps</span>
-            </button>
-            <button type="button" onClick={() => scrollToSection('reachout-form')} style={styles.jumpBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              <span>Submit Inquiry</span>
-            </button>
-            <button type="button" onClick={() => scrollToSection('contact-hub')} style={styles.jumpBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-              <span>Contact Business</span>
-            </button>
-            <button type="button" onClick={() => scrollToSection('faq-section')} style={styles.jumpBtn}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <span>FAQ</span>
-            </button>
-          </div>
+        /* Hero Banner */
+        .drp-sup-hero {
+          background: linear-gradient(135deg, #163156 0%, #1E3A63 65%, #264878 100%);
+          border: 1.5px solid #0F2644;
+          border-radius: 12px;
+          padding: 20px 22px;
+          color: #FFFFFF;
+          margin-bottom: 22px;
+          box-shadow: 0 6px 18px rgba(15, 38, 68, 0.18);
+        }
+        .drp-sup-hero-badges {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 8px;
+        }
+        .drp-sup-brand-pill {
+          background: #E08131;
+          color: #FFFFFF;
+          font-size: 10.5px;
+          font-weight: 800;
+          padding: 2px 8px;
+          border-radius: 5px;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+        .drp-sup-sub-pill {
+          font-size: 11.5px;
+          color: #CBD5E1;
+          font-weight: 600;
+        }
+        .drp-sup-hero-title {
+          font-size: 22px;
+          font-weight: 800;
+          margin: 0 0 6px;
+          line-height: 1.25;
+          color: #FFFFFF;
+        }
+        .drp-sup-hero-desc {
+          font-size: 13px;
+          color: #E2E8F0;
+          line-height: 1.45;
+          margin: 0 0 14px;
+          max-width: 720px;
+        }
+        .drp-sup-jump-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .drp-sup-jump-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 11px;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          border-radius: 7px;
+          color: #FFFFFF;
+          font-size: 11.5px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .drp-sup-jump-btn:hover {
+          background: rgba(255, 255, 255, 0.22);
+        }
+        .drp-sup-jump-cta {
+          background: #E08131;
+          border-color: #FDBA74;
+        }
+        .drp-sup-jump-cta:hover {
+          background: #C96E22;
+        }
+
+        /* Section Wrapper & Header */
+        .drp-sup-section {
+          margin-bottom: 24px;
+        }
+        .drp-sup-sec-head {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+        .drp-sup-sec-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          background: #EFF6FF;
+          border: 1.5px solid #93C5FD;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .drp-sup-sec-title {
+          font-size: 16.5px;
+          font-weight: 800;
+          color: #1E3A63;
+          margin: 0;
+          line-height: 1.25;
+        }
+        .drp-sup-sec-sub {
+          font-size: 12px;
+          color: #64748B;
+          margin: 2px 0 0;
+        }
+
+        /* Policy Cards */
+        .drp-sup-policy-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+        }
+        .drp-sup-policy-card {
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 10px;
+          padding: 13px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .drp-sup-policy-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+        }
+        .drp-sup-policy-pill {
+          font-size: 10px;
+          font-weight: 800;
+          padding: 2px 7px;
+          border-radius: 5px;
+          text-transform: uppercase;
+          border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+        .drp-sup-policy-amt {
+          font-size: 15px;
+          font-weight: 900;
+        }
+        .drp-sup-policy-title {
+          font-size: 13.5px;
+          font-weight: 800;
+          color: #0F172A;
+          margin: 0;
+        }
+        .drp-sup-policy-list {
+          margin: 0;
+          padding-left: 15px;
+          font-size: 11.8px;
+          color: #475569;
+          line-height: 1.45;
+        }
+        .drp-sup-policy-list li + li {
+          margin-top: 4px;
+        }
+
+        /* Interactive 9-Step Guide */
+        .drp-sup-step-shell {
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+        }
+        .drp-sup-tabs {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          margin-bottom: 12px;
+          border-bottom: 1px solid #E2E8F0;
+          scrollbar-width: thin;
+        }
+        .drp-sup-tab {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          border-radius: 7px;
+          border: 1.5px solid #CBD5E1;
+          background: #F8FAFC;
+          color: #334155;
+          font-size: 11.5px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+          white-space: nowrap;
+        }
+        .drp-sup-tab:hover {
+          border-color: #1E3A63;
+          background: #EFF6FF;
+        }
+        .drp-sup-tab-active {
+          background: #1E3A63;
+          border-color: #1E3A63;
+          color: #FFFFFF;
+        }
+        .drp-sup-tab-active:hover {
+          background: #1E3A63;
+        }
+        .drp-sup-step-panel {
+          background: #F8FAFC;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 9px;
+          padding: 14px 16px;
+        }
+        .drp-sup-step-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .drp-sup-step-heading {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 0;
+          font-size: 15px;
+          font-weight: 800;
+          color: #0F172A;
+        }
+        .drp-sup-step-num {
+          background: #1E3A63;
+          color: #FFFFFF;
+          font-size: 11px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 5px;
+        }
+        .drp-sup-step-tag {
+          font-size: 11px;
+          font-weight: 700;
+          color: #1E3A63;
+          background: #EFF6FF;
+          border: 1px solid #BFDBFE;
+          padding: 2px 8px;
+          border-radius: 5px;
+        }
+        .drp-sup-step-summary {
+          margin: 0 0 10px;
+          font-size: 12.5px;
+          color: #334155;
+          line-height: 1.45;
+        }
+        .drp-sup-step-points {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .drp-sup-step-point {
+          display: flex;
+          align-items: flex-start;
+          gap: 7px;
+          background: #FFFFFF;
+          border: 1px solid #CBD5E1;
+          border-radius: 7px;
+          padding: 8px 10px;
+          font-size: 12px;
+          color: #334155;
+          line-height: 1.4;
+        }
+
+        /* Reach Out Form Card */
+        .drp-sup-form-card {
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 12px;
+          padding: 18px 20px;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        }
+        .drp-sup-alert-ok {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          background: #DCFCE7;
+          border: 1.5px solid #4ADE80;
+          color: #14532D;
+          border-radius: 9px;
+          padding: 10px 13px;
+          font-size: 12.5px;
+          font-weight: 600;
+          margin-bottom: 14px;
+        }
+        .drp-sup-alert-err {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          background: #FEE2E2;
+          border: 1.5px solid #F87171;
+          color: #991B1B;
+          border-radius: 9px;
+          padding: 10px 13px;
+          font-size: 12.5px;
+          font-weight: 600;
+          margin-bottom: 14px;
+        }
+        .drp-sup-form {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .drp-sup-form-2 {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+        .drp-sup-form-3 {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+        .drp-sup-label {
+          display: block;
+          font-size: 11.5px;
+          font-weight: 700;
+          color: #334155;
+          margin-bottom: 4px;
+        }
+        .drp-sup-input {
+          width: 100%;
+          padding: 8px 11px;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 7px;
+          font-size: 13px;
+          color: #0F172A;
+          background: #FFFFFF;
+          font-family: inherit;
+          outline: none;
+          transition: border-color 0.15s;
+        }
+        .drp-sup-input:focus {
+          border-color: #1E3A63;
+        }
+        .drp-sup-submit-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #E2E8F0;
+        }
+        .drp-sup-privacy {
+          font-size: 11.5px;
+          color: #64748B;
+        }
+        .drp-sup-submit-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 9px 18px;
+          background: #1E3A63;
+          color: #FFFFFF;
+          border: 1.5px solid #162D4E;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .drp-sup-submit-btn:hover:not(:disabled) {
+          background: #152B4A;
+        }
+        .drp-sup-submit-btn:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        /* Contact Hub */
+        .drp-sup-contact-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
+          gap: 12px;
+        }
+        .drp-sup-contact-card {
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 10px;
+          padding: 13px 14px;
+          display: flex;
+          align-items: flex-start;
+          gap: 11px;
+        }
+        .drp-sup-contact-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .drp-sup-contact-label {
+          display: block;
+          font-size: 10.5px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: #64748B;
+          letter-spacing: 0.3px;
+        }
+        .drp-sup-contact-val {
+          display: block;
+          font-size: 13px;
+          font-weight: 800;
+          color: #1E3A63;
+          text-decoration: none;
+          margin-top: 2px;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+        }
+        .drp-sup-contact-sub {
+          display: block;
+          font-size: 11.2px;
+          color: #64748B;
+          margin-top: 2px;
+        }
+        .drp-sup-btn-sm {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 10px;
+          border-radius: 6px;
+          font-size: 11.5px;
+          font-weight: 700;
+          text-decoration: none;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        /* FAQ List */
+        .drp-sup-faq-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .drp-sup-faq-card {
+          background: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 9px;
+          overflow: hidden;
+        }
+        .drp-sup-faq-btn {
+          width: 100%;
+          padding: 11px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          background: #FFFFFF;
+          border: none;
+          cursor: pointer;
+          text-align: left;
+          font-family: inherit;
+        }
+        .drp-sup-faq-q-left {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          min-width: 0;
+        }
+        .drp-sup-faq-num {
+          background: #EFF6FF;
+          border: 1px solid #BFDBFE;
+          color: #1E3A63;
+          font-size: 10.5px;
+          font-weight: 800;
+          padding: 2px 6px;
+          border-radius: 5px;
+          flex-shrink: 0;
+        }
+        .drp-sup-faq-q {
+          font-size: 13px;
+          font-weight: 700;
+          color: #0F172A;
+          line-height: 1.35;
+        }
+        .drp-sup-faq-ans {
+          padding: 9px 14px 12px 46px;
+          border-top: 1px solid #CBD5E1;
+          background: #F8FAFC;
+          font-size: 12.2px;
+          color: #334155;
+          line-height: 1.5;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+          .drp-sup-policy-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .drp-sup-form-3 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 640px) {
+          .drp-sup-page {
+            padding: 12px 10px 30px;
+          }
+          .drp-sup-hero {
+            padding: 14px 14px;
+            margin-bottom: 16px;
+          }
+          .drp-sup-hero-title {
+            font-size: 17px !important;
+          }
+          .drp-sup-hero-desc {
+            font-size: 12px;
+            margin-bottom: 10px;
+          }
+          .drp-sup-sec-title {
+            font-size: 14.5px !important;
+          }
+          .drp-sup-policy-grid,
+          .drp-sup-step-points,
+          .drp-sup-form-2,
+          .drp-sup-form-3 {
+            grid-template-columns: 1fr;
+          }
+          .drp-sup-form-card,
+          .drp-sup-step-shell {
+            padding: 12px;
+          }
+          .drp-sup-step-panel {
+            padding: 11px 12px;
+          }
+          .drp-sup-submit-btn {
+            width: 100%;
+          }
+          .drp-sup-faq-ans {
+            padding: 9px 12px 11px;
+          }
+        }
+      `}</style>
+
+      {/* Top Quick Navigation */}
+      <div className="drp-sup-topbar">
+        <Link to="/customer/dashboard" className="drp-sup-back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          <span>Back to Dashboard</span>
+        </Link>
+
+        <Link to="/customer/decks/new" className="drp-sup-new-est-link">
+          <span>+ Create Estimate</span>
+        </Link>
+      </div>
+
+      {/* 1. Compact Hero Banner */}
+      <section className="drp-sup-hero">
+        <div className="drp-sup-hero-badges">
+          <span className="drp-sup-brand-pill">Deck Restoration Plus</span>
+          <span className="drp-sup-sub-pill">Customer Help &amp; Inquiry Center</span>
+        </div>
+        <h1 className="drp-sup-hero-title">Help, Pricing Guide &amp; Direct Support</h1>
+        <p className="drp-sup-hero-desc">
+          Quick pricing rules, interactive 9-step calculator guide, direct Admin/Estimator reach-out, and key FAQs.
+        </p>
+
+        <div className="drp-sup-jump-row">
+          <button type="button" onClick={() => scrollToSection('reachout-form')} className="drp-sup-jump-btn drp-sup-jump-cta">
+            Reach Out Now
+          </button>
+          <button type="button" onClick={() => scrollToSection('rates-policies')} className="drp-sup-jump-btn">
+            Pricing Rules
+          </button>
+          <button type="button" onClick={() => scrollToSection('calculator-guide')} className="drp-sup-jump-btn">
+            9-Step Guide
+          </button>
+          <button type="button" onClick={() => scrollToSection('contact-hub')} className="drp-sup-jump-btn">
+            Office Contact
+          </button>
+          <button type="button" onClick={() => scrollToSection('faq-section')} className="drp-sup-jump-btn">
+            FAQs
+          </button>
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 2. RATES & MOBILIZATION POLICIES (HIGHLIGHTED FIRST) */}
-      {/* ======================================================== */}
-      <section id="rates-policies" style={styles.sectionWrap}>
-        <div style={styles.sectionHeader}>
-          <div style={styles.sectionIconBadge}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 2. Key Pricing & Policy Rules */}
+      <section id="rates-policies" className="drp-sup-section">
+        <div className="drp-sup-sec-head">
+          <div className="drp-sup-sec-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
           <div>
-            <h2 style={styles.sectionTitle}>Standard Mobilization Rates &amp; Travel Policies</h2>
-            <p style={styles.sectionSubtitle}>
-              Essential operational minimums and staging thresholds applied transparently across all client projects.
-            </p>
+            <h2 className="drp-sup-sec-title">Key Pricing &amp; Policy Rules</h2>
+            <p className="drp-sup-sec-sub">Clear project floors, travel thresholds, and warranty protection.</p>
           </div>
         </div>
 
-        <div style={styles.policyGrid}>
-          {/* Card 1: $2,500 Base Mobilization */}
-          <div style={{ ...styles.policyCard, borderTop: '4px solid #1E3A63' }}>
-            <div style={styles.policyCardTop}>
-              <span style={{ ...styles.policyPill, backgroundColor: '#EFF6FF', color: '#1E3A63' }}>
-                Standard Deployment
-              </span>
-              <strong style={{ ...styles.policyAmount, color: '#1E3A63' }}>$2,500 Floor</strong>
+        <div className="drp-sup-policy-grid">
+          {POLICY_CARDS.map((card) => (
+            <div
+              key={card.id}
+              className="drp-sup-policy-card"
+              style={{ borderTop: `4px solid ${card.accent}` }}
+            >
+              <div className="drp-sup-policy-top">
+                <span
+                  className="drp-sup-policy-pill"
+                  style={{ backgroundColor: card.pillBg, color: card.pillColor }}
+                >
+                  {card.pill}
+                </span>
+                <strong className="drp-sup-policy-amt" style={{ color: card.accent }}>
+                  {card.amount}
+                </strong>
+              </div>
+              <h3 className="drp-sup-policy-title">{card.title}</h3>
+              <ul className="drp-sup-policy-list">
+                {card.bullets.map((b, i) => (
+                  <li key={i}>{b}</li>
+                ))}
+              </ul>
             </div>
-            <h3 style={styles.policyCardTitle}>Base Project Mobilization Minimum</h3>
-            <p style={styles.policyCardText}>
-              Every Deck Restoration Plus deployment mobilizes a multi-technician certified crew, commercial-grade pressure regulation equipment, orbital mechanical sanders, and proprietary chemical neutralizers.
-            </p>
-            <div style={styles.policyCheckList}>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Applies to jobs where calculated billable area is under $2,500</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Guarantees commercial equipment rigor and surface preparation</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Full multi-stage wash, mechanical orbital prep, and premium penetrating coat</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: 45-Min Travel Threshold */}
-          <div style={{ ...styles.policyCard, borderTop: '4px solid #D97706' }}>
-            <div style={styles.policyCardTop}>
-              <span style={{ ...styles.policyPill, backgroundColor: '#FFFBEB', color: '#92400E' }}>
-                Distance Threshold
-              </span>
-              <strong style={{ ...styles.policyAmount, color: '#D97706' }}>$3,000 Minimum</strong>
-            </div>
-            <h3 style={styles.policyCardTitle}>Travel Beyond 45 Minutes Radius</h3>
-            <p style={styles.policyCardText}>
-              When a job site is situated further than a 45-minute driving distance from our headquarters hub (Shamong, NJ), the job mobilization floor shifts from $2,500 to $3,000.
-            </p>
-            <div style={styles.policyCheckList}>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Covers round-trip technician transit, fuel, and transport staging</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Accommodates multi-day drying inspections between chemical coats</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Automatically evaluated when project property address is provided</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Elevated Decks (8ft+) */}
-          <div style={{ ...styles.policyCard, borderTop: '4px solid #475569' }}>
-            <div style={styles.policyCardTop}>
-              <span style={{ ...styles.policyPill, backgroundColor: '#F8FAFC', color: '#334155' }}>
-                Safety &amp; Staging
-              </span>
-              <strong style={{ ...styles.policyAmount, color: '#334155' }}>Elevated Staging</strong>
-            </div>
-            <h3 style={styles.policyCardTitle}>Multi-Story Decks (8ft+ Height)</h3>
-            <p style={styles.policyCardText}>
-              Decks exceeding 8 feet off the grade require multi-story OSHA-compliant ladder rigging, scaffolding, safety harness anchor points, and underside joist staging protocols.
-            </p>
-            <div style={styles.policyCheckList}>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Full perimeter ladder stabilization and worker fall protection</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Underside beam, post, and carriage inspection included</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Included seamlessly in Section 2 elevation tier calculations</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: 1-Year Certified Warranty */}
-          <div style={{ ...styles.policyCard, borderTop: '4px solid #15803D' }}>
-            <div style={styles.policyCardTop}>
-              <span style={{ ...styles.policyPill, backgroundColor: '#DCFCE7', color: '#15803D' }}>
-                Quality Protection
-              </span>
-              <strong style={{ ...styles.policyAmount, color: '#15803D' }}>1-Year Guarantee</strong>
-            </div>
-            <h3 style={styles.policyCardTitle}>Certified Workmanship Warranty</h3>
-            <p style={styles.policyCardText}>
-              All multi-coat restorative staining and penetrations performed by Deck Restoration Plus include a comprehensive 1-year workmanship warranty against blistering, flaking, or peeling.
-            </p>
-            <div style={styles.policyCheckList}>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Covers multi-coat oil stains and marine-grade penetrating sealers</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Backed by our licensed and certified contractor network</span>
-              </div>
-              <div style={styles.policyCheckItem}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Includes direct technical support and remedial inspection if needed</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 3. CALCULATOR STEPS & DETAILED INPUTS BREAKDOWN */}
-      {/* ======================================================== */}
-      <section id="calculator-guide" style={styles.sectionWrap}>
-        <div style={styles.sectionHeader}>
-          <div style={styles.sectionIconBadge}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 3. Interactive 9-Step Calculator Quick Guide */}
+      <section id="calculator-guide" className="drp-sup-section">
+        <div className="drp-sup-sec-head">
+          <div className="drp-sup-sec-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2" />
-              <line x1="8" y1="6" x2="16" y2="6" />
-              <line x1="8" y1="10" x2="16" y2="10" />
-              <line x1="8" y1="14" x2="16" y2="14" />
-              <line x1="8" y1="18" x2="12" y2="18" />
+              <line x1="8" y1="7" x2="16" y2="7" />
+              <line x1="8" y1="11" x2="16" y2="11" />
+              <line x1="8" y1="15" x2="12" y2="15" />
             </svg>
           </div>
           <div>
-            <h2 style={styles.sectionTitle}>Continuous Calculator: Step-by-Step Architecture</h2>
-            <p style={styles.sectionSubtitle}>
-              Detailed breakdown of how each input operates, its mathematical formulation, and its restorative impact.
-            </p>
+            <h2 className="drp-sup-sec-title">9-Step Calculator Guide</h2>
+            <p className="drp-sup-sec-sub">Tap any step below to see what to enter.</p>
           </div>
         </div>
 
-        <div style={styles.stepsTimeline}>
-          {/* Step 1 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Step 1</span>
-              <div>
-                <h4 style={styles.stepTitle}>Deck Footprint &amp; Direct Dimensions</h4>
-                <span style={styles.stepCategory}>Perimeter Geometry &bull; Usable Floor Area</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Select your structural perimeter geometry and type the dimensions directly. The engine immediately computes your Usable Floor Area ($L \times W$) with zero estimation lag:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Rectangle</strong>
-                <p>Standard parallel joist layout with minimal lumber trimming and uniform square footage efficiency.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Square</strong>
-                <p>Concentric equilateral platform. Automatically copies Length into Width for rapid dimension entry.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>L-Shaped Wraparound</strong>
-                <p>Dual-zone architectural platform wrapping building corners, featuring transitional framing runs.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Multi-Level Stepped</strong>
-                <p>Tiered platforms connected by wide stairs, accounting for sloped topography and structural posts.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Custom Bespoke</strong>
-                <p>Faceted, curved, or multi-angled perimeters designed around trees, pool margins, or architecture.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Direct Numeric Inputs</strong>
-                <p>Length and Width enforce direct numeric typing only (steppers and scroll-wheel increments disabled).</p>
-              </div>
-            </div>
+        <div className="drp-sup-step-shell">
+          <div className="drp-sup-tabs" role="tablist" aria-label="Calculator Steps">
+            {CALCULATOR_STEPS.map((item, idx) => (
+              <button
+                key={item.step}
+                type="button"
+                role="tab"
+                aria-selected={activeStepIdx === idx}
+                onClick={() => setActiveStepIdx(idx)}
+                className={`drp-sup-tab ${activeStepIdx === idx ? 'drp-sup-tab-active' : ''}`}
+              >
+                <span>{item.step}.</span>
+                <span>{item.title}</span>
+              </button>
+            ))}
           </div>
 
-          {/* Step 2 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Step 2</span>
-              <div>
-                <h4 style={styles.stepTitle}>Site Accessibility &amp; Elevation Tiers</h4>
-                <span style={styles.stepCategory}>Vertical Staging &bull; Rigging Complexity</span>
-              </div>
+          <div className="drp-sup-step-panel">
+            <div className="drp-sup-step-top">
+              <h3 className="drp-sup-step-heading">
+                <span className="drp-sup-step-num">Step {activeStep.step}</span>
+                <span>{activeStep.title}</span>
+              </h3>
+              <span className="drp-sup-step-tag">{activeStep.tag}</span>
             </div>
-            <p style={styles.stepDesc}>
-              Vertical height determines technician reach, ladder staging, and whether structural underside work is required:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Ground Level (0–4 ft)</strong>
-                <p>Walk-up platform with standard ground staging. Simplest technician staging with direct perimeter access.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Elevated One-Story (4–8 ft)</strong>
-                <p>Requires perimeter stepladders, elevated reach wands, and safety barriers along open edges.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Multi-Story / High Elevation (8+ ft)</strong>
-                <p>Requires multi-tier ladder rigging, harness anchors, and specialized underside support access.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Step 3</span>
-              <div>
-                <h4 style={styles.stepTitle}>Wood Species &amp; Material Substrate Science</h4>
-                <span style={styles.stepCategory}>Lumber Density &bull; Absorption Rates &bull; Trex Lock Rule</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Lumber density controls the chemical absorption speed, drying intervals, and labor hours required for deep penetration:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Pressure Treated Pine</strong>
-                <p>High porosity softwood requiring mold-clearing wash, pH balancing, and semi-transparent penetration.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Western Red Cedar</strong>
-                <p>Naturally rich in cedar oils; requires gentle chemical stripping to preserve softwood tannins.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>California Redwood</strong>
-                <p>Highly resistant to decay; benefits from orbital leveling and rich oil replenishment.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Hardwoods (Mahogany, Ipe, Meranti, Teak)</strong>
-                <p>Ultra-dense grain; requires commercial mechanical orbital sanding to open fibers for deep oil intake.</p>
-              </div>
-              <div style={{ ...styles.stepMiniCard, border: '1.5px solid #1E3A63', backgroundColor: '#EFF6FF' }}>
-                <strong style={{ color: '#1E3A63' }}>Trex / Composite (Rule R1)</strong>
-                <p style={{ color: '#1E3A63' }}>
-                  <strong>Strict Trex Lock:</strong> Composite decks are strictly limited to specialized cleaning only to protect manufacturer warranty and prevent peeling.
-                </p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Tigerwood &amp; Exotic Decking</strong>
-                <p>Striated grain requiring specialized conditioning treatments to prevent cupping and surface checking.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Step 4</span>
-              <div>
-                <h4 style={styles.stepTitle}>Architectural Components &amp; Billable Add-ons</h4>
-                <span style={styles.stepCategory}>Stairs &bull; Railings &bull; Pergolas &bull; Fascia</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Decks are 3-dimensional structures. Additional vertical surfaces add billable surface area to the primary floor:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Stairs &amp; Steps (12 sq ft / step)</strong>
-                <p>Each step tread, riser, stringer, and nosing adds 12 billable square feet of meticulous hand work.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Perimeter Railings</strong>
-                <p>Includes top cap, bottom rail, and multi-sided balusters. Billed per linear foot or square foot equivalent.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Pergolas &amp; Overheads</strong>
-                <p>Overhead joists and beams requiring ladder staging, hand wiping, and weather shielding.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Fascia Rim Boards</strong>
-                <p>Outer perimeter trim boards surrounding the deck joist carriage, hand-brushed for a crisp look.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Privacy Walls &amp; Lattice</strong>
-                <p>Vertical tongue-and-groove or framed lattice panels requiring dual-sided chemical and stain coverage.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Underside Joists</strong>
-                <p>Treatment of floor framing joists for elevated decks visible from lower ground-level patios.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 5 & 6 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Steps 5 &amp; 6</span>
-              <div>
-                <h4 style={styles.stepTitle}>Substrate Condition &amp; Existing Coating Type</h4>
-                <span style={styles.stepCategory}>Surface Defects &bull; Paint/Stain Removal Evaluation</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Identifying pre-existing coatings and defect conditions determines the intensity of chemical stripping and orbital leveling:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Weathered &amp; Gray Wood</strong>
-                <p>Oxidized cellulose fibers. Requires commercial wood cleaner followed by oxalic acid brightening.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Surface Cracks &amp; Checking</strong>
-                <p>Micro-fissures caused by rapid moisture cycles; requires conditioning oil to restore flexibility.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Rotted or Damaged Boards</strong>
-                <p>Flagged for contractor confirmation; structural board replacement lines are cleanly separated.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Peeling / Failed Finish</strong>
-                <p>Existing solid stain or paint that has lost adhesion; mandates commercial chemical stripping and sanding.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Mold &amp; Mildew Colonization</strong>
-                <p>Deep bio-spore growth; treated with fungicidal detergents to prevent regrowth beneath new stains.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Coating Type Categories</strong>
-                <p>Clear sealer, Semi-transparent penetrating oil, Solid body stain, Acrylic/Alkyd paint, or Bare wood.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 7 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Step 7</span>
-              <div>
-                <h4 style={styles.stepTitle}>Restoration Scope of Work &amp; Operations</h4>
-                <span style={styles.stepCategory}>Chemical Stripping &bull; Orbital Sanding &bull; Multi-Coat Penetration</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Select operations tailored to your deck. Pricing starts at $2.50/sq.ft for prep with incremental +$1/sq.ft coating additions:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Commercial Cleaning &amp; Washing</strong>
-                <p>Biodegradable foaming surfactants lifted at regulated low-pressure to avoid gouging softwood grain.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Chemical Coating Stripping</strong>
-                <p>Dissolves failed oil and acrylic layers without harsh caustic scarring of natural lumber fibers.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Mechanical Orbital Sanding</strong>
-                <p>Eliminates raised wood fuzz, levels cupped boards, and creates an open pore surface for stain intake.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Deep Penetrating Staining</strong>
-                <p>Trans-oxide pigments suspended in rich natural oils that migrate deep into the wood cellular matrix.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Marine-Grade Sealing</strong>
-                <p>Silicone or wax-free paraffin barrier that shields wood against standing rain and freeze-thaw cycles.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Wood Brightening &amp; pH Balance</strong>
-                <p>Neutralizes alkaline wash solutions and restores the luminous natural amber tone of the wood.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 8 & 9 */}
-          <div style={styles.stepCard}>
-            <div style={styles.stepHeaderRow}>
-              <span style={styles.stepBadgeNum}>Steps 8 &amp; 9</span>
-              <div>
-                <h4 style={styles.stepTitle}>Photo Documentation &amp; Instant Guaranteed Quote</h4>
-                <span style={styles.stepCategory}>Visual Verification &bull; Inquiry Lead Conversion</span>
-              </div>
-            </div>
-            <p style={styles.stepDesc}>
-              Upload photos across four recommended categories (full view, close-up, stairs, problem areas). Click "Generate Official Estimate" in Section 9 to produce your guaranteed quote:
-            </p>
-            <div style={styles.stepGrid3}>
-              <div style={styles.stepMiniCard}>
-                <strong>Photo Category Guidance</strong>
-                <p>Stand back for full perimeter context, then take macro shots of peeling paint, checks, or stairs.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Instant Single Total Quote</strong>
-                <p>Customers receive a guaranteed total figure backed by our mobilization and rate standards.</p>
-              </div>
-              <div style={styles.stepMiniCard}>
-                <strong>Post-Estimate Action Suite</strong>
-                <p>
-                  <strong>Inquiry this Estimation</strong> (converts to lead for priority inspection), <strong>+ Another Estimation</strong> (reset), and <strong>Export</strong> (official PDF record).
-                </p>
-              </div>
+            <p className="drp-sup-step-summary">{activeStep.summary}</p>
+            <div className="drp-sup-step-points">
+              {activeStep.points.map((pt, i) => (
+                <div key={i} className="drp-sup-step-point">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>{pt}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 4. INTERACTIVE REACH OUT & PROJECT INQUIRY FORM */}
-      {/* ======================================================== */}
-      <section id="reachout-form" style={styles.sectionWrap}>
-        <div style={styles.sectionHeader}>
-          <div style={styles.sectionIconBadge}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 4. Direct Reach Out Inquiry Form (Synced to Admin Leads + Notifications) */}
+      <section id="reachout-form" className="drp-sup-section">
+        <div className="drp-sup-sec-head">
+          <div className="drp-sup-sec-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
           <div>
-            <h2 style={styles.sectionTitle}>Submit Project Inquiry &amp; Reach Out</h2>
-            <p style={styles.sectionSubtitle}>
-              Have custom specifications, unusual framing, or need on-site contractor consultation? Send a direct request.
-            </p>
+            <h2 className="drp-sup-sec-title">Reach Out to Our Team</h2>
+            <p className="drp-sup-sec-sub">Need a custom quote or help with your deck? Send a direct inquiry to DRP Admins.</p>
           </div>
         </div>
 
-        <div style={styles.formContainerCard}>
+        <div className="drp-sup-form-card">
           {submitSuccess && (
-            <div style={styles.successBanner}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="drp-sup-alert-ok" role="status" data-testid="reachout-success">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
-              <div>
-                <strong style={{ color: '#15803D', fontSize: '14px', display: 'block' }}>Inquiry Successfully Submitted!</strong>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#166534' }}>
-                  A Deck Restoration Plus senior estimator has been notified and will review your parameters. We will contact you within 24 business hours.
-                </p>
-              </div>
+              <span>{submitSuccess}</span>
             </div>
           )}
 
           {submitError && (
-            <div style={styles.errorBanner}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="drp-sup-alert-err" role="alert" data-testid="reachout-error">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -680,364 +1081,262 @@ export default function CustomerSupportPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmitInquiry} style={styles.inquiryForm}>
-            <div style={styles.formRow2}>
+          <form onSubmit={handleSubmitInquiry} className="drp-sup-form" noValidate>
+            <div className="drp-sup-form-3">
               <div>
-                <label style={styles.fieldLabel}>Your Full Name *</label>
+                <label className="drp-sup-label" htmlFor="sup-fullname">Full Name *</label>
                 <input
+                  id="sup-fullname"
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  placeholder="e.g. Robert Smith"
+                  placeholder="Your full name"
+                  className="drp-sup-input"
                   required
-                  style={styles.formInput}
                 />
               </div>
 
               <div>
-                <label style={styles.fieldLabel}>Email Address *</label>
+                <label className="drp-sup-label" htmlFor="sup-email">Email Address *</label>
                 <input
+                  id="sup-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="e.g. robert@example.com"
+                  placeholder="you@example.com"
+                  className="drp-sup-input"
                   required
-                  style={styles.formInput}
+                />
+              </div>
+
+              <div>
+                <label className="drp-sup-label" htmlFor="sup-phone">Phone (Optional)</label>
+                <input
+                  id="sup-phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="drp-sup-input"
                 />
               </div>
             </div>
 
-            <div style={styles.formRow3}>
+            <div className="drp-sup-form-3">
               <div>
-                <label style={styles.fieldLabel}>Contact Phone (Optional)</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="(856) 555-0199"
-                  style={styles.formInput}
-                />
+                <label className="drp-sup-label" htmlFor="sup-subject">Topic *</label>
+                <select
+                  id="sup-subject"
+                  value={formData.subject}
+                  onChange={(e) => handleInputChange('subject', e.target.value)}
+                  className="drp-sup-input"
+                >
+                  <option value="Estimator & Scope Guidance">Estimator &amp; Scope Guidance</option>
+                  <option value="Custom Deck Geometry Assistance">Custom Deck Geometry</option>
+                  <option value="Mobilization & Travel Inquiry">Mobilization &amp; Travel Check</option>
+                  <option value="Schedule On-Site Inspection">Schedule On-Site Inspection</option>
+                  <option value="Structural Repair & Board Replacement">Repairs &amp; Board Replacement</option>
+                  <option value="Billing & Official Estimate Verification">Quote Verification</option>
+                </select>
               </div>
 
               <div>
-                <label style={styles.fieldLabel}>Approx. Deck Size (Sq Ft)</label>
+                <label className="drp-sup-label" htmlFor="sup-size">Approx. Deck Size (Optional)</label>
                 <input
+                  id="sup-size"
                   type="text"
                   value={formData.deckSize}
                   onChange={(e) => handleInputChange('deckSize', e.target.value)}
-                  placeholder="e.g. 450"
-                  style={styles.formInput}
+                  placeholder="e.g., 420 sq ft"
+                  className="drp-sup-input"
                 />
               </div>
 
               <div>
-                <label style={styles.fieldLabel}>Wood Substrate</label>
+                <label className="drp-sup-label" htmlFor="sup-wood">Wood / Surface Type</label>
                 <select
+                  id="sup-wood"
                   value={formData.woodType}
                   onChange={(e) => handleInputChange('woodType', e.target.value)}
-                  style={styles.formSelect}
+                  className="drp-sup-input"
                 >
-                  <option value="pressure_treated_pine">Pressure Treated Pine</option>
-                  <option value="cedar">Western Red Cedar</option>
-                  <option value="redwood">California Redwood</option>
-                  <option value="mahogany">Mahogany / Hardwood</option>
-                  <option value="trex">Trex / Composite</option>
-                  <option value="other">Other / Unsure</option>
+                  <option value="pressure_treated_pine">Pressure-Treated Pine</option>
+                  <option value="cedar">Cedar / Redwood</option>
+                  <option value="hardwood">Exotic Hardwood (Ipe/Mahogany)</option>
+                  <option value="composite">Composite / Trex</option>
+                  <option value="unsure">Not Sure</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label style={styles.fieldLabel}>Inquiry Subject *</label>
-              <select
-                value={formData.subject}
-                onChange={(e) => handleInputChange('subject', e.target.value)}
-                style={styles.formSelect}
-              >
-                <option value="Estimator & Scope Guidance">Estimator &amp; Scope Guidance</option>
-                <option value="Custom Deck Geometry Assistance">Custom Deck Geometry Assistance</option>
-                <option value="Mobilization & Travel Inquiry">Mobilization &amp; Travel Threshold Inquiry</option>
-                <option value="Schedule On-Site Inspection">Schedule Certified On-Site Inspection</option>
-                <option value="Structural Repair & Board Replacement">Structural Repair &amp; Board Replacement</option>
-                <option value="Billing & Official Estimate Verification">Billing &amp; Official Estimate Verification</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={styles.fieldLabel}>Detailed Message / Question *</label>
+              <label className="drp-sup-label" htmlFor="sup-message">Message / Question *</label>
               <textarea
-                rows={4}
+                id="sup-message"
+                rows={3}
                 value={formData.message}
                 onChange={(e) => handleInputChange('message', e.target.value)}
-                placeholder="Describe your deck requirements, specific areas of concern, or questions regarding our restoration process..."
+                placeholder="Tell us about your deck condition, desired timing, or question..."
+                className="drp-sup-input"
+                style={{ resize: 'vertical' }}
                 required
-                style={{ ...styles.formInput, resize: 'vertical' }}
               />
             </div>
 
-            <div style={styles.formSubmitRow}>
-              <div style={styles.formPrivacyNote}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                <span>Inquiries are securely recorded and dispatched to certified estimators.</span>
-              </div>
-
+            <div className="drp-sup-submit-row">
+              <span className="drp-sup-privacy">
+                Routed directly to DRP Admins &amp; Estimators (tracked in Admin Leads).
+              </span>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  ...styles.submitInquiryBtn,
-                  opacity: isSubmitting ? 0.7 : 1,
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className="drp-sup-submit-btn"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                <span>{isSubmitting ? 'Submitting to Estimators...' : 'Submit Support Inquiry'}</span>
+                <span>{isSubmitting ? 'Sending Inquiry...' : 'Submit Reach Out Inquiry'}</span>
               </button>
             </div>
           </form>
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 5. OFFICIAL BUSINESS CONTACT DETAILS & HEADQUARTERS HUB */}
-      {/* ======================================================== */}
-      <section id="contact-hub" style={styles.sectionWrap}>
-        <div style={styles.sectionHeader}>
-          <div style={styles.sectionIconBadge}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 5. Official Business Contact Hub */}
+      <section id="contact-hub" className="drp-sup-section">
+        <div className="drp-sup-sec-head">
+          <div className="drp-sup-sec-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
           </div>
           <div>
-            <h2 style={styles.sectionTitle}>Deck Restoration Plus Contact Hub</h2>
-            <p style={styles.sectionSubtitle}>
-              Connect directly with our headquarters, licensed estimators, and certified field teams.
-            </p>
+            <h2 className="drp-sup-sec-title">Direct Office Contact</h2>
+            <p className="drp-sup-sec-sub">Call, email, or visit Deck Restoration Plus headquarters.</p>
           </div>
         </div>
 
-        <div style={styles.contactCardGrid}>
-          {/* Contact Item 1: Phone */}
-          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #1E3A63' }}>
-            <div style={{ ...styles.contactIconCircle, backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="drp-sup-contact-grid">
+          <div className="drp-sup-contact-card" style={{ borderLeft: '4px solid #1E3A63' }}>
+            <div className="drp-sup-contact-icon" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E3A63' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '3px' }}>
-                <span style={styles.contactLabel}>Direct Office Line</span>
-                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63' }}>
-                  Toll-Free
-                </span>
-              </div>
-              <a href="tel:8566783325" style={{ ...styles.contactValueLink, fontSize: '15px' }}>
-                (856) 678-3325
-              </a>
-              <span style={{ ...styles.contactSub, marginTop: '3px' }}>Toll-free customer consultation</span>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                <a href="tel:8566783325" style={styles.phoneActionBtn} title="Call (856) 678-3325">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  <span>Call Now</span>
-                </a>
-              </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span className="drp-sup-contact-label">Phone Lines</span>
+              <a href="tel:18664403325" className="drp-sup-contact-val">Main: (866) 440-DECK</a>
+              <a href="tel:16092683436" className="drp-sup-contact-val" style={{ fontSize: '12.5px', fontWeight: 700 }}>Shamong: (609) 268-3436</a>
+              <span className="drp-sup-contact-sub">Mon–Fri 7:30 AM – 6 PM EST</span>
             </div>
           </div>
 
-          {/* Contact Item 2: Email (Enhanced High-Visibility Mail Box & Buttons) */}
-          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #E08131', backgroundColor: '#FFFFFF' }}>
-            <div style={{ ...styles.contactIconCircle, backgroundColor: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="drp-sup-contact-card" style={{ borderLeft: '4px solid #E08131' }}>
+            <div className="drp-sup-contact-icon" style={{ background: '#FFFBEB', border: '1px solid #FDE68A', color: '#D97706' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                 <polyline points="22,6 12,13 2,6" />
               </svg>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
-                <span style={styles.contactLabel}>Estimates &amp; Inquiries</span>
-                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '4px', backgroundColor: '#FFFBEB', color: '#92400E' }}>
-                  24h Turnaround
-                </span>
-              </div>
-              
-              {/* Highlighted Email Box container */}
-              <div style={{
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                padding: '6px 10px',
-                marginTop: '4px',
-                marginBottom: '6px'
-              }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span className="drp-sup-contact-label">Official Email</span>
+              <a href="mailto:info@deckrestorationplus.com" className="drp-sup-contact-val">
+                info@deckrestorationplus.com
+              </a>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '7px', flexWrap: 'wrap' }}>
                 <a
-                  href="mailto:estimates@deckrestorationplus.com"
-                  style={{
-                    color: '#1E3A63',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    lineHeight: 1.4,
-                    textDecoration: 'none',
-                    wordBreak: 'break-all',
-                    overflowWrap: 'anywhere',
-                    display: 'block',
-                  }}
-                  title="Send email to estimates@deckrestorationplus.com"
+                  href="mailto:info@deckrestorationplus.com?subject=Deck%20Restoration%20Inquiry"
+                  className="drp-sup-btn-sm"
+                  style={{ background: '#E08131', color: '#FFFFFF', border: '1px solid #C2671D' }}
                 >
-                  estimates@deckrestorationplus.com
+                  Email
                 </a>
-              </div>
-              <span style={{ ...styles.contactSub, marginTop: '2px' }}>Direct senior estimator inbox</span>
-
-              {/* Action Buttons: Email Button + Quick Copy */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                <a
-                  href="mailto:estimates@deckrestorationplus.com?subject=Deck%20Restoration%20Estimate%20Inquiry"
-                  style={styles.mailActionBtn}
-                  title="Open mail application"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  <span>Email Us</span>
-                </a>
-
                 <button
                   type="button"
                   onClick={handleCopyEmail}
-                  style={styles.mailCopyBtn}
-                  title="Copy email address to clipboard"
+                  className="drp-sup-btn-sm"
+                  style={{ background: '#F8FAFC', color: '#334155', border: '1px solid #CBD5E1' }}
                 >
-                  {copiedEmail ? (
-                    <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      <span style={{ color: '#15803D', fontWeight: '700' }}>Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                      </svg>
-                      <span>Copy</span>
-                    </>
-                  )}
+                  {copiedEmail ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Contact Item 3: Headquarters Address */}
-          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #15803D' }}>
-            <div style={{ ...styles.contactIconCircle, backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="drp-sup-contact-card" style={{ borderLeft: '4px solid #15803D' }}>
+            <div className="drp-sup-contact-icon" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={styles.contactLabel}>Corporate Headquarters</span>
-              <strong style={styles.contactValueStatic}>
-                152 Indian Mills Road
-              </strong>
-              <span style={{ ...styles.contactSub, marginTop: '2px' }}>Shamong, NJ 08088</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span className="drp-sup-contact-label">Headquarters</span>
+              <a
+                href="https://maps.google.com/?q=152+Indian+Mills+Road+Unit+B,+Shamong,+NJ+08088"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="drp-sup-contact-val"
+              >
+                152 Indian Mills Rd Unit #B
+              </a>
+              <span className="drp-sup-contact-sub">Shamong, NJ 08088 &bull; Sat 8 AM–2 PM</span>
             </div>
           </div>
-
-          {/* Contact Item 4: Business Hours */}
-          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #475569' }}>
-            <div style={{ ...styles.contactIconCircle, backgroundColor: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={styles.contactLabel}>Operating Hours</span>
-              <strong style={styles.contactValueStatic}>
-                Mon – Fri: 7:30 AM – 6:00 PM EST
-              </strong>
-              <span style={{ ...styles.contactSub, marginTop: '2px' }}>Sat: 8:00 AM – 2:00 PM | Sun: Closed</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Credentials / Trust Banner */}
-        <div style={styles.credentialsBanner}>
-          <div style={styles.credentialsLeft}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            <div>
-              <strong style={{ fontSize: '13.5px', color: '#1E3A63' }}>DRP Certified Contractor Network &bull; Fully Licensed &amp; Insured</strong>
-              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#475569' }}>
-                All restoration technicians undergo formal training in wood substrate chemical safety, low-pressure surface cleaning, and EPA compliance.
-              </p>
-            </div>
-          </div>
-          <Link to="/customer/decks/new" style={styles.bannerStartEstBtn}>
-            <span>Start New Estimate &rarr;</span>
-          </Link>
         </div>
       </section>
 
-      {/* ======================================================== */}
-      {/* 6. FREQUENTLY ASKED QUESTIONS (ACCORDION) */}
-      {/* ======================================================== */}
-      <section id="faq-section" style={styles.sectionWrap}>
-        <div style={styles.sectionHeader}>
-          <div style={styles.sectionIconBadge}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 6. Concise FAQ Accordion */}
+      <section id="faq-section" className="drp-sup-section" style={{ marginBottom: 0 }}>
+        <div className="drp-sup-sec-head">
+          <div className="drp-sup-sec-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
           <div>
-            <h2 style={styles.sectionTitle}>Frequently Asked Questions</h2>
-            <p style={styles.sectionSubtitle}>
-              Authoritative answers to the most common customer questions regarding our pricing, process, and timber science.
-            </p>
+            <h2 className="drp-sup-sec-title">Quick FAQs</h2>
+            <p className="drp-sup-sec-sub">Short answers on pricing, weather, composites, and exports.</p>
           </div>
         </div>
 
-        <div style={styles.faqList}>
-          {faqs.map((faq, idx) => {
+        <div className="drp-sup-faq-list">
+          {FAQS.map((faq, idx) => {
             const isOpen = activeFaq === idx;
             return (
-              <div key={idx} style={styles.faqCard}>
+              <div key={idx} className="drp-sup-faq-card">
                 <button
                   type="button"
-                  onClick={() => toggleFaq(idx)}
-                  style={styles.faqQuestionBtn}
+                  onClick={() => setActiveFaq((prev) => (prev === idx ? null : idx))}
+                  className="drp-sup-faq-btn"
+                  aria-expanded={isOpen}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={styles.faqNumPill}>Q{idx + 1}</span>
-                    <span style={styles.faqQuestionText}>{faq.q}</span>
+                  <div className="drp-sup-faq-q-left">
+                    <span className="drp-sup-faq-num">Q{idx + 1}</span>
+                    <span className="drp-sup-faq-q">{faq.q}</span>
                   </div>
-                  <div style={{ ...styles.faqChevron, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#1E3A63"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      flexShrink: 0,
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </button>
-
-                {isOpen && (
-                  <div style={styles.faqAnswerBox}>
-                    <p style={styles.faqAnswerText}>{faq.a}</p>
-                  </div>
-                )}
+                {isOpen && <div className="drp-sup-faq-ans">{faq.a}</div>}
               </div>
             );
           })}
@@ -1046,531 +1345,3 @@ export default function CustomerSupportPage() {
     </div>
   );
 }
-
-// ========================================================
-// STYLES OBJECT (CLEAN NAVY BLUE #1E3A63 THEME, INTER FONT)
-// ========================================================
-const styles = {
-  pageContainer: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '24px 24px 60px 24px',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: '#0F172A',
-  },
-
-  // 1. Hero Banner
-  heroBanner: {
-    backgroundColor: '#1E3A63',
-    borderRadius: '14px',
-    padding: '36px 36px',
-    color: '#FFFFFF',
-    marginBottom: '32px',
-    boxShadow: '0 10px 25px -5px rgba(30, 58, 99, 0.25)',
-  },
-  heroContent: {
-    maxWidth: '900px',
-  },
-  heroBadgeRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginBottom: '12px',
-  },
-  heroBadge: {
-    backgroundColor: '#E08131',
-    color: '#FFFFFF',
-    fontSize: '11px',
-    fontWeight: '800',
-    padding: '3px 10px',
-    borderRadius: '6px',
-    letterSpacing: '0.6px',
-    textTransform: 'uppercase',
-  },
-  heroSubBadge: {
-    fontSize: '12px',
-    color: '#BFDBFE',
-    fontWeight: '600',
-  },
-  heroTitle: {
-    fontSize: '28px',
-    fontWeight: '800',
-    letterSpacing: '-0.5px',
-    margin: '0 0 10px 0',
-    lineHeight: 1.25,
-  },
-  heroDescription: {
-    fontSize: '14px',
-    color: '#E2E8F0',
-    lineHeight: 1.6,
-    margin: '0 0 22px 0',
-  },
-  jumpButtonsRow: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
-  },
-  jumpBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '7px',
-    padding: '8px 14px',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.25)',
-    borderRadius: '8px',
-    color: '#FFFFFF',
-    fontSize: '12px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-
-  // Section Standard Layout
-  sectionWrap: {
-    marginBottom: '44px',
-  },
-  sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    marginBottom: '20px',
-  },
-  sectionIconBadge: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '10px',
-    backgroundColor: '#EFF6FF',
-    border: '1px solid #BFDBFE',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  sectionTitle: {
-    fontSize: '20px',
-    fontWeight: '800',
-    color: '#1E3A63',
-    margin: 0,
-    letterSpacing: '-0.3px',
-  },
-  sectionSubtitle: {
-    fontSize: '13px',
-    color: '#64748B',
-    margin: '3px 0 0 0',
-  },
-
-  // 2. Policy Cards Grid
-  policyGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '18px',
-  },
-  policyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: '12px',
-    padding: '20px',
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  policyCardTop: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '12px',
-  },
-  policyPill: {
-    fontSize: '10px',
-    fontWeight: '800',
-    padding: '3px 8px',
-    borderRadius: '6px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.4px',
-  },
-  policyAmount: {
-    fontSize: '18px',
-    fontWeight: '900',
-  },
-  policyCardTitle: {
-    fontSize: '15px',
-    fontWeight: '750',
-    color: '#0F172A',
-    margin: '0 0 8px 0',
-  },
-  policyCardText: {
-    fontSize: '12.5px',
-    color: '#475569',
-    lineHeight: 1.5,
-    margin: '0 0 14px 0',
-  },
-  policyCheckList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '7px',
-    marginTop: 'auto',
-    borderTop: '1px solid #F1F5F9',
-    paddingTop: '12px',
-  },
-  policyCheckItem: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-    fontSize: '11.5px',
-    color: '#334155',
-    lineHeight: 1.4,
-  },
-
-  // 3. Calculator Steps
-  stepsTimeline: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '18px',
-  },
-  stepCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    padding: '22px 24px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
-  },
-  stepHeaderRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '10px',
-  },
-  stepBadgeNum: {
-    backgroundColor: '#1E3A63',
-    color: '#FFFFFF',
-    fontSize: '12px',
-    fontWeight: '800',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    letterSpacing: '0.4px',
-  },
-  stepTitle: {
-    fontSize: '16px',
-    fontWeight: '800',
-    color: '#0F172A',
-    margin: 0,
-  },
-  stepCategory: {
-    fontSize: '11px',
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  stepDesc: {
-    fontSize: '13px',
-    color: '#475569',
-    lineHeight: 1.55,
-    margin: '0 0 14px 0',
-  },
-  stepGrid3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '12px',
-  },
-  stepMiniCard: {
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
-    borderRadius: '8px',
-    padding: '12px 14px',
-    fontSize: '12px',
-    color: '#334155',
-    lineHeight: 1.45,
-  },
-
-  // 4. Inquiry Form
-  formContainerCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '14px',
-    padding: '28px 32px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
-  },
-  inquiryForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  formRow2: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '16px',
-  },
-  formRow3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-  },
-  fieldLabel: {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: '6px',
-  },
-  formInput: {
-    width: '100%',
-    padding: '9px 13px',
-    border: '1px solid #CBD5E1',
-    borderRadius: '7px',
-    fontSize: '13px',
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
-    outline: 'none',
-    boxSizing: 'border-box',
-    fontFamily: 'inherit',
-  },
-  formSelect: {
-    width: '100%',
-    padding: '9px 13px',
-    border: '1px solid #CBD5E1',
-    borderRadius: '7px',
-    fontSize: '13px',
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
-    outline: 'none',
-    boxSizing: 'border-box',
-    fontFamily: 'inherit',
-  },
-  formSubmitRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '14px',
-    paddingTop: '8px',
-    borderTop: '1px solid #F1F5F9',
-  },
-  formPrivacyNote: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '11.5px',
-    color: '#64748B',
-  },
-  submitInquiryBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '11px 22px',
-    backgroundColor: '#1E3A63',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '13.5px',
-    fontWeight: '700',
-    boxShadow: '0 4px 12px rgba(30, 58, 99, 0.25)',
-    transition: 'all 0.15s ease',
-  },
-  successBanner: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '12px',
-    backgroundColor: '#DCFCE7',
-    border: '1px solid #86EFAC',
-    borderRadius: '10px',
-    padding: '14px 18px',
-    marginBottom: '18px',
-  },
-  errorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    backgroundColor: '#FEE2E2',
-    border: '1px solid #FCA5A5',
-    color: '#B91C1C',
-    borderRadius: '10px',
-    padding: '12px 16px',
-    fontSize: '12.5px',
-    marginBottom: '18px',
-  },
-
-  // 5. Contact Hub
-  contactCardGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))',
-    gap: '16px',
-    marginBottom: '20px',
-  },
-  contactItemCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    padding: '18px 20px',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '14px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
-    transition: 'all 0.15s ease',
-  },
-  mailActionBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 14px',
-    backgroundColor: '#E08131',
-    color: '#FFFFFF',
-    borderRadius: '6px',
-    fontSize: '11.5px',
-    fontWeight: '700',
-    textDecoration: 'none',
-    boxShadow: '0 2px 6px rgba(224, 129, 49, 0.25)',
-    transition: 'background-color 0.15s ease',
-  },
-  mailCopyBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '5px',
-    padding: '5px 10px',
-    backgroundColor: '#F8FAFC',
-    color: '#475569',
-    border: '1px solid #CBD5E1',
-    borderRadius: '6px',
-    fontSize: '11.5px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  phoneActionBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 14px',
-    backgroundColor: '#1E3A63',
-    color: '#FFFFFF',
-    borderRadius: '6px',
-    fontSize: '11.5px',
-    fontWeight: '700',
-    textDecoration: 'none',
-    boxShadow: '0 2px 6px rgba(30, 58, 99, 0.25)',
-    transition: 'background-color 0.15s ease',
-  },
-  contactIconCircle: {
-    width: '46px',
-    height: '46px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  contactLabel: {
-    display: 'block',
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: '0.4px',
-  },
-  contactValueLink: {
-    fontSize: '14px',
-    fontWeight: '800',
-    color: '#1E3A63',
-    textDecoration: 'none',
-    display: 'block',
-    marginTop: '2px',
-  },
-  contactValueStatic: {
-    fontSize: '13.5px',
-    fontWeight: '800',
-    color: '#0F172A',
-    display: 'block',
-    marginTop: '2px',
-  },
-  contactSub: {
-    display: 'block',
-    fontSize: '11px',
-    color: '#64748B',
-    marginTop: '2px',
-  },
-  credentialsBanner: {
-    backgroundColor: '#EFF6FF',
-    border: '1.5px solid #BFDBFE',
-    borderRadius: '12px',
-    padding: '18px 24px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '16px',
-  },
-  credentialsLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    maxWidth: '750px',
-  },
-  bannerStartEstBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '10px 18px',
-    backgroundColor: '#1E3A63',
-    color: '#FFFFFF',
-    borderRadius: '8px',
-    textDecoration: 'none',
-    fontSize: '12.5px',
-    fontWeight: '700',
-    boxShadow: '0 2px 8px rgba(30, 58, 99, 0.25)',
-  },
-
-  // 6. FAQ Accordion
-  faqList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  },
-  faqCard: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E2E8F0',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-  },
-  faqQuestionBtn: {
-    width: '100%',
-    padding: '16px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-  },
-  faqNumPill: {
-    backgroundColor: '#EFF6FF',
-    color: '#1E3A63',
-    fontSize: '11px',
-    fontWeight: '800',
-    padding: '3px 8px',
-    borderRadius: '5px',
-    flexShrink: 0,
-  },
-  faqQuestionText: {
-    fontSize: '14px',
-    fontWeight: '750',
-    color: '#1E3A63',
-    lineHeight: 1.4,
-  },
-  faqChevron: {
-    transition: 'transform 0.2s ease',
-    flexShrink: 0,
-    marginLeft: '12px',
-  },
-  faqAnswerBox: {
-    padding: '0 20px 16px 48px',
-    borderTop: '1px solid #F1F5F9',
-    backgroundColor: '#FAFCFF',
-  },
-  faqAnswerText: {
-    fontSize: '13px',
-    color: '#334155',
-    lineHeight: 1.6,
-    margin: '12px 0 0 0',
-  },
-};
-

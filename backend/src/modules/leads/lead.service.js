@@ -12,6 +12,8 @@ const Estimate = require('../estimates/estimate.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
 const User = require('../users/users.model');
 const AuditLog = require('../../shared/models/auditLog.model');
+const Notification = require('../notifications/notification.model');
+const { BadRequestError } = require('../../shared/errors');
 const {
   ROLES,
   LEAD_STATUS,
@@ -830,99 +832,155 @@ async function getAdminLeadAnalytics() {
  * Submit Reach Out / Contact Us / Help enquiry from Customer or Contractor
  */
 async function submitReachOutEnquiry(user, payload = {}) {
+  const userId = user.id || user._id;
   const isContractor = user.role === ROLES.CONTRACTOR;
-  const isCustomer = user.role === ROLES.CUSTOMER;
+  const isCustomer = !isContractor;
+
+  const subjectText = (payload.subject || '').trim();
+  const messageText = (payload.message || '').trim();
+  if (!messageText) {
+    throw new BadRequestError('Please enter a message describing your inquiry.');
+  }
 
   const userType = isContractor ? 'Contractor' : 'Customer';
   const defaultSource = isContractor ? 'Reach Out' : 'Contact Us';
   const source = payload.contactSource || defaultSource;
+  const resolvedName = (payload.fullName || user.fullName || userType).trim();
+  const resolvedEmail = (payload.email || user.email || '').trim().toLowerCase();
+  const resolvedPhone = (payload.phone || user.phone || user.phoneNumber || '').trim();
 
   let cp = null;
   if (isContractor) {
-    cp = await ContractorProfile.findOne({ userId: user.id || user._id });
+    cp = await ContractorProfile.findOne({ userId }).lean();
   }
 
-  // Check if an existing open lead exists for this user and estimate
+  // Only merge with an existing lead if tied to the same estimateId OR an existing non-estimate general support inquiry
   const query = isContractor
-    ? { contractorId: user.id || user._id, status: { $ne: 'closed' } }
-    : { customerId: user.id || user._id, status: { $ne: 'closed' } };
+    ? { contractorId: userId, status: { $ne: 'closed' } }
+    : { customerId: userId, status: { $ne: 'closed' } };
 
   if (payload.estimateId) {
     query.estimateId = payload.estimateId;
+  } else {
+    query.estimateId = null;
   }
 
   let lead = await Lead.findOne(query).sort({ createdAt: -1 });
+  const now = new Date();
+  const finalSubject = subjectText || `${source} Enquiry`;
 
   if (lead) {
     if (payload.deckId) lead.deckId = payload.deckId;
     if (payload.estimateId) lead.estimateId = payload.estimateId;
     lead.contactCount = (lead.contactCount || 1) + 1;
-    lead.latestContactDate = new Date();
+    lead.latestContactDate = now;
     lead.contactSource = source;
     lead.priority = 'HOT';
+    if (isCustomer) {
+      lead.customerSnapshot = {
+        name: resolvedName,
+        email: resolvedEmail,
+        phone: resolvedPhone,
+      };
+    } else {
+      lead.contractorSnapshot = {
+        ...(lead.contractorSnapshot || {}),
+        name: resolvedName,
+        email: resolvedEmail,
+        phone: resolvedPhone,
+        businessName: cp?.businessName || lead.contractorSnapshot?.businessName || '',
+        licenseNumber: cp?.licenseNumber || lead.contractorSnapshot?.licenseNumber || '',
+      };
+    }
     lead.enquiry = {
-      subject: payload.subject || lead.enquiry?.subject || `${source} Enquiry`,
-      message: payload.message || lead.enquiry?.message || `${userType} requested support.`,
+      subject: finalSubject,
+      message: messageText,
       preferredContactMethod: payload.preferredContactMethod || lead.enquiry?.preferredContactMethod || 'any',
       preferredContactTime: payload.preferredContactTime || lead.enquiry?.preferredContactTime || 'any',
       additionalNotes: payload.additionalNotes || lead.enquiry?.additionalNotes || '',
     };
     if (!lead.contactHistory) lead.contactHistory = [];
     lead.contactHistory.push({
-      date: new Date(),
+      date: now,
       source,
-      subject: payload.subject || `${source} Enquiry`,
-      message: payload.message || `${userType} submitted enquiry via ${source}`,
+      subject: finalSubject,
+      message: messageText,
     });
     await lead.save();
-    return lead;
+  } else {
+    lead = new Lead({
+      leadNumber: generateLeadNumber(),
+      userType,
+      contactSource: source,
+      contactCount: 1,
+      firstContactDate: now,
+      latestContactDate: now,
+      priority: 'HOT',
+      status: 'new',
+      customerId: isCustomer ? userId : null,
+      contractorId: isContractor ? userId : null,
+      contractorProfileId: cp?._id || null,
+      deckId: payload.deckId || null,
+      estimateId: payload.estimateId || null,
+      customerSnapshot: isCustomer ? {
+        name: resolvedName,
+        email: resolvedEmail,
+        phone: resolvedPhone,
+      } : undefined,
+      contractorSnapshot: isContractor ? {
+        name: resolvedName,
+        email: resolvedEmail,
+        phone: resolvedPhone,
+        businessName: cp?.businessName || '',
+        licenseNumber: cp?.licenseNumber || '',
+      } : undefined,
+      enquiry: {
+        subject: finalSubject,
+        message: messageText,
+        preferredContactMethod: payload.preferredContactMethod || 'any',
+        preferredContactTime: payload.preferredContactTime || 'any',
+        additionalNotes: payload.additionalNotes || '',
+      },
+      contactHistory: [
+        {
+          date: now,
+          source,
+          subject: finalSubject,
+          message: messageText,
+        },
+      ],
+    });
+    await lead.save();
   }
 
-  // Create new relational lead
-  lead = new Lead({
-    leadNumber: generateLeadNumber(),
-    userType,
-    contactSource: source,
-    contactCount: 1,
-    firstContactDate: new Date(),
-    latestContactDate: new Date(),
-    priority: 'HOT',
-    status: 'new',
-    customerId: isCustomer ? (user.id || user._id) : null,
-    contractorId: isContractor ? (user.id || user._id) : null,
-    contractorProfileId: cp?._id || null,
-    deckId: payload.deckId || null,
-    estimateId: payload.estimateId || null,
-    customerSnapshot: isCustomer ? {
-      name: user.fullName || 'Customer',
-      email: user.email || '',
-      phone: user.phone || '',
-    } : undefined,
-    contractorSnapshot: isContractor ? {
-      name: user.fullName || 'Contractor',
-      email: user.email || '',
-      phone: user.phone || '',
-      businessName: cp?.businessName || '',
-      licenseNumber: cp?.licenseNumber || '',
-    } : undefined,
-    enquiry: {
-      subject: payload.subject || `${source} Enquiry`,
-      message: payload.message || `${userType} submitted enquiry via ${source}`,
-      preferredContactMethod: payload.preferredContactMethod || 'any',
-      preferredContactTime: payload.preferredContactTime || 'any',
-      additionalNotes: payload.additionalNotes || '',
-    },
-    contactHistory: [
-      {
-        date: new Date(),
-        source,
-        subject: payload.subject || `${source} Enquiry`,
-        message: payload.message || `${userType} submitted enquiry via ${source}`,
-      },
-    ],
-  });
+  // Notify admins fire-and-forget so Admin Dashboard / Leads reflects new reach-out immediately
+  User.find({ role: ROLES.ADMIN, accountStatus: { $ne: 'disabled' } })
+    .select('_id email fullName')
+    .lean()
+    .then((admins) => {
+      if (!admins || admins.length === 0) return;
+      return Notification.insertMany(
+        admins.map((adm) => ({
+          recipientType: 'specific',
+          userId: adm._id,
+          recipientSnapshot: {
+            name: adm.fullName || 'Admin',
+            email: adm.email || '',
+            role: 'admin',
+          },
+          targetRole: 'admin',
+          category: 'SYSTEM',
+          notificationType: 'LEAD_INQUIRY',
+          title: `New ${userType} Support Inquiry`,
+          message: `${resolvedName} submitted "${finalSubject}" (${lead.leadNumber}).`,
+          isRead: false,
+          sentBy: userId,
+          sentByName: resolvedName,
+        }))
+      );
+    })
+    .catch(() => {});
 
-  await lead.save();
   return lead;
 }
 

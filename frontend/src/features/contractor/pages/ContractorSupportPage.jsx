@@ -9,10 +9,14 @@
 // - Top metric rule cards for mobilization floors, additive tech rate, and wholesale discount
 
 import React, { useState } from 'react';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { leadApi } from '../../customer/api/leadApi';
 
 export default function ContractorSupportPage() {
+  const { user } = useAuth();
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [activeFaq, setActiveFaq] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketForm, setTicketForm] = useState({
     subject: '',
     category: 'ESTIMATION_FORMULA',
@@ -27,7 +31,7 @@ export default function ContractorSupportPage() {
     e.preventDefault();
     e.stopPropagation();
     if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText('estimates@deckrestorationplus.com');
+      navigator.clipboard.writeText('info@deckrestorationplus.com');
     }
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2200);
@@ -41,19 +45,40 @@ export default function ContractorSupportPage() {
     setTicketForm((prev) => ({ ...prev, [field]: val }));
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setTicketSubmitted(true);
-    setTimeout(() => {
-      setTicketForm({
-        subject: '',
-        category: 'ESTIMATION_FORMULA',
-        priority: 'NORMAL',
-        projectRef: '',
-        message: '',
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const subjectText = ticketForm.subject?.trim() || 'Contractor Partner Support Ticket';
+      const categoryPrefix = `[${ticketForm.category || 'PARTNER_INQUIRY'}]`;
+      const refSuffix = ticketForm.projectRef ? ` (Ref: ${ticketForm.projectRef.trim()})` : '';
+
+      await leadApi.submitReachOut({
+        fullName: user?.fullName || 'Contractor Partner',
+        email: user?.email || 'contractor@deckestimator.com',
+        phone: user?.phone || user?.phoneNumber || '(866) 440-3325',
+        subject: `${categoryPrefix} ${subjectText}${refSuffix}`,
+        message: ticketForm.message?.trim() || 'Partner consultation request.',
+        contactSource: 'Contractor Support Portal',
       });
-      setTicketSubmitted(false);
-    }, 4500);
+
+      setTicketSubmitted(true);
+      setTimeout(() => {
+        setTicketForm({
+          subject: '',
+          category: 'ESTIMATION_FORMULA',
+          priority: 'NORMAL',
+          projectRef: '',
+          message: '',
+        });
+        setTicketSubmitted(false);
+      }, 4500);
+    } catch (err) {
+      alert(`Submission error: ${err.message || 'Please check your connection and try again.'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Same FAQs preserved exactly as requested
@@ -211,14 +236,14 @@ export default function ContractorSupportPage() {
                 </span>
               </div>
               <span style={styles.contactLabel}>Direct Office</span>
-              <a href="tel:8566783325" style={styles.contactValueLink}>
-                (856) 678-3325
+              <a href="tel:8664403325" style={styles.contactValueLink}>
+                (866) 440-DECK
               </a>
-              <span style={styles.contactSub}>Contractor consultation line</span>
+              <span style={styles.contactSub}>Shamong: (609) 268-3436</span>
             </div>
 
             <div style={{ marginTop: '12px' }}>
-              <a href="tel:8566783325" style={styles.phoneActionBtn} title="Call (856) 678-3325">
+              <a href="tel:8664403325" style={styles.phoneActionBtn} title="Call (866) 440-DECK">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
@@ -238,7 +263,7 @@ export default function ContractorSupportPage() {
                   </svg>
                 </div>
                 <span style={{ ...styles.contactBadge, backgroundColor: '#FEF3C7', color: '#92400E' }}>
-                  24h Reply
+                  Official
                 </span>
               </div>
               <span style={styles.contactLabel}>Estimates &amp; Inquiries</span>
@@ -246,11 +271,11 @@ export default function ContractorSupportPage() {
               {/* Clean non-clipping email box */}
               <div style={styles.emailBoxWrap}>
                 <a
-                  href="mailto:estimates@deckrestorationplus.com"
+                  href="mailto:info@deckrestorationplus.com"
                   style={styles.emailLink}
-                  title="Send email to estimates@deckrestorationplus.com"
+                  title="Send email to info@deckrestorationplus.com"
                 >
-                  estimates@deckrestorationplus.com
+                  info@deckrestorationplus.com
                 </a>
               </div>
               <span style={styles.contactSub}>Senior estimator inbox</span>
@@ -259,7 +284,7 @@ export default function ContractorSupportPage() {
             {/* Action buttons */}
             <div style={styles.emailBtnRow}>
               <a
-                href="mailto:estimates@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
                 style={styles.mailActionBtn}
                 title="Send email"
               >
@@ -307,7 +332,7 @@ export default function ContractorSupportPage() {
               </div>
               <span style={styles.contactLabel}>Headquarters</span>
               <strong style={styles.contactValueStatic}>
-                152 Indian Mills Road
+                152 Indian Mills Road Unit #B
               </strong>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#334155', marginTop: '2px' }}>
                 Shamong, NJ 08088
@@ -453,6 +478,7 @@ export default function ContractorSupportPage() {
               <div style={styles.submitBtnRow}>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   onMouseEnter={() => setBtnHover(true)}
                   onMouseLeave={() => setBtnHover(false)}
                   style={{
@@ -462,13 +488,15 @@ export default function ContractorSupportPage() {
                     color: btnHover ? '#0284C7' : '#1E3A63',
                     transform: btnHover ? 'translateY(-1px)' : 'none',
                     boxShadow: btnHover ? '0 4px 12px rgba(30, 58, 99, 0.12)' : '0 1px 3px rgba(30, 58, 99, 0.08)',
+                    opacity: isSubmitting ? 0.6 : 1,
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
                   </svg>
-                  <span>Submit Partner Ticket</span>
+                  <span>{isSubmitting ? 'Submitting Inquiry...' : 'Submit Partner Ticket'}</span>
                 </button>
               </div>
             </form>

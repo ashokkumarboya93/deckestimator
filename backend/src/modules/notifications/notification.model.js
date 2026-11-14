@@ -60,6 +60,11 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     }],
+    clearedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    }],
     sentBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

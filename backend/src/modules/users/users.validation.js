@@ -8,7 +8,9 @@ const updateProfileSchema = {
   body: Joi.object({
     fullName: Joi.string().trim().min(2).max(100).optional(),
     phone: Joi.string().trim().allow('').max(25).optional(),
-    avatar: Joi.string().allow('').optional(),
+    avatar: Joi.string().allow('').max(500000).messages({
+      'string.max': 'Profile photo is too large after optimization. Please select another image.',
+    }).optional(),
     address: Joi.object({
       street: Joi.string().allow('').trim().optional(),
       city: Joi.string().allow('').trim().optional(),

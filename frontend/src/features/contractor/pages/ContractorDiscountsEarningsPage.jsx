@@ -120,6 +120,16 @@ export default function ContractorDiscountsEarningsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
+  const isMobile = windowWidth < 1024;
+  const isSmallMobile = windowWidth < 540;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('discounts'); // 'discounts' | 'commissions'
   const [loading, setLoading] = useState(true);
 
@@ -382,11 +392,30 @@ export default function ContractorDiscountsEarningsPage() {
   }
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '12px 10px 40px 10px' : '26px 36px 60px 36px' }}>
+      <style>{`
+        @media (max-width: 1024px) {
+          .contractor-discounts-bottom-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 16px !important;
+          }
+          .contractor-discounts-bottom-grid > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .contractor-discounts-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       {/* 1. Header Banner — Very pale navy blue with shiny style, thin border & money bag graphic */}
-      <div style={styles.headerCard}>
-        <div style={styles.bannerInner}>
-          <div style={{ flex: 1, minWidth: '280px' }}>
+      <div style={{ ...styles.headerCard, padding: isMobile ? '16px 14px' : '24px 30px' }}>
+        <div style={{ ...styles.bannerInner, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '14px' : '20px' }}>
+          <div style={{ flex: 1, minWidth: isMobile ? '100%' : '280px' }}>
             <div style={styles.portalBadge}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
@@ -394,95 +423,107 @@ export default function ContractorDiscountsEarningsPage() {
               </svg>
               <span style={styles.portalBadgeText}>Contractor Financial Portal</span>
             </div>
-            <h1 style={styles.pageTitle}>Discounts &amp; Earnings</h1>
-            <p style={styles.pageSub}>
+            <h1 style={{ ...styles.pageTitle, fontSize: isMobile ? '20px' : '25px' }}>Discounts &amp; Earnings</h1>
+            <p style={{ ...styles.pageSub, fontSize: isMobile ? '11.5px' : '13px' }}>
               Manage your wholesale material discounts, volume pricing benefits, and track accrued commission earnings in one unified dashboard.
             </p>
           </div>
 
           {/* Right side: High-fidelity Money Bag PNG/SVG Graphic (replacing the 2 removed buttons) */}
-          <div style={styles.moneyBagWrap} title="Contractor Wholesale Benefits & Revenue Hub">
-            <MoneyBagGraphic size={105} />
-          </div>
+          {!isSmallMobile && (
+            <div style={styles.moneyBagWrap} title="Contractor Wholesale Benefits & Revenue Hub">
+              <MoneyBagGraphic size={isMobile ? 75 : 105} />
+            </div>
+          )}
         </div>
       </div>
 
       {/* 2. Summary KPI Cards — Real Data Only with Improved Crisp Thin Borders */}
-      <div style={styles.kpiGrid}>
+      <div
+        style={{
+          ...styles.kpiGrid,
+          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, 1fr)',
+          gap: isMobile ? '10px' : '16px',
+        }}
+      >
         {/* Card 1: Wholesale Tier Discount */}
-        <div style={{ ...styles.kpiCard, borderTop: '4px solid #1E3A63', background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)' }}>
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #1E3A63', background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)' }}>
           <div style={styles.kpiTopRow}>
-            <span style={styles.kpiLabel}>Wholesale Tier Discount</span>
-            <div style={{ ...styles.kpiIconBox, backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Wholesale Tier Discount</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
+              <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="19" y1="5" x2="5" y2="19" />
                 <circle cx="6.5" cy="6.5" r="2.5" />
                 <circle cx="17.5" cy="17.5" r="2.5" />
               </svg>
             </div>
           </div>
-          <div style={styles.kpiValue}>{effectiveDiscountRate}% OFF</div>
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px' }}>{effectiveDiscountRate}% OFF</div>
         </div>
 
         {/* Card 2: Estimated Wholesale Savings (Replaces Active Policies) */}
-        <div style={{ ...styles.kpiCard, borderTop: '4px solid #0284C7', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)' }}>
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #0284C7', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)' }}>
           <div style={styles.kpiTopRow}>
-            <span style={styles.kpiLabel}>Estimated Wholesale Savings</span>
-            <div style={{ ...styles.kpiIconBox, backgroundColor: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Wholesale Savings</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+              <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, color: '#0284C7' }}>
-            ${totalWholesaleSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#0284C7' }}>
+            ${totalWholesaleSavings.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         {/* Card 3: Total Earned Commissions (Real MongoDB Data) */}
-        <div style={{ ...styles.kpiCard, borderTop: '4px solid #15803D', background: 'linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%)' }}>
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #15803D', background: 'linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%)' }}>
           <div style={styles.kpiTopRow}>
-            <span style={styles.kpiLabel}>Total Earned Commissions</span>
-            <div style={{ ...styles.kpiIconBox, backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Earned Commissions</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+              <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, color: '#15803D' }}>
-            ${realTotalEarned.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#15803D' }}>
+            ${realTotalEarned.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         {/* Card 4: Payable Balance (Real MongoDB Data) */}
-        <div style={{ ...styles.kpiCard, borderTop: '4px solid #E08131', background: 'linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%)' }}>
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #E08131', background: 'linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%)' }}>
           <div style={styles.kpiTopRow}>
-            <span style={styles.kpiLabel}>Payable Balance</span>
-            <div style={{ ...styles.kpiIconBox, backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Payable Balance</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+              <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, color: '#C2671A' }}>
-            ${realPayableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#C2671A' }}>
+            ${realPayableBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>
 
       {/* 3. Improved Two Tabs Switcher with Bold Typography & Real Visible Badges */}
-      <div style={styles.tabContainer}>
+      <div style={{ ...styles.tabContainer, flexWrap: 'wrap', gap: isMobile ? '8px' : '10px' }}>
         <button
           onClick={() => setActiveTab('discounts')}
           style={{
             ...styles.tabBtn,
+            padding: isMobile ? '8px 12px' : '10px 20px',
+            fontSize: isMobile ? '12px' : '13.5px',
+            flex: isMobile ? '1 1 auto' : 'none',
+            justifyContent: 'center',
             ...(activeTab === 'discounts' ? styles.tabBtnActive : {}),
           }}
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="5" x2="5" y2="19" />
             <circle cx="6.5" cy="6.5" r="2.5" />
             <circle cx="17.5" cy="17.5" r="2.5" />
@@ -497,10 +538,14 @@ export default function ContractorDiscountsEarningsPage() {
           onClick={() => setActiveTab('commissions')}
           style={{
             ...styles.tabBtn,
+            padding: isMobile ? '8px 12px' : '10px 20px',
+            fontSize: isMobile ? '12px' : '13.5px',
+            flex: isMobile ? '1 1 auto' : 'none',
+            justifyContent: 'center',
             ...(activeTab === 'commissions' ? styles.tabBtnActive : {}),
           }}
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="1" x2="12" y2="23" />
             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
           </svg>
@@ -566,7 +611,7 @@ export default function ContractorDiscountsEarningsPage() {
 
           {/* Active Partner Discount Policies Table Card with Pill Search & Filter */}
           <div style={styles.tableCard}>
-            <div style={styles.policiesTopBar}>
+            <div style={{ ...styles.policiesTopBar, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '10px' : '16px' }}>
               <div>
                 <h3 style={styles.tableTitle}>Active Partner Discount Policies</h3>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
@@ -575,19 +620,19 @@ export default function ContractorDiscountsEarningsPage() {
               </div>
 
               {/* Pill-shaped live Search and Filter */}
-              <div style={styles.pillControlRow}>
+              <div style={{ ...styles.pillControlRow, flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto', gap: isMobile ? '8px' : '12px' }}>
                 {/* Pill Search */}
-                <div style={styles.pillSearchBox}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <div style={{ ...styles.pillSearchBox, width: isMobile ? '100%' : '260px', height: isMobile ? '36px' : '40px', padding: isMobile ? '0 12px' : '0 16px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search policies by name, code, category..."
+                    placeholder={isMobile ? "Search policies..." : "Search policies by name, code, category..."}
                     value={discountSearch}
                     onChange={(e) => setDiscountSearch(e.target.value)}
-                    style={styles.pillSearchInput}
+                    style={{ ...styles.pillSearchInput, fontSize: isMobile ? '11.5px' : '13px' }}
                   />
                   {discountSearch && (
                     <button onClick={() => setDiscountSearch('')} style={styles.clearSearchBtn}>
@@ -597,11 +642,11 @@ export default function ContractorDiscountsEarningsPage() {
                 </div>
 
                 {/* Pill Filter Dropdown */}
-                <div style={styles.pillSelectWrap}>
+                <div style={{ ...styles.pillSelectWrap, width: isMobile ? '100%' : 'auto' }}>
                   <select
                     value={discountSort}
                     onChange={(e) => setDiscountSort(e.target.value)}
-                    style={styles.pillSelect}
+                    style={{ ...styles.pillSelect, width: isMobile ? '100%' : 'auto', height: isMobile ? '36px' : '38px', fontSize: isMobile ? '11.5px' : '12.5px', padding: isMobile ? '4px 10px' : '7px 14px' }}
                   >
                     <option value="ALL">All Policies</option>
                     <option value="HIGH_TO_LOW">Highest Discount First</option>
@@ -686,9 +731,19 @@ export default function ContractorDiscountsEarningsPage() {
           </div>
 
           {/* 4. Before Footer / After List: Two-Column Row (Request Higher Discount Form + Important Guidelines Box) */}
-          <div style={styles.bottomSectionGrid}>
+          <div
+            className="contractor-discounts-bottom-grid"
+            style={{
+              ...styles.bottomSectionGrid,
+              display: isMobile ? 'flex' : 'grid',
+              flexDirection: isMobile ? 'column' : 'initial',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+              gap: isMobile ? '16px' : '20px',
+              width: '100%',
+            }}
+          >
             {/* Left Box: Request Higher Wholesale Discount Form */}
-            <div style={styles.requestFormCard}>
+            <div style={{ ...styles.requestFormCard, padding: isMobile ? '16px 14px' : '22px 24px' }}>
               <div style={styles.formCardHeader}>
                 <div style={styles.formHeaderIcon}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -779,6 +834,8 @@ export default function ContractorDiscountsEarningsPage() {
                     disabled={reqSubmitting}
                     style={{
                       ...styles.formSubmitBtn,
+                      width: isMobile ? '100%' : 'auto',
+                      justifyContent: 'center',
                       opacity: reqSubmitting ? 0.7 : 1,
                       cursor: reqSubmitting ? 'not-allowed' : 'pointer',
                     }}
@@ -800,7 +857,7 @@ export default function ContractorDiscountsEarningsPage() {
             </div>
 
             {/* Right Box: Important Guidelines & Discount Tiers */}
-            <div style={styles.guidelinesCard}>
+            <div style={{ ...styles.guidelinesCard, padding: isMobile ? '16px 14px' : '22px 24px' }}>
               <div style={styles.guidelinesHeader}>
                 <div style={styles.guidelinesIconBox}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -875,9 +932,9 @@ export default function ContractorDiscountsEarningsPage() {
       {activeTab === 'commissions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Filter Bar with Reduced Width Pill Search & Pill Dropdown */}
-          <div style={styles.filterBarCard}>
+          <div style={{ ...styles.filterBarCard, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '10px' : '14px' }}>
             {/* Pill Search with reduced width */}
-            <div style={styles.commSearchPill}>
+            <div style={{ ...styles.commSearchPill, minWidth: isMobile ? '100%' : '320px', maxWidth: isMobile ? '100%' : '560px', width: '100%' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -1349,9 +1406,10 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1.5px solid #CBD5E1',
     borderRadius: '9999px',
-    padding: '8px 16px',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    padding: '7px 14px',
+    boxSizing: 'border-box',
+    width: '100%',
+    maxWidth: '420px',
   },
   pillSearchInput: {
     border: 'none',
@@ -1360,6 +1418,7 @@ const styles = {
     fontSize: '13px',
     color: '#1E293B',
     width: '100%',
+    minWidth: 0,
   },
   pillSelectWrap: {
     display: 'flex',
@@ -1655,10 +1714,9 @@ const styles = {
     backgroundColor: '#F8FAFC',
     border: '1.5px solid #CBD5E1',
     borderRadius: '9999px',
-    padding: '8px 16px',
+    padding: '7px 14px',
     width: '100%',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    boxSizing: 'border-box',
     maxWidth: '560px',
   },
 

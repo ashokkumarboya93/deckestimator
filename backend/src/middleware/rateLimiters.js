@@ -7,11 +7,11 @@ const rateLimit = require('express-rate-limit');
 
 /**
  * General API rate limiter.
- * 100 requests per 15 minutes per IP.
+ * Supports high concurrency (~150-300 simultaneous active users) without false 429s.
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 2000,
+  max: process.env.NODE_ENV === 'production' ? 1200 : 5000,
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
@@ -25,12 +25,11 @@ const apiLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for authentication endpoints.
- * 10 requests per 15 minutes per IP.
+ * Auth rate limiter for login/register endpoints.
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 200,
+  max: process.env.NODE_ENV === 'production' ? 60 : 300,
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
@@ -45,11 +44,11 @@ const authLimiter = rateLimit({
 
 /**
  * Upload rate limiter to prevent denial of service and storage exhaustion.
- * 30 upload requests per 15 minutes per IP (bypassed in test environment).
+ * Bypassed in test environment.
  */
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 120,
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,

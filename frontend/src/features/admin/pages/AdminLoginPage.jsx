@@ -16,24 +16,48 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [touched, setTouched] = useState({});
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const from = location.state?.from?.pathname || '/admin/dashboard';
 
+  const trimmedEmail = email.trim();
+  const isValidEmail =
+    trimmedEmail.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+
+  const emailError = touched.email
+    ? !trimmedEmail
+      ? 'Administrator email is required.'
+      : trimmedEmail.length > 254
+        ? 'Email address must not exceed 254 characters.'
+        : !isValidEmail
+          ? 'Please enter a valid administrator email.'
+          : ''
+    : '';
+
+  const passwordError = touched.password
+    ? !password
+      ? 'Password is required.'
+      : password.length > 128
+        ? 'Password must not exceed 128 characters.'
+        : ''
+    : '';
+
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMessage('');
+    setTouched({ email: true, password: true });
 
-    if (!email.trim() || !password) {
-      setErrorMessage('Please provide both administrator email and password.');
+    if (!trimmedEmail || !isValidEmail || !password || password.length > 128) {
+      setErrorMessage('Please provide a valid administrator email and password.');
       return;
     }
 
     setLoading(true);
     try {
-      await adminLogin({ email: email.trim().toLowerCase(), password });
+      await adminLogin({ email: trimmedEmail.toLowerCase(), password });
       setSuccessMessage('Administrator credentials verified. Accessing console...');
       setTimeout(() => {
         navigate(from, { replace: true });
@@ -46,42 +70,43 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={styles.pageContainer} className="auth-page-container">
       {/* Left Column: Bright Executive Admin Card */}
-      <div style={styles.formColumn}>
-        <div style={styles.formWrapper}>
-          <div style={styles.card}>
+      <div style={styles.formColumn} className="auth-form-column">
+        <div style={styles.formWrapper} className="auth-form-wrapper">
+          <div style={styles.card} className="auth-card">
             {/* Distinctive Orange Crown Accent Line */}
             <div style={styles.cardCrownAccent} />
 
             {/* Brand Header */}
-            <div style={styles.header}>
-              <div style={styles.logoWrap}>
+            <div style={styles.header} className="auth-header">
+              <div style={styles.logoWrap} className="auth-logo-wrap">
                 <img
                   src={mainLogo}
                   alt="Deck Restoration Plus"
                   style={styles.logoImg}
+                  className="auth-logo-img"
                 />
               </div>
 
               {/* Executive Amber Badge */}
-              <div style={styles.adminBadge}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div style={styles.adminBadge} className="auth-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
                 <span>DRP ADMINISTRATIVE GOVERNANCE</span>
               </div>
 
-              <h1 style={styles.title}>Administrative Sign In</h1>
-              <p style={styles.subtitle}>
+              <h1 style={styles.title} className="auth-title">Administrative Sign In</h1>
+              <p style={styles.subtitle} className="auth-subtitle">
                 Secure single-point access to platform governance, contractor verifications, and financial controls.
               </p>
             </div>
 
             {/* Success Alert */}
             {successMessage && (
-              <div style={styles.successBanner}>
+              <div style={styles.successBanner} className="auth-banner">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -91,7 +116,7 @@ export default function AdminLoginPage() {
 
             {/* Error Alert */}
             {errorMessage && !successMessage && (
-              <div style={styles.errorBanner}>
+              <div style={styles.errorBanner} className="auth-banner">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
@@ -102,50 +127,79 @@ export default function AdminLoginPage() {
             )}
 
             {/* Real-time Administrator Form */}
-            <form onSubmit={handleSubmit} style={styles.form}>
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Administrator Email *</label>
-                <div style={styles.inputWrap}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+            <form onSubmit={handleSubmit} noValidate style={styles.form} className="auth-form">
+              <div style={styles.fieldGroup} className="auth-field-group">
+                <label htmlFor="admin-email" style={styles.label} className="auth-label">Administrator Email *</label>
+                <div
+                  className="auth-input-wrap"
+                  style={{
+                    ...styles.inputWrap,
+                    borderColor: emailError ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#CBD5E1',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
                   <input
+                    id="admin-email"
                     type="email"
                     autoComplete="email"
                     required
+                    maxLength={254}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setErrorMessage('');
+                    }}
+                    onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
                     placeholder="admin@deckestimator.com"
                     style={styles.input}
+                    className="auth-input"
                     disabled={loading}
                   />
                 </div>
+                {emailError && <p style={styles.fieldErrorText} className="auth-field-error">{emailError}</p>}
               </div>
 
-              <div style={styles.fieldGroup}>
-                <div style={styles.labelRow}>
-                  <label style={styles.label}>Access Key / Password *</label>
+              <div style={styles.fieldGroup} className="auth-field-group">
+                <div style={styles.labelRow} className="auth-label-row">
+                  <label htmlFor="admin-password" style={styles.label} className="auth-label">Access Key / Password *</label>
                 </div>
-                <div style={styles.inputWrap}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon}>
+                <div
+                  className="auth-input-wrap"
+                  style={{
+                    ...styles.inputWrap,
+                    borderColor: passwordError ? '#ef4444' : '#CBD5E1',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                   <input
+                    id="admin-password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
+                    maxLength={128}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setErrorMessage('');
+                    }}
+                    onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
                     placeholder="••••••••••••"
                     style={styles.input}
+                    className="auth-input"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     style={styles.eyeBtn}
+                    className="auth-eye-btn"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     title={showPassword ? 'Hide password' : 'Show password'}
                     tabIndex={-1}
                   >
@@ -162,12 +216,14 @@ export default function AdminLoginPage() {
                     )}
                   </button>
                 </div>
+                {passwordError && <p style={styles.fieldErrorText} className="auth-field-error">{passwordError}</p>}
               </div>
 
               {/* Authoritative Midnight Navy Admin Submit Button */}
               <button
                 type="submit"
                 disabled={loading || Boolean(successMessage)}
+                className="auth-submit-btn"
                 style={{
                   ...styles.submitBtn,
                   opacity: loading || successMessage ? 0.75 : 1,
@@ -192,15 +248,15 @@ export default function AdminLoginPage() {
             </form>
 
             {/* Bottom Security Notice */}
-            <div style={styles.securityNotice}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={styles.securityNotice} className="auth-security-notice">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
               <span>Restricted Platform Gateway &bull; 256-Bit SSL Encrypted Session</span>
             </div>
 
-            <div style={styles.switchPortalWrap}>
+            <div style={styles.switchPortalWrap} className="auth-footer-link-wrap">
               <Link to="/login" style={styles.switchPortalLink}>
                 &larr; Return to Customer &amp; Contractor Sign In
               </Link>
@@ -210,7 +266,7 @@ export default function AdminLoginPage() {
       </div>
 
       {/* Right Column: Hero Visual Showcase */}
-      <div style={styles.heroColumn}>
+      <div style={styles.heroColumn} className="auth-hero-column">
         <div style={styles.heroOverlay} />
 
         {/* Decorative Wave Overlay at bottom right */}
@@ -241,12 +297,12 @@ export default function AdminLoginPage() {
           <div style={styles.orangeBar} />
 
           {/* Main Headline */}
-          <h2 style={styles.heroTitle}>
+          <h2 style={styles.heroTitle} className="auth-hero-title">
             Enterprise Platform Governance &amp; Operations Control.
           </h2>
 
           {/* Subtitle */}
-          <p style={styles.heroText}>
+          <p style={styles.heroText} className="auth-hero-text">
             Centralized administrative oversight for commercial estimates, contractor credentials, catalog pricing, and platform analytics.
           </p>
 
@@ -297,20 +353,23 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '40px 24px',
+    padding: '28px 20px',
     backgroundColor: '#F1F5F9',
+    minHeight: '100vh',
+    boxSizing: 'border-box',
+    overflowY: 'auto',
   },
   formWrapper: {
     width: '100%',
-    maxWidth: '470px',
+    maxWidth: '455px',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '24px',
+    borderRadius: '22px',
     border: '1px solid #E2E8F0',
     borderTop: '4px solid #E08131',
     boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(224, 129, 49, 0.06)',
-    padding: '38px 38px 34px 38px',
+    padding: '32px 32px 28px 32px',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
@@ -394,6 +453,9 @@ const styles = {
   fieldGroup: {
     display: 'flex',
     flexDirection: 'column',
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
   },
   labelRow: {
     display: 'flex',
@@ -414,6 +476,9 @@ const styles = {
     borderRadius: '12px',
     padding: '0 14px',
     height: '48px',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
     transition: 'all 0.15s ease',
   },
   inputIcon: {
@@ -422,6 +487,9 @@ const styles = {
   },
   input: {
     flex: 1,
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
     border: 'none',
     background: 'transparent',
     outline: 'none',
@@ -430,6 +498,12 @@ const styles = {
     fontWeight: '500',
     fontFamily: 'inherit',
     height: '100%',
+  },
+  fieldErrorText: {
+    fontSize: '12px',
+    color: '#DC2626',
+    margin: '5px 0 0 2px',
+    fontWeight: '500',
   },
   eyeBtn: {
     background: 'none',

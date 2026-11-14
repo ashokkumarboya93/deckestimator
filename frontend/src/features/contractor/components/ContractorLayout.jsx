@@ -8,11 +8,17 @@
 // - Dynamic top navigation with breadcrumbs, notifications, search, profile, and logout
 // - Help & Guide modal for contractor self-service
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
-import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
+import {
+  getMyNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  clearAllNotifications,
+} from '../../customer/api/notificationsApi';
+import RouteLoadingFallback from '../../../components/common/RouteLoadingFallback';
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
@@ -28,8 +34,25 @@ export default function ContractorLayout() {
   }
 
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
+  const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 640 : false));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const mobile = w < 1024;
+      setIsMobile(mobile);
+      setIsSmallMobile(w < 640);
+      if (!mobile) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [notifActionLoading, setNotifActionLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -40,8 +63,9 @@ export default function ContractorLayout() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Real-time synchronization of notifications from MongoDB
+  // Real-time synchronization of notifications from MongoDB (paused when tab hidden)
   const fetchRealNotifications = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const data = await getMyNotifications({ limit: 15 });
       setNotifications(data?.notifications || []);
@@ -54,20 +78,43 @@ export default function ContractorLayout() {
   useEffect(() => {
     fetchRealNotifications();
     const interval = setInterval(fetchRealNotifications, 20000);
+    const onVisible = () => {
+      if (!document.hidden) fetchRealNotifications();
+    };
     window.addEventListener('focus', fetchRealNotifications);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', fetchRealNotifications);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [fetchRealNotifications]);
 
-  const handleClearAllNotifications = async () => {
+  const handleMarkAllNotificationsRead = async () => {
+    if (notifActionLoading || unreadNotifications === 0) return;
+    setNotifActionLoading(true);
     try {
       await markAllNotificationsRead();
       setUnreadNotifications(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
+      // Graceful fallback
+    } finally {
+      setNotifActionLoading(false);
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    if (notifActionLoading || notifications.length === 0) return;
+    setNotifActionLoading(true);
+    try {
+      await clearAllNotifications();
+      setNotifications([]);
       setUnreadNotifications(0);
+    } catch {
+      fetchRealNotifications();
+    } finally {
+      setNotifActionLoading(false);
     }
   };
 
@@ -181,20 +228,68 @@ export default function ContractorLayout() {
         minHeight: '100vh',
       }}
     >
-      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave) */}
+      {/* Mobile Drawer Backdrop */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 99,
+          }}
+        />
+      )}
+
+      {/* 1. COLLAPSIBLE HOVER LEFT SIDEBAR (Expands over page, closes on mouse leave; drawer on mobile) */}
       <aside
-        onMouseEnter={() =>setIsSidebarHovered(true)}
-        onMouseLeave={() =>setIsSidebarHovered(false)}
+        onMouseEnter={() => !isMobile && setIsSidebarHovered(true)}
+        onMouseLeave={() => !isMobile && setIsSidebarHovered(false)}
         style={{
           ...styles.sidebar,
-          width: isSidebarHovered ? '240px' : '68px',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none',
+          width: isMobile ? '250px' : (isSidebarHovered ? '240px' : '68px'),
+          transform: isMobile ? (mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          boxShadow: isMobile && mobileMenuOpen ? '4px 0 28px rgba(15, 23, 42, 0.45)' : (isSidebarHovered ? '6px 0 28px rgba(15, 23, 42, 0.16)' : 'none'),
+          transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {/* Brand Header */}
         <div style={styles.brandBox}>
-          {isSidebarHovered ? (
+          {isMobile ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 8px' }}>
+              <Link to="/contractor/dashboard" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                <img
+                  src={mainLogo}
+                  alt="Deck Restoration Plus"
+                  style={{
+                    height: '46px',
+                    maxWidth: '160px',
+                    objectFit: 'contain',
+                  }}
+                />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          ) : isSidebarHovered ? (
             <Link to="/contractor/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', width: '100%', padding: '0 4px' }}>
               <img
                 src={mainLogo}
@@ -227,6 +322,7 @@ export default function ContractorLayout() {
           {/* 1. Dashboard */}
           <Link
             to="/contractor/dashboard"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/dashboard') ? styles.navItemActive : {}),
@@ -241,7 +337,7 @@ export default function ContractorLayout() {
                 <rect x="3" y="14" width="7" height="7" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               Dashboard
             </span>
           </Link>
@@ -249,6 +345,7 @@ export default function ContractorLayout() {
           {/* 2. New Estimation */}
           <Link
             to="/contractor/decks/new"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(currentPath === '/contractor/decks/new' ? styles.navItemActive : {}),
@@ -262,7 +359,7 @@ export default function ContractorLayout() {
                 <line x1="8" y1="12" x2="16" y2="12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               New Estimation
             </span>
           </Link>
@@ -270,6 +367,7 @@ export default function ContractorLayout() {
           {/* 3. My Projects */}
           <Link
             to="/contractor/projects"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/projects') || (isActive('/contractor/decks') && !currentPath.includes('/decks/new'))
@@ -285,7 +383,7 @@ export default function ContractorLayout() {
                 <polyline points="2 12 12 17 22 12" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               My Projects
             </span>
           </Link>
@@ -293,6 +391,7 @@ export default function ContractorLayout() {
           {/* 4. Discounts & Earnings */}
           <Link
             to="/contractor/discounts-earnings"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/discounts-earnings') || isActive('/contractor/commissions') || isActive('/contractor/discounts')
@@ -307,7 +406,7 @@ export default function ContractorLayout() {
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               Discounts &amp; Earnings
             </span>
           </Link>
@@ -315,6 +414,7 @@ export default function ContractorLayout() {
           {/* 5. Help & support */}
           <Link
             to="/contractor/support"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/support') ? styles.navItemActive : {}),
@@ -328,7 +428,7 @@ export default function ContractorLayout() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               Help &amp; support
             </span>
           </Link>
@@ -338,6 +438,7 @@ export default function ContractorLayout() {
           {/* 6. Profile Settings */}
           <Link
             to="/contractor/profile"
+            onClick={() => { if (isMobile) setMobileMenuOpen(false); }}
             style={{
               ...styles.navItem,
               ...(isActive('/contractor/profile') || currentPath === '/contractor/settings' || currentPath === '/contractor/verification'
@@ -352,7 +453,7 @@ export default function ContractorLayout() {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
             </span>
-            <span style={{ opacity: isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
+            <span style={{ opacity: isMobile || isSidebarHovered ? 1 : 0, ...styles.navLabel }}>
               Profile Settings
             </span>
           </Link>
@@ -360,7 +461,10 @@ export default function ContractorLayout() {
           {/* 7. Sign Out */}
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => {
+              if (isMobile) setMobileMenuOpen(false);
+              handleLogout();
+            }}
             onMouseEnter={() => setSignoutHover(true)}
             onMouseLeave={() => setSignoutHover(false)}
             style={{
@@ -375,7 +479,7 @@ export default function ContractorLayout() {
               marginBottom: '4px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isSidebarHovered ? 'flex-start' : 'center',
+              justifyContent: isMobile || isSidebarHovered ? 'flex-start' : 'center',
               padding: '9px 12px',
               gap: '10px',
               transition: 'all 0.18s ease',
@@ -392,8 +496,8 @@ export default function ContractorLayout() {
               </svg>
             </span>
             <span style={{
-              opacity: isSidebarHovered ? 1 : 0,
-              width: isSidebarHovered ? 'auto' : 0,
+              opacity: isMobile || isSidebarHovered ? 1 : 0,
+              width: isMobile || isSidebarHovered ? 'auto' : 0,
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               color: '#ef4444',
@@ -407,53 +511,93 @@ export default function ContractorLayout() {
         </nav>
       </aside>
 
-      {/* 2. MAIN CONTENT WRAPPER (Fixed at 68px: Zero adjustment effect, page stays stable) */}
+      {/* 2. MAIN CONTENT WRAPPER */}
       <div
         style={{
           ...styles.mainWrapper,
-          marginLeft: '68px',
+          marginLeft: isMobile ? 0 : '68px',
           minHeight: '100vh',
+          width: isMobile ? '100%' : 'calc(100% - 68px)',
         }}
       >
         {/* Top Header Bar (Normal Natural Flow — Not Sticky) */}
-        <header style={styles.topHeader}>
+        <header style={{ ...styles.topHeader, padding: isMobile ? '0 10px' : '0 24px', gap: '8px' }}>
           {/* Left: Dynamic Page Title / Breadcrumbs */}
-          <div style={styles.headerLeft}>
+          <div style={{ ...styles.headerLeft, minWidth: 0, flex: 1 }}>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  marginRight: '8px',
+                  color: '#0a1628',
+                }}
+                title="Open menu"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+            )}
             {isEstimatorPage ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '12px', minWidth: 0 }}>
                 <Link
-                  to="/contractor/projects"
-                  style={styles.outlinedBackBtn}
-                  title="← Back to Projects"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
+                  to="/contractor/dashboard"
+                  style={{
+                    ...styles.outlinedBackBtn,
+                    padding: isMobile ? '5px 9px' : '7px 14px',
+                    fontSize: isMobile ? '12px' : '13.5px',
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }}
+                  title="← Back to Dashboard"
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
                   <span>Back</span>
                 </Link>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>|</span>
-                  <span style={{ fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <span style={{ color: '#cbd5e1', fontSize: '16px', fontWeight: '300' }}>|</span>
+                  <span style={{
+                    fontSize: isMobile ? '0.88rem' : '1.05rem',
+                    fontWeight: '700',
+                    color: '#0f172a',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: isMobile ? '130px' : '300px',
+                  }}>
                     {projectName?.trim() ? projectName.trim() : 'Untitled Project'}
                   </span>
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h1 style={styles.headerTitle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px', minWidth: 0 }}>
+                <h1
+                  style={{
+                    ...styles.headerTitle,
+                    fontSize: isMobile ? (isSmallMobile ? '0.98rem' : '1.1rem') : '1.35rem',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: isMobile ? (isSmallMobile ? '140px' : '220px') : 'none',
+                  }}
+                >
                   {currentPath.includes('/dashboard') || currentPath === '/contractor' || currentPath === '/contractor/'
                     ? 'Contractor Dashboard'
                     : currentPath.includes('/leads')
-                    ? 'Assigned Leads & Enquiries'
+                    ? 'Assigned Leads'
                     : currentPath.includes('/projects')
                     ? 'Projects & Decks'
                     : currentPath.includes('/estimates')
@@ -465,53 +609,30 @@ export default function ContractorLayout() {
                     : currentPath.includes('/discounts')
                     ? 'Partner Discounts'
                     : currentPath.includes('/profile') || currentPath.includes('/settings')
-                    ? 'Profile & Business Settings'
+                    ? 'Profile & Settings'
                     : 'Contractor Dashboard'}
                 </h1>
               </div>
             )}
           </div>
 
-          {/* Center: Search Bar (Hidden on Contractor Dashboard & Estimator) */}
-          {!isEstimatorPage && !isDashboardPage && (
-            <div style={styles.headerCenter}>
-              <div style={styles.searchBox}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search projects, leads, estimates..."
-                  style={styles.searchInput}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      navigate(`/contractor/projects?search=${encodeURIComponent(e.target.value)}`);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Right: Notifications, Profile, Logout */}
-          <div style={styles.headerRight}>
-            {/* Quick Action Button for Contractor */}
-            <Link
-              to="/contractor/decks/new"
-              style={styles.primaryActionBtn}
-              title="Start New Estimation"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F0F7FF';
-                e.currentTarget.style.borderColor = '#003B7A';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#034EA2';
-              }}
-            >
-              <span>+ New Estimation</span>
-            </Link>
+          {/* Right: Notifications, Profile, Logout (No clipping, mobile clean spacing) */}
+          <div style={{ ...styles.headerRight, gap: isMobile ? '6px' : '12px', flexShrink: 0 }}>
+            {/* Quick Action Button for Contractor (Hidden on estimator page itself) */}
+            {!isEstimatorPage && (
+              <Link
+                to="/contractor/decks/new"
+                style={{
+                  ...styles.primaryActionBtn,
+                  padding: isMobile ? '5px 8px' : '8px 18px',
+                  fontSize: isMobile ? '11px' : '13.5px',
+                  whiteSpace: 'nowrap',
+                }}
+                title="Start New Estimation"
+              >
+                <span>{isMobile ? '+ New' : '+ New Estimation'}</span>
+              </Link>
+            )}
 
             {/* Notification Bell */}
             <div ref={notifRef} style={{ position: 'relative' }}>
@@ -520,6 +641,7 @@ export default function ContractorLayout() {
                 onClick={() => setShowNotifications(!showNotifications)}
                 style={styles.iconBtn}
                 title="Notifications"
+                aria-label="Notifications"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -531,20 +653,39 @@ export default function ContractorLayout() {
               </button>
 
               {showNotifications && (
-                <div style={styles.notifDropdown}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid #F1F5F9' }}>
+                <div
+                  style={{
+                    ...styles.notifDropdown,
+                    width: isSmallMobile ? 'min(320px, calc(100vw - 24px))' : '336px',
+                    right: isSmallMobile ? '-42px' : 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid #F1F5F9', gap: '8px' }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0F172A' }}>
                       Notifications {unreadNotifications > 0 && `(${unreadNotifications} new)`}
                     </div>
-                    {unreadNotifications > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleClearAllNotifications}
-                        style={{ background: 'none', border: 'none', color: '#034EA2', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
-                      >
-                        Mark all read
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {unreadNotifications > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllNotificationsRead}
+                          disabled={notifActionLoading}
+                          style={{ background: 'none', border: 'none', color: '#034EA2', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearAllNotifications}
+                          disabled={notifActionLoading}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
@@ -589,7 +730,11 @@ export default function ContractorLayout() {
             {/* Profile Dropdown Pill */}
             <div ref={profileRef} style={{ position: 'relative' }}>
               <div
-                style={styles.profilePill}
+                style={{
+                  ...styles.profilePill,
+                  padding: isMobile ? '3px 6px' : '5px 12px 5px 6px',
+                  gap: isMobile ? '4px' : '10px',
+                }}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 {user?.avatar ? (
@@ -601,11 +746,13 @@ export default function ContractorLayout() {
                 ) : (
                   <div style={styles.avatarCircle}>{initials}</div>
                 )}
-                <div style={styles.profileText}>
-                  <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
-                  <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
-                </div>
-                <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '4px' }}>▼</span>
+                {!isMobile && (
+                  <div style={styles.profileText}>
+                    <span style={styles.profileName}>{user?.fullName || 'Alex Master Builder'}</span>
+                    <span style={styles.profileRole}>{contractorProfile?.businessName || user?.businessName || 'Apex Deck Pros LLC'}</span>
+                  </div>
+                )}
+                <span style={{ fontSize: '10px', color: '#64748b', marginLeft: isMobile ? '2px' : '4px' }}>▼</span>
               </div>
 
               {showProfileMenu && (
@@ -652,13 +799,16 @@ export default function ContractorLayout() {
               )}
             </div>
 
-            {/* Standalone Logout Button */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={styles.logoutBtn}
-            >Logout
-            </button>
+            {/* Standalone Logout Button (Desktop only to prevent mobile header clipping) */}
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={styles.logoutBtn}
+              >
+                Logout
+              </button>
+            )}
           </div>
         </header>
 
@@ -669,7 +819,9 @@ export default function ContractorLayout() {
             ...(isEstimatorPage ? { padding: 0 } : {}),
           }}
         >
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
 
         {/* Dedicated Contractor Portal Footer (Shown on every page) */}
@@ -687,8 +839,9 @@ export default function ContractorLayout() {
                 type="button"
                 onClick={() =>setIsHelpOpen(false)}
                 style={styles.closeBtn}
+                aria-label="Close"
               >
-                
+                &times;
               </button>
             </div>
             <div style={styles.modalBody}>
