@@ -137,7 +137,7 @@ This file tracks all files, assets, and folders removed or relocated during the 
 ---
 
 ## Batch 9: Obsolete Test Runners, Guide Chunks & Dummy Contractor Documents
-**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+**Executed:** November 14, 2026 | **Git Commit:** `0d0a17c`
 
 | Original Path | File Count / Size | Action Taken | Status | Reason |
 | :--- | :---: | :---: | :---: | :--- |
