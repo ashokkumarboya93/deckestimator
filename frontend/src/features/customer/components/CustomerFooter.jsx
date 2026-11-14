@@ -73,6 +73,49 @@ const SITE_MAP_LINKS = [
   { label: 'Manual', href: 'https://www.deckrestorationplus.com/shop/p/manual' },
 ];
 
+const styles = {
+  headerBlock: {
+    marginBottom: '8px',
+  },
+  colTitle: {
+    fontSize: '12.5px',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    margin: '0 0 3px 0',
+    letterSpacing: '-0.1px',
+  },
+  titleUnderline: {
+    width: '24px',
+    height: '2px',
+    backgroundColor: '#E08131',
+    borderRadius: '2px',
+  },
+  certifiedBadgeCard: {
+    border: '1px solid rgba(224, 129, 49, 0.7)',
+    backgroundColor: 'rgba(224, 129, 49, 0.06)',
+    borderRadius: '8px',
+    padding: '8px 11px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  dividerLine: {
+    height: '1px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    margin: '12px 0 8px 0',
+  },
+  bottomBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  legalSeparator: {
+    color: 'rgba(255, 255, 255, 0.25)',
+    fontSize: '11px',
+  },
+};
+
 export default function CustomerFooter() {
   return (
     <footer className="drp-portal-footer">
@@ -365,46 +408,3 @@ export default function CustomerFooter() {
     </footer>
   );
 }
-
-const styles = {
-  headerBlock: {
-    marginBottom: '8px',
-  },
-  colTitle: {
-    fontSize: '12.5px',
-    fontWeight: '800',
-    color: '#FFFFFF',
-    margin: '0 0 3px 0',
-    letterSpacing: '-0.1px',
-  },
-  titleUnderline: {
-    width: '24px',
-    height: '2px',
-    backgroundColor: '#E08131',
-    borderRadius: '2px',
-  },
-  certifiedBadgeCard: {
-    border: '1px solid rgba(224, 129, 49, 0.7)',
-    backgroundColor: 'rgba(224, 129, 49, 0.06)',
-    borderRadius: '8px',
-    padding: '8px 11px',
-    width: '100%',
-    boxSizing: 'border-box',
-  },
-  dividerLine: {
-    height: '1px',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    margin: '12px 0 8px 0',
-  },
-  bottomBar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: '8px',
-  },
-  legalSeparator: {
-    color: 'rgba(255, 255, 255, 0.25)',
-    fontSize: '11px',
-  },
-};
