@@ -152,6 +152,19 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 10: Manual Testing Screenshots & Early Test Reports
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original Path | File Count / Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `docs/PagesManualtesting/contractor/` | 14 PNGs (~2.5 MB) | **DELETED** | Permanently Removed | Early manual testing screenshots of contractor portal pages. |
+| `docs/PagesManualtesting/contractor_approval/` | 6 PNGs (~1.1 MB) | **DELETED** | Permanently Removed | Early manual testing screenshots of contractor approval flow. |
+| `docs/PagesManualtesting/*.png` | 21 PNGs (~6.9 MB) | **DELETED** | Permanently Removed | Early manual testing screenshots of customer portal, registration, and estimator. |
+| `docs/PagesManualtesting/deck-pro-customer-estimator-correct-caption-images.html` | 46.9 KB | **DELETED** | Permanently Removed | Standalone static demo HTML mockup. |
+| `docs/PagesManualtesting/custonersidereport.md` | 31.1 KB | **DELETED** | Permanently Removed | Historical manual testing notes and observations. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
@@ -164,5 +177,6 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 7** | Empty Ghost Directories | 1 folder | 0 B | **COMPLETED** |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185 items | ~4.0 MB | **COMPLETED** |
 | **Batch 9** | Obsolete Test Runners & Dummy Contractor Documents | 67 items | ~150 KB | **COMPLETED** |
-| **TOTAL COMPLETED** | **All 9 Batches Fully Cleaned** | **322 items** | **~42.0 MB** | **CLEANED & OPTIMIZED** |
+| **Batch 10** | Manual Testing Screenshots & Demo Mockups | 43 items | ~10.56 MB | **COMPLETED** |
+| **TOTAL COMPLETED** | **All 10 Batches Fully Cleaned** | **365 items** | **~52.56 MB** | **CLEANED & OPTIMIZED** |
 
