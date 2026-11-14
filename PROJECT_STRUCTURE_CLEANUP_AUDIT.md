@@ -22,7 +22,8 @@ A deep recursive audit was performed across the entire `DeckEstimator` repositor
 | **6. Duplicate Root Documentation Files** | 4 files | ~109 KB | **Zero Risk** | Delete Root Duplicates (kept in `docs/`) |
 | **7. Empty Ghost Directories** | 1 directory | 0 KB | **Zero Risk** | Safe to Delete |
 | **8. Backend Scratch, Batch Dumps & Test Photos** | 185+ files | ~2.5 MB | **Low Risk** | Clean test artifacts & keep seeds |
-| **Total Waste Identified** | **240+ items** | **~40.1 MB** | — | **Massive project hygiene improvement** |
+| **9. Obsolete Test Runners & Dummy Contractor Stubs** | 67 files | ~150 KB | **Zero Risk** | Cleaned: stray image, 50 dummy docs & test runners |
+| **Total Waste Cleaned** | **322 items** | **~42.0 MB** | — | **All 9 batches successfully removed & verified** |
 
 ---
 
