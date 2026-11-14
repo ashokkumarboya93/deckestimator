@@ -136,6 +136,22 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
+## Batch 9: Obsolete Test Runners, Guide Chunks & Dummy Contractor Documents
+**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+
+| Original Path | File Count / Size | Action Taken | Status | Reason |
+| :--- | :---: | :---: | :---: | :--- |
+| `backend/scripts/audit_all_pages.js` | 3.1 KB | **DELETED** | Permanently Removed | Ad-hoc manual JWT token audit runner. |
+| `backend/scripts/complete-browser-test.js` | 10.3 KB | **DELETED** | Permanently Removed | Stale Puppeteer test script with hardcoded local Chrome paths. |
+| `backend/scripts/execute-all-25-steps.js` | 24.5 KB | **DELETED** | Permanently Removed | Stale 25-step Puppeteer browser runner. |
+| `backend/scripts/portal-browser-verification.js` | 5.4 KB | **DELETED** | Permanently Removed | Headless Chrome verification runner for old portal checks. |
+| `backend/scripts/generate-api-manual-testing-guide.js` | 5.3 KB | **DELETED** | Permanently Removed | Compiler script; final output already permanently preserved in `docs/API-Manual-Testing-Guide.md`. |
+| `backend/scripts/guide-data/` | 11 JS files (~45 KB) | **DELETED** | Permanently Removed | Compiler source chunks; rendered guide already saved in `docs/`. |
+| `backend/uploads/deckimgsss.jpg` | 54.8 KB | **DELETED** | Permanently Removed | Stray test image dropped in root of uploads folder; unreferenced in DB. |
+| `backend/uploads/contractor-documents/` (dummy stubs) | 50 dummy stubs (~2.5 KB) | **DELETED** | Permanently Removed | Automated test placeholder stubs (<200 bytes). All 7 real uploaded documents strictly preserved. |
+
+---
+
 ## Batch Summary Tracker
 | Batch | Category Description | Items | Space Cleared | Execution Status |
 | :---: | :--- | :---: | :---: | :---: |
@@ -147,5 +163,6 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 6** | Root vs Docs Duplicate Documentation | 5 files | ~119 KB | **COMPLETED** |
 | **Batch 7** | Empty Ghost Directories | 1 folder | 0 B | **COMPLETED** |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185 items | ~4.0 MB | **COMPLETED** |
-| **TOTAL COMPLETED** | **All 8 Batches Fully Cleaned** | **255 items** | **~41.8 MB** | **CLEANED & OPTIMIZED** |
+| **Batch 9** | Obsolete Test Runners & Dummy Contractor Documents | 67 items | ~150 KB | **COMPLETED** |
+| **TOTAL COMPLETED** | **All 9 Batches Fully Cleaned** | **322 items** | **~42.0 MB** | **CLEANED & OPTIMIZED** |
 
