@@ -75,8 +75,6 @@ export function resolveAvatarUrl(rawUrl) {
   ) {
     return rawUrl;
   }
-  const cleanPath = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
-  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  return `http://${host}:5000${cleanPath}`;
+  return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
 }
 

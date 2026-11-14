@@ -30,6 +30,7 @@ const AuditLog = require('../../shared/models/auditLog.model');
 const UserRequest = require('../users/userRequest.model');
 const VerificationDocument = require('../contractors/verificationDocument.model');
 const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
+const { invalidateActivePricingCache } = require('../pricing/pricing.service');
 
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS, LEAD_STATUS } = require('../../shared/constants');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../../shared/errors');
@@ -2457,6 +2458,7 @@ async function updatePricingConfig(adminUser, updates) {
 
   config.updatedBy = adminUser.id || adminUser._id;
   await config.save();
+  invalidateActivePricingCache();
 
   await logAdminAction(adminUser, 'PRICING_CONFIG_UPDATE', 'PricingConfiguration', config._id, null, updates);
 

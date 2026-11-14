@@ -131,6 +131,18 @@ export default function AdminUserProfilePage() {
     }
   };
 
+  const handleDownloadAvatar = () => {
+    const rawAvatar = profileData?.user?.avatar || profileData?.user?.profilePicture || profileData?.user?.avatarUrl || profileData?.contractorProfile?.avatarUrl;
+    const avatarSrc = resolveAvatarUrl(rawAvatar);
+    if (!avatarSrc) return;
+    const link = document.createElement('a');
+    link.href = avatarSrc;
+    link.download = `${(profileData?.user?.fullName || 'user').toLowerCase().replace(/\s+/g, '_')}_profile_picture.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -240,6 +252,28 @@ export default function AdminUserProfilePage() {
             <span>{isExportingPdf ? 'Generating PDF...' : 'Export Profile (PDF)'}</span>
           </button>
 
+          {/* Download Photo Button */}
+          {resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) && (
+            <button
+              type="button"
+              onClick={handleDownloadAvatar}
+              style={{
+                ...styles.exportBtn,
+                backgroundColor: '#f0fdf4',
+                color: '#15803d',
+                borderColor: '#bbf7d0',
+              }}
+              title="Download user profile picture directly"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Download Photo</span>
+            </button>
+          )}
+
           {/* Delete User Button */}
           <button
             type="button"
@@ -268,7 +302,15 @@ export default function AdminUserProfilePage() {
       {/* Hero Header Card */}
       <div style={{ ...styles.heroCard, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '24px 28px' }} className="dossier-card">
         <div style={{ ...styles.heroLeft, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '12px' : '18px' }}>
-          <div style={styles.avatarLarge}>
+          <div
+            style={{
+              ...styles.avatarLarge,
+              cursor: resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) ? 'pointer' : 'default',
+              position: 'relative',
+            }}
+            onClick={handleDownloadAvatar}
+            title={resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) ? "Click to download profile picture" : ""}
+          >
             {resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) && !avatarError ? (
               <img
                 src={resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl)}

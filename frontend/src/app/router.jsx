@@ -351,6 +351,10 @@ const router = createBrowserRouter([
             path: 'pricing',
             element: <AdminPricingDiscountsPage />,
           },
+          {
+            path: 'pricing-discounts',
+            element: <AdminPricingDiscountsPage />,
+          },
           // 7. Reports & Analytics
           {
             path: 'reports',
