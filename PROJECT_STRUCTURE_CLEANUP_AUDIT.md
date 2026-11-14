@@ -39,21 +39,21 @@ These were accidental files or abandoned notes in the root directory that served
 
 ---
 
-### Category 2: Demo Video Recordings & Recording Automation
-Large MP4 video recordings and the Puppeteer scripts used solely to capture them. These bloat the repository size by ~37 MB.
+### Category 2: Demo Video Recordings & Recording Automation — [COMPLETED]
+Large MP4 video recordings and the Puppeteer scripts used solely to capture them. Cleared ~36.9 MB of repository bloat.
 
-| File / Folder Path | Size | Reason / Analysis | Action |
+| File / Folder Path | Size | Reason / Analysis | Status |
 | :--- | :--- | :--- | :--- |
-| `videos/video_1_customer_admin.mp4` | 18.28 MB | Recorded video artifact from old demo. Bloats Git history. | **DELETE** |
-| `videos/video_2_contractor_admin.mp4` | 9.43 MB | Recorded video artifact from old demo. | **DELETE** |
-| `videos/video_3_admin_command_center.mp4` | 9.09 MB | Recorded video artifact from old demo. | **DELETE** |
-| `videos/` (Folder) | — | Entire folder contains only the 3 MP4 recordings above. | **DELETE FOLDER** |
-| `demo_engine.js` | 13.0 KB | Puppeteer automation engine built only to produce the videos. | **DELETE** |
-| `demo_video_1_customer_admin.js` | 8.9 KB | Video 1 recording sequence runner. | **DELETE** |
-| `demo_video_2_contractor_admin.js` | 8.2 KB | Video 2 recording sequence runner. | **DELETE** |
-| `demo_video_3_admin_command_center.js` | 10.2 KB | Video 3 recording sequence runner. | **DELETE** |
-| `run_demo_menu.js` | 1.4 KB | CLI interactive menu for running demo scripts. | **DELETE** |
-| `run_interactive_demo.js` | 18.6 KB | Interactive demo orchestrator script. | **DELETE** |
+| `videos/video_1_customer_admin.mp4` | 18.28 MB | Recorded video artifact from old demo. Bloated Git history. | **DELETED** |
+| `videos/video_2_contractor_admin.mp4` | 9.43 MB | Recorded video artifact from old demo. | **DELETED** |
+| `videos/video_3_admin_command_center.mp4` | 9.09 MB | Recorded video artifact from old demo. | **DELETED** |
+| `videos/` (Folder) | — | Entire folder deleted. | **DELETED** |
+| `demo_engine.js` | 13.0 KB | Puppeteer automation engine built only to produce the videos. | **DELETED** |
+| `demo_video_1_customer_admin.js` | 8.9 KB | Video 1 recording sequence runner. | **DELETED** |
+| `demo_video_2_contractor_admin.js` | 8.2 KB | Video 2 recording sequence runner. | **DELETED** |
+| `demo_video_3_admin_command_center.js` | 10.2 KB | Video 3 recording sequence runner. | **DELETED** |
+| `run_demo_menu.js` | 1.4 KB | CLI interactive menu for running demo scripts. | **DELETED** |
+| `run_interactive_demo.js` | 18.6 KB | Interactive demo orchestrator script. | **DELETED** |
 
 ---
 
