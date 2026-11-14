@@ -152,8 +152,8 @@ This file tracks all files, assets, and folders removed or relocated during the 
 
 ---
 
-## Batch 10: Manual Testing Screenshots & Early Test Reports
-**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+## Batch 10: Manual Testing Screenshots & Demo Mockups
+**Executed:** November 14, 2026 | **Git Commit:** `6e55f35`
 
 | Original Path | File Count / Size | Action Taken | Status | Reason |
 | :--- | :---: | :---: | :---: | :--- |
@@ -162,6 +162,7 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | `docs/PagesManualtesting/*.png` | 21 PNGs (~6.9 MB) | **DELETED** | Permanently Removed | Early manual testing screenshots of customer portal, registration, and estimator. |
 | `docs/PagesManualtesting/deck-pro-customer-estimator-correct-caption-images.html` | 46.9 KB | **DELETED** | Permanently Removed | Standalone static demo HTML mockup. |
 | `docs/PagesManualtesting/custonersidereport.md` | 31.1 KB | **DELETED** | Permanently Removed | Historical manual testing notes and observations. |
+| `docs/*.png` (Unreferenced Admin Showcases) | 4 PNGs (~6.8 MB) | **DELETED** | Permanently Removed | Heavy unreferenced UI showcase images. |
 
 ---
 
@@ -177,6 +178,6 @@ This file tracks all files, assets, and folders removed or relocated during the 
 | **Batch 7** | Empty Ghost Directories | 1 folder | 0 B | **COMPLETED** |
 | **Batch 8** | Backend Test Scratch & Dummy Upload Stubs | 185 items | ~4.0 MB | **COMPLETED** |
 | **Batch 9** | Obsolete Test Runners & Dummy Contractor Documents | 67 items | ~150 KB | **COMPLETED** |
-| **Batch 10** | Manual Testing Screenshots & Demo Mockups | 43 items | ~10.56 MB | **COMPLETED** |
-| **TOTAL COMPLETED** | **All 10 Batches Fully Cleaned** | **365 items** | **~52.56 MB** | **CLEANED & OPTIMIZED** |
+| **Batch 10** | Manual Testing Screenshots & Demo Mockups | 47 items | ~17.36 MB | **COMPLETED** |
+| **TOTAL COMPLETED** | **All 10 Batches Fully Cleaned** | **369 items** | **~59.36 MB** | **CLEANED & OPTIMIZED** |
 
