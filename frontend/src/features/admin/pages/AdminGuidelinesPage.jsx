@@ -18,7 +18,7 @@ const SECTIONS = [
   { id: 'verifications', title: '4. Contractor Verification & Documents', path: '/admin/verification-progress' },
   { id: 'leads', title: '5. Lead Inquiries & Raised Requests', path: '/admin/leads' },
   { id: 'projects', title: '6. Projects & 4-Stage Life Cycle', path: '/admin/projects' },
-  { id: 'pricing', title: '7. Pricing & Discounts Tuning Engine', path: '/admin/pricing' },
+  { id: 'pricing', title: '7. Pricing & Discounts Tuning Engine', path: '/admin/pricing-discounts' },
   { id: 'reports', title: '8. Business Intelligence & Reports', path: '/admin/reports' },
   { id: 'settings', title: '9. System Settings & Broadcast Alerts', path: '/admin/settings' },
   { id: 'sop', title: '10. Administrator Daily & Weekly SOPs', path: '/admin/dashboard' },
@@ -457,10 +457,10 @@ export default function AdminGuidelinesPage() {
             <div style={styles.docArticle}>
               <div style={styles.articleHeader}>
                 <div>
-                  <div style={styles.badgePill}>PAGE GUIDANCE: /admin/pricing</div>
+                  <div style={styles.badgePill}>PAGE GUIDANCE: /admin/pricing-discounts</div>
                   <h2 style={styles.docTitle}>Estimator Pricing & Options Tuning Engine</h2>
                 </div>
-                <button onClick={() => navigate('/admin/pricing')} style={styles.navPageBtn}>
+                <button onClick={() => navigate('/admin/pricing-discounts')} style={styles.navPageBtn}>
                   Go to Pricing Engine →
                 </button>
               </div>
@@ -596,7 +596,7 @@ export default function AdminGuidelinesPage() {
                   <strong>1. Export Performance Reports:</strong> Download weekly CSV/Excel reports from `/admin/reports` to monitor gross volume and conversion rates.
                 </div>
                 <div style={styles.featureItem}>
-                  <strong>2. Calibrate Material Pricing:</strong> Review `/admin/pricing` base rate matrix and wood species multipliers to match seasonal lumber costs.
+                  <strong>2. Calibrate Material Pricing:</strong> Review `/admin/pricing-discounts` base rate matrix and wood species multipliers to match seasonal lumber costs.
                 </div>
                 <div style={styles.featureItem}>
                   <strong>3. Contractor Partner Discounts:</strong> Audit wholesale trade discounts and customize high-performing contractor incentives.

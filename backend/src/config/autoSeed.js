@@ -13,7 +13,7 @@ async function autoSeed() {
     const adminEmail = 'admin@deckestimator.com';
     let admin = await User.findOne({ email: adminEmail });
     if (!admin) {
-      const passwordHash = await User.hashPassword('AdminPass123!');
+      const passwordHash = await User.hashPassword('DRP@2026');
       admin = await User.create({
         fullName: 'System Administrator',
         email: adminEmail,

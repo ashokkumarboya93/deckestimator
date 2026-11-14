@@ -863,10 +863,21 @@ export default function CustomerSupportPage() {
         }
         @media (max-width: 640px) {
           .drp-sup-page {
-            padding: 12px 10px 30px;
+            padding: 10px 8px 30px;
+          }
+          .drp-sup-topbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .drp-sup-back-link,
+          .drp-sup-new-est-link {
+            width: 100%;
+            justify-content: center;
+            padding: 8px 12px;
           }
           .drp-sup-hero {
-            padding: 14px 14px;
+            padding: 14px 12px;
             margin-bottom: 16px;
           }
           .drp-sup-hero-title {
@@ -876,14 +887,29 @@ export default function CustomerSupportPage() {
             font-size: 12px;
             margin-bottom: 10px;
           }
+          .drp-sup-jump-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+          }
+          .drp-sup-jump-btn {
+            justify-content: center;
+            padding: 7px 6px;
+            font-size: 11px;
+            text-align: center;
+          }
+          .drp-sup-jump-cta {
+            grid-column: span 2;
+          }
           .drp-sup-sec-title {
             font-size: 14.5px !important;
           }
           .drp-sup-policy-grid,
           .drp-sup-step-points,
           .drp-sup-form-2,
-          .drp-sup-form-3 {
-            grid-template-columns: 1fr;
+          .drp-sup-form-3,
+          .drp-sup-contact-grid {
+            grid-template-columns: 1fr !important;
           }
           .drp-sup-form-card,
           .drp-sup-step-shell {
@@ -892,11 +918,26 @@ export default function CustomerSupportPage() {
           .drp-sup-step-panel {
             padding: 11px 12px;
           }
+          .drp-sup-input {
+            font-size: 14px;
+            padding: 9px 11px;
+          }
           .drp-sup-submit-btn {
             width: 100%;
           }
           .drp-sup-faq-ans {
             padding: 9px 12px 11px;
+          }
+          .drp-sup-trust-banner {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 12px 14px !important;
+            gap: 12px !important;
+          }
+          .drp-sup-trust-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            text-align: center;
           }
         }
       `}</style>
@@ -1287,15 +1328,15 @@ export default function CustomerSupportPage() {
           </div>
 
           {/* Contact Item 4: Business Hours */}
-          <div style={{ ...styles.contactItemCard, borderLeft: '4px solid #475569' }}>
-            <div style={{ ...styles.contactIconCircle, backgroundColor: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="drp-sup-contact-card" style={{ borderLeft: '4px solid #475569' }}>
+            <div className="drp-sup-contact-icon" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#475569' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={styles.contactLabel}>Operating Hours</span>
+              <span className="drp-sup-contact-label">Operating Hours</span>
               <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
             </div>
           </div>
@@ -1305,19 +1346,50 @@ export default function CustomerSupportPage() {
         <OperatingHoursBlock variant="cards" style={{ marginBottom: '20px' }} />
 
         {/* Credentials / Trust Banner */}
-        <div style={styles.credentialsBanner}>
-          <div style={styles.credentialsLeft}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div
+          className="drp-sup-trust-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '14px',
+            flexWrap: 'wrap',
+            background: 'linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%)',
+            border: '1.5px solid #BFDBFE',
+            borderRadius: '10px',
+            padding: '14px 18px',
+            marginTop: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <div>
-              <strong style={{ fontSize: '13.5px', color: '#1E3A63' }}>DRP Certified Contractor Network &bull; Fully Licensed &amp; Insured</strong>
-              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#475569' }}>
+              <strong style={{ fontSize: '13.5px', color: '#1E3A63', display: 'block' }}>DRP Certified Contractor Network &bull; Fully Licensed &amp; Insured</strong>
+              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>
                 All restoration technicians undergo formal training in wood substrate chemical safety, low-pressure surface cleaning, and EPA compliance.
               </p>
             </div>
           </div>
-          <Link to="/customer/decks/new" style={styles.bannerStartEstBtn}>
+          <Link
+            to="/customer/decks/new"
+            className="drp-sup-trust-btn"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: '#1E3A63',
+              color: '#FFFFFF',
+              borderRadius: '7px',
+              fontWeight: 700,
+              fontSize: '12px',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
             <span>Start New Estimate &rarr;</span>
           </Link>
         </div>

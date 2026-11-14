@@ -51,6 +51,17 @@ app.use('/api/', apiLimiter);
 // ===============================================
 
 // Health check (no auth required)
+app.get(['/', '/api/v1'], (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Deck Estimator API v1 is active and running',
+    version: '1.0.0',
+    environment: env.NODE_ENV,
+    health: '/api/v1/health',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/v1/health', (req, res) => {
   res.status(200).json({
     success: true,

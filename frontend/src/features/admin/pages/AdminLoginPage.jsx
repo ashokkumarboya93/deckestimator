@@ -58,10 +58,8 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       await adminLogin({ email: trimmedEmail.toLowerCase(), password });
-      setSuccessMessage('Administrator credentials verified. Accessing console...');
-      setTimeout(() => {
-        navigate(from, { replace: true });
-      }, 500);
+      setSuccessMessage('Administrator credentials verified.');
+      navigate(from, { replace: true });
     } catch (err) {
       setErrorMessage(err.message || 'Authentication failed. Please verify administrator credentials.');
     } finally {

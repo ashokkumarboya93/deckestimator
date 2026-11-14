@@ -402,22 +402,19 @@ export default function AdminLeadManagementPage() {
           )}
         </form>
 
-        {/* Date Filter Pills */}
-        <div style={styles.filterPillGroup}>
-          <span style={styles.filterGroupLabel}>Range:</span>
+        {/* Range Dropdown Filter */}
+        <select
+          value={dateRangeFilter}
+          onChange={(e) => {
+            setDateRangeFilter(e.target.value);
+          }}
+          style={styles.shinySelect}
+          title="Filter by submission date range"
+        >
           {DATE_RANGE_OPTIONS.map((d) => (
-            <button
-              key={d.value}
-              onClick={() => setDateRangeFilter(d.value)}
-              style={{
-                ...styles.shinyPillBtn,
-                ...(dateRangeFilter === d.value ? styles.shinyPillBtnActive : {}),
-              }}
-            >
-              {d.label}
-            </button>
+            <option key={d.value} value={d.value}>{d.label}</option>
           ))}
-        </div>
+        </select>
 
         {/* Optional Last Date Selector (Available for All Leads Archive) */}
         {activeTab === 'all' && (
@@ -530,7 +527,9 @@ export default function AdminLeadManagementPage() {
               </thead>
               <tbody>
                 {leads.map((l) => {
-                  const isHot = l.isHot || l.priority === 'hot' || l.priority === 'HOT';
+                  const contactDate = new Date(l.latestContactDate || l.createdAt || Date.now());
+                  const daysDiff = (Date.now() - contactDate.getTime()) / (1000 * 3600 * 24);
+                  const isHot = (l.isHot || l.priority === 'hot' || l.priority === 'HOT') && daysDiff <= 7;
                   const isCust = (l.userType || '').toLowerCase() === 'customer';
                   const initials = (l.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -587,10 +586,12 @@ export default function AdminLeadManagementPage() {
                       <td style={styles.td}>
                         {isHot ? (
                           <span style={styles.hotPill}>
-                            HOT PRIORITY
+                            HOT
                           </span>
                         ) : (
-                          <span style={styles.standardPill}>Standard</span>
+                          <span style={styles.standardPill}>
+                            REQUESTED
+                          </span>
                         )}
                       </td>
 
@@ -761,13 +762,14 @@ export default function AdminLeadManagementPage() {
 
               {/* Modal Body */}
               <div style={styles.modalBody}>
-                {loadingDossier ? (
-                  <div style={styles.loaderBox}>
-                    <div style={styles.spinner} />
-                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Loading dossier details...</span>
+                {loadingDossier && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', marginBottom: '12px', fontSize: '12px', color: '#1e40af', fontWeight: '600' }}>
+                    <div style={{ ...styles.spinner, width: 14, height: 14, borderWidth: 2 }} />
+                    <span>Synchronizing full historical dossier from live database...</span>
                   </div>
-                ) : (
-                  <div style={styles.modalContentGrid}>
+                )}
+
+                <div style={styles.modalContentGrid}>
                     {/* Top Highlights Banner */}
                     <div style={styles.modalBanner}>
                       <div style={styles.bannerItem}>
@@ -1005,8 +1007,7 @@ export default function AdminLeadManagementPage() {
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
 
               {/* Accept Success / Error Notice */}
               {acceptSuccessNotice && (
@@ -1292,25 +1293,27 @@ const styles = {
     gap: '10px',
     marginBottom: '16px',
     flexWrap: 'wrap',
+    width: '100%',
   },
   shinySearchWrapper: {
     display: 'flex',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '9999px',
-    padding: '6px 12px',
-    width: '260px',
-    maxWidth: '100%',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '7px 12px',
+    flex: '1 1 280px',
+    minWidth: '220px',
     boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   shinySearchInput: {
     border: 'none',
     outline: 'none',
-    fontSize: '12px',
+    fontSize: '12.5px',
     color: '#0f172a',
     width: '100%',
     backgroundColor: 'transparent',
+    fontFamily: 'inherit',
   },
   clearSearchBtn: {
     background: 'none',
@@ -1375,28 +1378,31 @@ const styles = {
     cursor: 'pointer',
   },
   shinySelect: {
-    padding: '5px 12px',
-    borderRadius: '9999px',
-    border: '1px solid #cbd5e1',
+    padding: '7px 12px',
+    borderRadius: '8px',
+    border: '1.5px solid #cbd5e1',
     backgroundColor: '#ffffff',
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: '700',
     color: '#334155',
     outline: 'none',
     cursor: 'pointer',
+    height: '36px',
   },
   shinyRefreshBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '5px 12px',
-    borderRadius: '9999px',
+    gap: '6px',
+    padding: '7px 14px',
+    borderRadius: '8px',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    color: '#334155',
-    fontSize: '11px',
+    border: '1.5px solid #cbd5e1',
+    color: '#1e3a63',
+    fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
-    marginLeft: 'auto',
+    height: '36px',
+    whiteSpace: 'nowrap',
     transition: 'all 0.15s ease',
   },
 

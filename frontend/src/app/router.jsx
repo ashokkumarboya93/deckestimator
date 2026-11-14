@@ -87,7 +87,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'estimator',
-        element: <DeckEstimatorPage />,
+        element: <Navigate to="/login" replace />,
       },
       // Customer & Contractor Login
       {
@@ -349,6 +349,10 @@ const router = createBrowserRouter([
           // 6. Pricing & Discounts Unified Engine
           {
             path: 'pricing',
+            element: <AdminPricingDiscountsPage />,
+          },
+          {
+            path: 'pricing-discounts',
             element: <AdminPricingDiscountsPage />,
           },
           // 7. Reports & Analytics

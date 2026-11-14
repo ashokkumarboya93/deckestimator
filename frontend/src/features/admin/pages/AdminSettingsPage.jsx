@@ -15,15 +15,14 @@ import { adminApi } from '../api/adminApi';
 import DeckHomeLogo from '../components/DeckHomeLogo';
 
 const TABS = [
-  { id: 'general', label: 'General & Branding' },
-  { id: 'contact', label: 'Contact, WhatsApp & Channels' },
   { id: 'notifications', label: 'Targeted Notifications & Alerts' },
+  { id: 'contact', label: 'Contact, WhatsApp & Channels' },
   { id: 'security', label: 'Security & Session Access' },
   { id: 'system_info', label: 'System Diagnostics & DB' },
 ];
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('notifications');
   const [settings, setSettings] = useState({
     companyName: 'Deck Restoration Plus',
     brandTagline: 'Commercial & Residential Exterior Wood Restoration Specialists',
@@ -248,61 +247,6 @@ export default function AdminSettingsPage() {
           <div style={styles.loaderBox}>
             <div style={styles.spinner} />
             <span>Loading system settings...</span>
-          </div>
-        ) : activeTab === 'general' ? (
-          /* TAB 1: GENERAL & BRANDING */
-          <div>
-            <h3 style={styles.cardSectionTitle}>Brand Identity & Regional Defaults</h3>
-            <p style={styles.cardSectionSub}>Platform brand name, tagline, logo symbol, and financial parameters.</p>
-
-            <div style={styles.formGrid}>
-              <div style={styles.formGroup}>
-                <label style={styles.inputLabel}>Company Brand Name</label>
-                <input
-                  type="text"
-                  value={settings.companyName || ''}
-                  onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
-                  style={styles.input}
-                  placeholder="e.g. Deck Restoration Plus"
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.inputLabel}>Brand Tagline / Slogan</label>
-                <input
-                  type="text"
-                  value={settings.brandTagline || ''}
-                  onChange={(e) => setSettings({ ...settings, brandTagline: e.target.value })}
-                  style={styles.input}
-                  placeholder="e.g. Exterior Wood Restoration Specialists"
-                />
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.inputLabel}>Default Currency</label>
-                <select
-                  value={settings.currency || 'USD'}
-                  onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
-                  style={styles.select}
-                >
-                  <option value="USD">USD ($) - United States Dollar</option>
-                  <option value="CAD">CAD ($) - Canadian Dollar</option>
-                  <option value="EUR">EUR (€) - Euro</option>
-                  <option value="GBP">GBP (£) - British Pound</option>
-                </select>
-              </div>
-
-              <div style={styles.formGroup}>
-                <label style={styles.inputLabel}>Sales Tax Rate (%)</label>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={settings.taxRatePercent || 0}
-                  onChange={(e) => setSettings({ ...settings, taxRatePercent: Number(e.target.value) })}
-                  style={styles.input}
-                />
-              </div>
-            </div>
           </div>
         ) : activeTab === 'contact' ? (
           /* TAB 2: CONTACT, WHATSAPP & CHANNELS */

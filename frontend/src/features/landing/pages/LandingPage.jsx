@@ -218,14 +218,24 @@ export default function LandingPage() {
   };
 
   const handleLaunchEstimator = () => {
-    const targetRoute = isAuthenticated ? '/customer/decks/new' : '/estimator';
-    navigate(targetRoute, {
-      state: {
-        presetSize: deckSize,
-        presetWood: woodType,
-        presetService: serviceType,
-      },
-    });
+    if (isAuthenticated) {
+      navigate('/customer/decks/new', {
+        state: {
+          presetSize: deckSize,
+          presetWood: woodType,
+          presetService: serviceType,
+        },
+      });
+    } else {
+      navigate('/login', {
+        state: {
+          from: '/customer/decks/new',
+          presetSize: deckSize,
+          presetWood: woodType,
+          presetService: serviceType,
+        },
+      });
+    }
   };
 
   const scrollToSection = (id, name) => {
@@ -1653,7 +1663,7 @@ export default function LandingPage() {
 
             <h4 style={{ ...styles.footerColHeading, marginTop: '22px' }}>Estimator Portal</h4>
             <ul style={styles.footerList}>
-              <li><Link to="/estimator" style={styles.footerLink} className="drp-footer-link">Deck Calculator</Link></li>
+              <li><Link to="/login" style={styles.footerLink} className="drp-footer-link">Deck Calculator (Sign In)</Link></li>
               <li><Link to="/register" style={styles.footerLink} className="drp-footer-link">Contractor &amp; Customer Sign Up</Link></li>
               <li><Link to="/login" style={styles.footerLink} className="drp-footer-link">Sign In</Link></li>
             </ul>

@@ -33,6 +33,13 @@ export default function AdminProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Pagination & Select All
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(12);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+
   // Modals
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -41,21 +48,31 @@ export default function AdminProjectsPage() {
   const [savingStage, setSavingStage] = useState(false);
 
   useEffect(() => {
-    fetchProjects();
+    fetchProjects(1, statusFilter, searchTerm);
   }, [statusFilter]);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (pageNum = page, filter = statusFilter, search = searchTerm) => {
     setLoading(true);
     setIsRefreshing(true);
     setError(null);
     try {
       const res = await adminApi.getProjects({
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        limit: 100,
+        status: filter !== 'all' ? filter : undefined,
+        search: (search || '').trim() ? search.trim() : undefined,
+        page: pageNum,
+        limit: pageSize,
       });
       setProjects(res.data || []);
       if (res.counts) {
         setCounts(res.counts);
+      }
+      if (res.pagination) {
+        setTotalPages(res.pagination.totalPages || 1);
+        setTotalProjects(res.pagination.total || res.data?.length || 0);
+        setPage(res.pagination.page || pageNum);
+      } else {
+        setTotalPages(1);
+        setTotalProjects(res.data?.length || 0);
       }
     } catch (err) {
       setError(err?.message || 'Failed to load projects');
@@ -65,19 +82,66 @@ export default function AdminProjectsPage() {
     }
   };
 
-  const filteredProjects = projects.filter((p) => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      p.title?.toLowerCase().includes(term) ||
-      p.projectName?.toLowerCase().includes(term) ||
-      p.projectId?.toLowerCase().includes(term) ||
-      p.customerName?.toLowerCase().includes(term) ||
-      p.contractorName?.toLowerCase().includes(term) ||
-      p.location?.toLowerCase().includes(term) ||
-      p.woodSpecies?.toLowerCase().includes(term)
-    );
-  });
+  const allCurrentPageSelected = projects.length > 0 && projects.every(p => selectedProjectIds.includes(p._id || p.id));
+  const toggleSelectAll = () => {
+    if (allCurrentPageSelected) {
+      setSelectedProjectIds([]);
+    } else {
+      const currentIds = projects.map(p => p._id || p.id);
+      setSelectedProjectIds(currentIds);
+    }
+  };
+  const toggleSelectProject = (id) => {
+    setSelectedProjectIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleExport = (format = 'excel') => {
+    const listToExport = selectedProjectIds.length > 0
+      ? projects.filter(p => selectedProjectIds.includes(p._id || p.id))
+      : projects;
+
+    const headers = [
+      'Project Reference',
+      'Project Name',
+      'Customer Name',
+      'Customer Email',
+      'Customer Phone',
+      'Contractor Name',
+      'Wood Species',
+      'Deck Size',
+      'Estimated Value ($)',
+      'Stage',
+      'Location',
+      'Last Updated'
+    ];
+
+    const rows = listToExport.map(p => [
+      p.estimateReference || p.projectId || 'EST',
+      p.title || p.projectName || 'Deck Project',
+      p.customerName || 'N/A',
+      p.userEmail || '—',
+      p.userPhone || '—',
+      p.contractorName || 'Unassigned',
+      p.woodSpecies || 'Pressure Treated Pine',
+      p.deckSpecs?.dimensions ? `${p.deckSpecs.dimensions} ft` : p.deckSize || '400 sq ft',
+      Number(p.totalAmount || 0),
+      (p.stage || p.status || 'created').replace('_', ' ').toUpperCase(),
+      p.location || 'New Jersey, USA',
+      new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString()
+    ]);
+
+    const escapeCsv = (val) => `"${String(val !== undefined && val !== null ? val : '').replace(/"/g, '""')}"`;
+    const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: format === 'excel' ? 'application/vnd.ms-excel;charset=utf-8' : 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `deck-projects-${statusFilter}-${Date.now()}.${format === 'excel' ? 'xls' : 'csv'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleOpenStageModal = (project) => {
     const current = (project.stage || project.status || 'created').toLowerCase();
@@ -101,7 +165,7 @@ export default function AdminProjectsPage() {
       });
       setSuccessMsg(`Project stage updated to "${stageModal.stage.replace('_', ' ').toUpperCase()}" successfully.`);
       setStageModal({ open: false, project: null, stage: 'in_progress', note: '' });
-      fetchProjects();
+      fetchProjects(page, statusFilter, searchTerm);
     } catch (err) {
       setError(err?.message || 'Failed to update project stage.');
     } finally {
@@ -301,9 +365,9 @@ export default function AdminProjectsPage() {
         </div>
       </div>
 
-      {/* 3. Controls Bar: Shiny Pill Search, Stage Filter Tabs, and Shiny Refresh Button */}
+      {/* 3. Controls Bar: Single Row [Search | Stage Filter | Refresh | Exports] */}
       <div style={styles.controlBar}>
-        {/* Shiny Pill Search Input */}
+        {/* Search Input */}
         <div style={styles.shinySearchWrapper}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" style={{ marginRight: 8, flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
@@ -314,36 +378,42 @@ export default function AdminProjectsPage() {
             placeholder="Search estimations by name, customer, contractor, location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                setPage(1);
+                fetchProjects(1, statusFilter, searchTerm);
+              }
+            }}
             style={styles.shinySearchInput}
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} style={styles.clearSearchBtn} title="Clear search">✕</button>
+            <button onClick={() => { setSearchTerm(''); setPage(1); fetchProjects(1, statusFilter, ''); }} style={styles.clearSearchBtn} title="Clear search">✕</button>
           )}
         </div>
 
-        {/* Stage Filter Pills */}
-        <div style={styles.stageFilterPills}>
-          {STAGES.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setStatusFilter(s.id)}
-              style={{
-                ...styles.shinyStageBtn,
-                ...(statusFilter === s.id ? styles.shinyStageBtnActive : {}),
-              }}
-            >
-              {s.label}
-              {s.id === 'created' && counts.created ? ` (${counts.created})` : ''}
-              {s.id === 'requested' && counts.requested ? ` (${counts.requested})` : ''}
-              {s.id === 'in_progress' && counts.inProgress ? ` (${counts.inProgress})` : ''}
-              {s.id === 'completed' && counts.completed ? ` (${counts.completed})` : ''}
-            </button>
-          ))}
-        </div>
+        {/* Stage Filter Dropdown */}
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            const val = e.target.value;
+            setStatusFilter(val);
+            setPage(1);
+            fetchProjects(1, val, searchTerm);
+          }}
+          style={styles.shinySelect}
+          title="Filter by life cycle stage"
+        >
+          <option value="all">All Stages ({counts.total || 0})</option>
+          <option value="created">Created ({counts.created || 0})</option>
+          <option value="requested">Requested ({counts.requested || 0})</option>
+          <option value="in_progress">In Progress ({counts.inProgress || 0})</option>
+          <option value="completed">Completed ({counts.completed || 0})</option>
+        </select>
 
-        {/* Shiny Refresh Button */}
+        {/* Refresh Button */}
         <button
-          onClick={fetchProjects}
+          onClick={() => fetchProjects(page, statusFilter, searchTerm)}
           style={styles.shinyRefreshBtn}
           title="Refresh Projects Database"
           disabled={loading}
@@ -368,6 +438,24 @@ export default function AdminProjectsPage() {
           </svg>
           Refresh
         </button>
+
+        {/* Direct CSV / Excel Export Buttons */}
+        <button
+          type="button"
+          onClick={() => handleExport('csv')}
+          style={styles.exportBtnOutline}
+          title="Export records to CSV"
+        >
+          Export CSV{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleExport('excel')}
+          style={styles.exportBtnGreen}
+          title="Export records to Excel Spreadsheet"
+        >
+          Export Excel{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
+        </button>
       </div>
 
       {/* 4. Projects Table */}
@@ -377,7 +465,7 @@ export default function AdminProjectsPage() {
             <div style={styles.spinner} />
             <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 600 }}>Loading project estimations from database...</span>
           </div>
-        ) : filteredProjects.length === 0 ? (
+        ) : projects.length === 0 ? (
           <div style={styles.emptyBox}>
             <div style={styles.emptyIconCircle}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
@@ -397,6 +485,14 @@ export default function AdminProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={allCurrentPageSelected}
+                      onChange={toggleSelectAll}
+                      title="Select all projects on this page"
+                    />
+                  </th>
                   <th style={styles.th}>Project / Estimation</th>
                   <th style={styles.th}>Customer / Initiator</th>
                   <th style={styles.th}>Assigned Contractor</th>
@@ -407,8 +503,15 @@ export default function AdminProjectsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProjects.map((p) => (
+                {projects.map((p) => (
                   <tr key={p._id || p.id} style={styles.tr}>
+                    <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedProjectIds.includes(p._id || p.id)}
+                        onChange={() => toggleSelectProject(p._id || p.id)}
+                      />
+                    </td>
                     {/* Project & Ref */}
                     <td style={styles.td}>
                       <div style={styles.projectTitleRow}>
@@ -489,6 +592,42 @@ export default function AdminProjectsPage() {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            <div style={styles.paginationBar}>
+              <div style={styles.paginationInfo}>
+                Showing {totalProjects === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalProjects)} of {totalProjects} project estimations
+              </div>
+              <div style={styles.paginationActions}>
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => {
+                    const nextP = Math.max(1, page - 1);
+                    setPage(nextP);
+                    fetchProjects(nextP, statusFilter, searchTerm);
+                  }}
+                  style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  &larr; Previous
+                </button>
+                <span style={styles.pageIndicator}>
+                  Page {page} of {Math.max(1, totalPages)}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => {
+                    const nextP = Math.min(totalPages, page + 1);
+                    setPage(nextP);
+                    fetchProjects(nextP, statusFilter, searchTerm);
+                  }}
+                  style={page >= totalPages ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1857,5 +1996,52 @@ const styles = {
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+  },
+  paginationBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 18px',
+    backgroundColor: '#ffffff',
+    borderTop: '1px solid #e2e8f0',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  paginationInfo: {
+    fontSize: '13px',
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  paginationActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  pageBtn: {
+    padding: '6px 14px',
+    borderRadius: '6px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    color: '#1e3a63',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  pageBtnDisabled: {
+    padding: '6px 14px',
+    borderRadius: '6px',
+    backgroundColor: '#f1f5f9',
+    border: '1px solid #e2e8f0',
+    color: '#94a3b8',
+    fontSize: '12.5px',
+    fontWeight: '600',
+    cursor: 'not-allowed',
+  },
+  pageIndicator: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#0f172a',
+    padding: '0 6px',
   },
 };

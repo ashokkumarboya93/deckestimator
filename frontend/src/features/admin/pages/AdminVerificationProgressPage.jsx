@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
-import { getStoredToken } from '../../../api/client';
+import { getStoredToken, BASE_URL } from '../../../api/client';
 
 const PAGE_SIZE = 10;
 
@@ -101,11 +101,16 @@ export default function AdminVerificationProgressPage() {
       setDocLoading(true);
       try {
         const token = getStoredToken();
-        const res = await fetch(`/api/v1/admin/contractor-documents/${docId}/file`, {
+        const fileUrl = `${BASE_URL}/admin/contractor-documents/${docId}/file?token=${encodeURIComponent(token || '')}`;
+        const res = await fetch(fileUrl, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) {
-          throw new Error('Failed to fetch file');
+          throw new Error(`Failed to fetch file: ${res.status}`);
+        }
+        const cType = res.headers.get('content-type') || '';
+        if (cType.includes('text/html')) {
+          throw new Error('Received HTML fallback instead of real document blob');
         }
         const blob = await res.blob();
         if (isMounted) {
@@ -1170,13 +1175,14 @@ export default function AdminVerificationProgressPage() {
       {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH REAL AUTHENTICATED PREVIEW */}
       {viewingDocModal && (() => {
         const docId = viewingDocModal._id || viewingDocModal.id;
-        const previewSrc = docBlobUrl || `/api/v1/admin/contractor-documents/${docId}/file?token=${encodeURIComponent(getStoredToken() || '')}`;
+        const fallbackUrl = `${BASE_URL}/admin/contractor-documents/${docId}/file?token=${encodeURIComponent(getStoredToken() || '')}`;
+        const previewSrc = docBlobUrl || fallbackUrl;
         const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
         const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
 
         return (
           <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
-            <div style={{ ...styles.modalContent, maxWidth: '780px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ ...styles.modalContent, maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
               <div style={styles.modalHeader}>
                 <div>
                   <h3 style={styles.modalTitle}>Document Live Inspection</h3>
@@ -1195,7 +1201,7 @@ export default function AdminVerificationProgressPage() {
                 </div>
 
                 {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
-                <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '320px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '340px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #CBD5E1', borderRadius: '10px', padding: '12px' }}>
                   {docLoading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '12px' }}>
                       <div style={styles.spinner} />
@@ -1205,13 +1211,13 @@ export default function AdminVerificationProgressPage() {
                     <img
                       src={previewSrc}
                       alt={viewingDocModal.originalFileName}
-                      style={{ maxWidth: '100%', maxHeight: '460px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                      style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                     />
                   ) : isPdf ? (
                     <iframe
                       src={previewSrc}
                       title={viewingDocModal.originalFileName}
-                      style={{ width: '100%', height: '480px', border: 'none', borderRadius: '6px' }}
+                      style={{ width: '100%', height: '500px', border: '1px solid #E2E8F0', borderRadius: '6px' }}
                     />
                   ) : (
                     <div style={{ textAlign: 'center', padding: '24px 16px' }}>
@@ -1229,7 +1235,7 @@ export default function AdminVerificationProgressPage() {
                     </div>
                   )}
 
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  <div style={{ marginTop: '12px', display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     <a
                       href={previewSrc}
                       target="_blank"
@@ -1237,6 +1243,13 @@ export default function AdminVerificationProgressPage() {
                       style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
                     >
                       Open Document in Dedicated Tab &rarr;
+                    </a>
+                    <a
+                      href={previewSrc}
+                      download={viewingDocModal.originalFileName || 'document.pdf'}
+                      style={{ fontSize: '12.5px', color: '#15803D', fontWeight: '700', textDecoration: 'underline' }}
+                    >
+                      Download Document File ↓
                     </a>
                   </div>
                 </div>
@@ -1256,6 +1269,22 @@ export default function AdminVerificationProgressPage() {
                   >
                     Close Viewer
                   </button>
+                  {viewingDocModal.documentStatus !== 'rejected' && (
+                    <button
+                      type="button"
+                      disabled={docSubmitting}
+                      onClick={() => {
+                        const note = window.prompt('Enter rejection reason for this document:', 'Document illegible or expired.');
+                        if (note !== null) {
+                          handleReviewDocument(docId, 'rejected', note);
+                          setViewingDocModal(null);
+                        }
+                      }}
+                      style={{ ...styles.actionBtnOutline, color: '#B91C1C', borderColor: '#FCA5A5', padding: '8px 16px', fontSize: '13px' }}
+                    >
+                      ✕ Reject Document
+                    </button>
+                  )}
                   {viewingDocModal.documentStatus !== 'verified' && (
                     <button
                       type="button"
