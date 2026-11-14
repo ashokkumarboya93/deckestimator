@@ -321,11 +321,12 @@ export default function ContractorVerificationPage() {
               </div>
 
               <div>
-                <label style={styles.inputLabel}>Select File (PDF, PNG, JPG - max 10MB)</label>
+                <label style={styles.inputLabel}>Select File (PDF, DOC, DOCX, PNG, JPG, WebP — max 10MB)</label>
                 <input
                   type="file"
                   required
-                  onChange={(e) =>setSelectedFile(e.target.files[0])}
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
                   style={styles.fileInput}
                 />
               </div>

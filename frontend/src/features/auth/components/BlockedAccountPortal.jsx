@@ -68,15 +68,15 @@ export default function BlockedAccountPortal({ user }) {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="blocked-portal-container">
       <div style={styles.card}>
         {/* Brand Header */}
-        <div style={styles.brandHeader}>
+        <div style={styles.brandHeader} className="blocked-portal-brand">
           <img src={mainLogo} alt="Deck Restoration Plus" style={styles.logo} />
         </div>
 
         {/* Warning Banner */}
-        <div style={styles.warningBanner}>
+        <div style={styles.warningBanner} className="blocked-portal-banner">
           <div style={styles.warningIconBox}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -93,7 +93,7 @@ export default function BlockedAccountPortal({ user }) {
 
         {/* Status of Existing Request */}
         {submittedRequest && submittedRequest.status === 'pending' && (
-          <div style={styles.pendingNotice}>
+          <div style={styles.pendingNotice} className="blocked-portal-alert">
             <div style={styles.pendingDot} />
             <div>
               <div style={styles.pendingTitle}>Reactivation Appeal Under Review</div>
@@ -105,7 +105,7 @@ export default function BlockedAccountPortal({ user }) {
         )}
 
         {feedback && (
-          <div style={styles.alertSuccess}>
+          <div style={styles.alertSuccess} className="blocked-portal-alert">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -114,7 +114,7 @@ export default function BlockedAccountPortal({ user }) {
         )}
 
         {error && (
-          <div style={styles.alertError}>
+          <div style={styles.alertError} className="blocked-portal-alert">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.2">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -125,14 +125,14 @@ export default function BlockedAccountPortal({ user }) {
         )}
 
         {/* Request Form */}
-        <div style={styles.formContainer}>
+        <div style={styles.formContainer} className="blocked-portal-form">
           <h3 style={styles.formTitle}>Raise Unblock Request to Deck Restoration Plus Team</h3>
           <p style={styles.formSubtitle}>
             If you believe this action was taken in error or if you have resolved any compliance questions, please explain below. An administrator will review your account dossier.
           </p>
 
           <form onSubmit={handleSubmitAppeal}>
-            <div style={styles.rowTwo}>
+            <div style={styles.rowTwo} className="blocked-portal-row2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Full Name</label>
                 <input
@@ -140,6 +140,7 @@ export default function BlockedAccountPortal({ user }) {
                   value={user?.fullName || ''}
                   disabled
                   style={{ ...styles.input, backgroundColor: '#f1f5f9', color: '#64748b' }}
+                  className="auth-input"
                 />
               </div>
 
@@ -150,6 +151,7 @@ export default function BlockedAccountPortal({ user }) {
                   value={user?.email || ''}
                   disabled
                   style={{ ...styles.input, backgroundColor: '#f1f5f9', color: '#64748b' }}
+                  className="auth-input"
                 />
               </div>
             </div>
@@ -158,10 +160,12 @@ export default function BlockedAccountPortal({ user }) {
               <label style={styles.label}>Contact Phone Number</label>
               <input
                 type="tel"
+                maxLength={20}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(555) 000-0000"
                 style={styles.input}
+                className="auth-input"
               />
             </div>
 
@@ -169,15 +173,17 @@ export default function BlockedAccountPortal({ user }) {
               <label style={styles.label}>Appeal Message / Details *</label>
               <textarea
                 rows={4}
+                maxLength={1000}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="State why you are requesting to have your account unblocked, any relevant context, or steps taken..."
                 style={styles.textarea}
+                className="auth-input"
                 required
               />
             </div>
 
-            <div style={styles.buttonRow}>
+            <div style={styles.buttonRow} className="blocked-portal-actions">
               <button
                 type="submit"
                 disabled={loading}
@@ -202,7 +208,7 @@ export default function BlockedAccountPortal({ user }) {
         </div>
 
         {/* Footer Support Info */}
-        <div style={styles.footerNote}>
+        <div style={styles.footerNote} className="blocked-portal-footer">
           Need urgent assistance? Contact Deck Restoration Plus Support at <strong>support@deckrestorationplus.com</strong> or call <strong>(800) 555-DECK</strong>.
         </div>
       </div>

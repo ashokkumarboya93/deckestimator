@@ -52,7 +52,10 @@ router.post('/verifications/:id/approve', adminController.approveContractorVerif
 router.post('/verifications/:id/reject', adminController.rejectContractorVerification);
 router.get('/verifications/:contractorId/history', adminController.getVerificationHistory);
 router.get('/contractor-documents', adminController.listContractorDocuments);
+router.get('/contractor-documents/:id/file', adminController.downloadContractorDocument);
+router.get('/contractor-documents/:id/stream', adminController.downloadContractorDocument);
 router.patch('/contractor-documents/:id/review', adminController.reviewContractorDocument);
+router.patch('/contractor-documents/:id', adminController.reviewContractorDocument);
 
 // 4. Projects & Progress Tracking
 router.get('/projects', adminController.listProjects);

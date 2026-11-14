@@ -4,7 +4,6 @@
 // Includes dynamic inspection photos and architectural reference images
 // ====================================================================
 
-import html2pdf from 'html2pdf.js';
 import mainLogo from '../assets/images/Main_Logo_v2.png';
 import { ESTIMATOR_IMAGES } from '../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../constants/operatingHours';
@@ -487,6 +486,8 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
       })
     );
 
+    const html2pdfModule = await import('html2pdf.js');
+    const html2pdf = html2pdfModule.default || html2pdfModule;
     await html2pdf().from(reportElement).set(opt).save();
   } finally {
     if (document.body.contains(reportElement)) {
@@ -565,4 +566,166 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Download Official User Profile Dossier PDF
+ * Directly downloads PDF with executive branding without opening window.print()
+ * @param {Object} profileData - Complete profileData from adminApi.getUserProfile
+ */
+export async function downloadUserProfilePdf(profileData = {}) {
+  const u = profileData?.user || {};
+  const cp = profileData?.contractorProfile || null;
+  const cd = profileData?.customerData || null;
+  const kd = profileData?.contractorData || null;
+  const userName = u.fullName || u.name || 'User';
+  const role = (u.role || 'USER').toUpperCase();
+  const status = (u.accountStatus || 'ACTIVE').toUpperCase();
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const reportElement = document.createElement('div');
+  reportElement.style.width = '780px';
+  reportElement.style.padding = '24px 28px';
+  reportElement.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+  reportElement.style.color = '#0F172A';
+  reportElement.style.backgroundColor = '#FFFFFF';
+  reportElement.style.boxSizing = 'border-box';
+
+  reportElement.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1E3A63; padding-bottom:14px; margin-bottom:18px;">
+      <div>
+        <h1 style="margin:0; font-size:22px; font-weight:800; color:#1E3A63; letter-spacing:-0.4px;">DECK RESTORATION PLUS</h1>
+        <p style="margin:2px 0 0 0; font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.8px;">Platform Administration & Governance Dossier</p>
+      </div>
+      <div style="text-align:right;">
+        <span style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; background-color:#EFF6FF; color:#1E3A63; border:1px solid #BFDBFE;">CONFIDENTIAL AUDIT</span>
+        <p style="margin:4px 0 0 0; font-size:10.5px; color:#64748B;">Generated: ${dateStr}</p>
+      </div>
+    </div>
+
+    <!-- User Header Card -->
+    <div style="background:linear-gradient(135deg, #1E3A63 0%, #2A4D7E 100%); color:#FFFFFF; border-radius:10px; padding:18px 22px; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="margin:0; font-size:20px; font-weight:800;">${userName}</h2>
+          <p style="margin:4px 0 0 0; font-size:12px; color:#DBEAFE;">${u.email || 'N/A'} • ${u.phone || 'No phone'} • ID: ${u._id || u.id || 'N/A'}</p>
+        </div>
+        <div style="text-align:right;">
+          <span style="display:inline-block; padding:4px 12px; border-radius:9999px; font-size:11px; font-weight:800; background-color:#FFFFFF; color:#1E3A63;">${role}</span>
+          <span style="display:inline-block; padding:4px 12px; border-radius:9999px; font-size:11px; font-weight:800; background-color:${status === 'ACTIVE' ? '#10B981' : '#EF4444'}; color:#FFFFFF; margin-left:6px;">${status}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Details Table -->
+    <div style="margin-bottom:18px;">
+      <h3 style="font-size:13px; font-weight:800; color:#1E3A63; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px 0; border-bottom:1px solid #E2E8F0; padding-bottom:4px;">1. Account Standing & Security</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+        <tr>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; width:25%; border-bottom:1px solid #F1F5F9;">Registered Date:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A'}</td>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; width:25%; border-bottom:1px solid #F1F5F9;">Email Verified:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${u.emailVerifiedAt || u.isEmailVerified ? 'Verified' : 'Pending'}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Preferred Contact:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${u.preferredContactMethod || 'Email'}</td>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Last Active:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Recently active'}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${cp ? `
+    <!-- Contractor Business & Credentials -->
+    <div style="margin-bottom:18px;">
+      <h3 style="font-size:13px; font-weight:800; color:#1E3A63; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px 0; border-bottom:1px solid #E2E8F0; padding-bottom:4px;">2. Contractor Business Credentials</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+        <tr>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; width:25%; border-bottom:1px solid #F1F5F9;">Company Name:</td>
+          <td style="padding:6px 8px; font-weight:700; color:#0F172A; border-bottom:1px solid #F1F5F9;">${cp.businessName || 'N/A'}</td>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; width:25%; border-bottom:1px solid #F1F5F9;">License Number:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${cp.licenseNumber || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Partner Tier:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${(cp.tier || 'BRONZE').toUpperCase()} Partner</td>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Verification Status:</td>
+          <td style="padding:6px 8px; font-weight:700; color:${cp.verificationStatus === 'VERIFIED' ? '#15803D' : '#D97706'}; border-bottom:1px solid #F1F5F9;">${(cp.verificationStatus || 'PENDING').toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Experience:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${cp.yearsOfExperience || 0} Years in Trade</td>
+          <td style="padding:6px 8px; font-weight:700; color:#64748B; border-bottom:1px solid #F1F5F9;">Coverage Radius:</td>
+          <td style="padding:6px 8px; color:#0F172A; border-bottom:1px solid #F1F5F9;">${cp.coverageRadiusMiles || 35} Miles</td>
+        </tr>
+      </table>
+    </div>
+    ` : ''}
+
+    <!-- Summary Metrics -->
+    <div style="margin-bottom:18px;">
+      <h3 style="font-size:13px; font-weight:800; color:#1E3A63; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px 0; border-bottom:1px solid #E2E8F0; padding-bottom:4px;">3. Activity & Portfolio Summary</h3>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1; background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:10px 14px; text-align:center;">
+          <div style="font-size:10px; font-weight:800; color:#1E3A63; text-transform:uppercase;">Projects / Decks</div>
+          <div style="font-size:18px; font-weight:800; color:#1E3A63; margin-top:2px;">${cd?.decksCount ?? profileData?.projects?.length ?? 0}</div>
+        </div>
+        <div style="flex:1; background-color:#F5F3FF; border:1px solid #DDD6FE; border-radius:8px; padding:10px 14px; text-align:center;">
+          <div style="font-size:10px; font-weight:800; color:#6D28D9; text-transform:uppercase;">Estimates Created</div>
+          <div style="font-size:18px; font-weight:800; color:#6D28D9; margin-top:2px;">${cd?.estimatesCount ?? profileData?.estimates?.length ?? 0}</div>
+        </div>
+        <div style="flex:1; background-color:#ECFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:10px 14px; text-align:center;">
+          <div style="font-size:10px; font-weight:800; color:#065F46; text-transform:uppercase;">Inquiries / Leads</div>
+          <div style="font-size:18px; font-weight:800; color:#065F46; margin-top:2px;">${profileData?.enquiriesCount ?? 0}</div>
+        </div>
+        <div style="flex:1; background-color:#FEF3C7; border:1px solid #FDE68A; border-radius:8px; padding:10px 14px; text-align:center;">
+          <div style="font-size:10px; font-weight:800; color:#92400E; text-transform:uppercase;">Compliance Docs</div>
+          <div style="font-size:18px; font-weight:800; color:#92400E; margin-top:2px;">${profileData?.verificationDocuments?.length ?? 0}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:28px; padding-top:12px; border-top:1px solid #E2E8F0; display:flex; justify-content:space-between; font-size:10px; color:#94A3B8;">
+      <span>Deck Restoration Plus Platform Governance • System Administrator Export</span>
+      <span>Page 1 of 1</span>
+    </div>
+  `;
+
+  document.body.appendChild(reportElement);
+  reportElement.style.position = 'fixed';
+  reportElement.style.left = '0';
+  reportElement.style.top = '0';
+  reportElement.style.zIndex = '-9999';
+  reportElement.style.opacity = '1';
+  reportElement.style.pointerEvents = 'none';
+
+  try {
+    const safeName = (userName).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: `DRP-UserProfile-${safeName}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+
+    const html2pdfModule = await import('html2pdf.js');
+    const html2pdf = typeof html2pdfModule.default === 'function'
+      ? html2pdfModule.default
+      : (typeof html2pdfModule.default?.default === 'function'
+        ? html2pdfModule.default.default
+        : (typeof html2pdfModule === 'function' ? html2pdfModule : null));
+
+    if (!html2pdf) {
+      throw new Error('PDF export engine failed to initialize.');
+    }
+
+    await html2pdf().from(reportElement).set(opt).save();
+  } finally {
+    if (document.body.contains(reportElement)) {
+      document.body.removeChild(reportElement);
+    }
+  }
 }

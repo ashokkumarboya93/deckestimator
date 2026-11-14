@@ -33,6 +33,23 @@ export default function ContractorProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Pagination & Responsiveness
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 900 : false));
+  const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 540 : false));
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 900);
+        setIsSmallMobile(window.innerWidth < 540);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState([]);
   const [batchDeleting, setBatchDeleting] = useState(false);
@@ -211,6 +228,17 @@ export default function ContractorProjectsPage() {
       return matchesSearch && matchesStatus;
     });
   }, [estimates, searchTerm, statusFilter]);
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEstimates.length / pageSize));
+  const paginatedEstimates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEstimates.slice(start, start + pageSize);
+  }, [filteredEstimates, currentPage, pageSize]);
 
   // Pale Colored Shiny Summary KPI Cards
   const stats = useMemo(() => {
@@ -532,101 +560,154 @@ export default function ContractorProjectsPage() {
   };
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={{ ...styles.pageContainer, padding: isMobile ? '12px 10px 40px 10px' : '24px 20px 60px 20px' }}>
+      <style>{`
+        @media (max-width: 900px) {
+          .contractor-controls-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+            width: 100% !important;
+          }
+          .contractor-search-box {
+            flex: 0 0 auto !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            height: 38px !important;
+          }
+          .contractor-filter-group {
+            width: 100% !important;
+            justify-content: space-between !important;
+            margin-left: 0 !important;
+            gap: 8px !important;
+          }
+        }
+      `}</style>
       {/* 1. SMALL BANNER OF "MY PROJECTS" (Clean, Compact, Shiny) */}
       <section
         style={{
           ...styles.heroBanner,
+          padding: isMobile ? '16px 14px' : '24px 28px',
           backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 55%, rgba(30, 58, 99, 0.45) 100%), url(${contractorBannerBg})`,
         }}
       >
         <div style={styles.heroContent}>
-          <h1 style={styles.heroTitle}>My Projects</h1>
-          <p style={styles.heroSubtitle}>
+          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '19px' : '24px' }}>My Projects</h1>
+          <p style={{ ...styles.heroSubtitle, fontSize: isMobile ? '11.5px' : '12.5px', marginBottom: isMobile ? '10px' : '14px' }}>
             Manage all your deck projects, customer proposals, and technical pricing records in one synchronized workspace.
           </p>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
               onClick={() => navigate('/contractor/decks/new')}
-              style={styles.heroPrimaryBtn}
+              style={{
+                ...styles.heroPrimaryBtn,
+                padding: isMobile ? '7px 14px' : '9px 18px',
+                fontSize: isMobile ? '11.5px' : '12.5px',
+              }}
             >
               <span>+ New Estimation</span>
-              <span style={{ fontSize: '15px', fontWeight: '800' }}>&rarr;</span>
+              <span style={{ fontSize: isMobile ? '13px' : '15px', fontWeight: '800' }}>&rarr;</span>
             </button>
           </div>
         </div>
       </section>
 
       {/* 2. PALE COLORED SHINY SUMMARY KPI CARDS */}
-      <div style={styles.kpiGrid}>
+      <div
+        style={{
+          ...styles.kpiGrid,
+          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, 1fr)',
+          gap: isMobile ? '10px' : '16px',
+        }}
+      >
         {/* Total Projects */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#DBEAFE', color: '#1E3A63' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#DBEAFE', color: '#1E3A63' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 2 7 12 12 22 7 12 2" />
               <polyline points="2 17 12 22 22 17" />
               <polyline points="2 12 12 17 22 12" />
             </svg>
           </div>
           <div>
-            <span style={styles.kpiLabel}>Total Projects</span>
-            <strong style={{ ...styles.kpiValue, color: '#1E3A63' }}>{stats.total}</strong>
-            <span style={styles.kpiSub}>Tracked in active portfolio</span>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Total Projects</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#1E3A63' }}>{stats.total}</strong>
+            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Tracked in active portfolio</span>
           </div>
         </div>
 
         {/* In Review / Active Quotes */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#FEF3C7', color: '#B45309' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#FEF3C7', color: '#B45309' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
           </div>
           <div>
-            <span style={styles.kpiLabel}>In Review / Dispatched</span>
-            <strong style={{ ...styles.kpiValue, color: '#B45309' }}>{stats.inReviewCount}</strong>
-            <span style={styles.kpiSub}>Pending homeowner approval</span>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>In Review</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#B45309' }}>{stats.inReviewCount}</strong>
+            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Pending homeowner approval</span>
           </div>
         </div>
 
         {/* Completed Projects */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#D1FAE5', color: '#15803D' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#D1FAE5', color: '#15803D' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
           <div>
-            <span style={styles.kpiLabel}>Completed Projects</span>
-            <strong style={{ ...styles.kpiValue, color: '#15803D' }}>{stats.completedCount}</strong>
-            <span style={styles.kpiSub}>Successfully converted &amp; finished</span>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Completed</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#15803D' }}>{stats.completedCount}</strong>
+            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Finished projects</span>
           </div>
         </div>
 
         {/* Total Pipeline Value (Pale Purple as requested) */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#F3E8FF', color: '#9333EA' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#F3E8FF', color: '#9333EA' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
           <div>
-            <span style={styles.kpiLabel}>Pipeline Value</span>
-            <strong style={{ ...styles.kpiValue, color: '#7E22CE' }}>{formatCurrency(stats.totalPortfolioVal)}</strong>
-            <span style={styles.kpiSub}>Total estimated volume</span>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Pipeline Value</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#7E22CE' }}>{formatCurrency(stats.totalPortfolioVal)}</strong>
+            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Total estimated volume</span>
           </div>
         </div>
       </div>
 
       {/* 3. CONTROLS BAR: SEARCH + FILTER + REFRESH */}
-      <div style={styles.controlsRow}>
+      <div
+        className="contractor-controls-bar"
+        style={{
+          ...styles.controlsRow,
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center',
+          gap: isMobile ? '10px' : '14px',
+          width: '100%',
+        }}
+      >
         {/* Search Bar */}
-        <div style={styles.searchWrap}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={styles.searchIcon}>
+        <div
+          className="contractor-search-box"
+          style={{
+            ...styles.searchWrap,
+            flex: isMobile ? '0 0 auto' : '1 1 320px',
+            minWidth: isMobile ? '100%' : '260px',
+            maxWidth: isMobile ? '100%' : '560px',
+            width: '100%',
+            height: isMobile ? '38px' : '42px',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ ...styles.searchIcon, left: '14px', zIndex: 2 }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -634,8 +715,15 @@ export default function ContractorProjectsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search projects by title, reference #, or wood species..."
-            style={styles.searchInput}
+            placeholder={isMobile ? 'Search projects...' : 'Search projects by title, reference #, or wood species...'}
+            style={{
+              ...styles.searchInput,
+              height: isMobile ? '38px' : '42px',
+              paddingLeft: '38px',
+              paddingRight: '34px',
+              fontSize: isMobile ? '12.5px' : '13px',
+              textAlign: 'left',
+            }}
           />
           {searchTerm && (
             <button
@@ -650,17 +738,55 @@ export default function ContractorProjectsPage() {
         </div>
 
         {/* Filter & Refresh Container */}
-        <div style={styles.filterActionsGroup}>
-          <div style={styles.selectWrap}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={styles.selectIcon}>
+        <div
+          className="contractor-filter-group"
+          style={{
+            ...styles.filterActionsGroup,
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: isMobile ? 'space-between' : 'flex-end',
+            gap: isMobile ? '8px' : '10px',
+            marginLeft: isMobile ? '0' : 'auto',
+          }}
+        >
+          <div style={{ ...styles.selectWrap, flex: isMobile ? 1 : 'none', minWidth: 0, position: 'relative' }}>
+            <svg
+              width={isMobile ? '13' : '14'}
+              height={isMobile ? '13' : '14'}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#1E3A63"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                position: 'absolute',
+                left: isMobile ? '9px' : '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            >
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
             </svg>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={styles.filterSelect}
+              style={{
+                ...styles.filterSelect,
+                width: '100%',
+                height: isMobile ? '36px' : '42px',
+                paddingLeft: isMobile ? '28px' : '34px',
+                paddingRight: isMobile ? '20px' : '28px',
+                fontSize: isMobile ? '11px' : '13px',
+                fontWeight: '600',
+                textAlign: 'left',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+              }}
             >
-              <option value="ALL">All Statuses ({estimates.length})</option>
+              <option value="ALL">All ({estimates.length})</option>
               <option value="CREATED">Created ({stats.total - stats.inReviewCount - stats.completedCount})</option>
               <option value="IN REVIEW">In Review ({stats.inReviewCount})</option>
               <option value="COMPLETED">Completed ({stats.completedCount})</option>
@@ -671,12 +797,19 @@ export default function ContractorProjectsPage() {
             type="button"
             onClick={() => fetchProjects(true)}
             disabled={refreshing || loading}
-            style={styles.refreshBtn}
+            style={{
+              ...styles.refreshBtn,
+              height: isMobile ? '36px' : '42px',
+              padding: isMobile ? '0 10px' : '0 20px',
+              fontSize: isMobile ? '11px' : '13px',
+              gap: isMobile ? '5px' : '8px',
+              flexShrink: 0,
+            }}
             title="Refresh list from database"
           >
             <svg
-              width="15"
-              height="15"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -792,7 +925,145 @@ export default function ContractorProjectsPage() {
               + Create New Estimation
             </button>
           </div>
+        ) : isMobile ? (
+          /* Mobile Card View — Optimized for all smartphone viewports */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+            {paginatedEstimates.map((est) => {
+              const estId = est._id || est.id;
+              const isRowSelected = selectedIds.includes(estId);
+              const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Restoration';
+              const refName = est.estimateNumber || `DP-${(estId || '').substring(0, 8).toUpperCase()}`;
+              const exactPrice = getExactPrice(est);
+              const area = getDeckArea(est);
+              const dims = getDeckDimensions(est);
+              const lm = getLabourAndMaterials(est);
+              const statusObj = resolveStatusBadge(est.estimateStatus || est.status);
+              const fullDate = formatFullDate(est.createdAt);
+
+              return (
+                <div
+                  key={estId}
+                  style={{
+                    backgroundColor: isRowSelected ? '#F0F9FF' : '#ffffff',
+                    border: `1.5px solid ${isRowSelected ? '#93C5FD' : '#E2E8F0'}`,
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    boxShadow: '0 1px 4px rgba(15, 23, 42, 0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected}
+                        onChange={() => handleSelectOne(estId)}
+                        style={{ ...styles.checkboxInput, marginTop: '2px', flexShrink: 0 }}
+                        aria-label={`Select ${projName}`}
+                      />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4
+                          onClick={() => navigate(`/contractor/projects/${estId}`)}
+                          style={{ margin: '0 0 2px 0', fontSize: '13.5px', fontWeight: '800', color: '#1E3A63', cursor: 'pointer', wordBreak: 'break-word' }}
+                        >
+                          {projName}
+                        </h4>
+                        <span style={{ display: 'block', fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
+                          {refName} &bull; {fullDate}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      <span
+                        style={{
+                          ...styles.statusBadge,
+                          fontSize: '10px',
+                          padding: '2px 7px',
+                          backgroundColor: statusObj.bg,
+                          color: statusObj.text,
+                          borderColor: statusObj.border,
+                        }}
+                      >
+                        <span style={{ ...styles.statusDot, backgroundColor: statusObj.dot }} />
+                        {statusObj.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metrics Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', backgroundColor: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                    <div>
+                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
+                      <strong style={{ fontSize: '12px', color: '#0F172A' }}>{area}</strong>
+                      <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>{dims}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Estimator Price</span>
+                      <strong style={{ fontSize: '13.5px', color: '#1E3A63' }}>{exactPrice}</strong>
+                      <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', display: 'block' }}>Wholesale Applied</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/contractor/projects/${estId}`)}
+                      style={{ ...styles.actionViewBtn, flex: 1, justifyContent: 'center', padding: '6px 8px', height: '32px', fontSize: '11.5px' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePrint(est)}
+                      style={{ ...styles.actionPrintBtn, flex: 1, justifyContent: 'center', padding: '6px 8px', height: '32px', fontSize: '11.5px' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
+                      <span>Print</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (openMenuId === estId) {
+                          setOpenMenuId(null);
+                          setActiveMenuEst(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setMenuCoords({
+                            top: rect.bottom + 6,
+                            left: Math.max(10, rect.right - 220),
+                          });
+                          setActiveMenuEst(est);
+                          setOpenMenuId(estId);
+                        }
+                      }}
+                      style={{ ...styles.actionDotsBtn, width: '32px', height: '32px', padding: 0 }}
+                      title="More options"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="1.5" />
+                        <circle cx="19" cy="12" r="1.5" />
+                        <circle cx="5" cy="12" r="1.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* Desktop Table View */
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
               <thead>
@@ -819,7 +1090,7 @@ export default function ContractorProjectsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEstimates.map((est) => {
+                {paginatedEstimates.map((est) => {
                   const estId = est._id || est.id;
                   const isRowSelected = selectedIds.includes(estId);
                   const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Restoration';
@@ -950,7 +1221,7 @@ export default function ContractorProjectsPage() {
                             <span>Print</span>
                           </button>
 
-                          {/* 3. Three Dots Button (Coordinates tracked for fixed non-clipping menu) */}
+                          {/* 3. Three Dots Button */}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -984,6 +1255,95 @@ export default function ContractorProjectsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Dedicated Pagination Bar */}
+        {filteredEstimates.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              padding: '14px 18px',
+              borderTop: '1px solid #E2E8F0',
+              backgroundColor: '#FAFAFA',
+            }}
+          >
+            <div style={{ fontSize: '13px', color: '#64748B' }}>
+              Showing <strong>{Math.min(filteredEstimates.length, (currentPage - 1) * pageSize + 1)}</strong> to{' '}
+              <strong>{Math.min(filteredEstimates.length, currentPage * pageSize)}</strong> of{' '}
+              <strong>{filteredEstimates.length}</strong> projects
+            </div>
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    color: '#1E3A63',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.45 : 1,
+                  }}
+                >
+                  &larr; Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+                  <button
+                    key={pg}
+                    type="button"
+                    onClick={() => setCurrentPage(pg)}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: pg === currentPage ? '1.5px solid #1E3A63' : '1px solid #CBD5E1',
+                      backgroundColor: pg === currentPage ? '#1E3A63' : '#FFFFFF',
+                      color: pg === currentPage ? '#FFFFFF' : '#334155',
+                      boxShadow: pg === currentPage ? '0 1px 3px rgba(30, 58, 99, 0.2)' : 'none',
+                    }}
+                  >
+                    {pg}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    color: '#1E3A63',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === totalPages ? 0.45 : 1,
+                  }}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1302,8 +1662,10 @@ const styles = {
   },
   searchWrap: {
     position: 'relative',
-    minWidth: '380px',
-    flex: '1 1 380px',
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    flex: '1 1 auto',
     maxWidth: '560px',
   },
   checkboxInput: {

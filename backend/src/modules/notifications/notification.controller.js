@@ -31,9 +31,19 @@ async function markAllNotificationsAsRead(req, res, next) {
   }
 }
 
+async function clearAllNotifications(req, res, next) {
+  try {
+    const data = await notificationService.clearAllNotifications(req.user);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getMyNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  clearAllNotifications,
 };
 

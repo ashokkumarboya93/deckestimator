@@ -4,7 +4,87 @@
 // Shared HTTP client with safe defaults.
 // All API calls go through this module.
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const apiHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const BASE_URL = import.meta.env.VITE_API_URL || `http://${apiHost}:5000/api/v1`;
+
+export const AUTH_TOKEN_KEY = 'deck_auth_token';
+export const AUTH_SESSION_KEY = 'deck_auth_session';
+
+/**
+ * Retrieve the cached user session snapshot for instant reload hydration.
+ */
+export function getStoredSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.user) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist a lightweight user session snapshot (avoids slow blocking Verifying session... on reload).
+ */
+export function setStoredSession(user, contractorProfile = null) {
+  try {
+    if (!user) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      return;
+    }
+    const { avatar: _omitHeavyAvatar, ...lightUser } = user;
+    const safeUser = {
+      ...lightUser,
+      ...(typeof user.avatar === 'string' && user.avatar.length < 32768 ? { avatar: user.avatar } : {}),
+    };
+    localStorage.setItem(
+      AUTH_SESSION_KEY,
+      JSON.stringify({ user: safeUser, contractorProfile: contractorProfile || null, cachedAt: Date.now() })
+    );
+  } catch {
+    // Ignore storage quota or access errors
+  }
+}
+
+/**
+ * Retrieve the saved auth token from local storage.
+ */
+export function getStoredToken() {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist the auth token in local storage.
+ */
+export function setStoredToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch {
+    // Ignore storage quota or access errors
+  }
+}
+
+/**
+ * Remove the stored auth token and cached session.
+ */
+export function clearStoredToken() {
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 /**
  * Make an API request with consistent error handling.
@@ -28,12 +108,16 @@ async function apiClient(endpoint, options = {}) {
     }
   }
 
+  const token = getStoredToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
   const config = {
-    credentials: 'include', // Send cookies for session auth
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    credentials: 'include', // Send cookies if browser permits (dual auth fallback)
+    headers,
     ...options,
   };
 
@@ -58,6 +142,10 @@ async function apiClient(endpoint, options = {}) {
       }
 
       if (!response.ok) {
+        // If server returns 401 with token invalid/expired/required, clear local stale token
+        if (response.status === 401 && (data?.error?.code === 'TOKEN_EXPIRED' || data?.error?.code === 'INVALID_TOKEN')) {
+          clearStoredToken();
+        }
         if (response.status === 401 && !endpoint.startsWith('/auth/') && typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent('drp:unauthorized', {
@@ -84,7 +172,7 @@ async function apiClient(endpoint, options = {}) {
       }
 
       if (isNetworkError) {
-        const connError = new Error('Connection to Deck Estimator backend server failed. Please ensure the backend server is running on port 5000.');
+        const connError = new Error('Connection to Deck Estimator backend server failed. Please ensure the backend server is running.');
         connError.code = 'NETWORK_ERROR';
         throw connError;
       }

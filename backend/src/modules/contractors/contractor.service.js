@@ -18,10 +18,14 @@ const {
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
+  'image/jpg',
   'image/png',
   'image/webp',
   'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
+const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp'];
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
 /**
@@ -171,9 +175,13 @@ async function uploadDocument(userId, file, documentType, notes = '') {
     throw error;
   }
 
-  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+  const ext = file.originalname ? ('.' + file.originalname.split('.').pop().toLowerCase()) : '';
+  const isAllowedMime = ALLOWED_MIME_TYPES.includes(file.mimetype);
+  const isAllowedExt = ALLOWED_EXTENSIONS.includes(ext);
+
+  if (!isAllowedMime && !isAllowedExt) {
     const error = new Error(
-      `Unsupported file type '${file.mimetype}'. Supported types: PDF, JPEG, PNG, WebP.`
+      `Unsupported file type '${file.mimetype}'. Supported types: PDF, DOC, DOCX, JPEG, PNG, WebP.`
     );
     error.statusCode = 400;
     error.code = 'INVALID_FILE_TYPE';

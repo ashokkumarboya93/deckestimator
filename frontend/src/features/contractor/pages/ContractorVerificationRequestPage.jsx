@@ -498,7 +498,7 @@ export default function ContractorVerificationRequestPage() {
 
                   <input
                     type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                     onChange={(e) => setExtraDocFile(e.target.files[0] || null)}
                     style={styles.fileInputSmall}
                   />
@@ -737,10 +737,10 @@ export default function ContractorVerificationRequestPage() {
                     </div>
 
                     <div style={styles.fieldGroup}>
-                      <label style={styles.label}>Select File (PDF, PNG, JPG, WebP — max 10MB)</label>
+                      <label style={styles.label}>Select File (PDF, DOC, DOCX, PNG, JPG, WebP — max 10MB)</label>
                       <input
                         type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                         onChange={(e) => setOptionalDocFile(e.target.files[0] || null)}
                         style={styles.fileInput}
                       />

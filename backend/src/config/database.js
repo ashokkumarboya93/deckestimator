@@ -9,11 +9,13 @@ const dns = require('dns');
 const { env } = require('./env');
 
 // When connecting to Atlas SRV URIs on Windows / Wi-Fi routers that truncate large SRV packets,
-// ensure public standard DNS resolvers are available
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch {
-  // Use system default if setting custom servers is restricted
+// ensure public standard DNS resolvers are available (never override DNS in production containers)
+if (process.platform === 'win32') {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch {
+    // Use system default if setting custom servers is restricted
+  }
 }
 
 /**
@@ -24,6 +26,10 @@ async function connectDatabase() {
   try {
     await mongoose.connect(env.MONGODB_URI, {
       dbName: 'DECK_ESTIMATOR',
+      maxPoolSize: 20,
+      minPoolSize: 5,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
     });
     console.log(`[Database] Connected to MongoDB (${env.isDev ? 'development' : env.NODE_ENV})`);
   } catch (error) {

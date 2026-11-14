@@ -118,3 +118,688 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* =============================================
+   Universal Responsive Design System
+   Auto-adjusts for Mobile, Tablets / iPads, Laptops & Desktops
+   ============================================= */
+
+/* Fluid media */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Safe viewport box sizing */
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Responsive Table Wrapper */
+.table-responsive,
+.overflow-x-auto,
+div[style*="overflowX: 'auto'"],
+div[style*="overflow-x: auto"] {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Modals & Dialogs responsiveness */
+.modal-responsive-card,
+div[style*="maxWidth: '920px'"],
+div[style*="maxWidth: '800px'"],
+div[style*="maxWidth: '680px'"] {
+  max-width: 95vw !important;
+  width: 100% !important;
+  margin: 0 auto;
+}
+
+/* Responsive Grid Helpers */
+.grid-cols-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+/* --- Breakpoint: Laptops & Large Tablets (<= 1200px) --- */
+@media screen and (max-width: 1200px) {
+  .dashboard-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* --- Breakpoint: iPads & Tablets (<= 1024px) --- */
+@media screen and (max-width: 1024px) {
+  /* Layout adjustments */
+  .layout-container {
+    flex-direction: column !important;
+  }
+
+  /* Admin / Contractor / Customer sidebars adjust gracefully */
+  aside[style*="position: fixed"],
+  aside[style*="position: 'fixed'"] {
+    max-width: 80vw;
+  }
+
+  /* Split forms & 2-column layouts wrap */
+  .grid-2col,
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*="gridTemplateColumns: 'repeat(2, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stat cards */
+  .stat-grid,
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* --- Breakpoint: Mobile & Small Tablets (<= 768px) --- */
+@media screen and (max-width: 768px) {
+  /* Ensure page content never overflows viewport */
+  main {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    max-width: 100vw !important;
+    overflow-x: hidden;
+  }
+
+  /* Modals take full mobile screen comfort */
+  div[style*="position: 'fixed'"] > div[style*="backgroundColor: '#ffffff'"],
+  div[style*="position: fixed"] > div[style*="background-color: #ffffff"] {
+    max-width: 96vw !important;
+    width: 96vw !important;
+    max-height: 94vh !important;
+    margin: 8px auto !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Modal footers stack or wrap comfortably */
+  div[style*="justifyContent: 'flex-end'"],
+  div[style*="justify-content: flex-end"] {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  /* Buttons on mobile take comfortable touch areas */
+  button {
+    min-height: 38px;
+  }
+
+  /* Modal action buttons take natural width or stretch cleanly */
+  .modal-responsive-footer button,
+  div[style*="borderTop: '1px solid #f1f5f9'"] button {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Multi-column grids become single column on mobile */
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*="gridTemplateColumns: 'repeat(2, 1fr)'"],
+  div[style*="gridTemplateColumns: 'repeat(3, 1fr)'"],
+  div[style*="gridTemplateColumns: 'repeat(4, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Tables wrap in horizontal scroll automatically */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Headers and nav bars */
+  header {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Typography auto-scaling (no !important so custom page/card classes stay proportional) */
+  h1 {
+    font-size: clamp(1.15rem, 3.2vw, 1.65rem);
+  }
+
+  h2 {
+    font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  }
+
+  h3 {
+    font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  }
+}
+
+/* --- Breakpoint: Small Mobile (<= 480px) --- */
+@media screen and (max-width: 480px) {
+  /* Ultra-compact padding for small devices */
+  body {
+    font-size: 13.5px;
+  }
+
+  /* Full-bleed modal actions */
+  div[style*="borderTop: '1px solid #f1f5f9'"] {
+    flex-direction: column !important;
+  }
+
+  div[style*="borderTop: '1px solid #f1f5f9'"] button {
+    width: 100% !important;
+  }
+}
+
+/* Inline styled React pages need explicit overrides: ordinary media rules cannot
+   otherwise beat their fixed grid, width, and spacing values. */
+@media screen and (max-width: 768px) {
+  main [style*="grid-template-columns"],
+  main [style*="gridTemplateColumns"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  main [style*="width:"] {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  main [style*="min-width:"] {
+    min-width: 0 !important;
+  }
+
+  main [style*="padding:"] {
+    padding: clamp(12px, 3vw, 20px) !important;
+  }
+
+  main [style*="gap:"] {
+    gap: clamp(8px, 2.5vw, 14px) !important;
+  }
+
+  main [style*="display: flex"][style*="flex-direction: row"] {
+    flex-wrap: wrap !important;
+  }
+
+  main table {
+    min-width: 620px;
+  }
+
+  main [style*="overflow-x: auto"],
+  main [style*="overflowX: auto"] {
+    max-width: 100%;
+    overflow-x: auto !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  main [style*="grid-template-columns"],
+  main [style*="gridTemplateColumns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  main [style*="padding:"] {
+    padding: 12px !important;
+  }
+
+  main [style*="gap:"] {
+    gap: 10px !important;
+  }
+
+  main button,
+  main a[role="button"] {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* Responsive refinements shared by public, customer, contractor, and admin pages. */
+#root {
+  min-height: 100vh;
+  width: 100%;
+  min-width: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body,
+#root,
+#root > *,
+main,
+main > *,
+main section,
+main article {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+/* Keep content columns from forcing the whole viewport wider than the device. */
+main > div,
+main > section,
+main > article {
+  max-width: 100%;
+}
+
+/* Tables remain readable and scroll within their own area on narrow screens. */
+.table-responsive,
+[class*="tableWrapper"],
+[class*="table-wrapper"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+@media screen and (min-width: 769px) and (max-width: 1100px) {
+  /* Retain two useful columns on tablets instead of collapsing every grid. */
+  .grid-2col,
+  .stat-grid,
+  .dashboard-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  main {
+    padding-left: clamp(16px, 2.5vw, 28px);
+    padding-right: clamp(16px, 2.5vw, 28px);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  main {
+    padding-top: 16px !important;
+    padding-bottom: 24px !important;
+  }
+
+  /* Inline page headers and action groups can wrap without shrinking controls. */
+  main h1,
+  main h2 {
+    overflow-wrap: anywhere;
+  }
+
+  main [style*="justify-content: space-between"],
+  main [style*="justifyContent: 'space-between'"] {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  main input,
+  main select,
+  main textarea {
+    font-size: 16px !important; /* Prevent iOS from zooming when a field is focused. */
+  }
+
+  .grid-cols-auto-fit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  main {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .grid-2col,
+  .stat-grid,
+  .dashboard-grid-4 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* =============================================
+   Auth Pages & Forms Responsive System
+   (Login, Register, Admin Login, Blocked Portal)
+   ============================================= */
+.auth-page-container {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.auth-form-column {
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.auth-hero-column {
+  min-width: 0;
+}
+
+.auth-form-wrapper {
+  width: 100%;
+  margin: auto 0;
+  box-sizing: border-box;
+}
+
+.auth-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.auth-label-row .auth-label {
+  margin-bottom: 0 !important;
+}
+
+.auth-eye-btn {
+  min-height: auto !important;
+}
+
+/* Laptop / Compact Desktop (961px - 1200px) */
+@media screen and (max-width: 1200px) {
+  .auth-hero-column {
+    padding: 40px 36px !important;
+  }
+
+  .auth-hero-title {
+    font-size: 1.85rem !important;
+  }
+
+  .auth-hero-text {
+    font-size: 0.94rem !important;
+    margin-bottom: 24px !important;
+  }
+
+  .auth-form-column {
+    padding: 24px 20px !important;
+  }
+
+  .auth-card {
+    padding: 24px 24px 20px !important;
+  }
+}
+
+/* Tablet / iPad Portrait (<= 960px) */
+@media screen and (max-width: 960px) {
+  .auth-page-container {
+    flex-direction: column !important;
+  }
+
+  .auth-hero-column {
+    display: none !important;
+  }
+
+  .auth-form-column {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 28px 20px !important;
+    min-height: 100dvh !important;
+  }
+
+  .auth-form-wrapper {
+    max-width: 450px !important;
+    margin: auto !important;
+  }
+
+  .auth-form-wrapper--register {
+    max-width: 490px !important;
+  }
+
+  .auth-title {
+    font-size: 21px !important;
+    margin-bottom: 5px !important;
+  }
+
+  .auth-subtitle {
+    font-size: 13px !important;
+  }
+}
+
+/* Mobile (<= 640px) */
+@media screen and (max-width: 640px) {
+  .auth-form-column {
+    padding: 16px 14px !important;
+  }
+
+  .auth-form-wrapper,
+  .auth-form-wrapper--register {
+    max-width: 420px !important;
+    margin: auto !important;
+  }
+
+  .auth-card {
+    padding: 20px 18px 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .auth-header {
+    margin-bottom: 14px !important;
+  }
+
+  .auth-logo-wrap {
+    margin-bottom: 10px !important;
+  }
+
+  .auth-logo-img {
+    max-height: 44px !important;
+    max-width: 180px !important;
+  }
+
+  .auth-badge {
+    font-size: 10px !important;
+    padding: 4px 10px !important;
+    margin-bottom: 8px !important;
+    gap: 5px !important;
+  }
+
+  .auth-title {
+    font-size: 19px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .auth-subtitle {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  .auth-role-tabs {
+    gap: 6px !important;
+    padding: 4px !important;
+    margin-bottom: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .auth-role-tab {
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    gap: 5px !important;
+    border-radius: 9px !important;
+  }
+
+  .auth-banner {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+    margin-bottom: 14px !important;
+    border-radius: 10px !important;
+  }
+
+  .auth-form {
+    gap: 12px !important;
+  }
+
+  .auth-label {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .auth-label-hint {
+    font-size: 10.5px !important;
+  }
+
+  .auth-input-wrap {
+    height: 42px !important;
+    padding: 0 11px !important;
+    border-radius: 10px !important;
+  }
+
+  .auth-input-icon {
+    width: 15px !important;
+    height: 15px !important;
+    margin-right: 8px !important;
+  }
+
+  .auth-input {
+    font-size: 16px !important; /* Prevents mobile Safari auto-zoom on focus */
+  }
+
+  .auth-contractor-box {
+    padding: 12px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .auth-contractor-header {
+    font-size: 11.5px !important;
+  }
+
+  .auth-grid-2col {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .auth-password-rules {
+    font-size: 11px !important;
+    padding: 5px 9px !important;
+    gap: 4px 10px !important;
+    margin-top: 5px !important;
+  }
+
+  .auth-field-error {
+    font-size: 11px !important;
+    margin-top: 3px !important;
+  }
+
+  .auth-submit-btn {
+    height: 44px !important;
+    font-size: 14px !important;
+    border-radius: 10px !important;
+    margin-top: 4px !important;
+  }
+
+  .auth-security-notice {
+    margin-top: 14px !important;
+    font-size: 10.5px !important;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    text-align: center !important;
+  }
+
+  .auth-footer-link-wrap {
+    margin-top: 16px !important;
+    font-size: 13px !important;
+  }
+
+  /* Blocked Account Portal Mobile */
+  .blocked-portal-container {
+    padding: 14px 10px !important;
+  }
+
+  .blocked-portal-brand {
+    padding: 16px 18px !important;
+  }
+
+  .blocked-portal-banner,
+  .blocked-portal-form {
+    padding: 18px 16px !important;
+  }
+
+  .blocked-portal-alert {
+    margin: 14px 16px 0 16px !important;
+  }
+
+  .blocked-portal-row2 {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .blocked-portal-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .blocked-portal-footer {
+    padding: 14px 16px !important;
+  }
+}
+
+/* Compact / Small Mobile (<= 400px) */
+@media screen and (max-width: 400px) {
+  .auth-form-column {
+    padding: 12px 10px !important;
+  }
+
+  .auth-card {
+    padding: 18px 14px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .auth-logo-img {
+    max-height: 38px !important;
+    max-width: 155px !important;
+  }
+
+  .auth-title {
+    font-size: 17.5px !important;
+  }
+
+  .auth-subtitle {
+    font-size: 11.5px !important;
+  }
+
+  .auth-role-tab {
+    padding: 7px 5px !important;
+    font-size: 11px !important;
+  }
+
+  .auth-input-wrap {
+    height: 40px !important;
+    padding: 0 10px !important;
+  }
+
+  .auth-submit-btn {
+    height: 42px !important;
+    font-size: 13.5px !important;
+  }
+}
+
+@media screen and (max-width: 340px) {
+  .auth-role-tabs {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+

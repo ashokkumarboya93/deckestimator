@@ -12,5 +12,6 @@ router.use(authenticate);
 router.get('/my', notificationController.getMyNotifications);
 router.patch('/:id/read', notificationController.markNotificationAsRead);
 router.post('/read-all', notificationController.markAllNotificationsAsRead);
+router.delete('/clear-all', notificationController.clearAllNotifications);
 
 module.exports = router;

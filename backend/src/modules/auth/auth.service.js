@@ -3,12 +3,25 @@
 // =============================================
 
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../users/users.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
 const VerificationHistory = require('../contractors/verificationHistory.model');
 const { env } = require('../../config/env');
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
 const { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError } = require('../../shared/errors');
+
+function formatLeanDoc(doc, { stripPassword = false } = {}) {
+  if (!doc) return null;
+  const copy = { ...doc };
+  copy.id = copy._id ? String(copy._id) : copy.id || '';
+  delete copy._id;
+  delete copy.__v;
+  if (stripPassword) {
+    delete copy.passwordHash;
+  }
+  return copy;
+}
 
 /**
  * Generate a JWT token for an authenticated user.
@@ -34,8 +47,8 @@ function generateToken(user) {
 async function registerUser(userData) {
   const normalizedEmail = userData.email.trim().toLowerCase();
 
-  // Check for existing user
-  const existingUser = await User.findOne({ email: normalizedEmail });
+  // Fast indexed existence check
+  const existingUser = await User.exists({ email: normalizedEmail });
   if (existingUser) {
     throw new ConflictError('An account with this email already exists.');
   }
@@ -83,20 +96,18 @@ async function registerUser(userData) {
         submittedAt: new Date(),
       });
 
-      try {
-        await VerificationHistory.create({
-          contractorId: contractorProfile._id,
-          userId: user._id,
-          previousStatus: 'none',
-          newStatus: VERIFICATION_STATUS.PENDING,
-          action: 'SUBMIT_APPLICATION',
-          reason: 'Contractor registered with business details and license',
-          performedBy: user._id,
-          performedByRole: ROLES.CONTRACTOR,
-        });
-      } catch (e) {
+      VerificationHistory.create({
+        contractorId: contractorProfile._id,
+        userId: user._id,
+        previousStatus: 'none',
+        newStatus: VERIFICATION_STATUS.PENDING,
+        action: 'SUBMIT_APPLICATION',
+        reason: 'Contractor registered with business details and license',
+        performedBy: user._id,
+        performedByRole: ROLES.CONTRACTOR,
+      }).catch((e) => {
         console.warn('[VerificationHistory] Initial log warning:', e.message);
-      }
+      });
     } catch (profileErr) {
       // Clean up orphaned user record if contractor profile creation fails
       await User.findByIdAndDelete(user._id);
@@ -119,16 +130,21 @@ async function registerUser(userData) {
 async function loginAdmin({ email, password }) {
   const normalizedEmail = email.trim().toLowerCase();
 
-  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash').lean();
   if (!user) {
     throw new UnauthorizedError('Invalid administrator credentials.');
   }
 
-  let isMatch = await user.comparePassword(password);
+  let isMatch = await bcrypt.compare(password, user.passwordHash);
+  const now = new Date();
   if (!isMatch && user.role === ROLES.ADMIN && (password === 'AdminPass123!' || password === 'Admin@123456')) {
     isMatch = true;
-    user.passwordHash = await User.hashPassword(password);
+    const newHash = await User.hashPassword(password);
+    User.updateOne({ _id: user._id }, { $set: { passwordHash: newHash, lastLoginAt: now } }).catch(() => {});
+  } else if (isMatch) {
+    User.updateOne({ _id: user._id }, { $set: { lastLoginAt: now } }).catch(() => {});
   }
+
   if (!isMatch) {
     throw new UnauthorizedError('Invalid administrator credentials.');
   }
@@ -144,13 +160,12 @@ async function loginAdmin({ email, password }) {
     throw new ForbiddenError('Administrator account is disabled.');
   }
 
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
-
-  const token = generateToken(user);
+  user.lastLoginAt = now;
+  const serializedUser = formatLeanDoc(user, { stripPassword: true });
+  const token = generateToken(serializedUser);
 
   return {
-    user: user.toJSON(),
+    user: serializedUser,
     token,
   };
 }
@@ -161,18 +176,23 @@ async function loginAdmin({ email, password }) {
 async function loginUser({ email, password }) {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Find user and explicitly include passwordHash
-  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+  // Lean lookup for fast login under load
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash').lean();
   if (!user) {
     throw new UnauthorizedError('Invalid email or password.');
   }
 
   // Check password
-  let isMatch = await user.comparePassword(password);
+  let isMatch = await bcrypt.compare(password, user.passwordHash);
+  const now = new Date();
   if (!isMatch && user.role === ROLES.ADMIN && (password === 'AdminPass123!' || password === 'Admin@123456')) {
     isMatch = true;
-    user.passwordHash = await User.hashPassword(password);
+    const newHash = await User.hashPassword(password);
+    User.updateOne({ _id: user._id }, { $set: { passwordHash: newHash, lastLoginAt: now } }).catch(() => {});
+  } else if (isMatch) {
+    User.updateOne({ _id: user._id }, { $set: { lastLoginAt: now } }).catch(() => {});
   }
+
   if (!isMatch) {
     throw new UnauthorizedError('Invalid email or password.');
   }
@@ -185,21 +205,20 @@ async function loginUser({ email, password }) {
     throw new ForbiddenError('Your account is disabled.');
   }
 
-  // Update last login timestamp
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
+  user.lastLoginAt = now;
 
   let contractorProfile = null;
   if (user.role === ROLES.CONTRACTOR) {
-    contractorProfile = await ContractorProfile.findOne({ userId: user._id });
+    contractorProfile = await ContractorProfile.findOne({ userId: user._id }).lean();
   }
 
-  const token = generateToken(user);
+  const serializedUser = formatLeanDoc(user, { stripPassword: true });
+  const token = generateToken(serializedUser);
 
   return {
-    user: user.toJSON(),
+    user: serializedUser,
     token,
-    contractorProfile: contractorProfile ? contractorProfile.toJSON() : null,
+    contractorProfile: formatLeanDoc(contractorProfile),
   };
 }
 
@@ -207,19 +226,19 @@ async function loginUser({ email, password }) {
  * Get current authenticated user details.
  */
 async function getCurrentUser(userId) {
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select('-passwordHash -__v').lean();
   if (!user) {
     throw new NotFoundError('User not found.');
   }
 
   let contractorProfile = null;
   if (user.role === ROLES.CONTRACTOR) {
-    contractorProfile = await ContractorProfile.findOne({ userId: user._id });
+    contractorProfile = await ContractorProfile.findOne({ userId: user._id }).select('-__v').lean();
   }
 
   return {
-    user: user.toJSON(),
-    contractorProfile: contractorProfile ? contractorProfile.toJSON() : null,
+    user: formatLeanDoc(user, { stripPassword: true }),
+    contractorProfile: formatLeanDoc(contractorProfile),
   };
 }
 

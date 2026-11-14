@@ -17,19 +17,28 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getEstimates, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
-import { downloadEstimatePdf, downloadEstimateExcel, getEstimatePhotos } from '../../../utils/reportExport';
+import { getEstimates, getEstimateById, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
+import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
+import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
-import deckBannerWood from '../../../assets/images/deck_banner_wood.png';
-import mainLogo from '../../../assets/images/MainLodo.png';
 
 const DEFAULT_THUMBS = [
-  'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1591825729269-caeb344f6df2?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=120&q=80',
-  'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=120&q=80',
+  ESTIMATOR_IMAGES.shapes.rectangle.references[1] || ESTIMATOR_IMAGES.shapes.rectangle.main,
+  ESTIMATOR_IMAGES.woodSpecies.cedar.main,
+  ESTIMATOR_IMAGES.woodSpecies.redwood.main,
+  ESTIMATOR_IMAGES.services.staining.main,
+  ESTIMATOR_IMAGES.services.cleaning.main,
 ];
+
+function extractEstimatePhotos(est) {
+  if (!est) return [];
+  const raw =
+    (Array.isArray(est.photos) && est.photos.length > 0 && est.photos) ||
+    (Array.isArray(est.deckDetails?.photos) && est.deckDetails.photos.length > 0 && est.deckDetails.photos) ||
+    (Array.isArray(est.deckId?.photos) && est.deckId.photos.length > 0 && est.deckId.photos) ||
+    [];
+  return raw.filter((p) => p && (p.url || p.dataUrl || typeof p === 'string'));
+}
 
 export default function CustomerEstimatesPage() {
   const navigate = useNavigate();
@@ -40,10 +49,25 @@ export default function CustomerEstimatesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
+  const [errorToast, setErrorToast] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+
+  // Responsive listener for mobile and tablets
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState([]);
@@ -52,6 +76,9 @@ export default function CustomerEstimatesPage() {
 
   // Modals & Action Menus
   const [viewEstimate, setViewEstimate] = useState(null);
+  const [hydratingView, setHydratingView] = useState(false);
+  const [requestingId, setRequestingId] = useState(null);
+  const [exportingId, setExportingId] = useState(null);
   const [deleteConfirmEst, setDeleteConfirmEst] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -59,6 +86,7 @@ export default function CustomerEstimatesPage() {
   const [activeMenuEst, setActiveMenuEst] = useState(null);
 
   const menuRef = useRef(null);
+  const hydratedCacheRef = useRef(new Map());
 
   // Close 3-dots menu on click outside or scroll
   useEffect(() => {
@@ -78,13 +106,14 @@ export default function CustomerEstimatesPage() {
     };
   }, []);
 
-  // Fetch estimates from backend
+  // Fetch estimates from backend using fast compact projection (excludes heavy photos from list)
   const fetchEstimates = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
+    if (isRefresh) hydratedCacheRef.current.clear();
     try {
-      const data = await getEstimates({ limit: 100 });
+      const data = await getEstimates({ limit: 50, compact: '1' });
       setEstimates(data?.estimates || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch your estimates.');
@@ -93,6 +122,39 @@ export default function CustomerEstimatesPage() {
       setRefreshing(false);
     }
   }, []);
+
+  // Hydrate full estimate (photos & detailed line items) lazily on View / Edit / Export
+  const hydrateEstimate = useCallback(async (est) => {
+    const id = est?._id || est?.id;
+    if (!id) return est;
+    if (hydratedCacheRef.current.has(id)) {
+      return hydratedCacheRef.current.get(id);
+    }
+    try {
+      const full = await getEstimateById(id);
+      if (full) {
+        hydratedCacheRef.current.set(id, full);
+        return full;
+      }
+    } catch {
+      // Fallback to compact record if hydration fails
+    }
+    return est;
+  }, []);
+
+  const handleOpenView = async (est) => {
+    setViewEstimate(est);
+    const id = est?._id || est?.id;
+    if (!id) return;
+    if (hydratedCacheRef.current.has(id)) {
+      setViewEstimate(hydratedCacheRef.current.get(id));
+      return;
+    }
+    setHydratingView(true);
+    const full = await hydrateEstimate(est);
+    setHydratingView(false);
+    setViewEstimate((prev) => (prev && (prev._id || prev.id) === id ? full : prev));
+  };
 
   useEffect(() => {
     fetchEstimates();
@@ -104,10 +166,17 @@ export default function CustomerEstimatesPage() {
   // Toast notification auto-dismiss
   useEffect(() => {
     if (successToast) {
-      const timer = setTimeout(() => setSuccessToast(null), 3500);
+      const timer = setTimeout(() => setSuccessToast(null), 4000);
       return () => clearTimeout(timer);
     }
   }, [successToast]);
+
+  useEffect(() => {
+    if (errorToast) {
+      const timer = setTimeout(() => setErrorToast(null), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [errorToast]);
 
   // Helpers: Currency & Full Date
   function formatCurrency(val) {
@@ -160,14 +229,19 @@ export default function CustomerEstimatesPage() {
 
   // Get Labour & Materials Summary
   function getLabourAndMaterials(est) {
-    const snap = est.pricingSnapshot || {};
-    const laborHrs = snap.baseHours !== undefined
-      ? (Number(snap.baseHours) + Number(snap.woodHours || 0) + Number(snap.accessHours || 0)).toFixed(1)
-      : (est.laborBreakdown?.totalHours ? Number(est.laborBreakdown.totalHours).toFixed(1) : '32.0');
+    const snap = est?.pricingSnapshot || {};
+    const baseHrs = Number(snap.baseHours ?? est?.laborBreakdown?.totalHours ?? 0);
+    const woodHrs = Number(snap.woodHours || 0);
+    const accessHrs = Number(snap.accessHours || 0);
+    const totalHrsNum = snap.baseHours !== undefined
+      ? (baseHrs + woodHrs + accessHrs)
+      : (est?.laborBreakdown?.totalHours !== undefined ? Number(est.laborBreakdown.totalHours) : 32.0);
+    const laborHrs = (Number.isFinite(totalHrsNum) ? totalHrsNum : 32.0).toFixed(1);
 
-    const matCost = snap.materialsCost !== undefined
-      ? formatCurrency(snap.materialsCost)
-      : (est.selectedMaterials?.[0]?.totalCost ? formatCurrency(est.selectedMaterials[0].totalCost) : '$1,120.00');
+    const rawMat = snap.materialsCost ?? est?.selectedMaterials?.[0]?.subtotal ?? est?.selectedMaterials?.[0]?.totalCost;
+    const matCost = rawMat !== undefined && rawMat !== null
+      ? formatCurrency(Number(rawMat))
+      : '$1,120.00';
 
     return {
       hours: `${laborHrs} labor hrs`,
@@ -177,7 +251,7 @@ export default function CustomerEstimatesPage() {
 
   // Map Backend Status to Target Workflow
   function getNormalizedStatus(est) {
-    const raw = (est.estimateStatus || '').toUpperCase();
+    const raw = (est?.estimateStatus || '').toUpperCase();
     if (raw === 'COMPLETED') return 'COMPLETED';
     if (raw === 'IN_PROGRESS') return 'IN_PROGRESS';
     if (raw === 'REQUESTED' || raw === 'IN_REVIEW' || raw === 'SUBMITTED' || raw === 'APPROVED') return 'REQUESTED';
@@ -239,11 +313,25 @@ export default function CustomerEstimatesPage() {
     });
   }, [estimates, statusFilter, searchTerm]);
 
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEstimates.length / pageSize));
+  const paginatedEstimates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEstimates.slice(start, start + pageSize);
+  }, [filteredEstimates, currentPage, pageSize]);
+
   // KPI Metrics Calculation
   const kpis = useMemo(() => {
     const total = estimates.length;
     const completed = estimates.filter((e) => getNormalizedStatus(e) === 'COMPLETED').length;
-    const inReview = estimates.filter((e) => getNormalizedStatus(e) === 'IN_REVIEW').length;
+    const inReview = estimates.filter((e) => {
+      const st = getNormalizedStatus(e);
+      return st === 'REQUESTED' || st === 'IN_PROGRESS';
+    }).length;
     const created = estimates.filter((e) => getNormalizedStatus(e) === 'CREATED').length;
 
     const totalVal = estimates.reduce((sum, e) => {
@@ -258,12 +346,38 @@ export default function CustomerEstimatesPage() {
   // ACTION HANDLERS
   // -------------------------------------------------------------
 
-  // 1. Edit Action: Navigate to estimator with preloaded state
-  const handleEdit = (est) => {
+  // 1. Edit Action: Hydrate full estimate & navigate to estimator with preloaded state
+  const handleEdit = async (est) => {
     setOpenMenuId(null);
+    const full = await hydrateEstimate(est);
     navigate('/customer/decks/new', {
-      state: { editEstimate: est },
+      state: { editEstimate: full || est },
     });
+  };
+
+  // Submit Reach-Out / Booking Request (Syncs Estimate + Admin Lead + Project)
+  const handleRequestBooking = async (est) => {
+    const estId = est?._id || est?.id;
+    if (!estId || requestingId) return;
+    setOpenMenuId(null);
+    setRequestingId(estId);
+    setErrorToast(null);
+    try {
+      await requestProjectEstimate(estId, {
+        message: `Customer requested service booking / reach-out for ${est.deckDetails?.projectName || est.estimateName || 'Deck Project'} ($${est.totalAmount || 0})`,
+      });
+      setEstimates((prev) =>
+        prev.map((item) => ((item._id || item.id) === estId ? { ...item, estimateStatus: 'REQUESTED' } : item))
+      );
+      setViewEstimate((prev) =>
+        prev && (prev._id || prev.id) === estId ? { ...prev, estimateStatus: 'REQUESTED' } : prev
+      );
+      setSuccessToast(`Booking request submitted for "${est.deckDetails?.projectName || est.estimateName || 'Deck Project'}".`);
+    } catch (err) {
+      setErrorToast(err?.message || 'Failed to submit booking request.');
+    } finally {
+      setRequestingId(null);
+    }
   };
 
   // 2. Delete Action: Confirm & Delete from DB
@@ -273,12 +387,13 @@ export default function CustomerEstimatesPage() {
     setDeletingId(id);
     try {
       await deleteEstimate(id);
+      hydratedCacheRef.current.delete(id);
       setEstimates((prev) => prev.filter((e) => (e._id || e.id) !== id));
       setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
       setSuccessToast(`Estimate record "${deleteConfirmEst.deckDetails?.projectName || deleteConfirmEst.estimateName || 'Project'}" deleted.`);
       setDeleteConfirmEst(null);
     } catch (err) {
-      alert(`Failed to delete estimate: ${err.message}`);
+      setErrorToast(`Failed to delete estimate: ${err.message}`);
     } finally {
       setDeletingId(null);
     }
@@ -303,24 +418,41 @@ export default function CustomerEstimatesPage() {
   const isAllSelected =
     filteredEstimates.length > 0 &&
     filteredEstimates.every((est) => selectedIds.includes(est._id || est.id));
-  const isPartiallySelected =
-    selectedIds.length > 0 && !isAllSelected;
 
-  // Batch Export PDF
+  const isPartiallySelected =
+    filteredEstimates.some((est) => selectedIds.includes(est._id || est.id)) && !isAllSelected;
+
+  // Batch Export PDF (lazy-loads PDF library + hydrates each selected estimate)
   const handleBatchExportPdf = async () => {
     const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
-    for (const est of selectedEsts) {
-      await downloadEstimatePdf(est, user);
-      await new Promise((r) => setTimeout(r, 450));
+    if (selectedEsts.length === 0) return;
+    try {
+      const { downloadEstimatePdf } = await import('../../../utils/reportExport');
+      for (const est of selectedEsts) {
+        const full = await hydrateEstimate(est);
+        await downloadEstimatePdf(full || est, user);
+        await new Promise((r) => setTimeout(r, 350));
+      }
+      setSuccessToast(`Exported ${selectedEsts.length} official PDF estimates.`);
+    } catch (err) {
+      setErrorToast(`Batch PDF export failed: ${err.message}`);
     }
-    setSuccessToast(`Exported ${selectedEsts.length} official PDF estimates.`);
   };
 
-  // Batch Export Excel / CSV
-  const handleBatchExportExcel = () => {
+  // Batch Export Excel / CSV (lazy-loaded)
+  const handleBatchExportExcel = async () => {
     const selectedEsts = estimates.filter((e) => selectedIds.includes(e._id || e.id));
-    selectedEsts.forEach((est) => downloadEstimateExcel(est, user));
-    setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
+    if (selectedEsts.length === 0) return;
+    try {
+      const { downloadEstimateExcel } = await import('../../../utils/reportExport');
+      for (const est of selectedEsts) {
+        const full = await hydrateEstimate(est);
+        downloadEstimateExcel(full || est, user);
+      }
+      setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
+    } catch (err) {
+      setErrorToast(`Batch Excel export failed: ${err.message}`);
+    }
   };
 
   // Batch Delete
@@ -328,233 +460,79 @@ export default function CustomerEstimatesPage() {
     setBatchDeleting(true);
     try {
       await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      selectedIds.forEach((id) => hydratedCacheRef.current.delete(id));
       setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
       setSuccessToast(`Successfully deleted ${selectedIds.length} estimates.`);
       setSelectedIds([]);
       setShowBatchDeleteModal(false);
     } catch (err) {
-      alert(`Could not delete selected items: ${err.message}`);
+      setErrorToast(`Could not delete selected items: ${err.message}`);
     } finally {
       setBatchDeleting(false);
     }
   };
 
-  // 3. Dedicated Professional PDF Template Generation for Print & Export
-  const generateOfficialEstimateHtml = (est) => {
-    const estId = est.estimateNumber || est._id || 'EST-PRO-2026';
-    const dateFormatted = formatFullDate(est.createdAt);
-    const statusText = getNormalizedStatus(est) === 'COMPLETED' ? 'COMPLETED & VERIFIED' : getNormalizedStatus(est) === 'IN_REVIEW' ? 'UNDER CONTRACTOR REVIEW' : 'CREATED ESTIMATE';
-    const customerName = user?.fullName || 'Valued Deck Restoration Customer';
-    const customerEmail = user?.email || 'customer@deckrestorationplus.com';
-    const customerPhone = user?.phone || user?.phoneNumber || '(856) 678-3325';
-    const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Residential Deck Restoration';
-    const street = est.deckDetails?.location?.street || '152 Indian Mills Road';
-    const city = est.deckDetails?.location?.city || 'Shamong';
-    const state = est.deckDetails?.location?.state || 'NJ';
-    const zip = est.deckDetails?.location?.zipCode || '08088';
-    const area = getDeckArea(est);
-    const dims = getDeckDimensions(est);
-    const shape = (est.deckDetails?.deckShape || est.pricingSnapshot?.shape || 'Rectangle').toUpperCase();
-    const wood = (est.deckDetails?.surfaceMaterial || est.pricingSnapshot?.wood || 'Pressure Treated Pine').replace(/_/g, ' ').toUpperCase();
-    const elevation = (est.deckDetails?.deckType || est.pricingSnapshot?.elevation || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase();
-    const exactPrice = getExactPrice(est);
-    const lm = getLabourAndMaterials(est);
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Official Deck Restoration Estimate - ${estId}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-        <style>
-          * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
-          body { background: #ffffff; color: #0f172a; margin: 0; padding: 36px 42px; font-size: 13px; line-height: 1.5; }
-          .header-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1E3A63; padding-bottom: 18px; margin-bottom: 22px; }
-          .logo-text { font-size: 22px; font-weight: 800; color: #1E3A63; letter-spacing: -0.5px; margin: 0; }
-          .sub-brand { font-size: 11px; font-weight: 700; color: #E08131; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
-          .doc-title-block { text-align: right; }
-          .doc-title { font-size: 16px; font-weight: 800; color: #1E3A63; text-transform: uppercase; margin: 0; }
-          .doc-ref { font-size: 12px; color: #64748b; font-weight: 600; margin-top: 3px; }
-          .status-badge { display: inline-block; padding: 4px 10px; background: #EFF6FF; color: #1E3A63; border: 1px solid #BFDBFE; border-radius: 6px; font-size: 11px; font-weight: 700; margin-top: 6px; }
-
-          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-          .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; }
-          .box-title { font-size: 11px; font-weight: 700; color: #1E3A63; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
-          .info-line { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
-          .info-label { color: #64748b; font-weight: 500; }
-          .info-val { font-weight: 600; color: #0f172a; }
-
-          .spec-table { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
-          .spec-table th { background: #1E3A63; color: #ffffff; text-align: left; padding: 9px 12px; font-size: 12px; font-weight: 700; }
-          .spec-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12.5px; }
-          .spec-table tr:nth-child(even) { background: #f8fafc; }
-
-          .price-card { background: #f0f7ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-          .price-title { font-size: 14px; font-weight: 700; color: #1E3A63; }
-          .price-sub { font-size: 11px; color: #475569; margin-top: 2px; }
-          .price-amount { font-size: 26px; font-weight: 900; color: #1E3A63; }
-
-          .guarantee-box { border-left: 3px solid #E08131; background: #fffbf5; padding: 10px 14px; font-size: 11.5px; color: #9a3412; margin-bottom: 24px; border-radius: 0 6px 6px 0; }
-          .footer-box { border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; font-size: 11px; color: #64748b; }
-          .footer-contact strong { color: #0f172a; }
-
-          @media print {
-            body { padding: 18px; }
-            @page { margin: 15mm; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header-row">
-          <div>
-            <h1 class="logo-text">DECK RESTORATION PLUS</h1>
-            <div class="sub-brand">National Deck Restoration & Wood Care Platform</div>
-          </div>
-          <div class="doc-title-block">
-            <h2 class="doc-title">Official Guaranteed Estimate</h2>
-            <div class="doc-ref">Ref: ${estId} &bull; Date: ${dateFormatted}</div>
-            <div class="status-badge">${statusText}</div>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="info-box">
-            <h3 class="box-title">Client &amp; Contact Details</h3>
-            <div class="info-line"><span class="info-label">Customer:</span><span class="info-val">${customerName}</span></div>
-            <div class="info-line"><span class="info-label">Email:</span><span class="info-val">${customerEmail}</span></div>
-            <div class="info-line"><span class="info-label">Phone:</span><span class="info-val">${customerPhone}</span></div>
-            <div class="info-line"><span class="info-label">Account Status:</span><span class="info-val">Verified Client</span></div>
-          </div>
-
-          <div class="info-box">
-            <h3 class="box-title">Project Site Location</h3>
-            <div class="info-line"><span class="info-label">Project Title:</span><span class="info-val">${projName}</span></div>
-            <div class="info-line"><span class="info-label">Property Address:</span><span class="info-val">${street}</span></div>
-            <div class="info-line"><span class="info-label">Municipality:</span><span class="info-val">${city}, ${state} ${zip}</span></div>
-            <div class="info-line"><span class="info-label">Service Tier:</span><span class="info-val">Full Scope Certified Restoration</span></div>
-          </div>
-        </div>
-
-        <table class="spec-table">
-          <thead>
-            <tr>
-              <th>Restoration Specification</th>
-              <th>Selected Input</th>
-              <th>Technical Scope Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Deck Perimeter &amp; Shape</strong></td>
-              <td>${shape}</td>
-              <td>Configured surface geometry</td>
-            </tr>
-            <tr>
-              <td><strong>Deck Footprint Dimensions</strong></td>
-              <td>${dims}</td>
-              <td>${area} total billable footprint area</td>
-            </tr>
-            <tr>
-              <td><strong>Surface Wood Species</strong></td>
-              <td>${wood}</td>
-              <td>Penetrating rate card classification</td>
-            </tr>
-            <tr>
-              <td><strong>Structural Elevation</strong></td>
-              <td>${elevation}</td>
-              <td>Staging, safety harness &amp; ladder allowance</td>
-            </tr>
-            <tr>
-              <td><strong>Labour Breakdown</strong></td>
-              <td>${lm.hours}</td>
-              <td>Deep wash, preparation &amp; finish application</td>
-            </tr>
-            <tr>
-              <td><strong>Materials &amp; Coatings</strong></td>
-              <td>${lm.materials}</td>
-              <td>Professional exterior penetrating oils &amp; sealers</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="price-card">
-          <div>
-            <div class="price-title">Guaranteed Restoration Total</div>
-            <div class="price-sub">Includes all specified labor, materials, equipment mobilization, and disposal</div>
-          </div>
-          <div class="price-amount">${exactPrice}</div>
-        </div>
-
-        <div class="guarantee-box">
-          <strong>Deck Restoration Plus Quality Guarantee:</strong> All estimates provided through this official portal are backed by Deck Restoration Plus proprietary restoration standards, professional-grade penetrating sealers, and licensed, certified contractors. Standard $2,500 project mobilization floor applies upon crew dispatch.
-        </div>
-
-        <div class="footer-box">
-          <div>
-            <strong>Deck Restoration Plus National Headquarters</strong><br>
-            152 Indian Mills Road, Unit A, Shamong, NJ 08088<br>
-            Official Website: www.deckrestorationplus.com
-          </div>
-          <div class="footer-contact" style="text-align: right;">
-            Toll Free Support: <strong>1 (866) 440-DECK (3325)</strong><br>
-            Office: <strong>(609) 268-3436</strong> &bull; Email: <strong>info@deckrestorationplus.com</strong><br>
-            ${OPERATING_HOURS_PRINT_LINES.contracting}<br>
-            ${OPERATING_HOURS_PRINT_LINES.office}
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
   // Trigger Dedicated Print Action (Direct PDF download without browser print dialog)
   const handlePrint = async (est) => {
-    try {
-      await downloadEstimatePdf(est, user);
-      setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
-    } catch (err) {
-      alert(`Could not download PDF report: ${err.message}`);
-    }
+    return handleExport(est, 'pdf');
   };
 
-  // Trigger Dedicated Export Template (PDF or Excel)
+  // Export / Download Official Report (PDF or Excel, lazy-loads heavy PDF bundle + full estimate data)
   const handleExport = async (est, format = 'pdf') => {
+    const estId = est?._id || est?.id;
     setOpenMenuId(null);
+    if (exportingId) return;
+    setExportingId(estId || 'export');
+    setErrorToast(null);
     try {
+      const full = await hydrateEstimate(est);
+      const targetEst = full || est;
+      const { downloadEstimatePdf, downloadEstimateExcel } = await import('../../../utils/reportExport');
       if (format === 'excel') {
-        downloadEstimateExcel(est, user);
-        setSuccessToast(`Estimate Excel dossier downloaded for ${est.estimateNumber || 'Project'}.`);
+        downloadEstimateExcel(targetEst, user);
+        setSuccessToast(`Estimate Excel dossier downloaded for ${targetEst.estimateNumber || 'Project'}.`);
       } else {
-        await downloadEstimatePdf(est, user);
-        setSuccessToast(`Official estimate PDF downloaded for ${est.estimateNumber || 'Project'}.`);
+        await downloadEstimatePdf(targetEst, user);
+        setSuccessToast(`Official estimate PDF downloaded for ${targetEst.estimateNumber || 'Project'}.`);
       }
     } catch (err) {
-      alert(`Export error: ${err.message}`);
+      setErrorToast(`Export failed: ${err.message || 'Unable to generate report.'}`);
+    } finally {
+      setExportingId(null);
     }
   };
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={{
+      ...styles.pageContainer,
+      padding: isMobile ? '12px 10px 44px 10px' : '16px 24px 60px 24px',
+    }}>
       {/* 1. HERO HEADER BANNER (Consistent with Dashboard Navy Overlay) */}
       <section
         style={{
           ...styles.heroBanner,
+          padding: isMobile ? '20px 16px' : '36px 40px',
+          minHeight: isMobile ? 'auto' : '220px',
           backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 46%, rgba(30, 58, 99, 0.35) 100%), url(${deckBannerWood})`,
         }}
       >
         <div style={styles.heroContent}>
-          <h1 style={styles.heroTitle}>My Projects &amp; Estimations</h1>
-          <p style={styles.heroSubtitle}>
+          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '21px' : '30px', margin: '0 0 6px 0' }}>
+            My Projects &amp; Estimations
+          </h1>
+          <p style={{ ...styles.heroSubtitle, fontSize: isMobile ? '12.5px' : '14px', margin: '0 0 14px 0' }}>
             Review specifications, track review status, export official estimate documents, and manage your deck restoration portfolio.
           </p>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
               onClick={() => navigate('/customer/decks/new')}
-              style={styles.heroPrimaryBtn}
+              style={{
+                ...styles.heroPrimaryBtn,
+                width: isMobile ? '100%' : 'auto',
+                justifyContent: 'center',
+                padding: isMobile ? '10px 16px' : '11px 22px',
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#C96D22';
                 e.currentTarget.style.transform = 'translateY(-1px)';
@@ -571,69 +549,73 @@ export default function CustomerEstimatesPage() {
         </div>
       </section>
 
-      {/* 2. SUMMARY KPI CARDS (Colored Cards Kept Intact) */}
-      <div style={styles.kpiGrid}>
+      {/* 2. SUMMARY KPI CARDS */}
+      <div style={{
+        ...styles.kpiGrid,
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '8px' : '14px',
+      }}>
         {/* Total Estimates */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dbeafe', color: '#1E3A63' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#dbeafe', color: '#1E3A63' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
           </div>
-          <div>
-            <span style={styles.kpiLabel}>Total Estimates</span>
-            <strong style={styles.kpiValue}>{kpis.total}</strong>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Total Estimates</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.total}</strong>
           </div>
         </div>
 
         {/* Created Estimates */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#ccfbf1', color: '#0f766e' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#ccfbf1', color: '#0f766e' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
           </div>
-          <div>
-            <span style={styles.kpiLabel}>Created Status</span>
-            <strong style={styles.kpiValue}>{kpis.created}</strong>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Created</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.created}</strong>
           </div>
         </div>
 
-        {/* In Review / Submitted */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#fef9c3', color: '#b45309' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Requested / In Progress */}
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#fef9c3', color: '#b45309' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
-          <div>
-            <span style={styles.kpiLabel}>In Review</span>
-            <strong style={styles.kpiValue}>{kpis.inReview}</strong>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Requested / Active</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.inReview}</strong>
           </div>
         </div>
 
         {/* Completed Quotes */}
-        <div style={{ ...styles.kpiCard, backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' }}>
-          <div style={{ ...styles.kpiIconWrap, backgroundColor: '#dcfce7', color: '#15803d' }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#dcfce7', color: '#15803d' }}>
+            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
-          <div>
-            <span style={styles.kpiLabel}>Completed Quotes</span>
-            <strong style={styles.kpiValue}>{kpis.completed}</strong>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Completed</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.completed}</strong>
           </div>
         </div>
       </div>
 
-      {/* Toast Notification */}
+      {/* Toast Notifications */}
       {successToast && (
         <div style={styles.toastBox}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -642,20 +624,33 @@ export default function CustomerEstimatesPage() {
           <span>{successToast}</span>
         </div>
       )}
+      {errorToast && (
+        <div style={{ ...styles.errorAlert, marginBottom: '14px' }}>
+          <span>{errorToast}</span>
+          <button type="button" onClick={() => setErrorToast(null)} style={{ background: 'none', border: 'none', color: '#b91c1c', fontWeight: '800', fontSize: '16px', cursor: 'pointer', lineHeight: 1 }}>
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* 3. SEARCH & FILTER TOOLBAR */}
-      <div style={styles.toolbarCard}>
+      <div style={{
+        ...styles.toolbarCard,
+        flexDirection: isMobile ? 'column' : 'row',
+        padding: isMobile ? '10px 12px' : '14px 18px',
+        gap: isMobile ? '8px' : '14px',
+      }}>
         {/* Working Search Bar */}
-        <div style={styles.searchBox}>
+        <div style={{ ...styles.searchBox, width: isMobile ? '100%' : 'auto', flex: 1 }}>
           <span style={styles.searchIcon}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </span>
           <input
             type="text"
-            placeholder="Search by project name, reference number, or wood species..."
+            placeholder={isMobile ? "Search project, ref # or wood..." : "Search by project name, reference number, or wood species..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.searchInput}
@@ -672,16 +667,22 @@ export default function CustomerEstimatesPage() {
           )}
         </div>
 
-        {/* Status Filter & Refresh Button with Icon */}
-        <div style={styles.filterGroup}>
+        {/* Status Filter & Refresh Button */}
+        <div style={{
+          ...styles.filterGroup,
+          width: isMobile ? '100%' : 'auto',
+          display: 'flex',
+          gap: '8px',
+        }}>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={styles.selectDropdown}
+            style={{ ...styles.selectDropdown, flex: isMobile ? 1 : 'none' }}
           >
             <option value="ALL">All Statuses</option>
             <option value="CREATED">Created</option>
-            <option value="IN_REVIEW">In Review</option>
+            <option value="REQUESTED">Requested</option>
+            <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
           </select>
 
@@ -693,8 +694,8 @@ export default function CustomerEstimatesPage() {
             title="Refresh Estimations List"
           >
             <svg
-              width="15"
-              height="15"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -709,7 +710,7 @@ export default function CustomerEstimatesPage() {
               <path d="M1 20v-6h6" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            <span>{refreshing ? 'Syncing...' : 'Refresh'}</span>
           </button>
         </div>
       </div>
@@ -813,6 +814,223 @@ export default function CustomerEstimatesPage() {
               + Create First Estimate
             </button>
           </div>
+        ) : isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px' }}>
+            {paginatedEstimates.map((est) => {
+              const estId = est._id || est.id;
+              const isRowSelected = selectedIds.includes(estId);
+              const projName = est.deckDetails?.projectName || est.estimateName || 'Deck Restoration Project';
+              const refNumber = est.estimateNumber || estId;
+              const exactPrice = getExactPrice(est);
+              const normStatus = getNormalizedStatus(est);
+              const lm = getLabourAndMaterials(est);
+              const fullDate = formatFullDate(est.createdAt);
+
+              return (
+                <div
+                  key={estId}
+                  style={{
+                    backgroundColor: isRowSelected ? '#F0F9FF' : '#ffffff',
+                    border: `1px solid ${isRowSelected ? '#93C5FD' : '#E2E8F0'}`,
+                    borderRadius: '10px',
+                    padding: '12px',
+                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected}
+                        onChange={() => handleSelectOne(estId)}
+                        style={{ ...styles.checkboxInput, marginTop: '3px', flexShrink: 0 }}
+                        aria-label={`Select ${projName}`}
+                      />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '800', color: '#1E3A63', wordBreak: 'break-word' }}>
+                          {projName}
+                        </h4>
+                        <span style={{ display: 'block', fontSize: '10.5px', color: '#64748b', fontWeight: '600', wordBreak: 'break-all' }}>
+                          {refNumber} &bull; {fullDate}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0 }}>{renderStatusBadge(normStatus)}</div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '8px',
+                      padding: '8px 10px',
+                      border: '1px solid #F1F5F9',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+                        Deck Size
+                      </div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>
+                        {getDeckArea(est)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+                        Labour &amp; Materials
+                      </div>
+                      <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#0F172A', marginTop: '2px', lineHeight: 1.3 }}>
+                        <div>{lm.hours}</div>
+                        <div style={{ color: '#475569', fontWeight: '600' }}>{lm.materials}</div>
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: 'span 2', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
+                        Estimator Price:
+                      </span>
+                      <span style={{ fontSize: '16px', fontWeight: '900', color: '#15803D' }}>
+                        {exactPrice}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenView(est)}
+                      style={{
+                        flex: '1 1 calc(50% - 3px)',
+                        backgroundColor: '#1E3A63',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '7px',
+                        padding: '8px 10px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      <span>View</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleExport(est, 'pdf')}
+                      disabled={exportingId === estId}
+                      style={{
+                        flex: '1 1 calc(50% - 3px)',
+                        backgroundColor: '#ffffff',
+                        color: '#1E3A63',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '7px',
+                        padding: '8px 10px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      <span>{exportingId === estId ? 'Exporting...' : 'PDF'}</span>
+                    </button>
+
+                    {normStatus === 'CREATED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRequestBooking(est)}
+                        disabled={requestingId === estId}
+                        style={{
+                          flex: '1 1 100%',
+                          backgroundColor: '#D97706',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '7px',
+                          padding: '8px 10px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {requestingId === estId ? 'Submitting Booking Request...' : 'Reach Out / Book Project'}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(est)}
+                      style={{
+                        flex: '1 1 0',
+                        backgroundColor: '#F8FAFC',
+                        color: '#334155',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '7px',
+                        padding: '7px 8px',
+                        fontSize: '11.5px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExport(est, 'excel')}
+                      style={{
+                        flex: '1 1 0',
+                        backgroundColor: '#F0FDFA',
+                        color: '#0F766E',
+                        border: '1px solid #CCFBF1',
+                        borderRadius: '7px',
+                        padding: '7px 8px',
+                        fontSize: '11.5px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Excel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmEst(est)}
+                      style={{
+                        flex: '1 1 0',
+                        backgroundColor: '#FEF2F2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        borderRadius: '7px',
+                        padding: '7px 8px',
+                        fontSize: '11.5px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
@@ -840,7 +1058,7 @@ export default function CustomerEstimatesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEstimates.map((est, idx) => {
+                {paginatedEstimates.map((est, idx) => {
                   const estId = est._id || est.id;
                   const isRowSelected = selectedIds.includes(estId);
                   const thumb = DEFAULT_THUMBS[idx % DEFAULT_THUMBS.length];
@@ -923,13 +1141,13 @@ export default function CustomerEstimatesPage() {
                         <span style={styles.dateText}>{fullDate}</span>
                       </td>
 
-                      {/* 7. Actions: View | Print | Three Dots (Edit, Export, Delete) */}
+                      {/* 7. Actions: View | Download PDF | Three Dots (Book, Edit, Export Excel, Delete) */}
                       <td style={{ ...styles.tableCell, textAlign: 'center' }}>
                         <div style={styles.actionBtnsRow}>
                           {/* View Button */}
                           <button
                             type="button"
-                            onClick={() => setViewEstimate(est)}
+                            onClick={() => handleOpenView(est)}
                             style={styles.actionBtnView}
                             title="View Project Specifications"
                           >
@@ -940,19 +1158,20 @@ export default function CustomerEstimatesPage() {
                             <span>View</span>
                           </button>
 
-                          {/* Print Button (Dedicated PDF Template) */}
+                          {/* Download PDF Button */}
                           <button
                             type="button"
-                            onClick={() => handlePrint(est)}
+                            onClick={() => handleExport(est, 'pdf')}
+                            disabled={exportingId === estId}
                             style={styles.actionBtnPrint}
-                            title="Print Official PDF Estimate"
+                            title="Download Official PDF Estimate"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="6 9 6 2 18 2 18 9" />
-                              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                              <rect x="6" y="14" width="12" height="8" />
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
                             </svg>
-                            <span>Print</span>
+                            <span>{exportingId === estId ? '...' : 'PDF'}</span>
                           </button>
 
                           {/* Three Dots Button (Coordinates tracked for fixed non-clipping menu) */}
@@ -963,7 +1182,7 @@ export default function CustomerEstimatesPage() {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setMenuCoords({
                                 top: rect.bottom + 4,
-                                left: Math.max(10, rect.right - 150),
+                                left: Math.max(10, rect.right - 170),
                               });
                               setActiveMenuEst(est);
                               setOpenMenuId((prev) => (prev === estId ? null : estId));
@@ -980,13 +1199,95 @@ export default function CustomerEstimatesPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
 
-            {/* Table Footer */}
-            <div style={styles.tableFooter}>
-              <span style={styles.showingText}>
-                Showing 1 – {filteredEstimates.length} of {estimates.length} estimations
-              </span>
+        {/* Dedicated Customer Pagination Bar */}
+        {filteredEstimates.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              padding: '14px 18px',
+              borderTop: '1px solid #E2E8F0',
+              backgroundColor: '#FAFAFA',
+            }}
+          >
+            <div style={{ fontSize: '13px', color: '#64748B' }}>
+              Showing <strong>{Math.min(filteredEstimates.length, (currentPage - 1) * pageSize + 1)}</strong> to{' '}
+              <strong>{Math.min(filteredEstimates.length, currentPage * pageSize)}</strong> of{' '}
+              <strong>{filteredEstimates.length}</strong> estimations
             </div>
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    color: '#1E3A63',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.45 : 1,
+                  }}
+                >
+                  &larr; Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+                  <button
+                    key={pg}
+                    type="button"
+                    onClick={() => setCurrentPage(pg)}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: pg === currentPage ? '1.5px solid #1E3A63' : '1px solid #CBD5E1',
+                      backgroundColor: pg === currentPage ? '#1E3A63' : '#FFFFFF',
+                      color: pg === currentPage ? '#FFFFFF' : '#334155',
+                      boxShadow: pg === currentPage ? '0 1px 3px rgba(30, 58, 99, 0.2)' : 'none',
+                    }}
+                  >
+                    {pg}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    color: '#1E3A63',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === totalPages ? 0.45 : 1,
+                  }}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -997,12 +1298,27 @@ export default function CustomerEstimatesPage() {
           ref={menuRef}
           style={{
             ...styles.actionDropdownMenu,
+            width: '170px',
             position: 'fixed',
             top: `${menuCoords.top}px`,
             left: `${menuCoords.left}px`,
             zIndex: 99999,
           }}
         >
+          {/* Reach Out / Book (when Created) */}
+          {getNormalizedStatus(activeMenuEst) === 'CREATED' && (
+            <button
+              type="button"
+              onClick={() => handleRequestBooking(activeMenuEst)}
+              style={{ ...styles.actionDropdownItem, color: '#B45309', fontWeight: '700' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72" />
+              </svg>
+              <span>Book / Reach Out</span>
+            </button>
+          )}
+
           {/* Edit */}
           <button
             type="button"
@@ -1066,35 +1382,95 @@ export default function CustomerEstimatesPage() {
         </div>
       )}
 
-      {/* 5. VIEW ESTIMATE REPORT MODAL (EXPANDED TO FULL DOSSIER WITH PHOTOS & EXPORTS) */}
-      {viewEstimate && (
+      {/* 5. VIEW ESTIMATE REPORT MODAL (RESPONSIVE FULL DOSSIER WITH LAZY PHOTOS & EXPORTS) */}
+      {viewEstimate && (() => {
+        const viewId = viewEstimate._id || viewEstimate.id;
+        const propAddr = viewEstimate.deckDetails?.propertyAddress || viewEstimate.deckDetails?.location || {};
+        const streetText = propAddr.street || 'Not specified';
+        const municipalityText = [propAddr.city, propAddr.state, propAddr.zipCode].filter(Boolean).join(', ') || 'Not specified';
+        const specComponents = viewEstimate.components?.length
+          ? viewEstimate.components
+          : (viewEstimate.deckDetails?.components?.length ? viewEstimate.deckDetails.components : (viewEstimate.pricingSnapshot?.spec?.components || []));
+        const specServices = viewEstimate.services?.length
+          ? viewEstimate.services
+          : (viewEstimate.deckDetails?.services?.length ? viewEstimate.deckDetails.services : (viewEstimate.pricingSnapshot?.spec?.services || []));
+        const specConditions = viewEstimate.damageConditions?.length
+          ? viewEstimate.damageConditions
+          : (viewEstimate.deckDetails?.damageConditions?.length ? viewEstimate.deckDetails.damageConditions : (viewEstimate.pricingSnapshot?.spec?.damageConditions || []));
+        const specHeightFt = viewEstimate.exactHeightFt || viewEstimate.deckDetails?.exactHeightFt;
+        const specCoating = viewEstimate.coatingType || viewEstimate.surfaceDetails?.coatingStatus || viewEstimate.deckDetails?.coatingType || 'None / Bare';
+        const viewPhotos = extractEstimatePhotos(viewEstimate);
+
+        const specRows = [
+          {
+            section: 'Section 1: Footprint',
+            input: (viewEstimate.deckDetails?.deckShape || viewEstimate.pricingSnapshot?.shape || 'Rectangle').replace(/_/g, ' '),
+            details: `${getDeckDimensions(viewEstimate)} • ${getDeckArea(viewEstimate)}`,
+          },
+          {
+            section: 'Section 2: Components',
+            input: specComponents.length > 0 ? specComponents.join(', ') : 'Standard Floor',
+            details: 'Perimeter railings & step assemblies calibrated',
+          },
+          {
+            section: 'Section 3: Wood Species',
+            input: (viewEstimate.deckDetails?.surfaceMaterial || viewEstimate.woodSpecies || viewEstimate.pricingSnapshot?.wood || 'Pressure Treated Pine').replace(/_/g, ' '),
+            details: 'Penetrating oil rate card calibration',
+          },
+          {
+            section: 'Section 4: Elevation',
+            input: (viewEstimate.deckDetails?.deckType || viewEstimate.accessType || viewEstimate.pricingSnapshot?.elevation || 'Ground Level (0–4 ft)').replace(/_/g, ' '),
+            details: specHeightFt ? `${specHeightFt} ft staging` : 'Ground tier',
+          },
+          {
+            section: 'Section 5: Existing Finish',
+            input: String(specCoating).replace(/_/g, ' '),
+            details: 'Clean pore absorption verified',
+          },
+          {
+            section: 'Section 6: Services',
+            input: specServices.length > 0 ? specServices.map((s) => String(s).replace(/_/g, ' ').toUpperCase()).join(' • ') : 'Cleaning & Sealing',
+            details: 'Commercial chemicals & multi-coat protection',
+            highlight: true,
+          },
+          {
+            section: 'Section 7: Conditions',
+            input: specConditions.length > 0 ? specConditions.join(', ') : 'Weathered baseline',
+            details: 'Surface stabilized prior to coating',
+          },
+        ];
+
+        return (
         <div style={styles.modalOverlay} onClick={() => setViewEstimate(null)}>
           <div
             style={{
               ...styles.modalContent,
+              width: isMobile ? '96vw' : '920px',
               maxWidth: '920px',
-              maxHeight: '92vh',
+              maxHeight: isMobile ? '94vh' : '92vh',
               display: 'flex',
               flexDirection: 'column',
+              margin: 'auto',
+              borderRadius: isMobile ? '10px' : '12px',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={styles.modalHeader}>
-              <div>
-                <h3 style={{ margin: '0 0 3px 0', fontSize: '19px', fontWeight: '800', color: '#1E3A63' }}>
+            <div style={{ ...styles.modalHeader, padding: isMobile ? '12px 14px' : '16px 24px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+                <h3 style={{ margin: '0 0 3px 0', fontSize: isMobile ? '16px' : '19px', fontWeight: '800', color: '#1E3A63', wordBreak: 'break-word' }}>
                   {viewEstimate.deckDetails?.projectName || viewEstimate.estimateName || 'Deck Restoration Project'}
                 </h3>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                  Ref: {viewEstimate.estimateNumber || viewEstimate._id} &bull; Created {formatFullDate(viewEstimate.createdAt)}
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', wordBreak: 'break-all' }}>
+                  Ref: {viewEstimate.estimateNumber || viewId} &bull; Created {formatFullDate(viewEstimate.createdAt)}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                 <span
                   style={{
                     display: 'inline-block',
-                    padding: '4px 10px',
+                    padding: '4px 8px',
                     borderRadius: '6px',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: '800',
                     backgroundColor: '#DCFCE7',
                     color: '#15803D',
@@ -1115,24 +1491,24 @@ export default function CustomerEstimatesPage() {
               </div>
             </div>
 
-            <div style={{ ...styles.modalBody, overflowY: 'auto', padding: '20px 24px' }}>
+            <div style={{ ...styles.modalBody, overflowY: 'auto', padding: isMobile ? '12px' : '20px 24px' }}>
               {/* Customer & Location Dossier */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '10px' : '16px', marginBottom: '14px' }}>
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
                     Customer Contact Dossier
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Name:</span>
-                    <strong>{user?.fullName || 'Verified Deck Owner'}</strong>
+                    <strong style={{ textAlign: 'right' }}>{user?.fullName || 'Verified Deck Owner'}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Email:</span>
-                    <strong>{user?.email || 'N/A'}</strong>
+                    <strong style={{ wordBreak: 'break-all', textAlign: 'right' }}>{user?.email || 'N/A'}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px' }}>
                     <span style={{ color: '#64748b' }}>Phone:</span>
-                    <strong>{user?.phone || '(856) 678-3325'}</strong>
+                    <strong style={{ textAlign: 'right' }}>{user?.phone || user?.phoneNumber || 'Not provided'}</strong>
                   </div>
                 </div>
 
@@ -1140,124 +1516,149 @@ export default function CustomerEstimatesPage() {
                   <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px' }}>
                     Project Site Address
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Street Address:</span>
-                    <strong>{viewEstimate.deckDetails?.propertyAddress?.street || viewEstimate.deckDetails?.location?.street || '152 Indian Mills Road'}</strong>
+                    <strong style={{ textAlign: 'right', wordBreak: 'break-word' }}>{streetText}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px', marginBottom: '4px' }}>
                     <span style={{ color: '#64748b' }}>Municipality:</span>
-                    <strong>
-                      {[viewEstimate.deckDetails?.propertyAddress?.city || viewEstimate.deckDetails?.location?.city || 'Shamong', viewEstimate.deckDetails?.propertyAddress?.state || viewEstimate.deckDetails?.location?.state || 'NJ', viewEstimate.deckDetails?.propertyAddress?.zipCode || viewEstimate.deckDetails?.location?.zipCode || '08088'].filter(Boolean).join(', ')}
-                    </strong>
+                    <strong style={{ textAlign: 'right', wordBreak: 'break-word' }}>{municipalityText}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px' }}>
                     <span style={{ color: '#64748b' }}>Status:</span>
                     <div>{renderStatusBadge(getNormalizedStatus(viewEstimate))}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Section-by-Section Architectural Inputs Table */}
-              <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
-                    <tr style={{ background: '#1E3A63', color: '#ffffff' }}>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '30%' }}>Section</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '35%' }}>Selected Input</th>
-                      <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '35%' }}>Dimensions & Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 1: Footprint</td>
-                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{viewEstimate.deckDetails?.deckShape || viewEstimate.pricingSnapshot?.shape || 'Rectangle'}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>{getDeckDimensions(viewEstimate)} • {getDeckArea(viewEstimate)}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 2: Components</td>
-                      <td style={{ padding: '8px 12px' }}>{viewEstimate.components?.length > 0 ? viewEstimate.components.join(', ') : 'Standard Floor'}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>Perimeter railings & step assemblies included</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 3: Wood Species</td>
-                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.deckDetails?.surfaceMaterial || viewEstimate.woodSpecies || 'Pressure Treated Pine').replace(/_/g, ' ')}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>Penetrating oil rate card calibration</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 4: Elevation</td>
-                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.deckDetails?.deckType || viewEstimate.accessType || 'Ground Level (0–4 ft)').replace(/_/g, ' ')}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>{viewEstimate.exactHeightFt ? `${viewEstimate.exactHeightFt} ft staging` : 'Ground tier'}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 5: Existing Finish</td>
-                      <td style={{ padding: '8px 12px', textTransform: 'capitalize' }}>{(viewEstimate.coatingType || viewEstimate.surfaceDetails?.coatingStatus || 'None / Bare').replace(/_/g, ' ')}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>Clean pore absorption verified</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 6: Services</td>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#E08131' }}>
-                        {viewEstimate.services?.length > 0 ? viewEstimate.services.map((s) => s.replace(/_/g, ' ').toUpperCase()).join(' • ') : 'Cleaning & Sealing'}
-                      </td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>Commercial chemicals & multi-coat protection</td>
-                    </tr>
-                    <tr style={{ background: '#FFFFFF' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>Section 7: Conditions</td>
-                      <td style={{ padding: '8px 12px' }}>{viewEstimate.damageConditions?.length > 0 ? viewEstimate.damageConditions.join(', ') : 'Weathered baseline'}</td>
-                      <td style={{ padding: '8px 12px', color: '#475569' }}>Surface stabilized prior to coating</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Uploaded Inspection Photos Gallery (Section 8) */}
-              {(() => {
-                const viewPhotos = getEstimatePhotos(viewEstimate);
-                if (viewPhotos.length === 0) return null;
-                return (
-                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Uploaded Deck Inspection Photos ({viewPhotos.length} On-File)</span>
-                      <span style={{ fontSize: '10px', color: '#64748b' }}>Included in Official PDF Report</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
-                      {viewPhotos.map((p, pIdx) => (
-                        <div key={pIdx} style={{ border: '1px solid #CBD5E1', borderRadius: '6px', overflow: 'hidden', background: '#FFFFFF' }}>
-                          <img
-                            src={p.url || p.dataUrl}
-                            alt={p.category || `Inspection ${pIdx + 1}`}
-                            style={{ width: '100%', height: '85px', objectFit: 'cover', display: 'block' }}
-                          />
-                          <div style={{ padding: '4px', fontSize: '9px', fontWeight: '700', color: '#475569', textAlign: 'center', background: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {p.category || `Photo #${pIdx + 1}`}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+              {/* Section-by-Section Architectural Inputs (Responsive Cards on Mobile, Table on Desktop/Tablet) */}
+              {isMobile ? (
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', marginBottom: '14px' }}>
+                  <div style={{ background: '#1E3A63', color: '#ffffff', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', textTransform: 'uppercase' }}>
+                    Restoration Specifications
                   </div>
-                );
-              })()}
+                  {specRows.map((row, rIdx) => (
+                    <div
+                      key={row.section}
+                      style={{
+                        padding: '9px 12px',
+                        backgroundColor: rIdx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                        borderBottom: rIdx < specRows.length - 1 ? '1px solid #E2E8F0' : 'none',
+                      }}
+                    >
+                      <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase' }}>
+                        {row.section}
+                      </div>
+                      <div style={{ fontSize: '12.5px', fontWeight: row.highlight ? '700' : '600', color: row.highlight ? '#E08131' : '#0F172A', marginTop: '2px', textTransform: row.highlight ? 'none' : 'capitalize', wordBreak: 'break-word' }}>
+                        {row.input}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                        {row.details}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#1E3A63', color: '#ffffff' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '28%' }}>Section</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '36%' }}>Selected Input</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '700', width: '36%' }}>Dimensions &amp; Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {specRows.map((row, rIdx) => (
+                        <tr
+                          key={row.section}
+                          style={{
+                            borderBottom: rIdx < specRows.length - 1 ? '1px solid #E2E8F0' : 'none',
+                            background: rIdx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                          }}
+                        >
+                          <td style={{ padding: '8px 12px', fontWeight: '700', color: '#1E3A63' }}>{row.section}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: row.highlight ? '700' : '500', color: row.highlight ? '#E08131' : '#0F172A', textTransform: row.highlight ? 'none' : 'capitalize' }}>
+                            {row.input}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#475569' }}>{row.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Uploaded Inspection Photos Gallery (Lazy-Hydrated Section 8) */}
+              {hydratingView && viewPhotos.length === 0 ? (
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#64748b' }}>
+                  <div style={{ ...styles.spinner, width: '18px', height: '18px', borderWidth: '2px' }} />
+                  <span>Loading full specification details &amp; inspection photos...</span>
+                </div>
+              ) : viewPhotos.length > 0 ? (
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#1E3A63', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid #E2E8F0', paddingBottom: '4px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                    <span>Uploaded Deck Inspection Photos ({viewPhotos.length} On-File)</span>
+                    <span style={{ fontSize: '10px', color: '#64748b' }}>Included in Official PDF Report</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
+                    {viewPhotos.map((p, pIdx) => (
+                      <div key={pIdx} style={{ border: '1px solid #CBD5E1', borderRadius: '6px', overflow: 'hidden', background: '#FFFFFF' }}>
+                        <img
+                          src={typeof p === 'string' ? p : (p.url || p.dataUrl)}
+                          alt={p.category || `Inspection ${pIdx + 1}`}
+                          style={{ width: '100%', height: '85px', objectFit: 'cover', display: 'block' }}
+                        />
+                        <div style={{ padding: '4px', fontSize: '9px', fontWeight: '700', color: '#475569', textAlign: 'center', background: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.category || `Photo #${pIdx + 1}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {/* Price Highlight Box */}
-              <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '8px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '8px', padding: isMobile ? '12px 14px' : '14px 18px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '0' }}>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
                     Official Guaranteed Estimate Total
                   </div>
                   <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
                     All labor hours, commercial equipment, EPA detergents &amp; premium wood penetrations included.
                   </div>
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: '900', color: '#15803D' }}>
+                <div style={{ fontSize: isMobile ? '22px' : '24px', fontWeight: '900', color: '#15803D', alignSelf: isMobile ? 'flex-end' : 'auto' }}>
                   {getExactPrice(viewEstimate)}
                 </div>
               </div>
             </div>
 
-            <div style={styles.modalFooter}>
+            <div style={{ ...styles.modalFooter, padding: isMobile ? '10px 12px' : '14px 24px', flexWrap: 'wrap', gap: '8px' }}>
+              {getNormalizedStatus(viewEstimate) === 'CREATED' && (
+                <button
+                  type="button"
+                  onClick={() => handleRequestBooking(viewEstimate)}
+                  disabled={requestingId === viewId}
+                  style={{
+                    ...styles.modalPrimaryActionBtn,
+                    backgroundColor: '#D97706',
+                    borderColor: '#B45309',
+                    color: '#ffffff',
+                    flex: isMobile ? '1 1 100%' : 'none',
+                    order: isMobile ? -1 : 0,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {requestingId === viewId ? 'Submitting Booking...' : 'Reach Out / Book Project'}
+                </button>
+              )}
+
               {/* Export PDF Button */}
               <button
                 type="button"
                 onClick={() => handleExport(viewEstimate, 'pdf')}
+                disabled={exportingId === viewId}
                 style={{
                   ...styles.modalPrimaryActionBtn,
                   backgroundColor: '#1E3A63',
@@ -1266,44 +1667,24 @@ export default function CustomerEstimatesPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  flex: isMobile ? '1 1 calc(50% - 4px)' : 'none',
+                  justifyContent: 'center',
                 }}
-                title="Download template-based PDF report"
+                title="Download official PDF estimate"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                <span>Export PDF</span>
-              </button>
-
-              {/* Print Official PDF Button */}
-              <button
-                type="button"
-                onClick={() => handlePrint(viewEstimate)}
-                style={{
-                  ...styles.modalPrimaryActionBtn,
-                  backgroundColor: '#ffffff',
-                  borderColor: '#CBD5E1',
-                  color: '#1E3A63',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-                title="Print Official PDF Report"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 6 2 18 2 18 9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                <span>Print</span>
+                <span>{exportingId === viewId ? 'Exporting...' : 'Download PDF'}</span>
               </button>
 
               {/* Export Excel Button */}
               <button
                 type="button"
                 onClick={() => handleExport(viewEstimate, 'excel')}
+                disabled={exportingId === viewId}
                 style={{
                   ...styles.modalPrimaryActionBtn,
                   backgroundColor: '#0F766E',
@@ -1312,6 +1693,8 @@ export default function CustomerEstimatesPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  flex: isMobile ? '1 1 calc(50% - 4px)' : 'none',
+                  justifyContent: 'center',
                 }}
                 title="Download Excel spreadsheet summary"
               >
@@ -1323,39 +1706,18 @@ export default function CustomerEstimatesPage() {
                 <span>Export Excel</span>
               </button>
 
-              {getNormalizedStatus(viewEstimate) === 'CREATED' && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const estId = viewEstimate._id || viewEstimate.id;
-                    try {
-                      await requestProjectEstimate(estId, {
-                        message: `Customer requested service booking / reach-out for ${viewEstimate.deckDetails?.projectName || 'Deck'} ($${viewEstimate.totalAmount || 0})`,
-                      });
-                      alert('Request submitted! Our team will contact you shortly and your project status is now Requested.');
-                      setViewEstimate(null);
-                      fetchEstimates();
-                    } catch (err) {
-                      alert(err?.message || 'Failed to submit booking request.');
-                    }
-                  }}
-                  style={{ ...styles.modalPrimaryActionBtn, backgroundColor: '#D97706', borderColor: '#B45309', color: '#ffffff' }}
-                >
-                  Reach Out / Book Project
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => setViewEstimate(null)}
-                style={styles.modalDismissBtn}
+                style={{ ...styles.modalDismissBtn, flex: isMobile ? '1 1 100%' : 'none', justifyContent: 'center' }}
               >
                 Close
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* 6. DELETE CONFIRMATION MODAL */}
       {deleteConfirmEst && (
@@ -2146,6 +2508,7 @@ const styles = {
   modalFooter: {
     display: 'flex',
     justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: '10px',
     padding: '14px 24px',
     borderTop: '1px solid #f1f5f9',

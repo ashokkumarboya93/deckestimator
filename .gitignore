@@ -36,6 +36,7 @@ generated/
 
 # Test artifacts
 .nyc_output/
+scratch/
 
 # Python
 __pycache__/

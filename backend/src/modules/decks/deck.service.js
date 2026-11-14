@@ -89,12 +89,21 @@ async function getDecks(user, { page = 1, limit = 10 } = {}) {
   const skip = (Math.max(1, page) - 1) * limit;
 
   const [decks, total] = await Promise.all([
-    Deck.find(query).populate('ownerId', 'fullName email').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Deck.find(query)
+      .select('-photos -__v')
+      .populate('ownerId', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Deck.countDocuments(query),
   ]);
 
   return {
-    decks: decks.map((d) => d.toJSON()),
+    decks: decks.map((d) => ({
+      ...d,
+      id: d._id ? String(d._id) : (d.id || ''),
+    })),
     pagination: {
       total,
       page: Number(page),

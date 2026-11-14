@@ -18,12 +18,13 @@ import { contractorLeadApi } from '../api/contractorLeadApi';
 import { userProfileApi } from '../../customer/api/userProfileApi';
 
 export default function ContractorProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, contractorProfile: authContractorProfile, refreshUser } = useAuth();
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
+  const hasFetchedRef = useRef(false);
 
-  // Loading & feedback state
-  const [loading, setLoading] = useState(true);
+  // Loading & feedback state (Instant render if session user exists)
+  const [loading, setLoading] = useState(() => !user);
   const [saving, setSaving] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -31,40 +32,55 @@ export default function ContractorProfilePage() {
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
+  // Responsive state
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
+  const isMobile = windowWidth < 900;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 1. Personal Details State
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [personalPhone, setPersonalPhone] = useState('');
-  const [avatar, setAvatar] = useState('');
-  const [preferredContact, setPreferredContact] = useState('email');
+  const [fullName, setFullName] = useState(() => user?.fullName || '');
+  const [email, setEmail] = useState(() => user?.email || '');
+  const [personalPhone, setPersonalPhone] = useState(() => user?.phone || '');
+  const [avatar, setAvatar] = useState(() => user?.avatar || '');
+  const [preferredContact, setPreferredContact] = useState(() => user?.preferredContactMethod || 'email');
 
   // 2. Business Details State
-  const [organizationName, setOrganizationName] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [businessPhone, setBusinessPhone] = useState('');
-  const [yearsOfExperience, setYearsOfExperience] = useState(5);
-  const [coverageRadius, setCoverageRadius] = useState(35);
+  const [organizationName, setOrganizationName] = useState(() => authContractorProfile?.businessName || user?.businessName || '');
+  const [licenseNumber, setLicenseNumber] = useState(() => authContractorProfile?.licenseNumber || user?.licenseNumber || '');
+  const [websiteUrl, setWebsiteUrl] = useState(() => authContractorProfile?.website || '');
+  const [businessPhone, setBusinessPhone] = useState(() => authContractorProfile?.businessPhone || user?.phone || '');
+  const [yearsOfExperience, setYearsOfExperience] = useState(() => authContractorProfile?.yearsOfExperience || 5);
+  const [coverageRadius, setCoverageRadius] = useState(() => authContractorProfile?.coverageRadiusMiles || 35);
   const [serviceZipCodes, setServiceZipCodes] = useState('');
-  const [businessStreet, setBusinessStreet] = useState('');
-  const [businessCity, setBusinessCity] = useState('');
-  const [businessState, setBusinessState] = useState('');
-  const [businessZip, setBusinessZip] = useState('');
+  const [businessStreet, setBusinessStreet] = useState(() => user?.address?.street || '');
+  const [businessCity, setBusinessCity] = useState(() => user?.address?.city || '');
+  const [businessState, setBusinessState] = useState(() => user?.address?.state || '');
+  const [businessZip, setBusinessZip] = useState(() => user?.address?.zipCode || '');
 
   // 3. Compliance & Verification State
-  const [verificationStatus, setVerificationStatus] = useState('PENDING');
-  const [contractorTier, setContractorTier] = useState('BRONZE');
+  const [verificationStatus, setVerificationStatus] = useState(() => (authContractorProfile?.verificationStatus || 'PENDING').toUpperCase());
+  const [contractorTier, setContractorTier] = useState(() => (authContractorProfile?.tier || 'BRONZE').toUpperCase());
   const [documents, setDocuments] = useState([]);
 
   // 4. Security State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
-  // Load profile and compliance data
+  // Load profile and compliance data once on mount or when user id changes
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     loadAllProfileData();
-  }, [user]);
+  }, []);
 
   // Auto-dismiss alerts
   useEffect(() => {
@@ -75,7 +91,6 @@ export default function ContractorProfilePage() {
   }, [successMsg]);
 
   async function loadAllProfileData() {
-    setLoading(true);
     setErrorMsg(null);
     try {
       const [userRes, contractorRes, docsRes] = await Promise.allSettled([
@@ -85,7 +100,7 @@ export default function ContractorProfilePage() {
       ]);
 
       // Populate User details
-      const u = userRes.status === 'fulfilled' && userRes.value?.data ? (userRes.value.data.user || userRes.value.data) : user;
+      const u = userRes.status === 'fulfilled' && userRes.value?.data ? (userRes.value.data.user || userRes.value.data) : (userRes.value?.user || user);
       if (u) {
         setFullName(u.fullName || '');
         setEmail(u.email || '');
@@ -101,8 +116,11 @@ export default function ContractorProfilePage() {
       }
 
       // Populate Contractor Business details
-      if (contractorRes.status === 'fulfilled' && contractorRes.value?.data) {
-        const c = contractorRes.value.data.profile || contractorRes.value.data;
+      const c = contractorRes.status === 'fulfilled'
+        ? (contractorRes.value?.profile || contractorRes.value?.data?.profile || contractorRes.value?.data || contractorRes.value)
+        : null;
+
+      if (c && typeof c === 'object') {
         if (c.businessName || c.companyName || c.organizationName) {
           setOrganizationName(c.businessName || c.companyName || c.organizationName);
         }
@@ -119,8 +137,8 @@ export default function ContractorProfilePage() {
           setServiceZipCodes(Array.isArray(c.serviceZipCodes) ? c.serviceZipCodes.join(', ') : c.serviceZipCodes);
         }
 
-        if (c.verificationStatus) setVerificationStatus(c.verificationStatus.toUpperCase());
-        if (c.tier) setContractorTier(c.tier.toUpperCase());
+        if (c.verificationStatus) setVerificationStatus(String(c.verificationStatus).toUpperCase());
+        if (c.tier) setContractorTier(String(c.tier).toUpperCase());
 
         if (c.businessAddress) {
           if (c.businessAddress.street) setBusinessStreet(c.businessAddress.street);
@@ -134,13 +152,20 @@ export default function ContractorProfilePage() {
         setLicenseNumber(u?.licenseNumber || '');
         setWebsiteUrl('');
         setBusinessPhone(u?.phone || '');
-        setVerificationStatus('PENDING');
-        setContractorTier('BRONZE');
       }
 
-      // Populate Documents (Strictly real MongoDB documents only, no fake/mock fallbacks)
-      if (docsRes.status === 'fulfilled' && docsRes.value?.data) {
-        const rawDocs = Array.isArray(docsRes.value.data) ? docsRes.value.data : docsRes.value.data?.documents || [];
+      // Populate Documents (Strictly real MongoDB documents only)
+      if (docsRes.status === 'fulfilled' && docsRes.value) {
+        const val = docsRes.value;
+        const rawDocs = Array.isArray(val)
+          ? val
+          : Array.isArray(val.documents)
+          ? val.documents
+          : Array.isArray(val.data)
+          ? val.data
+          : Array.isArray(val.data?.documents)
+          ? val.data.documents
+          : [];
         setDocuments(rawDocs);
       } else {
         setDocuments([]);
@@ -458,7 +483,7 @@ export default function ContractorProfilePage() {
       {/* ======================================================== */}
       {/* 1. TOP HEADER & TOP SAVE BUTTONS ROW                     */}
       {/* ======================================================== */}
-      <div style={styles.topHeaderCard}>
+      <div style={{ ...styles.topHeaderCard, padding: isMobile ? '14px 16px' : '20px 24px', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '12px' : '20px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <h1 style={styles.pageTitle}>Profile Settings</h1>
@@ -485,11 +510,11 @@ export default function ContractorProfilePage() {
         </div>
 
         {/* TOP SAVE BUTTONS */}
-        <div style={styles.topActionButtons}>
+        <div style={{ ...styles.topActionButtons, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-start' : 'flex-end', gap: isMobile ? '8px' : '10px' }}>
           <button
             type="button"
             onClick={loadAllProfileData}
-            style={styles.cancelBtn}
+            style={{ ...styles.cancelBtn, padding: isMobile ? '7px 14px' : '9px 18px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', textAlign: 'center' }}
             disabled={saving}
           >
             Reset
@@ -498,7 +523,7 @@ export default function ContractorProfilePage() {
             type="button"
             onClick={handleSaveAll}
             disabled={saving}
-            style={styles.saveBtn}
+            style={{ ...styles.saveBtn, padding: isMobile ? '7px 16px' : '9px 22px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
@@ -888,7 +913,7 @@ export default function ContractorProfilePage() {
                   }
                 }}
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                 style={{ display: 'none' }}
               />
 
@@ -905,7 +930,7 @@ export default function ContractorProfilePage() {
                   {uploadingDoc ? 'Uploading & Queuing Document...' : 'Drag & drop your trade documents here, or click to browse'}
                 </div>
                 <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
-                  Supports PDF, JPG, PNG, and WebP up to 10MB (General Liability COI, State License, W-9, EPA Certifications)
+                  Supports PDF, DOC, DOCX, JPG, PNG, and WebP up to 10MB (General Liability COI, State License, W-9, EPA Certifications)
                 </p>
               </div>
 
@@ -1052,35 +1077,125 @@ export default function ContractorProfilePage() {
           <div style={styles.grid3}>
             <div>
               <label style={styles.label}>Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="••••••••"
-                style={styles.input}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type={showCurrentPass ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ ...styles.input, paddingRight: '40px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPass(!showCurrentPass)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={showCurrentPass ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrentPass ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div>
               <label style={styles.label}>New Password (Min 6 chars)</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                style={styles.input}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type={showNewPass ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ ...styles.input, paddingRight: '40px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPass(!showNewPass)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={showNewPass ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPass ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div>
               <label style={styles.label}>Confirm New Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                style={styles.input}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type={showConfirmPass ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ ...styles.input, paddingRight: '40px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPass(!showConfirmPass)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={showConfirmPass ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPass ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1092,7 +1207,7 @@ export default function ContractorProfilePage() {
           <button
             type="button"
             onClick={loadAllProfileData}
-            style={styles.cancelBtn}
+            style={{ ...styles.cancelBtn, padding: isMobile ? '7px 14px' : '9px 18px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', textAlign: 'center' }}
             disabled={saving}
           >
             Reset Form
@@ -1100,7 +1215,7 @@ export default function ContractorProfilePage() {
           <button
             type="submit"
             disabled={saving}
-            style={styles.saveBtn}
+            style={{ ...styles.saveBtn, padding: isMobile ? '7px 16px' : '9px 22px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />

@@ -2,16 +2,19 @@
 // Deck Estimator — Admin Verification & Progress Page
 // =============================================
 // Features:
-// - 5 horizontal tabs: Verifications, Customers, Contractors, Permissions, Progress
+// - 4 horizontal tabs: Verifications, Contractor Documents, Customers, Contractors
 // - Tab 1 (Verifications): Contractor onboarding queue, document inspect, Approve & Reject with mandatory reason dialog, Verification History
-// - Tab 2 (Customers): Complete customer directory with estimate count, projects, and moderation controls
-// - Tab 3 (Contractors): Complete contractor roster with verification standing, license, discount tier, and projects
-// - Tab 4 (Permissions): Role-based permissions matrix grid (Admin, Contractor, Customer) with live MongoDB save
-// - Tab 5 (Progress): Deck project progress tracker with visual progress bars, update modal (slider, status, notes), history timeline, CSV/Excel export
+// - Tab 2 (Contractor Documents): Review uploaded licenses, insurance certificates, and commercial credentials with live inline preview
+// - Tab 3 (Customers): Complete customer directory with estimate count, projects, and moderation controls
+// - Tab 4 (Contractors): Complete contractor roster with verification standing, license, discount tier, and projects
+// - All tabs feature search, status filtering, refresh, and pagination
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
+import { getStoredToken } from '../../../api/client';
+
+const PAGE_SIZE = 10;
 
 const TABS = [
   { id: 'verifications', label: 'Verifications' },
@@ -22,46 +25,115 @@ const TABS = [
 
 export default function AdminVerificationProgressPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('verifications');
+  const location = useLocation();
+
+  // Tab State: restore tab if returning from user profile
+  const [activeTab, setActiveTab] = useState(() => {
+    return location.state?.tab || 'verifications';
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Search & Filtering
+  // Responsive layout
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 900 : false));
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Shared / Tab Filter States
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Status filters
+  const [verifFilter, setVerifFilter] = useState('all');
+  const [docsFilter, setDocsFilter] = useState('all');
   const [customerStatusFilter, setCustomerStatusFilter] = useState('all');
   const [contractorStatusFilter, setContractorStatusFilter] = useState('all');
-  const [viewContractorModal, setViewContractorModal] = useState(null);
+
+  // Document Blob Preview State
+  const [docBlobUrl, setDocBlobUrl] = useState(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const [viewingDocModal, setViewingDocModal] = useState(null);
+  const [docReviewModal, setDocReviewModal] = useState({ open: false, doc: null, action: '', notes: '' });
+  const [docSubmitting, setDocSubmitting] = useState(false);
 
   // Verifications State
   const [verifications, setVerifications] = useState([]);
   const [verifCounts, setVerifCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
-  const [verifFilter, setVerifFilter] = useState('pending');
   const [verifActionModal, setVerifActionModal] = useState({ open: false, type: '', item: null, reason: '' });
   const [verifHistoryModal, setVerifHistoryModal] = useState({ open: false, logs: [], contractorName: '' });
+  const [viewContractorModal, setViewContractorModal] = useState(null);
 
-  // Contractor Documents State (NEW)
+  // Contractor Documents State
   const [contractorDocs, setContractorDocs] = useState([]);
   const [docsCounts, setDocsCounts] = useState({ pending: 0, verified: 0, rejected: 0, total: 0 });
-  const [docsFilter, setDocsFilter] = useState('all');
-  const [viewingDocModal, setViewingDocModal] = useState(null);
-  const [docReviewModal, setDocReviewModal] = useState({ open: false, doc: null, action: '', notes: '' });
-  const [docSubmitting, setDocSubmitting] = useState(false);
 
   // Users Directory State (Customers & Contractors)
   const [customers, setCustomers] = useState([]);
   const [contractors, setContractors] = useState([]);
 
-  // Progress Modal State
-  const [progressModal, setProgressModal] = useState({ open: false, project: null, progress: 0, status: '', note: '' });
-  const [savingProgress, setSavingProgress] = useState(false);
+  // Reset page and search when switching tabs
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setSearchTerm('');
+    setPage(1);
+  };
+
+  // Secure Document Viewer with Authorization Token (Fixes previewing landing page)
+  useEffect(() => {
+    if (!viewingDocModal) {
+      if (docBlobUrl) {
+        URL.revokeObjectURL(docBlobUrl);
+        setDocBlobUrl(null);
+      }
+      return;
+    }
+
+    const docId = viewingDocModal._id || viewingDocModal.id;
+    if (!docId) return;
+
+    let isMounted = true;
+    async function fetchDocBlob() {
+      setDocLoading(true);
+      try {
+        const token = getStoredToken();
+        const res = await fetch(`/api/v1/admin/contractor-documents/${docId}/file`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+          throw new Error('Failed to fetch file');
+        }
+        const blob = await res.blob();
+        if (isMounted) {
+          const url = URL.createObjectURL(blob);
+          setDocBlobUrl(url);
+        }
+      } catch (err) {
+        console.warn('Direct file stream fallback:', err);
+      } finally {
+        if (isMounted) setDocLoading(false);
+      }
+    }
+    fetchDocBlob();
+
+    return () => {
+      isMounted = false;
+      if (docBlobUrl) {
+        URL.revokeObjectURL(docBlobUrl);
+      }
+    };
+  }, [viewingDocModal]);
 
   useEffect(() => {
     loadTabData(false);
 
     const interval = setInterval(() => {
       loadTabData(true);
-    }, 10000);
+    }, 15000);
 
     const handleFocus = () => {
       loadTabData(true);
@@ -89,10 +161,10 @@ export default function AdminVerificationProgressPage() {
         setContractorDocs(list);
         if (res.counts || res.data?.counts) setDocsCounts(res.counts || res.data?.counts);
       } else if (activeTab === 'customers') {
-        const res = await adminApi.getUsers({ role: 'customer', limit: 50 });
+        const res = await adminApi.getUsers({ role: 'customer', limit: 100 });
         setCustomers(res.data || []);
       } else if (activeTab === 'contractors') {
-        const res = await adminApi.getUsers({ role: 'contractor', limit: 50 });
+        const res = await adminApi.getUsers({ role: 'contractor', limit: 100 });
         setContractors(res.data || []);
       }
     } catch (err) {
@@ -121,7 +193,7 @@ export default function AdminVerificationProgressPage() {
   const handleApproveVerification = async (item) => {
     setLoading(true);
     try {
-      await adminApi.approveVerification(item._id);
+      await adminApi.approveVerification(item._id || item.id);
       setSuccessMsg(`Contractor ${item.contractorName || 'account'} approved successfully.`);
       loadTabData();
     } catch (err) {
@@ -141,8 +213,8 @@ export default function AdminVerificationProgressPage() {
     }
     setLoading(true);
     try {
-      await adminApi.rejectVerification(verifActionModal.item._id, verifActionModal.reason);
-      setSuccessMsg(`Contractor registration rejected with reason logged.`);
+      await adminApi.rejectVerification(verifActionModal.item._id || verifActionModal.item.id, verifActionModal.reason);
+      setSuccessMsg('Contractor registration rejected with reason logged.');
       setVerifActionModal({ open: false, type: '', item: null, reason: '' });
       loadTabData();
     } catch (err) {
@@ -160,82 +232,123 @@ export default function AdminVerificationProgressPage() {
     }
   };
 
-  // PERMISSIONS ACTIONS
-  const handlePermissionToggle = (ruleIndex, roleKey) => {
-    const updated = [...permissions];
-    updated[ruleIndex].roles[roleKey] = !updated[ruleIndex].roles[roleKey];
-    setPermissions(updated);
-  };
+  // =========================================================================
+  // TAB FILTERING & PAGINATION DERIVATIONS
+  // =========================================================================
 
-  const handleSavePermissions = async () => {
-    setSavingPermissions(true);
-    try {
-      await adminApi.savePermissions(permissions);
-      setSuccessMsg('Role permissions policy saved successfully.');
-    } catch (err) {
-      setError(err?.message || 'Failed to save permissions policy.');
-    } finally {
-      setSavingPermissions(false);
-    }
-  };
-
-  // PROGRESS ACTIONS
-  const handleOpenProgressModal = (project) => {
-    setProgressModal({
-      open: true,
-      project,
-      progress: project.progress || 0,
-      status: project.status || 'in_progress',
-      note: '',
+  // Tab 1: Verifications
+  const filteredVerifications = useMemo(() => {
+    return verifications.filter((item) => {
+      if (verifFilter !== 'all' && item.status !== verifFilter) return false;
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      return (
+        (item.contractorName || '').toLowerCase().includes(q) ||
+        (item.contractorEmail || '').toLowerCase().includes(q) ||
+        (item.companyName || '').toLowerCase().includes(q) ||
+        (item.licenseNumber || '').toLowerCase().includes(q)
+      );
     });
-  };
+  }, [verifications, verifFilter, searchTerm]);
 
-  const handleSaveProjectProgress = async () => {
-    if (!progressModal.project) return;
-    setSavingProgress(true);
-    try {
-      await adminApi.updateProjectProgress(progressModal.project._id, {
-        progress: Number(progressModal.progress),
-        status: progressModal.status,
-        note: progressModal.note || `Progress adjusted to ${progressModal.progress}%`,
-      });
-      setSuccessMsg(`Progress updated for project: ${progressModal.project.title}`);
-      setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' });
-      loadTabData();
-    } catch (err) {
-      setError(err?.message || 'Failed to update project progress.');
-    } finally {
-      setSavingProgress(false);
-    }
-  };
+  const totalVerifPages = Math.max(1, Math.ceil(filteredVerifications.length / PAGE_SIZE));
+  const currentVerifications = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredVerifications.slice(start, start + PAGE_SIZE);
+  }, [filteredVerifications, page]);
+
+  // Tab 2: Contractor Documents
+  const filteredContractorDocs = useMemo(() => {
+    return contractorDocs.filter((doc) => {
+      const docStatus = doc.documentStatus || 'pending_review';
+      if (docsFilter !== 'all' && docStatus !== docsFilter) return false;
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      const cont = doc.contractorId || {};
+      const user = doc.userId || {};
+      return (
+        (doc.originalFileName || '').toLowerCase().includes(q) ||
+        (cont.businessName || '').toLowerCase().includes(q) ||
+        (user.fullName || '').toLowerCase().includes(q) ||
+        (cont.licenseNumber || '').toLowerCase().includes(q) ||
+        (user.email || '').toLowerCase().includes(q)
+      );
+    });
+  }, [contractorDocs, docsFilter, searchTerm]);
+
+  const totalDocsPages = Math.max(1, Math.ceil(filteredContractorDocs.length / PAGE_SIZE));
+  const currentContractorDocs = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredContractorDocs.slice(start, start + PAGE_SIZE);
+  }, [filteredContractorDocs, page]);
+
+  // Tab 3: Customers
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      const st = (c.accountStatus || c.status || 'active').toLowerCase();
+      if (customerStatusFilter !== 'all' && st !== customerStatusFilter.toLowerCase()) return false;
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      return (
+        (c.fullName || c.name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q)
+      );
+    });
+  }, [customers, customerStatusFilter, searchTerm]);
+
+  const totalCustPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const currentCustomers = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredCustomers.slice(start, start + PAGE_SIZE);
+  }, [filteredCustomers, page]);
+
+  // Tab 4: Contractors
+  const filteredContractors = useMemo(() => {
+    return contractors.filter((c) => {
+      const vStatus = (c.contractorProfile?.verificationStatus || 'unverified').toLowerCase();
+      const accStatus = (c.accountStatus || c.status || 'active').toLowerCase();
+      if (contractorStatusFilter !== 'all') {
+        if (contractorStatusFilter === 'verified' && vStatus !== 'verified') return false;
+        if (contractorStatusFilter === 'unverified' && vStatus !== 'unverified') return false;
+        if (contractorStatusFilter === 'pending' && vStatus !== 'pending') return false;
+        if (contractorStatusFilter === 'suspended' && accStatus !== 'suspended') return false;
+      }
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      return (
+        (c.fullName || c.name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.contractorProfile?.companyName || '').toLowerCase().includes(q) ||
+        (c.contractorProfile?.licenseNumber || '').toLowerCase().includes(q)
+      );
+    });
+  }, [contractors, contractorStatusFilter, searchTerm]);
+
+  const totalContPages = Math.max(1, Math.ceil(filteredContractors.length / PAGE_SIZE));
+  const currentContractors = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredContractors.slice(start, start + PAGE_SIZE);
+  }, [filteredContractors, page]);
 
   return (
     <div style={styles.container}>
       {/* Page Header */}
       <div style={styles.pageHeader}>
         <div>
-          <h1 style={styles.title}>Verification & Progress</h1>
+          <h2 style={styles.title}>Platform Verifications & Directory</h2>
           <p style={styles.subtitle}>
-            Review contractor registrations, enforce permissions policies, and oversee active deck project milestones.
+            Comprehensive contractor compliance, document inspections, customer accounts, and credential moderation.
           </p>
         </div>
-        {activeTab === 'verifications' && (
-          <div style={styles.badgeGroup}>
-            <span style={styles.badgePending}>Pending: {verifCounts.pending || 0}</span>
-            <span style={styles.badgeApproved}>Approved: {verifCounts.approved || 0}</span>
-            <span style={styles.badgeRejected}>Rejected: {verifCounts.rejected || 0}</span>
-          </div>
-        )}
-        {activeTab === 'documents' && (
-          <div style={styles.badgeGroup}>
-            <span style={styles.badgePending}>Pending Review: {docsCounts.pending || 0}</span>
-            <span style={styles.badgeApproved}>Verified: {docsCounts.verified || 0}</span>
-            <span style={styles.badgeRejected}>Rejected: {docsCounts.rejected || 0}</span>
-          </div>
-        )}
+        <div style={styles.badgeGroup}>
+          <span style={styles.badgePending}>Pending: {verifCounts.pending || 0}</span>
+          <span style={styles.badgeApproved}>Verified: {verifCounts.approved || 0}</span>
+          <span style={styles.badgeRejected}>Rejected: {verifCounts.rejected || 0}</span>
+        </div>
       </div>
 
-      {/* Alerts */}
+      {/* Global Alerts */}
       {successMsg && (
         <div style={styles.alertSuccess}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -264,7 +377,7 @@ export default function AdminVerificationProgressPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               style={{
                 ...styles.tabButton,
                 ...(isActive ? styles.tabButtonActive : {}),
@@ -284,20 +397,63 @@ export default function AdminVerificationProgressPage() {
       {/* ========================================================================= */}
       {activeTab === 'verifications' && (
         <div>
+          {/* Universal Search & Filter Bar */}
           <div style={styles.filterBar}>
-            <div style={styles.filterPills}>
-              {['pending', 'approved', 'rejected', 'all'].map((filter) => (
+            <div style={styles.searchBox}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search contractor, company, license, email..."
+                style={styles.searchInput}
+              />
+              {searchTerm && (
                 <button
-                  key={filter}
-                  onClick={() => setVerifFilter(filter)}
-                  style={{
-                    ...styles.filterPill,
-                    ...(verifFilter === filter ? styles.filterPillActive : {}),
-                  }}
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 4px' }}
                 >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  ✕
                 </button>
-              ))}
+              )}
+            </div>
+
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={verifFilter}
+                onChange={(e) => {
+                  setVerifFilter(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.selectInput}
+              >
+                <option value="all">All Applications</option>
+                <option value="pending">Pending Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => loadTabData(false)}
+                style={styles.refreshBtn}
+                title="Refresh verifications"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
@@ -307,261 +463,158 @@ export default function AdminVerificationProgressPage() {
                 <div style={styles.spinner} />
                 <span>Loading verification applications...</span>
               </div>
-            ) : verifications.length === 0 ? (
+            ) : filteredVerifications.length === 0 ? (
               <div style={styles.emptyBox}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <p style={styles.emptyTitle}>No verification applications in this queue</p>
-                <p style={styles.emptySub}>All contractor submissions have been processed.</p>
+                <p style={styles.emptyTitle}>No verification applications found</p>
+                <p style={styles.emptySub}>Try adjusting your search keywords or status filter.</p>
               </div>
             ) : (
-              <div style={styles.tableResponsive}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Contractor / Company</th>
-                      <th style={styles.th}>Submitted Date</th>
-                      <th style={styles.th}>License / Documents</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Verification History</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Review Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {verifications.map((item) => (
-                      <tr key={item._id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.contractorName || 'Contractor'}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>{item.contractorEmail}</div>
-                          {item.companyName && (
-                            <div style={{ fontSize: '11px', color: '#1d4ed8', fontWeight: '500' }}>{item.companyName}</div>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          <div style={{ fontSize: '13px', color: '#334155' }}>
-                            {new Date(item.submittedAt || item.createdAt || Date.now()).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td style={styles.td}>
-                          <div style={{ fontSize: '13px', color: '#0f172a' }}>
-                            License: <strong>{item.licenseNumber || 'Verified ID'}</strong>
-                          </div>
-                          {item.documents && item.documents.length > 0 ? (
-                            <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '2px' }}>
-                              {item.documents.length} document(s) attached
+              <>
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Contractor / Company</th>
+                        <th style={styles.th}>Submitted Date</th>
+                        <th style={styles.th}>License / Documents</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Verification History</th>
+                        <th style={{ ...styles.th, textAlign: 'right' }}>Review Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentVerifications.map((item) => {
+                        const itemId = item._id || item.id;
+                        return (
+                        <tr key={itemId} style={styles.tr}>
+                          <td style={styles.td}>
+                            <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.contractorName || 'Contractor'}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>{item.contractorEmail}</div>
+                            {item.companyName && (
+                              <div style={{ fontSize: '11px', color: '#1d4ed8', fontWeight: '500' }}>{item.companyName}</div>
+                            )}
+                          </td>
+                          <td style={styles.td}>
+                            <div style={{ fontSize: '13px', color: '#334155' }}>
+                              {new Date(item.submittedAt || item.createdAt || Date.now()).toLocaleDateString()}
                             </div>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Standard verification</div>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          <span style={getVerifStatusBadge(item.status)}>{(item.status || 'PENDING').toUpperCase()}</span>
-                          {item.rejectionReason && (
-                            <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '4px' }}>
-                              Reason: {item.rejectionReason}
+                          </td>
+                          <td style={styles.td}>
+                            <div style={{ fontSize: '13px', color: '#0f172a' }}>
+                              License: <strong>{item.licenseNumber || 'Verified ID'}</strong>
                             </div>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          <button
-                            onClick={() => handleViewVerificationHistory(item.contractorId, item.contractorName)}
-                            style={styles.actionBtnOutline}
-                          >
-                            View Audit ({item.history?.length || 0})
-                          </button>
-                        </td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <div style={styles.actionButtonGroup}>
+                            {item.documents && item.documents.length > 0 ? (
+                              <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '2px' }}>
+                                {item.documents.length} document(s) attached
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '11px', color: '#94a3b8' }}>Standard verification</div>
+                            )}
+                          </td>
+                          <td style={styles.td}>
+                            <span style={getVerifStatusBadge(item.status)}>{(item.status || 'PENDING').toUpperCase()}</span>
+                            {item.rejectionReason && (
+                              <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '4px' }}>
+                                Reason: {item.rejectionReason}
+                              </div>
+                            )}
+                          </td>
+                          <td style={styles.td}>
                             <button
-                              type="button"
-                              onClick={() => setViewContractorModal(item)}
+                              onClick={() => handleViewVerificationHistory(item.contractorId, item.contractorName)}
                               style={styles.actionBtnOutline}
-                              title="View contractor submission details and location"
                             >
-                              View
+                              View Audit ({item.history?.length || 0})
                             </button>
-                            {item.status === 'pending' ? (
-                              <>
+                          </td>
+                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                            <div style={styles.actionButtonGroup}>
+                              <button
+                                type="button"
+                                onClick={() => setViewContractorModal(item)}
+                                style={styles.actionBtnOutline}
+                                title="View contractor submission details and location"
+                              >
+                                View
+                              </button>
+                              {item.status === 'pending' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveVerification(item)}
+                                    style={styles.actionBtnSuccess}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenRejectModal(item)}
+                                    style={styles.actionBtnDanger}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              ) : item.status === 'rejected' ? (
                                 <button
                                   onClick={() => handleApproveVerification(item)}
                                   style={styles.actionBtnSuccess}
                                 >
-                                  Approve
+                                  Re-Approve
                                 </button>
+                              ) : (
                                 <button
                                   onClick={() => handleOpenRejectModal(item)}
-                                  style={styles.actionBtnDanger}
+                                  style={styles.actionBtnOutline}
                                 >
-                                  Reject
+                                  Revoke
                                 </button>
-                              </>
-                            ) : item.status === 'rejected' ? (
-                              <button
-                                onClick={() => handleApproveVerification(item)}
-                                style={styles.actionBtnSuccess}
-                              >
-                                Re-Approve
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleOpenRejectModal(item)}
-                                style={styles.actionBtnOutline}
-                              >
-                                Revoke
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div style={styles.paginationBar}>
+                  <div style={styles.paginationInfo}>
+                    Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredVerifications.length)} to{' '}
+                    {Math.min(page * PAGE_SIZE, filteredVerifications.length)} of {filteredVerifications.length} applications
+                  </div>
+                  <div style={styles.paginationBtns}>
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                    >
+                      &larr; Previous
+                    </button>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                      Page {page} of {totalVerifPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= totalVerifPages}
+                      onClick={() => setPage((p) => Math.min(totalVerifPages, p + 1))}
+                      style={page >= totalVerifPages ? styles.pageBtnDisabled : styles.pageBtn}
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: CUSTOMERS DIRECTORY */}
-      {/* ========================================================================= */}
-      {activeTab === 'customers' && (
-        <div style={styles.card}>
-          <div style={styles.cardHeaderFlex}>
-            <div>
-              <h3 style={styles.cardTitle}>Customer Accounts Directory</h3>
-              <p style={styles.cardSub}>Overview of registered homeowners, estimates generated, and active projects.</p>
-            </div>
-            <span style={styles.countBadge}>{customers.length} Customers</span>
-          </div>
-
-          <div style={styles.tableResponsive}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Customer</th>
-                  <th style={styles.th}>Email</th>
-                  <th style={styles.th}>Phone</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Joined Date</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => {
-                  const custName = c.fullName || c.name || 'Customer';
-                  const custStatus = c.accountStatus || c.status || 'ACTIVE';
-                  return (
-                  <tr key={c._id || c.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <strong>{custName}</strong>
-                    </td>
-                    <td style={styles.td}>{c.email}</td>
-                    <td style={styles.td}>{c.phone || '—'}</td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(custStatus)}>
-                        {custStatus.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                        style={styles.actionBtnOutline}
-                        title="View complete user dossier"
-                      >
-                        View Profile
-                      </button>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: CONTRACTORS ROSTER */}
-      {/* ========================================================================= */}
-      {activeTab === 'contractors' && (
-        <div style={styles.card}>
-          <div style={styles.cardHeaderFlex}>
-            <div>
-              <h3 style={styles.cardTitle}>Verified Contractor Roster</h3>
-              <p style={styles.cardSub}>Status of verified contractors, licensed specialists, and active projects.</p>
-            </div>
-            <span style={styles.countBadge}>{contractors.length} Contractors</span>
-          </div>
-
-          <div style={styles.tableResponsive}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Contractor / Company</th>
-                  <th style={styles.th}>License #</th>
-                  <th style={styles.th}>Verification</th>
-                  <th style={styles.th}>Discount Rate</th>
-                  <th style={styles.th}>Completed Jobs</th>
-                  <th style={styles.th}>Account Status</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contractors.map((c) => {
-                  const contName = c.fullName || c.name || 'Contractor';
-                  const contStatus = c.accountStatus || c.status || 'ACTIVE';
-                  return (
-                  <tr key={c._id || c.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <strong>{contName}</strong>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
-                    </td>
-                    <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
-                        {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
-                        {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{ fontWeight: '600', color: '#0f172a' }}>
-                        {c.contractorProfile?.completedProjectsCount || 0}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={getVerifStatusBadge(contStatus)}>
-                        {contStatus.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/users/${c._id || c.id}`)}
-                        style={styles.actionBtnOutline}
-                        title="View complete user dossier"
-                      >
-                        View Profile
-                      </button>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: CONTRACTOR DOCUMENTS (Approval for discount verification) */}
+      {/* TAB 2: CONTRACTOR DOCUMENTS */}
       {/* ========================================================================= */}
       {activeTab === 'documents' && (
         <div style={styles.card}>
@@ -572,11 +625,45 @@ export default function AdminVerificationProgressPage() {
                 Review uploaded licenses, insurance certificates, and commercial credentials to approve contractor discount eligibility.
               </p>
             </div>
+            <span style={styles.countBadge}>{filteredContractorDocs.length} Documents</span>
+          </div>
+
+          {/* Universal Search & Filter Bar */}
+          <div style={styles.filterBar}>
+            <div style={styles.searchBox}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search file name, business, license, email..."
+                style={styles.searchInput}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             <div style={styles.filterRight}>
               <label style={styles.filterLabel}>Status:</label>
               <select
                 value={docsFilter}
-                onChange={(e) => setDocsFilter(e.target.value)}
+                onChange={(e) => {
+                  setDocsFilter(e.target.value);
+                  setPage(1);
+                }}
                 style={styles.selectInput}
               >
                 <option value="all">All Documents</option>
@@ -584,6 +671,20 @@ export default function AdminVerificationProgressPage() {
                 <option value="verified">Verified (Approved)</option>
                 <option value="rejected">Rejected</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => loadTabData(false)}
+                style={styles.refreshBtn}
+                title="Refresh contractor documents"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
@@ -593,24 +694,24 @@ export default function AdminVerificationProgressPage() {
                 <tr>
                   <th style={styles.th}>Document File</th>
                   <th style={styles.th}>Contractor / Business</th>
-                  <th style={styles.th}>Category</th>
                   <th style={styles.th}>Status</th>
                   <th style={styles.th}>Uploaded Date</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {contractorDocs.length === 0 ? (
+                {currentContractorDocs.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
+                    <td colSpan="5" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
                   </tr>
                 ) : (
-                  contractorDocs.map((doc) => {
+                  currentContractorDocs.map((doc) => {
+                    const docId = doc._id || doc.id;
                     const cont = doc.contractorId || {};
                     const user = doc.userId || {};
                     const docStatus = doc.documentStatus || 'pending_review';
                     return (
-                      <tr key={doc._id} style={styles.tr}>
+                      <tr key={docId} style={styles.tr}>
                         <td style={styles.td}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={styles.docFileIcon}>
@@ -632,11 +733,6 @@ export default function AdminVerificationProgressPage() {
                           <div style={{ fontSize: '11px', color: '#64748b' }}>
                             License: {cont.licenseNumber || 'N/A'} • {user.email || ''}
                           </div>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={styles.docTypeBadge}>
-                            {(doc.documentType || 'DOCUMENT').replace(/_/g, ' ').toUpperCase()}
-                          </span>
                         </td>
                         <td style={styles.td}>
                           <span style={{
@@ -666,7 +762,7 @@ export default function AdminVerificationProgressPage() {
                               <button
                                 type="button"
                                 disabled={docSubmitting}
-                                onClick={() => handleReviewDocument(doc._id, 'verified')}
+                                onClick={() => handleReviewDocument(docId, 'verified')}
                                 style={styles.actionBtnSuccess}
                                 title="Approve document to unlock contractor wholesale discounts"
                               >
@@ -693,62 +789,437 @@ export default function AdminVerificationProgressPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          <div style={styles.paginationBar}>
+            <div style={styles.paginationInfo}>
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredContractorDocs.length)} to{' '}
+              {Math.min(page * PAGE_SIZE, filteredContractorDocs.length)} of {filteredContractorDocs.length} documents
+            </div>
+            <div style={styles.paginationBtns}>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                &larr; Previous
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                Page {page} of {totalDocsPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalDocsPages}
+                onClick={() => setPage((p) => Math.min(totalDocsPages, p + 1))}
+                style={page >= totalDocsPages ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH LIVE PREVIEW */}
-      {viewingDocModal && (
-        <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div>
-                <h3 style={styles.modalTitle}>Document Live Inspection</h3>
-                <p style={styles.modalSub}>{viewingDocModal.originalFileName}</p>
-              </div>
-              <button onClick={() => setViewingDocModal(null)} style={styles.modalCloseBtn}>✕</button>
+      {/* ========================================================================= */}
+      {/* TAB 3: CUSTOMERS DIRECTORY */}
+      {/* ========================================================================= */}
+      {activeTab === 'customers' && (
+        <div style={styles.card}>
+          <div style={styles.cardHeaderFlex}>
+            <div>
+              <h3 style={styles.cardTitle}>Customer Accounts Directory</h3>
+              <p style={styles.cardSub}>Overview of registered homeowners, estimates generated, and active projects.</p>
             </div>
-            <div style={styles.modalBody}>
-              <div style={styles.docInfoGrid}>
-                <div><strong>Contractor:</strong> {viewingDocModal.contractorId?.businessName || viewingDocModal.userId?.fullName || 'N/A'}</div>
-                <div><strong>Category:</strong> {(viewingDocModal.documentType || 'document').replace(/_/g, ' ').toUpperCase()}</div>
-                <div><strong>Status:</strong> {(viewingDocModal.documentStatus || 'pending').replace(/_/g, ' ').toUpperCase()}</div>
-                <div><strong>File Size:</strong> {Math.round((viewingDocModal.fileSize || 1024) / 1024)} KB</div>
-                <div><strong>Uploaded:</strong> {new Date(viewingDocModal.createdAt).toLocaleString()}</div>
-                <div><strong>Storage:</strong> MongoDB Secure Vault</div>
+            <span style={styles.countBadge}>{filteredCustomers.length} Customers</span>
+          </div>
+
+          {/* Universal Search & Filter Bar */}
+          <div style={styles.filterBar}>
+            <div style={styles.searchBox}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search customer name, email, phone..."
+                style={styles.searchInput}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={customerStatusFilter}
+                onChange={(e) => {
+                  setCustomerStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.selectInput}
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="blocked">Blocked / Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => loadTabData(false)}
+                style={styles.refreshBtn}
+                title="Refresh customer accounts"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Customer</th>
+                  <th style={styles.th}>Email</th>
+                  <th style={styles.th}>Phone</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Joined Date</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={styles.emptyTd}>No customers found matching this filter.</td>
+                  </tr>
+                ) : (
+                  currentCustomers.map((c) => {
+                    const custId = c._id || c.id;
+                    const custName = c.fullName || c.name || 'Customer';
+                    const custStatus = c.accountStatus || c.status || 'ACTIVE';
+                    return (
+                      <tr key={custId} style={styles.tr}>
+                        <td style={styles.td}>
+                          <strong>{custName}</strong>
+                        </td>
+                        <td style={styles.td}>{c.email}</td>
+                        <td style={styles.td}>{c.phone || '—'}</td>
+                        <td style={styles.td}>
+                          <span style={getVerifStatusBadge(custStatus)}>
+                            {custStatus.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/users/${custId}`, {
+                              state: {
+                                from: '/admin/verification-progress',
+                                fromTab: 'customers',
+                                fromTitle: '← Back to Verification & Progress',
+                              },
+                            })}
+                            style={styles.actionBtnOutline}
+                            title="View complete user dossier"
+                          >
+                            View Profile
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div style={styles.paginationBar}>
+            <div style={styles.paginationInfo}>
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredCustomers.length)} to{' '}
+              {Math.min(page * PAGE_SIZE, filteredCustomers.length)} of {filteredCustomers.length} customers
+            </div>
+            <div style={styles.paginationBtns}>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                &larr; Previous
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                Page {page} of {totalCustPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalCustPages}
+                onClick={() => setPage((p) => Math.min(totalCustPages, p + 1))}
+                style={page >= totalCustPages ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: CONTRACTORS ROSTER */}
+      {/* ========================================================================= */}
+      {activeTab === 'contractors' && (
+        <div style={styles.card}>
+          <div style={styles.cardHeaderFlex}>
+            <div>
+              <h3 style={styles.cardTitle}>Verified Contractor Roster</h3>
+              <p style={styles.cardSub}>Status of verified contractors, licensed specialists, and active projects.</p>
+            </div>
+            <span style={styles.countBadge}>{filteredContractors.length} Contractors</span>
+          </div>
+
+          {/* Universal Search & Filter Bar */}
+          <div style={styles.filterBar}>
+            <div style={styles.searchBox}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search contractor name, company, license, email..."
+                style={styles.searchInput}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div style={styles.filterRight}>
+              <label style={styles.filterLabel}>Status:</label>
+              <select
+                value={contractorStatusFilter}
+                onChange={(e) => {
+                  setContractorStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.selectInput}
+              >
+                <option value="all">All Contractors</option>
+                <option value="verified">Verified Standing</option>
+                <option value="unverified">Unverified</option>
+                <option value="pending">Pending Verification</option>
+                <option value="suspended">Suspended / Blocked</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => loadTabData(false)}
+                style={styles.refreshBtn}
+                title="Refresh contractor roster"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Contractor / Company</th>
+                  <th style={styles.th}>License #</th>
+                  <th style={styles.th}>Verification</th>
+                  <th style={styles.th}>Discount Rate</th>
+                  <th style={styles.th}>Completed Jobs</th>
+                  <th style={styles.th}>Account Status</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentContractors.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={styles.emptyTd}>No contractors found matching this filter.</td>
+                  </tr>
+                ) : (
+                  currentContractors.map((c) => {
+                    const contId = c._id || c.id;
+                    const contName = c.fullName || c.name || 'Contractor';
+                    const contStatus = c.accountStatus || c.status || 'ACTIVE';
+                    return (
+                      <tr key={contId} style={styles.tr}>
+                        <td style={styles.td}>
+                          <strong>{contName}</strong>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
+                        </td>
+                        <td style={styles.td}>{c.contractorProfile?.licenseNumber || '—'}</td>
+                        <td style={styles.td}>
+                          <span style={getVerifStatusBadge(c.contractorProfile?.verificationStatus || 'unverified')}>
+                            {(c.contractorProfile?.verificationStatus || 'UNVERIFIED').toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ fontWeight: '700', color: '#1d4ed8' }}>
+                            {c.contractorProfile?.customDiscount !== undefined ? `${c.contractorProfile.customDiscount}%` : '10% (Default)'}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ fontWeight: '600', color: '#0f172a' }}>
+                            {c.contractorProfile?.completedProjectsCount || 0}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={getVerifStatusBadge(contStatus)}>
+                            {contStatus.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/users/${contId}`, {
+                              state: {
+                                from: '/admin/verification-progress',
+                                fromTab: 'contractors',
+                                fromTitle: '← Back to Verification & Progress',
+                              },
+                            })}
+                            style={styles.actionBtnOutline}
+                            title="View complete user dossier"
+                          >
+                            View Profile
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div style={styles.paginationBar}>
+            <div style={styles.paginationInfo}>
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredContractors.length)} to{' '}
+              {Math.min(page * PAGE_SIZE, filteredContractors.length)} of {filteredContractors.length} contractors
+            </div>
+            <div style={styles.paginationBtns}>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                &larr; Previous
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                Page {page} of {totalContPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalContPages}
+                onClick={() => setPage((p) => Math.min(totalContPages, p + 1))}
+                style={page >= totalContPages ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODALS */}
+      {/* ========================================================================= */}
+
+      {/* CONTRACTOR DOCUMENT VIEWER MODAL WITH REAL AUTHENTICATED PREVIEW */}
+      {viewingDocModal && (() => {
+        const docId = viewingDocModal._id || viewingDocModal.id;
+        const previewSrc = docBlobUrl || `/api/v1/admin/contractor-documents/${docId}/file?token=${encodeURIComponent(getStoredToken() || '')}`;
+        const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
+        const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
+
+        return (
+          <div style={styles.modalOverlay} onClick={() => setViewingDocModal(null)}>
+            <div style={{ ...styles.modalContent, maxWidth: '780px' }} onClick={(e) => e.stopPropagation()}>
+              <div style={styles.modalHeader}>
+                <div>
+                  <h3 style={styles.modalTitle}>Document Live Inspection</h3>
+                  <p style={styles.modalSub}>{viewingDocModal.originalFileName}</p>
+                </div>
+                <button onClick={() => setViewingDocModal(null)} style={styles.modalCloseBtn}>✕</button>
               </div>
+              <div style={styles.modalBody}>
+                <div style={styles.docInfoGrid}>
+                  <div><strong>Contractor:</strong> {viewingDocModal.contractorId?.businessName || viewingDocModal.userId?.fullName || 'N/A'}</div>
+                  <div><strong>Status:</strong> {(viewingDocModal.documentStatus || 'pending').replace(/_/g, ' ').toUpperCase()}</div>
+                  <div><strong>File Size:</strong> {Math.round((viewingDocModal.fileSize || 1024) / 1024)} KB</div>
+                  <div><strong>Uploaded:</strong> {new Date(viewingDocModal.createdAt || viewingDocModal.uploadedAt || Date.now()).toLocaleString()}</div>
+                  <div><strong>Storage:</strong> MongoDB Secure Vault</div>
+                  <div><strong>File Type:</strong> {viewingDocModal.mimeType || 'application/pdf'}</div>
+                </div>
 
-              {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
-              <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
-                {(() => {
-                  const docUrl = `/api/v1/contractors/documents/${viewingDocModal._id}/file`;
-                  const isImg = (viewingDocModal.mimeType || '').includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(viewingDocModal.originalFileName || '');
-                  const isPdf = (viewingDocModal.mimeType || '').includes('pdf') || /\.pdf$/i.test(viewingDocModal.originalFileName || '');
-
-                  if (isImg) {
-                    return (
-                      <img
-                        src={docUrl}
-                        alt={viewingDocModal.originalFileName}
-                        style={{ maxWidth: '100%', maxHeight: '440px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-                      />
-                    );
-                  }
-                  if (isPdf) {
-                    return (
-                      <iframe
-                        src={docUrl}
-                        title={viewingDocModal.originalFileName}
-                        style={{ width: '100%', height: '440px', border: 'none', borderRadius: '6px' }}
-                      />
-                    );
-                  }
-                  return (
+                {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
+                <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '320px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                  {docLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '12px' }}>
+                      <div style={styles.spinner} />
+                      <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Loading secure document stream...</span>
+                    </div>
+                  ) : isImg ? (
+                    <img
+                      src={previewSrc}
+                      alt={viewingDocModal.originalFileName}
+                      style={{ maxWidth: '100%', maxHeight: '460px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                    />
+                  ) : isPdf ? (
+                    <iframe
+                      src={previewSrc}
+                      title={viewingDocModal.originalFileName}
+                      style={{ width: '100%', height: '480px', border: 'none', borderRadius: '6px' }}
+                    />
+                  ) : (
                     <div style={{ textAlign: 'center', padding: '24px 16px' }}>
                       <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#0F172A' }}>
                         {viewingDocModal.originalFileName}
                       </p>
                       <a
-                        href={docUrl}
+                        href={previewSrc}
                         target="_blank"
                         rel="noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#1E3A63', color: '#FFFFFF', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}
@@ -756,53 +1227,54 @@ export default function AdminVerificationProgressPage() {
                         Open File in Viewer &rarr;
                       </a>
                     </div>
-                  );
-                })()}
-                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                  <a
-                    href={`/api/v1/contractors/documents/${viewingDocModal._id}/file`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: '12px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
-                  >
-                    Open Document in New Tab &rarr;
-                  </a>
-                </div>
-              </div>
+                  )}
 
-              {viewingDocModal.reviewNotes && (
-                <div style={{ marginTop: '14px', padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#991b1b' }}>Review Notes:</span>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>{viewingDocModal.reviewNotes}</p>
+                  <div style={{ marginTop: '12px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                    <a
+                      href={previewSrc}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
+                    >
+                      Open Document in Dedicated Tab &rarr;
+                    </a>
+                  </div>
                 </div>
-              )}
 
-              <div style={styles.modalFooter}>
-                <button
-                  type="button"
-                  onClick={() => setViewingDocModal(null)}
-                  style={styles.modalBtnSecondary}
-                >
-                  Close Viewer
-                </button>
-                {viewingDocModal.documentStatus !== 'verified' && (
+                {viewingDocModal.reviewNotes && (
+                  <div style={{ marginTop: '14px', padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#991b1b' }}>Review Notes:</span>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>{viewingDocModal.reviewNotes}</p>
+                  </div>
+                )}
+
+                <div style={styles.modalFooter}>
                   <button
                     type="button"
-                    disabled={docSubmitting}
-                    onClick={() => {
-                      handleReviewDocument(viewingDocModal._id, 'verified');
-                      setViewingDocModal(null);
-                    }}
-                    style={styles.actionBtnSuccessLg}
+                    onClick={() => setViewingDocModal(null)}
+                    style={styles.modalBtnSecondary}
                   >
-                    ✓ Approve Document
+                    Close Viewer
                   </button>
-                )}
+                  {viewingDocModal.documentStatus !== 'verified' && (
+                    <button
+                      type="button"
+                      disabled={docSubmitting}
+                      onClick={() => {
+                        handleReviewDocument(docId, 'verified');
+                        setViewingDocModal(null);
+                      }}
+                      style={styles.actionBtnSuccessLg}
+                    >
+                      ✓ Approve Document
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* CONTRACTOR DETAILS, DATE & LOCATION POPUP MODAL */}
       {viewContractorModal && (
@@ -936,7 +1408,7 @@ export default function AdminVerificationProgressPage() {
               <button
                 type="button"
                 disabled={docSubmitting}
-                onClick={() => handleReviewDocument(docReviewModal.doc._id, 'rejected', docReviewModal.notes)}
+                onClick={() => handleReviewDocument(docReviewModal.doc._id || docReviewModal.doc.id, 'rejected', docReviewModal.notes)}
                 style={styles.actionBtnDangerLg}
               >
                 {docSubmitting ? 'Saving...' : 'Confirm Rejection'}
@@ -1027,74 +1499,6 @@ export default function AdminVerificationProgressPage() {
           </div>
         </div>
       )}
-
-      {/* UPDATE PROJECT PROGRESS MODAL */}
-      {progressModal.open && progressModal.project && (
-        <div style={styles.modalOverlay} onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}>
-          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Update Project Progress</h3>
-            <p style={styles.modalSub}>{progressModal.project.title}</p>
-
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <label style={styles.inputLabel}>Progress Percentage:</label>
-                <span style={{ fontWeight: '700', color: '#1d4ed8' }}>{progressModal.progress}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={progressModal.progress}
-                onChange={(e) => setProgressModal({ ...progressModal, progress: Number(e.target.value) })}
-                style={{ width: '100%', accentColor: '#1d4ed8' }}
-              />
-            </div>
-
-            <div style={{ marginTop: '16px' }}>
-              <label style={styles.inputLabel}>Milestone Status:</label>
-              <select
-                value={progressModal.status}
-                onChange={(e) => setProgressModal({ ...progressModal, status: e.target.value })}
-                style={styles.selectInputFull}
-              >
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="on_hold">On Hold</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-
-            <div style={{ marginTop: '16px' }}>
-              <label style={styles.inputLabel}>Progress Note / History Log:</label>
-              <textarea
-                rows={2}
-                style={styles.modalTextarea}
-                placeholder="e.g. Surface stripped and power washed, drying scheduled..."
-                value={progressModal.note}
-                onChange={(e) => setProgressModal({ ...progressModal, note: e.target.value })}
-              />
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button
-                onClick={() => setProgressModal({ open: false, project: null, progress: 0, status: '', note: '' })}
-                style={styles.modalBtnSecondary}
-                disabled={savingProgress}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProjectProgress}
-                style={styles.primaryBtn}
-                disabled={savingProgress}
-              >
-                {savingProgress ? 'Saving...' : 'Save Progress'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1109,24 +1513,9 @@ function getVerifStatusBadge(status) {
     letterSpacing: '0.04em',
   };
   const s = (status || '').toLowerCase();
-  if (s === 'approved' || s === 'active') return { ...base, backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
+  if (s === 'approved' || s === 'active' || s === 'verified') return { ...base, backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
   if (s === 'rejected' || s === 'blocked') return { ...base, backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' };
   return { ...base, backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
-}
-
-function getProgressStatusBadge(status) {
-  const base = {
-    display: 'inline-block',
-    padding: '3px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '700',
-  };
-  const s = (status || '').toLowerCase();
-  if (s === 'completed') return { ...base, backgroundColor: '#ecfdf5', color: '#047857' };
-  if (s === 'on_hold') return { ...base, backgroundColor: '#fffbeb', color: '#b45309' };
-  if (s === 'cancelled') return { ...base, backgroundColor: '#fef2f2', color: '#b91c1c' };
-  return { ...base, backgroundColor: '#eff6ff', color: '#1d4ed8' };
 }
 
 const styles = {
@@ -1158,6 +1547,7 @@ const styles = {
     display: 'flex',
     gap: '8px',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   badgePending: {
     backgroundColor: '#fffbeb',
@@ -1185,30 +1575,6 @@ const styles = {
     padding: '6px 12px',
     fontSize: '13px',
     fontWeight: '600',
-  },
-  exportBtn: {
-    backgroundColor: '#ffffff',
-    color: '#334155',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-  },
-  exportBtnExcel: {
-    backgroundColor: '#047857',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: '600',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
   },
   alertSuccess: {
     display: 'flex',
@@ -1245,6 +1611,7 @@ const styles = {
     gap: '8px',
     borderBottom: '2px solid #e2e8f0',
     marginBottom: '20px',
+    flexWrap: 'wrap',
   },
   tabButton: {
     padding: '10px 18px',
@@ -1273,61 +1640,110 @@ const styles = {
     borderRadius: '10px',
   },
   filterBar: {
-    marginBottom: '16px',
-  },
-  filterPills: {
     display: 'flex',
-    gap: '8px',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+    gap: '16px',
+    flexWrap: 'wrap',
   },
-  filterPill: {
-    padding: '6px 14px',
+  searchBox: {
+    display: 'flex',
+    alignItems: 'center',
     backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '20px',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '0 12px',
+    height: '40px',
+    flex: '1',
+    minWidth: '240px',
+  },
+  searchInput: {
+    border: 'none',
+    outline: 'none',
+    padding: '0 8px',
+    width: '100%',
+    fontSize: '13.5px',
+    color: '#0f172a',
+    backgroundColor: 'transparent',
+  },
+  filterRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  filterLabel: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#475569',
+  },
+  selectInput: {
+    padding: '8px 12px',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
     fontSize: '13px',
     fontWeight: '600',
-    color: '#64748b',
+    color: '#1e293b',
+    outline: 'none',
     cursor: 'pointer',
+    minWidth: '160px',
+    height: '40px',
   },
-  filterPillActive: {
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    borderColor: '#1d4ed8',
+  refreshBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    backgroundColor: '#ffffff',
+    color: '#1e3a63',
+    border: '1.5px solid #1e3a63',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    height: '40px',
   },
   card: {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    padding: '24px',
+    marginBottom: '24px',
   },
   cardHeaderFlex: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px',
   },
   cardTitle: {
-    margin: '0 0 4px',
+    margin: 0,
     fontSize: '16px',
     fontWeight: '700',
     color: '#0f172a',
   },
   cardSub: {
-    margin: 0,
+    margin: '4px 0 0',
     fontSize: '13px',
     color: '#64748b',
   },
   countBadge: {
     backgroundColor: '#f1f5f9',
-    color: '#334155',
-    padding: '4px 10px',
-    borderRadius: '6px',
+    color: '#475569',
     fontSize: '12px',
-    fontWeight: '600',
+    fontWeight: '700',
+    padding: '4px 10px',
+    borderRadius: '12px',
   },
   tableResponsive: {
     overflowX: 'auto',
+    width: '100%',
   },
   table: {
     width: '100%',
@@ -1335,130 +1751,129 @@ const styles = {
     textAlign: 'left',
   },
   th: {
-    padding: '12px 14px',
-    fontSize: '12px',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: '#64748b',
-    borderBottom: '1px solid #e2e8f0',
+    padding: '12px 16px',
     backgroundColor: '#f8fafc',
+    color: '#475569',
+    fontSize: '12px',
+    fontWeight: '600',
+    borderBottom: '1px solid #e2e8f0',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
   },
   td: {
-    padding: '14px',
-    fontSize: '14px',
-    color: '#1e293b',
+    padding: '14px 16px',
+    fontSize: '13px',
+    color: '#334155',
     verticalAlign: 'middle',
   },
-  actionButtonGroup: {
-    display: 'inline-flex',
-    gap: '6px',
+  emptyBox: {
+    padding: '48px 16px',
+    textAlign: 'center',
   },
-  actionBtnOutline: {
-    padding: '5px 12px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    fontSize: '12px',
+  emptyTitle: {
+    margin: '12px 0 4px',
+    fontSize: '15px',
     fontWeight: '600',
-    color: '#334155',
-    cursor: 'pointer',
+    color: '#1e293b',
   },
-  actionBtnSuccess: {
-    padding: '5px 12px',
-    backgroundColor: '#ecfdf5',
-    border: '1px solid #6ee7b7',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#047857',
-    cursor: 'pointer',
-  },
-  actionBtnDanger: {
-    padding: '5px 12px',
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fca5a5',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#b91c1c',
-    cursor: 'pointer',
-  },
-  primaryBtn: {
-    padding: '8px 18px',
-    backgroundColor: '#1d4ed8',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
+  emptySub: {
+    margin: 0,
     fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  progressContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    width: '160px',
-  },
-  progressTrack: {
-    flex: 1,
-    height: '8px',
-    backgroundColor: '#e2e8f0',
-    borderRadius: '4px',
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: '4px',
-    transition: 'width 0.3s ease',
-  },
-  progressText: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#334155',
-    width: '32px',
-    textAlign: 'right',
-  },
-  checkbox: {
-    width: '18px',
-    height: '18px',
-    cursor: 'pointer',
-    accentColor: '#1d4ed8',
+    color: '#64748b',
   },
   loaderBox: {
+    padding: '48px 16px',
+    textAlign: 'center',
+    color: '#64748b',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '48px 0',
     gap: '12px',
-    color: '#64748b',
-    fontSize: '14px',
   },
   spinner: {
-    width: '32px',
-    height: '32px',
+    width: '28px',
+    height: '28px',
     border: '3px solid #e2e8f0',
     borderTopColor: '#1d4ed8',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
-  emptyBox: {
-    textAlign: 'center',
-    padding: '48px 0',
+  actionButtonGroup: {
+    display: 'flex',
+    gap: '6px',
+    justifyContent: 'flex-end',
   },
-  emptyTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
+  actionBtnOutline: {
+    padding: '6px 12px',
+    backgroundColor: '#ffffff',
     color: '#334155',
-    margin: '12px 0 4px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
   },
-  emptySub: {
+  actionBtnSuccess: {
+    padding: '6px 12px',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  actionBtnDanger: {
+    padding: '6px 12px',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  paginationBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '16px',
+    paddingTop: '14px',
+    borderTop: '1px solid #f1f5f9',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  paginationInfo: {
+    fontSize: '13px',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  paginationBtns: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  pageBtn: {
+    padding: '6px 14px',
+    backgroundColor: '#ffffff',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1e3a63',
+    cursor: 'pointer',
+  },
+  pageBtnDisabled: {
+    padding: '6px 14px',
+    backgroundColor: '#f1f5f9',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
     fontSize: '13px',
     color: '#94a3b8',
-    margin: 0,
+    cursor: 'not-allowed',
   },
   modalOverlay: {
     position: 'fixed',
@@ -1466,10 +1881,10 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000,
     padding: '16px',
   },
@@ -1573,18 +1988,6 @@ const styles = {
     boxSizing: 'border-box',
     fontFamily: 'inherit',
   },
-  selectInputFull: {
-    width: '100%',
-    height: '40px',
-    padding: '0 12px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    fontSize: '13px',
-    color: '#0f172a',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
   modalFooter: {
     padding: '16px 24px',
     borderTop: '1px solid #e2e8f0',
@@ -1635,16 +2038,6 @@ const styles = {
     justifyContent: 'center',
     flexShrink: 0,
   },
-  docTypeBadge: {
-    display: 'inline-block',
-    padding: '3px 8px',
-    fontSize: '11px',
-    fontWeight: '700',
-    borderRadius: '4px',
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
-    letterSpacing: '0.04em',
-  },
   statusPillSmall: {
     display: 'inline-block',
     padding: '3px 9px',
@@ -1669,12 +2062,5 @@ const styles = {
     fontSize: '12px',
     color: '#334155',
     marginBottom: '16px',
-  },
-  docPreviewPlaceholder: {
-    padding: '24px 16px',
-    backgroundColor: '#f0fdf4',
-    border: '1px dashed #86efac',
-    borderRadius: '8px',
-    textAlign: 'center',
   },
 };

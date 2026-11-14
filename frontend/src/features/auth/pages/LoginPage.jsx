@@ -9,16 +9,16 @@ import heroLogo from '../../../assets/images/MainLodo.png';
 
 export default function LoginPage() {
   return (
-    <div style={styles.pageContainer}>
+    <div style={styles.pageContainer} className="auth-page-container">
       {/* Left Column: Floating Form Card */}
-      <div style={styles.formColumn}>
-        <div style={styles.formWrapper}>
+      <div style={styles.formColumn} className="auth-form-column">
+        <div style={styles.formWrapper} className="auth-form-wrapper">
           <LoginForm />
         </div>
       </div>
 
       {/* Right Column: Hero Visual Showcase */}
-      <div style={styles.heroColumn}>
+      <div style={styles.heroColumn} className="auth-hero-column">
         <div style={styles.heroOverlay} />
 
         {/* Decorative Wave Overlay at bottom right */}
@@ -49,12 +49,12 @@ export default function LoginPage() {
           <div style={styles.orangeBar} />
 
           {/* Main Headline */}
-          <h2 style={styles.heroTitle}>
+          <h2 style={styles.heroTitle} className="auth-hero-title">
             Precision Estimates &amp; Contractor Management in One Platform.
           </h2>
 
           {/* Subtitle */}
-          <p style={styles.heroText}>
+          <p style={styles.heroText} className="auth-hero-text">
             Join thousands of homeowners and certified contractors using DeckPro for interactive blueprints, transparent material itemization, and instant pricing.
           </p>
 

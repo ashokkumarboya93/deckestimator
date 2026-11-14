@@ -4,7 +4,6 @@
 
 const pricingService = require('./pricing.service');
 const pricingEngine = require('./pricingEngine');
-const PricingConfiguration = require('./pricingConfiguration.model');
 
 function getClientIp(req) {
   return req.ip || (req.connection && req.connection.remoteAddress) || null;
@@ -102,8 +101,7 @@ async function calculateClientPricingPreview(req, res, next) {
       (req.user && ['contractor', 'admin', 'super_admin'].includes(req.user.role)) ||
       req.body.forContractor
     );
-    const activeConfig = await PricingConfiguration.findOne({ isActive: true });
-    const customCfg = activeConfig?.restorationPricing || null;
+    const customCfg = await pricingService.getActiveRestorationPricing();
     const result = isContractor
       ? pricingEngine.calculateRestorationEstimate(req.body, customCfg)
       : pricingEngine.calculateClientPricing(req.body, customCfg);

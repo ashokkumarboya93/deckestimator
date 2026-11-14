@@ -19,15 +19,14 @@
 // - 100% reliable submission creating Deck & Estimate and rendering Official Estimate Box
 // - Client Q12 Strict Compliance: Customer sees ONE TOTAL NUMBER ONLY with zero breakdown
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createDeck, updateDeck } from '../api/decksApi';
+import { createDeck, updateDeck, deleteDeck } from '../api/decksApi';
 import { createEstimate, updateEstimate, calculateLivePricing, updateEstimateStatus } from '../api/estimatesApi';
 import { leadApi } from '../api/leadApi';
 import { calculateRestorationEstimateClient } from '../utils/pricingEngineClient';
 import { contractorDiscountApi } from '../../contractor/api/contractorDiscountApi';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
-import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 // Helper to validate Mongo ObjectIds
@@ -887,6 +886,7 @@ export default function ContinuousEstimatorForm({
   const [officialEstimate, setOfficialEstimate] = useState(null);
   const [leadCreated, setLeadCreated] = useState(false);
   const [leadLoading, setLeadLoading] = useState(false);
+  const skipNextAutoSaveRef = useRef(false);
 
   // Contractor Wholesale Discount State (Default checked as requested)
   const [applyContractorDiscount, setApplyContractorDiscount] = useState(true);
@@ -1407,7 +1407,7 @@ export default function ContinuousEstimatorForm({
     const activeCoating = existingCoating || 'none';
     const activeServices = services.length > 0 ? services : ['cleaning'];
     const activeConditions = conditions.length > 0 ? conditions : ['weathered'];
-    const activeProjName = projectName.trim() || `Custom Deck Restoration (${activeFloorArea} sq ft)`;
+    const activeProjName = projectName.trim() || `Custom Deck Restoration (${activeFloorArea} sq ft) #${Math.floor(100 + Math.random() * 900)}`;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -1483,26 +1483,32 @@ export default function ContinuousEstimatorForm({
     setOfficialEstimate(immediateEstimate);
     if (isContractor) setContractorPricing(localCalc);
 
-    // Smooth scroll down to the right sidebar card / estimate result box immediately
+    // Smooth scroll to the Official Estimate box on mobile/tablet, or sidebar/estimate on desktop
     if (shouldScroll) {
       setTimeout(() => {
+        const isSmallViewport = typeof window !== 'undefined' && window.innerWidth <= 1024;
+        const resultEl = document.getElementById('official-estimate-result-box');
         const sidebarCard = document.getElementById('sidebar-guidance-card');
-        if (sidebarCard) {
+        if (isSmallViewport && resultEl) {
+          resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (sidebarCard) {
           sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          const el = document.getElementById('official-estimate-result-box');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (resultEl) {
+          resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 120);
+      }, 100);
     }
 
     if (!user) {
-      setAuthNotice('Preview mode: your estimate is ready below. Sign in to save this project to your account or book an estimate.');
+      if (typeof setAuthNotice === 'function') {
+        setAuthNotice('Preview mode: your estimate is ready below. Sign in to save this project to your account or book an estimate.');
+      }
       setSubmitting(false);
       return;
     }
 
-    // 2. Persist to Backend in background
+    // 2. Persist to Backend BEFORE showing/confirming saved official quote when creating or checking errors
+    let newlyCreatedDeckId = null;
     try {
       const deckPayload = {
         projectName: activeProjName,
@@ -1558,17 +1564,19 @@ export default function ContinuousEstimatorForm({
         } catch (deckErr) {
           console.warn('[Deck Update Fallback to Create]:', deckErr.message);
           savedDeck = await createDeck(deckPayload);
+          newlyCreatedDeckId = extractValidObjectId(savedDeck?._id || savedDeck?.id);
         }
       } else {
         savedDeck = await createDeck(deckPayload);
+        newlyCreatedDeckId = extractValidObjectId(savedDeck?._id || savedDeck?.id);
       }
 
       const activeDeckId = extractValidObjectId(savedDeck?._id || savedDeck?.id || targetDeckId);
-      if (activeDeckId) setActiveSavedDeckId(activeDeckId);
 
       // Estimate Payload
       const estimatePayload = {
         deckId: activeDeckId,
+        projectName: activeProjName,
         estimateName: `${activeProjName} Official Estimate`,
         floorArea: activeFloorArea,
         woodSpecies: activeWood,
@@ -1620,6 +1628,9 @@ export default function ContinuousEstimatorForm({
         try {
           est = await updateEstimate(targetEstimateId, estimatePayload);
         } catch (estErr) {
+          if (estErr.status === 409 || estErr.code === 'CONFLICT') {
+            throw estErr;
+          }
           console.warn('[Estimate Update Fallback to Create]:', estErr.message);
           est = await createEstimate(estimatePayload);
         }
@@ -1627,8 +1638,16 @@ export default function ContinuousEstimatorForm({
         est = await createEstimate(estimatePayload);
       }
 
+      if (activeDeckId && activeDeckId !== activeSavedDeckId) {
+        skipNextAutoSaveRef.current = true;
+        setActiveSavedDeckId(activeDeckId);
+      }
+
       const activeEstId = extractValidObjectId(est?._id || est?.id || targetEstimateId);
-      if (activeEstId) setActiveSavedEstimateId(activeEstId);
+      if (activeEstId && activeEstId !== activeSavedEstimateId) {
+        skipNextAutoSaveRef.current = true;
+        setActiveSavedEstimateId(activeEstId);
+      }
       setSaveSuccessNotice(true);
       setTimeout(() => setSaveSuccessNotice(false), 3500);
 
@@ -1667,11 +1686,25 @@ export default function ContinuousEstimatorForm({
       }
     } catch (persistErr) {
       console.warn('[Backend Persistence Note]:', persistErr.message);
-      if (isAuthError(persistErr)) {
+      setSaveSuccessNotice(false);
+      // Clean up temporary newly-created deck if estimate creation was rejected (e.g. 409 duplicate title)
+      if (newlyCreatedDeckId && !activeSavedDeckId) {
+        deleteDeck(newlyCreatedDeckId).catch(() => {});
+      }
+      if (!activeSavedEstimateId && (persistErr.status === 409 || persistErr.code === 'CONFLICT')) {
+        setOfficialEstimate(null);
+      }
+      if (typeof isAuthError === 'function' && isAuthError(persistErr)) {
         setSubmitError(null);
-        setAuthNotice('Your session needs sign-in. Your quote is ready below — sign in to save this estimate to your portal.');
+        if (typeof setAuthNotice === 'function') {
+          setAuthNotice('Your session needs sign-in. Your quote is ready below — sign in to save this estimate to your portal.');
+        }
       } else {
         setSubmitError(persistErr.message || 'Failed to save estimate to server.');
+      }
+      const errBanner = document.getElementById('section-9-error-banner');
+      if (errBanner) {
+        errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } finally {
       setSubmitting(false);
@@ -1681,6 +1714,10 @@ export default function ContinuousEstimatorForm({
   // Continuous Auto-Save: whenever inputs change after calculation, auto-update in place
   useEffect(() => {
     if (!user || (!activeSavedEstimateId && !activeSavedDeckId)) return;
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       handleSave('SUBMITTED', { shouldScroll: false });
     }, 1500);
@@ -1755,9 +1792,10 @@ export default function ContinuousEstimatorForm({
     }
   };
 
-  // Dedicated Export of Official Deck Estimate (Template PDF Document & Excel)
+  // Dedicated Export of Official Deck Estimate (Template PDF Document & Excel, lazy-loaded)
   const handleExportOfficialEstimate = async (format = 'pdf') => {
     if (!officialEstimate) return;
+    const { downloadEstimatePdf, downloadEstimateExcel } = await import('../../../utils/reportExport');
     const estimatePayload = {
       ...officialEstimate,
       shape,
@@ -1853,11 +1891,262 @@ export default function ContinuousEstimatorForm({
   const currentWoodObj = WOOD_SPECIES.find((w) => w.id === woodSpecies) || null;
 
   return (
-    <div style={styles.estimatorPageContainer}>
-      {/* Top Application Section Status & Reach Out Bar (Single Unified Line) */}
-      <div style={styles.topBrandingBar}>
+    <div style={styles.estimatorPageContainer} className="estimator-page-root">
+      <style>{`
+        @media (max-width: 1024px) {
+          .estimator-page-root {
+            padding: 12px !important;
+            gap: 14px !important;
+          }
+          .estimator-page-root .estimator-content-layout {
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .estimator-page-root .estimator-sidebar-col {
+            width: 100% !important;
+            position: static !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+            gap: 12px !important;
+          }
+          .estimator-page-root .estimator-mobile-hide-guaranteed {
+            display: none !important;
+          }
+          .estimator-page-root .estimator-top-bar {
+            position: static !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 8px !important;
+            padding: 10px 12px !important;
+            overflow-x: visible !important;
+          }
+          .estimator-page-root .estimator-top-boxes {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 6px !important;
+            width: 100% !important;
+          }
+          .estimator-page-root .estimator-top-box-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 6px 6px !important;
+            min-height: 30px !important;
+            font-size: 11px !important;
+            border-radius: 7px !important;
+          }
+          .estimator-page-root .estimator-reachout-wrap {
+            display: flex !important;
+            justify-content: flex-end !important;
+            width: 100% !important;
+          }
+          .estimator-page-root .estimator-reachout-btn {
+            padding: 6px 12px 6px 8px !important;
+            font-size: 11.5px !important;
+            min-height: 32px !important;
+            width: auto !important;
+          }
+          .estimator-page-root .estimator-dimensions-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .estimator-page-root .estimator-green-area-box {
+            grid-column: 1 / -1 !important;
+          }
+          .estimator-page-root .estimator-proj-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+          }
+          .estimator-page-root .estimator-mini-badge {
+            padding: 3px 8px !important;
+            width: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            line-height: 1.25 !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .estimator-page-root {
+            padding: 10px !important;
+            gap: 12px !important;
+          }
+          .estimator-page-root .estimator-main-col {
+            gap: 12px !important;
+          }
+          .estimator-page-root .estimator-section-card {
+            padding: 12px !important;
+            border-radius: 10px !important;
+          }
+          .estimator-page-root .estimator-section-header {
+            gap: 8px !important;
+            margin-bottom: 12px !important;
+            padding-bottom: 10px !important;
+            align-items: center !important;
+          }
+          .estimator-page-root .estimator-step-badge {
+            padding: 3px 9px !important;
+            font-size: 10px !important;
+            border-radius: 5px !important;
+            white-space: nowrap !important;
+            width: auto !important;
+            flex-shrink: 0 !important;
+            line-height: 1.2 !important;
+          }
+          .estimator-page-root .estimator-section-title {
+            font-size: 15px !important;
+            line-height: 1.25 !important;
+          }
+          .estimator-page-root .estimator-section-subtitle {
+            font-size: 11.5px !important;
+            line-height: 1.35 !important;
+            margin-top: 2px !important;
+          }
+          .estimator-page-root .estimator-options-grid,
+          .estimator-page-root .estimator-components-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+          .estimator-page-root .estimator-card-img-frame {
+            height: 70px !important;
+          }
+          .estimator-page-root .estimator-card-caption-box {
+            padding: 7px 6px !important;
+            gap: 2px !important;
+          }
+          .estimator-page-root .estimator-card-caption-title {
+            font-size: 11.5px !important;
+            line-height: 1.2 !important;
+          }
+          .estimator-page-root .estimator-check-badge {
+            width: 18px !important;
+            height: 18px !important;
+            top: 5px !important;
+            right: 5px !important;
+          }
+          .estimator-page-root .estimator-comp-meta {
+            padding: 7px 8px !important;
+            gap: 6px !important;
+          }
+          .estimator-page-root .estimator-comp-input-box {
+            padding: 6px 8px 8px 8px !important;
+          }
+          .estimator-page-root .estimator-dimensions-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            margin-top: 12px !important;
+            padding-top: 12px !important;
+          }
+          .estimator-page-root .estimator-green-area-box {
+            grid-column: 1 / -1 !important;
+            padding: 10px 12px !important;
+          }
+          .estimator-page-root .estimator-green-area-val {
+            font-size: 20px !important;
+          }
+          .estimator-page-root .estimator-stain-grid,
+          .estimator-page-root .estimator-board-counts-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 8px !important;
+          }
+          .estimator-page-root .estimator-photo-tips-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+          .estimator-page-root .estimator-photo-dropzone {
+            padding: 16px 12px !important;
+          }
+          .estimator-page-root .estimator-proj-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 10px !important;
+          }
+          .estimator-page-root .estimator-proj-span2 {
+            grid-column: 1 / -1 !important;
+          }
+          .estimator-page-root .estimator-submit-btn {
+            width: 100% !important;
+            padding: 11px 16px !important;
+            font-size: 14px !important;
+          }
+          .estimator-page-root .estimator-sidebar-card {
+            padding: 12px !important;
+          }
+          .estimator-page-root .estimator-ref-main-frame {
+            height: 120px !important;
+          }
+          .estimator-page-root .estimator-ref-thumb-btn {
+            padding: 0 !important;
+            flex: 0 0 42px !important;
+            width: 42px !important;
+            height: 42px !important;
+            min-height: 42px !important;
+          }
+          .estimator-page-root .estimator-ref-thumb-img {
+            padding: 0 !important;
+          }
+          .estimator-page-root .estimator-ref-thumb-img-diagram {
+            padding: 2px !important;
+          }
+          .estimator-page-root .estimator-official-card {
+            padding: 14px 12px !important;
+            margin: 8px 0 !important;
+          }
+          .estimator-page-root .estimator-official-header {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            padding-bottom: 8px !important;
+          }
+          .estimator-page-root .estimator-official-title {
+            font-size: 13.5px !important;
+          }
+          .estimator-page-root .estimator-official-total-box {
+            padding: 12px !important;
+          }
+          .estimator-page-root .estimator-official-amt {
+            font-size: 28px !important;
+          }
+          .estimator-page-root .estimator-minjob-box {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+            margin-top: 12px !important;
+          }
+          .estimator-page-root .estimator-result-actions {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            margin-top: 14px !important;
+          }
+          .estimator-page-root .estimator-result-actions > button {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 9px 10px !important;
+            font-size: 12px !important;
+            justify-content: center !important;
+          }
+          .estimator-page-root .estimator-result-actions > button:first-child {
+            grid-column: 1 / -1 !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .estimator-page-root .estimator-top-box-btn {
+            padding: 5px 4px !important;
+            font-size: 10.5px !important;
+            min-height: 28px !important;
+          }
+          .estimator-page-root .estimator-card-img-frame {
+            height: 62px !important;
+          }
+          .estimator-page-root .estimator-official-amt {
+            font-size: 26px !important;
+          }
+        }
+      `}</style>
+
+      {/* Top Application Section Status & Reach Out Bar (Single Unified Line on Desktop, 3x3 Grid + Compact Reach Out on Mobile) */}
+      <div style={styles.topBrandingBar} className="estimator-top-bar">
         {/* Left: Section Boxes (Section 01 to Section 09) */}
-        <div style={styles.topSectionBoxesRow}>
+        <div style={styles.topSectionBoxesRow} className="estimator-top-boxes">
           {sectionSteps.map((step) => {
             const isFilled = step.done;
             const formattedNum = step.num < 10 ? `0${step.num}` : step.num;
@@ -1865,6 +2154,7 @@ export default function ContinuousEstimatorForm({
               <button
                 key={step.num}
                 type="button"
+                className="estimator-top-box-btn"
                 onClick={() => scrollToSection(step.id)}
                 title={`Section ${formattedNum}: ${step.name} - ${isFilled ? 'Completed (Click to view)' : 'Click to jump'}`}
                 style={{
@@ -1887,9 +2177,10 @@ export default function ContinuousEstimatorForm({
         </div>
 
         {/* Right: Reach Out button in exact same line with Hover Tooltip */}
-        <div style={styles.topReachOutWrapper}>
+        <div style={styles.topReachOutWrapper} className="estimator-reachout-wrap">
           <button
             type="button"
+            className="estimator-reachout-btn"
             onClick={() => setReachOutOpen(true)}
             onMouseEnter={() => setReachOutHover(true)}
             onMouseLeave={() => setReachOutHover(false)}
@@ -1897,7 +2188,7 @@ export default function ContinuousEstimatorForm({
             title="Need Assistance? Click to speak with a specialist"
           >
             <div style={styles.reachOutIconPill}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
             </div>
@@ -1914,10 +2205,10 @@ export default function ContinuousEstimatorForm({
       {/* ======================================================== */}
       {/* TWO-COLUMN LAYOUT: MIDDLE SCROLLABLE FORM + RIGHT SIDEBAR */}
       {/* ======================================================== */}
-      <div style={styles.contentLayoutRow}>
+      <div style={styles.contentLayoutRow} className="estimator-content-layout">
         {/* MIDDLE SCROLLABLE FORM */}
-        <div style={styles.middleScrollableColumn} id="middle-scrollable-form">
-          <AuthPromptBanner message={authNotice} onSignIn={handleSignInRedirect} />
+        <div style={styles.middleScrollableColumn} id="middle-scrollable-form" className="estimator-main-col">
+          {typeof AuthPromptBanner === 'function' && <AuthPromptBanner message={authNotice} onSignIn={handleSignInRedirect} />}
           {submitError && (
             <div style={styles.errorBox}>
               <strong style={{ color: '#B91C1C' }}>Attention:</strong> {submitError}
@@ -1927,17 +2218,17 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 1: DECK DIMENSIONS & BLUEPRINT */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-1">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 1</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-1">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 1</span>
               <div>
-                <h3 style={styles.cardTitle}>Deck Footprint & Dimensions</h3>
-                <p style={styles.cardSubtitle}>Select your deck perimeter shape and enter length and width.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Deck Footprint & Dimensions</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select your deck perimeter shape and enter length and width.</p>
               </div>
             </div>
 
             {/* Shape Image Cards Grid (4 Shapes) */}
-            <div style={styles.imageCardsGrid4}>
+            <div style={styles.imageCardsGrid4} className="estimator-options-grid">
               {SHAPES.map((s) => {
                 const isSelected = shape === s.id;
                 return (
@@ -1959,21 +2250,21 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
                       <img
                         src={s.img}
                         alt={s.label}
                         style={s.isDiagram ? styles.cardCoverImageContain : styles.cardCoverImage}
                       />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }} className="estimator-card-caption-title">
                         {s.label}
                       </strong>
                     </div>
@@ -1983,7 +2274,7 @@ export default function ContinuousEstimatorForm({
             </div>
 
             {/* Dimensions Inputs & Green Usable Area Highlight Box */}
-            <div style={styles.dimensionsFormRow}>
+            <div className="estimator-dimensions-row" style={styles.dimensionsFormRow}>
               <div style={styles.dimInputWrap}>
                 <label style={styles.inputLabel}>Length (ft) *</label>
                 <input
@@ -2018,14 +2309,14 @@ export default function ContinuousEstimatorForm({
               </div>
 
               {/* Polished Green Text Highlight Box */}
-              <div style={styles.greenFloorAreaBox}>
+              <div style={styles.greenFloorAreaBox} className="estimator-green-area-box">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={styles.greenDot} />
                   <span style={styles.greenAreaLabel}>
                     {currentShapeObj ? `${currentShapeObj.label} Shape Selected` : 'Select Shape & Dimensions'}
                   </span>
                 </div>
-                <strong style={styles.greenAreaValue}>
+                <strong style={styles.greenAreaValue} className="estimator-green-area-val">
                   {floorArea > 0 ? `${floorArea.toLocaleString()} sq ft` : '0 sq ft'}
                 </strong>
                 <span style={styles.greenAreaSub}>
@@ -2038,16 +2329,16 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 2: DECK COMPONENTS & FEATURES (SQFT INPUTS) */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-2">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 2</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-2">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 2</span>
               <div>
-                <h3 style={styles.cardTitle}>Deck Components & Features</h3>
-                <p style={styles.cardSubtitle}>Select attached architectural structures to include square footage in the estimate.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Deck Components & Features</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select attached architectural structures to include square footage in the estimate.</p>
               </div>
             </div>
 
-            <div style={styles.componentsGrid}>
+            <div style={styles.componentsGrid} className="estimator-components-grid">
               {COMPONENTS.map((comp) => {
                 const isSelected = selectedComponents.includes(comp.id);
                 return (
@@ -2070,17 +2361,17 @@ export default function ContinuousEstimatorForm({
                       }}
                       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
                     >
-                      <div style={styles.componentThumbFrame}>
-                        <img src={comp.img} alt={comp.label} style={styles.componentThumbImage} />
+                      <div style={styles.componentThumbFrame} className="estimator-card-img-frame">
+                        <img src={comp.img} alt={comp.label} loading="lazy" style={styles.componentThumbImage} />
                       </div>
-                      <div style={styles.componentMetaRow}>
+                      <div style={styles.componentMetaRow} className="estimator-comp-meta">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           readOnly
-                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                          style={{ ...styles.checkbox, pointerEvents: 'none', flexShrink: 0 }}
                         />
-                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }}>
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#034EA2' : '#1E293B' }} className="estimator-card-caption-title">
                           {comp.label}
                         </strong>
                       </div>
@@ -2088,7 +2379,7 @@ export default function ContinuousEstimatorForm({
 
                     {/* Pop-out Input asking for Steps (for stairs) or Sqft (for others) when selected */}
                     {isSelected && (
-                      <div style={styles.componentSqftInputBox}>
+                      <div style={styles.componentSqftInputBox} className="estimator-comp-input-box">
                         <label style={styles.sqftInputLabel}>
                           {comp.id === 'stairs' ? 'Number of Steps (Count):' : `${comp.prompt}:`}
                         </label>
@@ -2121,16 +2412,16 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 3: WOOD SPECIES & MATERIAL (8 INPUTS) */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-3">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 3</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-3">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 3</span>
               <div>
-                <h3 style={styles.cardTitle}>Wood Species & Material</h3>
-                <p style={styles.cardSubtitle}>Select one species. Density parameters apply to labor adjustments.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Wood Species & Material</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select one species. Density parameters apply to labor adjustments.</p>
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid4}>
+            <div style={styles.imageCardsGrid4} className="estimator-options-grid">
               {WOOD_SPECIES.map((w) => {
                 const isSelected = woodSpecies === w.id;
                 return (
@@ -2152,17 +2443,17 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
-                      <img src={w.img} alt={w.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
+                      <img src={w.img} alt={w.name} loading="lazy" style={styles.cardCoverImage} />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }} className="estimator-card-caption-title">
                         {w.name}
                       </strong>
                     </div>
@@ -2175,16 +2466,16 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 4: SITE ACCESSIBILITY & ELEVATION */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-4">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 4</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-4">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 4</span>
               <div>
-                <h3 style={styles.cardTitle}>Site Accessibility & Elevation</h3>
-                <p style={styles.cardSubtitle}>Select one elevation tier. Feet ranges shown clearly.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Site Accessibility & Elevation</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select one elevation tier. Feet ranges shown clearly.</p>
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid4}>
+            <div style={styles.imageCardsGrid4} className="estimator-options-grid">
               {ELEVATIONS.map((el) => {
                 const isSelected = height === el.id;
                 return (
@@ -2206,17 +2497,17 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
-                      <img src={el.img} alt={el.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
+                      <img src={el.img} alt={el.label} loading="lazy" style={styles.cardCoverImage} />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }} className="estimator-card-caption-title">
                         {el.label}
                       </strong>
                       <span style={styles.rangeCaptionBadge}>{el.range}</span>
@@ -2227,8 +2518,8 @@ export default function ContinuousEstimatorForm({
             </div>
 
             {/* Optional Exact Height in Feet */}
-            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#1E293B' }}>
+            <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '12.5px', fontWeight: '600', color: '#1E293B' }}>
                 Exact Elevation Height (Optional, ft):
               </label>
               <input
@@ -2240,7 +2531,7 @@ export default function ContinuousEstimatorForm({
                 onChange={(e) => setExactHeightFt(e.target.value)}
                 style={{ ...styles.textInput, maxWidth: '140px', padding: '6px 10px', fontSize: '13px' }}
               />
-              <span style={{ fontSize: '12px', color: '#64748B' }}>
+              <span style={{ fontSize: '11.5px', color: '#64748B' }}>
                 {exactHeightFt ? `Auto-mapped elevation: ${Number(exactHeightFt) <= 4 ? 'Ground Level (0–4 ft)' : Number(exactHeightFt) <= 8 ? 'First Story (4–8 ft)' : Number(exactHeightFt) <= 12 ? 'Second Story (8–12 ft)' : 'Roof / Staging (Over 12 ft)'}` : 'Defaults to selected card tier above'}
               </span>
             </div>
@@ -2249,16 +2540,16 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 5: EXISTING DECK FINISH & COATING (NO PRICE IMPACT) */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-5">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 5</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-5">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 5</span>
               <div>
-                <h3 style={styles.cardTitle}>Existing Deck Finish & Coating</h3>
-                <p style={styles.cardSubtitle}>Select current finish layer on deck wood (No price impact, informs preparation).</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Existing Deck Finish & Coating</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select current finish layer on deck wood (No price impact, informs preparation).</p>
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid3}>
+            <div style={styles.imageCardsGrid3} className="estimator-options-grid">
               {EXISTING_COATINGS.map((ec) => {
                 const isSelected = existingCoating === ec.id;
                 return (
@@ -2280,17 +2571,17 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
-                      <img src={ec.img} alt={ec.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
+                      <img src={ec.img} alt={ec.label} loading="lazy" style={styles.cardCoverImage} />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B' }} className="estimator-card-caption-title">
                         {ec.label}
                       </strong>
                     </div>
@@ -2303,16 +2594,16 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 6: RESTORATION SCOPE OF WORK */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-6">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 6</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-6">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 6</span>
               <div>
-                <h3 style={styles.cardTitle}>Restoration Scope of Work</h3>
-                <p style={styles.cardSubtitle}>Select operations. No coating starts at $2.50/sq.ft; each coating adds $1/sq.ft.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Restoration Scope of Work</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Select operations. No coating starts at $2.50/sq.ft; each coating adds $1/sq.ft.</p>
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid3}>
+            <div style={styles.imageCardsGrid3} className="estimator-options-grid">
               {SERVICES_LIST.map((srv) => {
                 const isSelected = services.includes(srv.id);
                 const isLocked = (woodSpecies === 'trex' || woodSpecies === 'composite') && srv.id !== 'cleaning' && srv.id !== 'no_coating';
@@ -2339,25 +2630,25 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
-                      <img src={srv.img} alt={srv.name} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
+                      <img src={srv.img} alt={srv.name} loading="lazy" style={styles.cardCoverImage} />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <input
                           type="checkbox"
                           checked={isSelected}
                           readOnly
                           disabled={isLocked}
-                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                          style={{ ...styles.checkbox, pointerEvents: 'none', flexShrink: 0 }}
                         />
-                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }} className="estimator-card-caption-title">
                           {srv.name}
                         </strong>
                       </div>
@@ -2372,7 +2663,7 @@ export default function ContinuousEstimatorForm({
             {services.includes('staining') && (
               <div style={styles.stainTypeBox}>
                 <label style={styles.inputLabel}>Desired Stain Finish Type *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                <div className="estimator-stain-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '6px' }}>
                   <label style={styles.stainOption}>
                     <input
                       type="radio"
@@ -2422,19 +2713,18 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 7: DECK PHYSICAL CONDITION */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-7">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 7</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-7">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 7</span>
               <div>
-                <h3 style={styles.cardTitle}>Deck Physical Condition</h3>
-                <p style={styles.cardSubtitle}>Multi-select. <strong>Good Condition</strong> is an exclusive option.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Deck Physical Condition</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Multi-select. <strong>Good Condition</strong> is an exclusive option.</p>
               </div>
             </div>
 
-            <div style={styles.imageCardsGrid3}>
+            <div style={styles.imageCardsGrid3} className="estimator-options-grid">
               {CONDITIONS.map((c) => {
                 const isSelected = conditions.includes(c.id);
-                const isGood = c.id === 'good_condition';
                 return (
                   <div
                     key={c.id}
@@ -2454,24 +2744,24 @@ export default function ContinuousEstimatorForm({
                     }}
                   >
                     {isSelected && (
-                      <div style={styles.cardSelectedCheckBadge}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                      <div style={styles.cardSelectedCheckBadge} className="estimator-check-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
                     )}
-                    <div style={styles.cardImageFrame}>
-                      <img src={c.img} alt={c.label} style={styles.cardCoverImage} />
+                    <div style={styles.cardImageFrame} className="estimator-card-img-frame">
+                      <img src={c.img} alt={c.label} loading="lazy" style={styles.cardCoverImage} />
                     </div>
-                    <div style={styles.cardCaptionBox}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={styles.cardCaptionBox} className="estimator-card-caption-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <input
                           type="checkbox"
                           checked={isSelected}
                           readOnly
-                          style={{ ...styles.checkbox, pointerEvents: 'none' }}
+                          style={{ ...styles.checkbox, pointerEvents: 'none', flexShrink: 0 }}
                         />
-                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }}>
+                        <strong style={{ ...styles.cardCaptionTitle, color: isSelected ? '#065F46' : '#1E293B', fontSize: '12px' }} className="estimator-card-caption-title">
                           {c.label}
                         </strong>
                       </div>
@@ -2487,7 +2777,7 @@ export default function ContinuousEstimatorForm({
                 <strong style={{ fontSize: '13px', color: '#034EA2', display: 'block', marginBottom: '8px' }}>
                   Optional: Specify Affected Board Quantities (For precise repair estimate):
                 </strong>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div className="estimator-board-counts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                   {conditions.includes('crack') && (
                     <div>
                       <label style={styles.inputLabel}>Cracked Boards (qty):</label>
@@ -2554,7 +2844,7 @@ export default function ContinuousEstimatorForm({
                     </div>
                   )}
                   {(conditions.includes('crack') && conditions.includes('loose_board')) && (
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div className="estimator-proj-span2" style={{ gridColumn: 'span 2' }}>
                       <label style={styles.inputLabel}>Both Cracked & Loose on Same Board (overlap qty):</label>
                       <input
                         type="number"
@@ -2574,12 +2864,12 @@ export default function ContinuousEstimatorForm({
           {/* ======================================================== */}
           {/* SECTION 8: UPLOAD PHOTOS (OPTIONAL) */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-8">
-            <div style={styles.cardHeader}>
-              <span style={{ ...styles.stepBadge, backgroundColor: '#1E3A63' }}>Section 8</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-8">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={{ ...styles.stepBadge, backgroundColor: '#1E3A63' }} className="estimator-step-badge">Section 8</span>
               <div>
-                <h3 style={styles.cardTitle}>Upload photos (optional)</h3>
-                <p style={styles.cardSubtitle}>Add photos of your deck to help us provide a more accurate estimate.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Upload photos (optional)</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Add photos of your deck to help us provide a more accurate estimate.</p>
               </div>
             </div>
 
@@ -2597,6 +2887,7 @@ export default function ContinuousEstimatorForm({
 
             {/* Drag & Drop Upload Dropzone (Preserved Color As Requested) */}
             <div
+              className="estimator-photo-dropzone"
               onDragOver={(e) => {
                 e.preventDefault();
                 setIsDraggingPhoto(true);
@@ -2629,22 +2920,22 @@ export default function ContinuousEstimatorForm({
                 onChange={(e) => handlePhotoFiles(e.target.files)}
               />
               <div style={styles.photoCloudIconBox}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
                   <polyline points="12 13 12 7 9 10" />
                   <line x1="12" y1="7" x2="15" y2="10" />
                 </svg>
               </div>
-              <strong style={{ fontSize: '15px', color: '#78350F', display: 'block', marginBottom: '4px' }}>
+              <strong style={{ fontSize: '14px', color: '#78350F', display: 'block', marginBottom: '4px' }}>
                 Drag & drop your photos here, or click to upload
               </strong>
-              <span style={{ fontSize: '12px', color: '#92400E' }}>
+              <span style={{ fontSize: '11.5px', color: '#92400E' }}>
                 JPG, JPEG, PNG · max 10 MB each · previews stay in your browser
               </span>
             </div>
 
             {/* 4 Quick-Tip Category Guidance Cards with Clean SVGs */}
-            <div style={styles.photoCategoriesGrid}>
+            <div style={styles.photoCategoriesGrid} className="estimator-photo-tips-grid">
               <div style={{ ...styles.photoCategoryCard, backgroundColor: '#FFFFFF', borderColor: '#E2E8F0' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -2731,17 +3022,17 @@ export default function ContinuousEstimatorForm({
           {/* SECTION 9: PROJECT INFORMATION & PROPERTY LOCATION */}
           {/* (Full Name & Phone removed; only Project Name required) */}
           {/* ======================================================== */}
-          <section style={styles.cardSection} id="section-9">
-            <div style={styles.cardHeader}>
-              <span style={styles.stepBadge}>Section 9</span>
+          <section style={styles.cardSection} className="estimator-section-card" id="section-9">
+            <div style={styles.cardHeader} className="estimator-section-header">
+              <span style={styles.stepBadge} className="estimator-step-badge">Section 9</span>
               <div>
-                <h3 style={styles.cardTitle}>Project Information & Location</h3>
-                <p style={styles.cardSubtitle}>Provide project reference name. Address fields are optional.</p>
+                <h3 style={styles.cardTitle} className="estimator-section-title">Project Information & Location</h3>
+                <p style={styles.cardSubtitle} className="estimator-section-subtitle">Provide project reference name. Address fields are optional.</p>
               </div>
             </div>
 
-            <div style={styles.projFormGrid}>
-              <div style={{ gridColumn: 'span 2' }}>
+            <div className="estimator-proj-grid" style={styles.projFormGrid}>
+              <div className="estimator-proj-span2" style={{ gridColumn: 'span 2' }}>
                 <label style={styles.inputLabel}>Project / Deck Name *</label>
                 <input
                   type="text"
@@ -2752,7 +3043,7 @@ export default function ContinuousEstimatorForm({
                 />
               </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
+              <div className="estimator-proj-span2" style={{ gridColumn: 'span 2' }}>
                 <label style={styles.inputLabel}>Project Property Address (Optional)</label>
                 <input
                   type="text"
@@ -2785,7 +3076,7 @@ export default function ContinuousEstimatorForm({
                 />
               </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
+              <div className="estimator-proj-span2" style={{ gridColumn: 'span 2' }}>
                 <label style={styles.inputLabel}>Scope Notes (Optional)</label>
                 <textarea
                   rows={2}
@@ -2804,7 +3095,7 @@ export default function ContinuousEstimatorForm({
               style={{ marginTop: '16px', marginBottom: '8px' }}
             />
             {submitError && (
-              <div style={{ ...styles.errorBox, marginTop: '16px', marginBottom: '8px' }}>
+              <div id="section-9-error-banner" style={{ ...styles.errorBox, marginTop: '16px', marginBottom: '8px' }}>
                 <strong style={{ color: '#B91C1C' }}>Notice:</strong> {submitError}
               </div>
             )}
@@ -2812,6 +3103,7 @@ export default function ContinuousEstimatorForm({
             <div style={styles.bottomActionBar}>
               <button
                 type="button"
+                className="estimator-submit-btn"
                 onClick={() => handleSave('SUBMITTED')}
                 disabled={submitting}
                 style={styles.submitBtn}
@@ -2827,20 +3119,20 @@ export default function ContinuousEstimatorForm({
           {/* POST-ESTIMATE OFFICIAL ESTIMATE RESULT BOX (HIGHLIGHTED) */}
           {/* ======================================================== */}
           {officialEstimate && (
-            <div style={styles.officialResultCard} id="official-estimate-result-box">
-              <div style={styles.resultHeader}>
+            <div style={styles.officialResultCard} className="estimator-official-card" id="official-estimate-result-box">
+              <div style={styles.resultHeader} className="estimator-official-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={styles.verifiedCheck}>✓</span>
-                  <span style={styles.resultTitle}>Deck Restoration Plus • Official Estimate</span>
+                  <span style={styles.resultTitle} className="estimator-official-title">Deck Restoration Plus • Official Estimate</span>
                 </div>
-                <span style={styles.refBadge}>Ref: {officialEstimate.ref}</span>
+                <span style={styles.refBadge} className="estimator-mini-badge">Ref: {officialEstimate.ref}</span>
               </div>
 
               {/* CLIENT Q12 STRICT COMPLIANCE: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown */}
               {!isContractor ? (
-                <div style={styles.customerTotalBox}>
+                <div style={styles.customerTotalBox} className="estimator-official-total-box">
                   <span style={styles.customerTotalSub}>Official Guaranteed Estimate Total</span>
-                  <strong style={styles.customerTotalAmt}>
+                  <strong style={styles.customerTotalAmt} className="estimator-official-amt">
                     ${((applyMinJobPrice
                       ? Math.max(
                           officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total,
@@ -2858,7 +3150,7 @@ export default function ContinuousEstimatorForm({
                   </span>
 
                   {/* USER REQUIREMENT: Minimum Job Notice & Default Unchecked Checkbox to Apply Min Job Price */}
-                  <div style={styles.customerMinJobNoticeBox}>
+                  <div style={styles.customerMinJobNoticeBox} className="estimator-minjob-box">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
                       <circle cx="12" cy="12" r="10" />
                       <line x1="12" y1="8" x2="12" y2="12" />
@@ -2997,7 +3289,7 @@ export default function ContinuousEstimatorForm({
               )}
 
               {/* Action Buttons: 1. Inquiry this Estimation (Slightly decreased size, 100% lead convert), 2. + Another Estimation, 3. Manual Save, 4. Export PDF & Excel */}
-              <div style={styles.resultActionRow}>
+              <div style={styles.resultActionRow} className="estimator-result-actions">
                 <button
                   type="button"
                   onClick={handleConvertToLead}
@@ -3132,7 +3424,7 @@ export default function ContinuousEstimatorForm({
         {/* ======================================================== */}
         {/* RIGHT SIDEBAR: CIRCLE PROGRESS, PREVIEW, IMAGES & ESTIMATE */}
         {/* ======================================================== */}
-        <aside style={styles.fixedRightSidebar}>
+        <aside className="estimator-sidebar-col" style={styles.fixedRightSidebar}>
           {/* 1. CIRCLE STEP PROGRESS CARD */}
           <div style={styles.sidebarCard}>
             <div style={styles.progressCircleRow}>
@@ -3240,7 +3532,7 @@ export default function ContinuousEstimatorForm({
           </div>
 
           {/* 3. MORE REFERENCES MINI-WINDOW / FRAME (DYNAMIC MULTI-IMAGE GALLERY) */}
-          <div style={styles.sidebarCard}>
+          <div style={styles.sidebarCard} className="estimator-sidebar-card">
             <div style={styles.refWindowHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -3250,16 +3542,16 @@ export default function ContinuousEstimatorForm({
                 </svg>
                 <h4 style={{ ...styles.sidebarHeading, color: '#1E3A63' }}>More References</h4>
               </div>
-              <span style={{ fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              <span className="estimator-mini-badge" style={{ fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 {activeRefObj.category || 'Reference'}
               </span>
             </div>
 
             <div style={styles.refFrameContainer}>
               {/* Main Image in Frame with Image Counter Badge */}
-              <div style={styles.refMainImageFrame}>
+              <div style={styles.refMainImageFrame} className="estimator-ref-main-frame">
                 <img
-                  src={(activeRefObj.images && activeRefObj.images[refImageIdx]) || (activeRefObj.images && activeRefObj.images[0]) || 'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80'}
+                  src={(activeRefObj.images && activeRefObj.images[refImageIdx]) || (activeRefObj.images && activeRefObj.images[0]) || ''}
                   alt={activeRefObj.title || 'Deck Reference'}
                   style={{
                     ...styles.refMainImage,
@@ -3269,7 +3561,7 @@ export default function ContinuousEstimatorForm({
                   }}
                 />
                 {activeRefObj.images && activeRefObj.images.length > 1 && (
-                  <div style={styles.refImageCounterBadge}>
+                  <div style={styles.refImageCounterBadge} className="estimator-mini-badge">
                     {refImageIdx + 1} / {activeRefObj.images.length}
                   </div>
                 )}
@@ -3282,18 +3574,20 @@ export default function ContinuousEstimatorForm({
                     <button
                       key={idx}
                       type="button"
+                      className="estimator-ref-thumb-btn"
                       onClick={() => setRefImageIdx(idx)}
                       style={{
                         ...styles.refThumbBtn,
                         borderColor: refImageIdx === idx ? '#1E3A63' : '#E2E8F0',
                         boxShadow: refImageIdx === idx ? '0 0 0 2px #1E3A63' : 'none',
-                        opacity: refImageIdx === idx ? 1 : 0.65,
+                        opacity: refImageIdx === idx ? 1 : 0.72,
                       }}
                       title={`View image ${idx + 1}`}
                     >
                       <img
                         src={imgUrl}
                         alt={`Thumbnail ${idx + 1}`}
+                        className={activeRefObj.isDiagram ? 'estimator-ref-thumb-img estimator-ref-thumb-img-diagram' : 'estimator-ref-thumb-img'}
                         style={{
                           ...styles.refThumbImg,
                           objectFit: activeRefObj.isDiagram ? 'contain' : 'cover',
@@ -3318,11 +3612,11 @@ export default function ContinuousEstimatorForm({
           </div>
 
           {/* 4. GUIDANCE & IMPORTANT NOTES (ENHANCED LOOK WITH HIGHLIGHTED TEXT) */}
-          <div id="sidebar-guidance-card" style={styles.sidebarCard}>
-            {/* If officialEstimate exists or contractor pricing, show total header */}
+          <div id="sidebar-guidance-card" style={styles.sidebarCard} className="estimator-sidebar-card">
+            {/* If officialEstimate exists or contractor pricing, show total header (Hidden on mobile where Official Estimate box is primary) */}
             {!isContractor ? (
               officialEstimate && (
-                <div style={{ ...styles.customerSidebarResult, marginBottom: '16px' }}>
+                <div id="sidebar-guaranteed-estimate" className="estimator-mobile-hide-guaranteed" style={{ ...styles.customerSidebarResult, marginBottom: '16px' }}>
                   <span style={styles.customerResultLabel}>Guaranteed Estimate</span>
                   <strong style={styles.customerResultAmt}>${officialEstimate.total.toLocaleString()}</strong>
                   <span style={styles.customerResultSub}>Ref: {officialEstimate.ref}</span>
@@ -3335,7 +3629,7 @@ export default function ContinuousEstimatorForm({
               )
             ) : (
               contractorPricing ? (
-                <div style={{ ...styles.priceBreakdown, marginBottom: '16px' }}>
+                <div className="estimator-mobile-hide-guaranteed" style={{ ...styles.priceBreakdown, marginBottom: '16px' }}>
                   <div style={styles.priceRow}>
                     <span>Billable Surface Area:</span>
                     <strong>{contractorPricing.billableArea || contractorPricing.A || totalBillableArea} sq ft</strong>
@@ -3380,7 +3674,7 @@ export default function ContinuousEstimatorForm({
             {/* Highlighted Notes Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
               <div style={{ padding: '10px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px' }}>
-                <span style={{ display: 'inline-block', backgroundColor: '#1E3A63', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
+                <span className="estimator-mini-badge" style={{ display: 'inline-block', backgroundColor: '#1E3A63', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
                   $2,500 Floor
                 </span>
                 <p style={{ margin: 0, fontSize: '11px', color: '#1E3A63', lineHeight: 1.4 }}>
@@ -3389,7 +3683,7 @@ export default function ContinuousEstimatorForm({
               </div>
 
               <div style={{ padding: '10px 12px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px' }}>
-                <span style={{ display: 'inline-block', backgroundColor: '#D97706', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
+                <span className="estimator-mini-badge" style={{ display: 'inline-block', backgroundColor: '#D97706', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
                   Travel Over 45 Mins
                 </span>
                 <p style={{ margin: 0, fontSize: '11px', color: '#92400E', lineHeight: 1.4 }}>
@@ -3398,7 +3692,7 @@ export default function ContinuousEstimatorForm({
               </div>
 
               <div style={{ padding: '10px 12px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
-                <span style={{ display: 'inline-block', backgroundColor: '#475569', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
+                <span className="estimator-mini-badge" style={{ display: 'inline-block', backgroundColor: '#475569', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
                   Elevated Decks (8ft+)
                 </span>
                 <p style={{ margin: 0, fontSize: '11px', color: '#334155', lineHeight: 1.4 }}>
@@ -3407,7 +3701,7 @@ export default function ContinuousEstimatorForm({
               </div>
 
               <div style={{ padding: '10px 12px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px' }}>
-                <span style={{ display: 'inline-block', backgroundColor: '#15803D', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
+                <span className="estimator-mini-badge" style={{ display: 'inline-block', backgroundColor: '#15803D', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
                   1-Year Warranty
                 </span>
                 <p style={{ margin: 0, fontSize: '11px', color: '#166534', lineHeight: 1.4 }}>

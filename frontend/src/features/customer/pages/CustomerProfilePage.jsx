@@ -5,73 +5,108 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { userProfileApi } from '../api/userProfileApi';
+import { compressAvatarImage } from '../../../utils/imageOptimizer';
+
+function EyeToggleIcon({ visible }) {
+  return visible ? (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ) : (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
 
 export default function CustomerProfilePage() {
   const { user, refreshUser } = useAuth();
   const fileInputRef = useRef(null);
+  const hasFetchedRef = useRef(false);
+  const isDirtyRef = useRef(false);
 
-  // Form State
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [avatar, setAvatar] = useState('');
-  const [preferredContact, setPreferredContact] = useState('email');
+  // Hydrate immediately from auth context/localStorage to avoid blocking spinner
+  const [fullName, setFullName] = useState(() => user?.fullName || '');
+  const [email, setEmail] = useState(() => user?.email || '');
+  const [phone, setPhone] = useState(() => user?.phone || '');
+  const [avatar, setAvatar] = useState(() => user?.avatar || '');
+  const [preferredContact, setPreferredContact] = useState(() => user?.preferredContactMethod || 'email');
 
   // Address State
-  const [street, setStreet] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [zipCode, setZipCode] = useState('');
-  const [country, setCountry] = useState('USA');
+  const [street, setStreet] = useState(() => user?.address?.street || '');
+  const [city, setCity] = useState(() => user?.address?.city || '');
+  const [state, setState] = useState(() => user?.address?.state || '');
+  const [zipCode, setZipCode] = useState(() => user?.address?.zipCode || '');
+  const [country, setCountry] = useState(() => user?.address?.country || 'USA');
 
-  // Password State
+  // Password State & Show/Hide Toggles
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Status State
-  const [loading, setLoading] = useState(false);
+  // Status State (Only show initial loading if no cached user exists at all)
+  const [loading, setLoading] = useState(() => !user);
   const [saving, setSaving] = useState(false);
+  const [compressingPhoto, setCompressingPhoto] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // Populate from current user or fetch profile
+  const applyUserToForm = (u) => {
+    if (!u) return;
+    setFullName(u.fullName || '');
+    setEmail(u.email || '');
+    setPhone(u.phone || '');
+    setAvatar(u.avatar || '');
+    setPreferredContact(u.preferredContactMethod || 'email');
+    if (u.address) {
+      setStreet(u.address.street || '');
+      setCity(u.address.city || '');
+      setState(u.address.state || '');
+      setZipCode(u.address.zipCode || '');
+      setCountry(u.address.country || 'USA');
+    }
+  };
+
+  // Populate silently once on mount without blocking UI when cached user is present
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    let mounted = true;
+
+    async function syncLatestProfile() {
       try {
         const res = await userProfileApi.getProfile();
-        const u = res?.data?.user || res?.data || user;
-        if (u) {
-          setFullName(u.fullName || '');
-          setEmail(u.email || '');
-          setPhone(u.phone || '');
-          setAvatar(u.avatar || '');
-          setPreferredContact(u.preferredContactMethod || 'email');
-          if (u.address) {
-            setStreet(u.address.street || '');
-            setCity(u.address.city || '');
-            setState(u.address.state || '');
-            setZipCode(u.address.zipCode || '');
-            setCountry(u.address.country || 'USA');
-          }
+        const u = res?.data?.user || res?.data;
+        if (mounted && u && !isDirtyRef.current) {
+          applyUserToForm(u);
         }
-      } catch (err) {
-        if (user) {
-          setFullName(user.fullName || '');
-          setEmail(user.email || '');
-          setPhone(user.phone || '');
-          setAvatar(user.avatar || '');
-        }
+      } catch {
+        // Already hydrated from AuthContext fallback
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
-    loadData();
-  }, [user]);
 
-  // Handle Photo File Upload
-  const handlePhotoSelect = (e) => {
+    syncLatestProfile();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const markDirty = (setter) => (valueOrEvent) => {
+    isDirtyRef.current = true;
+    setter(valueOrEvent?.target ? valueOrEvent.target.value : valueOrEvent);
+  };
+
+  // Compress photo client-side before storing (2-5MB -> ~15-30KB)
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -79,27 +114,36 @@ export default function CustomerProfilePage() {
       setErrorMsg('Please select a valid image file (JPG, PNG, or WebP).');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('Image size must be under 5 MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Image file must be under 10 MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setAvatar(uploadEvent.target.result);
-      setErrorMsg(null);
-    };
-    reader.readAsDataURL(file);
+    setCompressingPhoto(true);
+    setErrorMsg(null);
+    try {
+      const optimizedDataUrl = await compressAvatarImage(file, 256, 0.82);
+      isDirtyRef.current = true;
+      setAvatar(optimizedDataUrl);
+    } catch (err) {
+      setErrorMsg(err.message || 'Unable to process selected image.');
+    } finally {
+      setCompressingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleRemovePhoto = () => {
+    isDirtyRef.current = true;
     setAvatar('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Submit Handler
   const handleSaveProfile = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
+    if (saving) return;
+
     setErrorMsg(null);
     setSuccessMsg(null);
 
@@ -108,12 +152,12 @@ export default function CustomerProfilePage() {
       return;
     }
 
-    if (newPassword) {
+    if (newPassword || currentPassword || confirmPassword) {
       if (!currentPassword) {
-        setErrorMsg('Please enter your current password to set a new password.');
+        setErrorMsg('Please enter your current password to change your password.');
         return;
       }
-      if (newPassword.length < 6) {
+      if (!newPassword || newPassword.length < 6) {
         setErrorMsg('New password must be at least 6 characters.');
         return;
       }
@@ -144,17 +188,29 @@ export default function CustomerProfilePage() {
         payload.newPassword = newPassword;
       }
 
-      await userProfileApi.updateProfile(payload);
-      await refreshUser();
+      const res = await userProfileApi.updateProfile(payload);
+      const updatedUser = res?.data?.user || null;
 
-      setSuccessMsg('Profile settings updated and saved successfully!');
+      // Update auth context & localStorage synchronously without extra /auth/me round-trip
+      if (updatedUser) {
+        await refreshUser(updatedUser);
+        applyUserToForm(updatedUser);
+      } else {
+        await refreshUser();
+      }
+
+      isDirtyRef.current = false;
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+      setSuccessMsg('Profile settings saved successfully!');
 
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update profile settings.');
+      setErrorMsg(err?.message || 'Failed to update profile settings.');
     } finally {
       setSaving(false);
     }
@@ -169,24 +225,199 @@ export default function CustomerProfilePage() {
         .toUpperCase()
     : 'U';
 
+  const passwordMismatch = Boolean(confirmPassword && newPassword !== confirmPassword);
+
   return (
-    <div style={styles.container}>
-      {/* Page Title & Breadcrumb Header with Top Save Button */}
-      <div style={styles.pageHeader}>
-        <div>
-          <h1 style={styles.headingTitle}>Profile Settings</h1>
-          <p style={styles.subTitle}>
-            Manage your personal profile, contact information, and default property address.
+    <div className="drp-prof-wrap">
+      <style>{`
+        .drp-prof-wrap {
+          max-width: 980px;
+          margin: 0 auto;
+          padding: 14px 18px 24px;
+          font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        }
+        .drp-prof-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .drp-prof-card {
+          background-color: #FFFFFF;
+          border-radius: 10px;
+          border: 1px solid #E2E8F0;
+          padding: 14px 18px;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+        }
+        .drp-prof-grid-2 {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px 12px;
+        }
+        .drp-prof-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px 12px;
+        }
+        .drp-prof-col-full {
+          grid-column: 1 / -1;
+        }
+        .drp-prof-input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 8px 11px;
+          border-radius: 7px;
+          border: 1px solid #CBD5E1;
+          font-size: 13px !important;
+          color: #0F172A;
+          background-color: #FFFFFF;
+          outline: none;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .drp-prof-input:focus {
+          border-color: #034EA2;
+          box-shadow: 0 0 0 2.5px rgba(3, 78, 162, 0.12);
+        }
+        .drp-prof-pw-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .drp-prof-pw-input {
+          padding-right: 36px !important;
+          letter-spacing: 0.04em;
+        }
+        .drp-prof-pw-toggle {
+          position: absolute;
+          right: 6px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: transparent;
+          border: none;
+          padding: 4px !important;
+          min-height: 26px !important;
+          min-width: 26px !important;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748B;
+          cursor: pointer;
+          border-radius: 5px;
+          transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .drp-prof-pw-toggle:hover {
+          color: #034EA2;
+          background-color: #F1F5F9;
+        }
+        @media (max-width: 900px) {
+          .drp-prof-wrap {
+            padding: 12px 14px 22px;
+          }
+          .drp-prof-title {
+            font-size: 18px !important;
+          }
+          .drp-prof-card {
+            padding: 13px 15px;
+          }
+          .drp-prof-card-heading {
+            font-size: 14px !important;
+          }
+          .drp-prof-grid-3 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 640px) {
+          .drp-prof-wrap {
+            padding: 10px 10px 20px;
+          }
+          .drp-prof-title {
+            font-size: 16.5px !important;
+          }
+          .drp-prof-sub {
+            font-size: 11px !important;
+            line-height: 1.35;
+          }
+          .drp-prof-top-save {
+            padding: 7px 12px !important;
+            font-size: 11.5px !important;
+            min-height: 32px !important;
+          }
+          .drp-prof-card {
+            padding: 11px 12px;
+            border-radius: 9px;
+          }
+          .drp-prof-card-header {
+            padding-bottom: 6px !important;
+            margin-bottom: 8px !important;
+          }
+          .drp-prof-card-heading {
+            font-size: 13.5px !important;
+          }
+          .drp-prof-card-sub {
+            font-size: 10.5px !important;
+          }
+          .drp-prof-grid-2,
+          .drp-prof-grid-3 {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+          }
+          .drp-prof-avatar-row {
+            gap: 10px !important;
+          }
+          .drp-prof-avatar-circle {
+            width: 56px !important;
+            height: 56px !important;
+          }
+          .drp-prof-avatar-fallback {
+            font-size: 19px !important;
+          }
+          .drp-prof-upload-btn {
+            padding: 6px 11px !important;
+            font-size: 11.5px !important;
+            min-height: 32px !important;
+          }
+          .drp-prof-label {
+            font-size: 11px !important;
+          }
+          .drp-prof-input {
+            padding: 7px 9px !important;
+            font-size: 12.5px !important;
+          }
+          .drp-prof-method-btn {
+            padding: 6px 8px !important;
+            font-size: 11px !important;
+            min-height: 32px !important;
+          }
+          .drp-prof-bottom-save {
+            width: 100%;
+            padding: 9px 14px !important;
+            font-size: 12.5px !important;
+          }
+        }
+      `}</style>
+
+      {/* Page Title & Quick Save Header */}
+      <div className="drp-prof-header">
+        <div style={{ minWidth: 0 }}>
+          <h1 className="drp-prof-title" style={styles.headingTitle}>Profile Settings</h1>
+          <p className="drp-prof-sub" style={styles.subTitle}>
+            Manage your personal profile, contact details, default deck address, and password.
           </p>
         </div>
         <button
           type="button"
           onClick={handleSaveProfile}
-          disabled={saving}
-          style={styles.topSaveBtn}
+          disabled={saving || compressingPhoto}
+          className="drp-prof-top-save"
+          style={{
+            ...styles.topSaveBtn,
+            opacity: saving || compressingPhoto ? 0.72 : 1,
+          }}
           title="Save profile changes"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
             <polyline points="17 21 17 13 7 13 7 21" />
             <polyline points="7 3 7 8 15 8" />
@@ -195,35 +426,37 @@ export default function CustomerProfilePage() {
         </button>
       </div>
 
-      {/* Notifications */}
+      {/* Inline Feedback Banners */}
       {successMsg && (
-        <div style={styles.alertSuccess}>
+        <div role="status" style={styles.alertSuccess}>
           <span>✓ {successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div style={styles.alertError}>
+        <div role="alert" style={styles.alertError}>
           <span>✕ {errorMsg}</span>
         </div>
       )}
 
       {loading ? (
-        <div style={styles.loadingBox}>Loading profile data...</div>
+        <div style={styles.loadingBox}>Loading your profile...</div>
       ) : (
         <form onSubmit={handleSaveProfile} style={styles.formLayout}>
-          {/* 1. TOP PROFILE AVATAR CARD */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardHeading}>Profile Photo & Identity</h3>
-              <span style={styles.cardSub}>Photo visible across estimates and contractor correspondence.</span>
+          {/* 1. PROFILE PHOTO & IDENTITY */}
+          <div className="drp-prof-card">
+            <div className="drp-prof-card-header" style={styles.cardHeader}>
+              <h3 className="drp-prof-card-heading" style={styles.cardHeading}>Profile Photo &amp; Identity</h3>
+              <span className="drp-prof-card-sub" style={styles.cardSub}>
+                Shown across your dashboard, estimates, and contractor updates.
+              </span>
             </div>
 
-            <div style={styles.avatarSection}>
-              <div style={styles.avatarWrap}>
+            <div className="drp-prof-avatar-row" style={styles.avatarSection}>
+              <div className="drp-prof-avatar-circle" style={styles.avatarWrap}>
                 {avatar ? (
-                  <img src={avatar} alt={fullName} style={styles.avatarImage} />
+                  <img src={avatar} alt={fullName || 'Profile'} style={styles.avatarImage} />
                 ) : (
-                  <div style={styles.avatarFallback}>{initials}</div>
+                  <div className="drp-prof-avatar-fallback" style={styles.avatarFallback}>{initials}</div>
                 )}
               </div>
 
@@ -235,82 +468,93 @@ export default function CustomerProfilePage() {
                   onChange={handlePhotoSelect}
                   style={{ display: 'none' }}
                 />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={styles.uploadPhotoBtn}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                  <span>Upload Photo</span>
-                </button>
-                {avatar && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={handleRemovePhoto}
-                    style={styles.removePhotoBtn}
+                    disabled={compressingPhoto}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="drp-prof-upload-btn"
+                    style={styles.uploadPhotoBtn}
                   >
-                    Remove
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span>{compressingPhoto ? 'Optimizing...' : 'Upload Photo'}</span>
                   </button>
-                )}
+                  {avatar && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      style={styles.removePhotoBtn}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
                 <span style={styles.avatarHint}>
-                  Recommended: Square JPG or PNG, max 5 MB.
+                  Auto-optimized JPG, PNG, or WebP (max 10 MB upload).
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 2. PERSONAL INFORMATION CARD */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardHeading}>Personal Information</h3>
-              <span style={styles.cardSub}>Basic contact details for project coordination.</span>
+          {/* 2. PERSONAL INFORMATION */}
+          <div className="drp-prof-card">
+            <div className="drp-prof-card-header" style={styles.cardHeader}>
+              <h3 className="drp-prof-card-heading" style={styles.cardHeading}>Personal Information</h3>
+              <span className="drp-prof-card-sub" style={styles.cardSub}>
+                Basic contact details for estimate coordination.
+              </span>
             </div>
 
-            <div style={styles.grid2Col}>
+            <div className="drp-prof-grid-2">
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Full Name *</label>
+                <label className="drp-prof-label" style={styles.label}>Full Name *</label>
                 <input
                   type="text"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={markDirty(setFullName)}
                   placeholder="e.g. Ashok Kumar"
-                  style={styles.input}
+                  className="drp-prof-input"
                   required
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Email Address (Account ID)</label>
+                <label className="drp-prof-label" style={styles.label}>Email Address (Account ID)</label>
                 <input
                   type="email"
                   value={email}
                   disabled
-                  style={{ ...styles.input, backgroundColor: '#F8FAFC', color: '#64748B', cursor: 'not-allowed' }}
+                  className="drp-prof-input"
+                  style={{ backgroundColor: '#F8FAFC', color: '#64748B', cursor: 'not-allowed' }}
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Phone Number</label>
+                <label className="drp-prof-label" style={styles.label}>Phone Number</label>
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={markDirty(setPhone)}
                   placeholder="(555) 000-0000"
-                  style={styles.input}
+                  className="drp-prof-input"
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Preferred Contact Method</label>
+                <label className="drp-prof-label" style={styles.label}>Preferred Contact Method</label>
                 <div style={styles.contactMethodGroup}>
                   {['email', 'phone', 'sms'].map((method) => (
                     <button
                       key={method}
                       type="button"
-                      onClick={() => setPreferredContact(method)}
+                      onClick={() => {
+                        isDirtyRef.current = true;
+                        setPreferredContact(method);
+                      }}
+                      className="drp-prof-method-btn"
                       style={{
                         ...styles.contactMethodBtn,
                         backgroundColor: preferredContact === method ? '#034EA2' : '#FFFFFF',
@@ -326,122 +570,169 @@ export default function CustomerProfilePage() {
             </div>
           </div>
 
-          {/* 3. PROPERTY & BILLING ADDRESS CARD */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardHeading}>Default Property & Deck Address</h3>
-              <span style={styles.cardSub}>Auto-populates new restoration project location fields.</span>
+          {/* 3. PROPERTY & BILLING ADDRESS */}
+          <div className="drp-prof-card">
+            <div className="drp-prof-card-header" style={styles.cardHeader}>
+              <h3 className="drp-prof-card-heading" style={styles.cardHeading}>Default Property &amp; Deck Address</h3>
+              <span className="drp-prof-card-sub" style={styles.cardSub}>
+                Auto-populates new restoration project location fields.
+              </span>
             </div>
 
-            <div style={styles.grid2Col}>
-              <div style={{ ...styles.inputGroup, gridColumn: 'span 2' }}>
-                <label style={styles.label}>Street Address</label>
+            <div className="drp-prof-grid-2">
+              <div className="drp-prof-col-full" style={styles.inputGroup}>
+                <label className="drp-prof-label" style={styles.label}>Street Address</label>
                 <input
                   type="text"
                   value={street}
-                  onChange={(e) => setStreet(e.target.value)}
+                  onChange={markDirty(setStreet)}
                   placeholder="123 Oakwood Drive"
-                  style={styles.input}
+                  className="drp-prof-input"
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>City</label>
+                <label className="drp-prof-label" style={styles.label}>City</label>
                 <input
                   type="text"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Austin"
-                  style={styles.input}
+                  onChange={markDirty(setCity)}
+                  placeholder="Shamong"
+                  className="drp-prof-input"
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>State / Province</label>
+                <label className="drp-prof-label" style={styles.label}>State / Province</label>
                 <input
                   type="text"
                   value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  placeholder="TX"
-                  style={styles.input}
+                  onChange={markDirty(setState)}
+                  placeholder="NJ"
+                  className="drp-prof-input"
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>ZIP / Postal Code</label>
+                <label className="drp-prof-label" style={styles.label}>ZIP / Postal Code</label>
                 <input
                   type="text"
                   value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  placeholder="78701"
-                  style={styles.input}
+                  onChange={markDirty(setZipCode)}
+                  placeholder="08088"
+                  className="drp-prof-input"
                 />
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Country</label>
+                <label className="drp-prof-label" style={styles.label}>Country</label>
                 <input
                   type="text"
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                  onChange={markDirty(setCountry)}
                   placeholder="USA"
-                  style={styles.input}
+                  className="drp-prof-input"
                 />
               </div>
             </div>
           </div>
 
-          {/* 4. SECURITY & PASSWORD CARD (OPTIONAL) */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h3 style={styles.cardHeading}>Security & Password</h3>
-              <span style={styles.cardSub}>Leave blank if you do not wish to change your password.</span>
+          {/* 4. SECURITY & PASSWORD */}
+          <div className="drp-prof-card">
+            <div className="drp-prof-card-header" style={styles.cardHeader}>
+              <h3 className="drp-prof-card-heading" style={styles.cardHeading}>Security &amp; Password</h3>
+              <span className="drp-prof-card-sub" style={styles.cardSub}>
+                Leave blank unless changing your login password.
+              </span>
             </div>
 
-            <div style={styles.grid3Col}>
+            <div className="drp-prof-grid-3">
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  style={styles.input}
-                />
+                <label className="drp-prof-label" style={styles.label}>Current Password</label>
+                <div className="drp-prof-pw-wrap">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    className="drp-prof-input drp-prof-pw-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((prev) => !prev)}
+                    className="drp-prof-pw-toggle"
+                    aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                    title={showCurrentPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeToggleIcon visible={showCurrentPassword} />
+                  </button>
+                </div>
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
-                  style={styles.input}
-                />
+                <label className="drp-prof-label" style={styles.label}>New Password</label>
+                <div className="drp-prof-pw-wrap">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    className="drp-prof-input drp-prof-pw-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    className="drp-prof-pw-toggle"
+                    aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                    title={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeToggleIcon visible={showNewPassword} />
+                  </button>
+                </div>
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
-                  style={styles.input}
-                />
+                <label className="drp-prof-label" style={styles.label}>Confirm New Password</label>
+                <div className="drp-prof-pw-wrap">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    className="drp-prof-input drp-prof-pw-input"
+                    style={passwordMismatch ? { borderColor: '#EF4444' } : undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="drp-prof-pw-toggle"
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeToggleIcon visible={showConfirmPassword} />
+                  </button>
+                </div>
+                {passwordMismatch && (
+                  <span style={{ fontSize: '11px', color: '#DC2626', fontWeight: '600' }}>
+                    Passwords do not match.
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* FORM ACTIONS */}
+          {/* Bottom Save Action */}
           <div style={styles.actionsBar}>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || compressingPhoto}
+              className="drp-prof-bottom-save"
               style={{
                 ...styles.saveButton,
-                opacity: saving ? 0.7 : 1,
+                opacity: saving || compressingPhoto ? 0.72 : 1,
                 cursor: saving ? 'wait' : 'pointer',
               }}
             >
@@ -454,74 +745,66 @@ export default function CustomerProfilePage() {
   );
 }
 
-// Modern Clean Samsung Blue Styles
 const styles = {
   container: {
-    maxWidth: '1040px',
+    maxWidth: '980px',
     margin: '0 auto',
-    padding: '16px 20px 40px 20px',
+    padding: '14px 18px 28px 18px',
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-  },
-  pageHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '16px',
-    marginBottom: '16px',
-    flexWrap: 'wrap',
   },
   topSaveBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '9px 18px',
+    gap: '7px',
+    padding: '8px 16px',
     backgroundColor: '#034EA2',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(3, 78, 162, 0.25)',
+    boxShadow: '0 2px 8px rgba(3, 78, 162, 0.22)',
     transition: 'all 0.16s ease',
+    flexShrink: 0,
   },
   headingTitle: {
-    fontSize: '22px',
+    fontSize: '20px',
     fontWeight: '800',
     color: '#0F172A',
-    margin: '0 0 4px 0',
+    margin: '0 0 2px 0',
     letterSpacing: '-0.3px',
   },
   subTitle: {
-    fontSize: '12.5px',
+    fontSize: '12px',
     color: '#64748B',
     margin: 0,
   },
   alertSuccess: {
-    padding: '10px 16px',
+    padding: '9px 14px',
     backgroundColor: '#DCFCE7',
     border: '1px solid #86EFAC',
     borderRadius: '8px',
     color: '#15803D',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: '600',
-    marginBottom: '14px',
+    marginBottom: '10px',
   },
   alertError: {
-    padding: '10px 16px',
+    padding: '9px 14px',
     backgroundColor: '#FEE2E2',
     border: '1px solid #FCA5A5',
     borderRadius: '8px',
     color: '#B91C1C',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: '600',
-    marginBottom: '14px',
+    marginBottom: '10px',
   },
   loadingBox: {
-    padding: '30px',
+    padding: '24px',
     textAlign: 'center',
     color: '#64748B',
-    fontSize: '13.5px',
+    fontSize: '13px',
     backgroundColor: '#FFFFFF',
     borderRadius: '10px',
     border: '1px solid #E2E8F0',
@@ -529,47 +812,48 @@ const styles = {
   formLayout: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '12px',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: '10px',
     border: '1px solid #E2E8F0',
-    padding: '16px 20px',
+    padding: '14px 18px',
     boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
   },
   cardHeader: {
     borderBottom: '1px solid #F1F5F9',
-    paddingBottom: '10px',
-    marginBottom: '12px',
+    paddingBottom: '8px',
+    marginBottom: '10px',
   },
   cardHeading: {
-    fontSize: '16px',
+    fontSize: '15px',
     fontWeight: '700',
     color: '#0F172A',
-    margin: '0 0 4px 0',
+    margin: '0 0 2px 0',
   },
   cardSub: {
-    fontSize: '12px',
+    fontSize: '11.5px',
     color: '#64748B',
+    display: 'block',
   },
   avatarSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '24px',
+    gap: '18px',
     flexWrap: 'wrap',
   },
   avatarWrap: {
-    width: '90px',
-    height: '90px',
+    width: '76px',
+    height: '76px',
     borderRadius: '50%',
     overflow: 'hidden',
     backgroundColor: '#034EA2',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    border: '3px solid #E2E8F0',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    border: '2.5px solid #E2E8F0',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
     flexShrink: 0,
   },
   avatarImage: {
@@ -579,85 +863,66 @@ const styles = {
   },
   avatarFallback: {
     color: '#FFFFFF',
-    fontSize: '30px',
+    fontSize: '25px',
     fontWeight: '800',
     letterSpacing: '-0.5px',
   },
   avatarActions: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
+    minWidth: 0,
+    flex: 1,
   },
   uploadPhotoBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '9px 18px',
+    gap: '7px',
+    padding: '7px 14px',
     backgroundColor: '#034EA2',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '13px',
+    borderRadius: '7px',
+    fontSize: '12.5px',
     fontWeight: '600',
     cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.2)',
-    transition: 'all 0.16s ease',
+    boxShadow: '0 2px 5px rgba(3, 78, 162, 0.18)',
   },
   removePhotoBtn: {
-    padding: '6px 14px',
+    padding: '6px 12px',
     backgroundColor: '#FFFFFF',
     color: '#B91C1C',
     border: '1px solid #FCA5A5',
-    borderRadius: '6px',
+    borderRadius: '7px',
     fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer',
-    alignSelf: 'flex-start',
   },
   avatarHint: {
     fontSize: '11px',
     color: '#94A3B8',
   },
-  grid2Col: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '12px',
-  },
-  grid3Col: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '12px',
-  },
   inputGroup: {
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
+    minWidth: 0,
   },
   label: {
-    fontSize: '12px',
+    fontSize: '11.5px',
     fontWeight: '600',
     color: '#334155',
   },
-  input: {
-    padding: '8px 12px',
-    borderRadius: '8px',
-    border: '1px solid #CBD5E1',
-    fontSize: '13px',
-    color: '#0F172A',
-    outline: 'none',
-    backgroundColor: '#FFFFFF',
-    transition: 'border-color 0.15s ease',
-  },
   contactMethodGroup: {
     display: 'flex',
-    gap: '8px',
+    gap: '6px',
   },
   contactMethodBtn: {
     flex: 1,
-    padding: '9px 12px',
-    borderRadius: '8px',
+    padding: '8px 10px',
+    borderRadius: '7px',
     border: '1.5px solid',
-    fontSize: '12px',
+    fontSize: '11.5px',
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
@@ -665,19 +930,18 @@ const styles = {
   actionsBar: {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '10px',
+    gap: '10px',
+    marginTop: '4px',
   },
   saveButton: {
-    padding: '12px 28px',
+    padding: '10px 22px',
     backgroundColor: '#034EA2',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '9px',
-    fontSize: '14px',
+    borderRadius: '8px',
+    fontSize: '13.5px',
     fontWeight: '700',
-    boxShadow: '0 4px 14px rgba(3, 78, 162, 0.3)',
-    cursor: 'pointer',
+    boxShadow: '0 3px 10px rgba(3, 78, 162, 0.25)',
     transition: 'all 0.18s ease',
   },
 };

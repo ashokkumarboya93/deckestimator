@@ -29,11 +29,25 @@ export default function AdminDashboardPage() {
   const navigate = useNavigate();
 
   const [dateRange, setDateRange] = useState('30d');
-  const [loading, setLoading] = useState(true);
+  const [summaryData, setSummaryData] = useState(() => {
+    try {
+      const cached = localStorage.getItem('drp_admin_dashboard_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [trendData, setTrendData] = useState(() => {
+    try {
+      const cached = localStorage.getItem('drp_admin_trend_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => !summaryData);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [summaryData, setSummaryData] = useState(null);
-  const [trendData, setTrendData] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
   // Interactive Plot Hover States
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -86,9 +100,19 @@ export default function AdminDashboardPage() {
 
       if (summaryPayload && summaryPayload.summary) {
         setSummaryData(summaryPayload);
+        try {
+          localStorage.setItem('drp_admin_dashboard_cache', JSON.stringify(summaryPayload));
+        } catch {
+          // Ignore quota errors
+        }
       }
       if (trendPayload && trendPayload.series) {
         setTrendData(trendPayload);
+        try {
+          localStorage.setItem('drp_admin_trend_cache', JSON.stringify(trendPayload));
+        } catch {
+          // Ignore quota errors
+        }
       }
       setLastUpdated(new Date());
     } catch (err) {

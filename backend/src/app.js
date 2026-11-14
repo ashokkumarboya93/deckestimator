@@ -8,6 +8,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
@@ -20,9 +21,13 @@ const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
-// --------------- Security middleware ---------------
+// Trust reverse proxies (Railway, Cloudflare, etc.) for rate limiters & secure cookies
+app.set('trust proxy', 1);
+
+// --------------- Security & Compression middleware ---------------
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors(corsOptions));
+app.use(compression({ threshold: 1024 }));
 
 // --------------- Request parsing ---------------
 app.use(express.json({ limit: '50mb' }));
