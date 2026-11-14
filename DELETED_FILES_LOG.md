@@ -114,7 +114,7 @@ This file tracks all files, assets, and folders removed or relocated during the 
 ---
 
 ## Batch 7: Empty Ghost Directories
-**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+**Executed:** November 14, 2026 | **Git Commit:** `8c3382f`
 
 | Original Folder Path | Content | Action Taken | Status | Reason |
 | :--- | :---: | :---: | :---: | :--- |
@@ -123,7 +123,7 @@ This file tracks all files, assets, and folders removed or relocated during the 
 ---
 
 ## Batch 8: Backend Scratch & Dummy Upload Stubs
-**Executed:** November 14, 2026 | **Git Commit:** `Pending`
+**Executed:** November 14, 2026 | **Git Commit:** `8c3382f`
 
 | Original Path | File Count / Size | Action Taken | Status | Reason |
 | :--- | :---: | :---: | :---: | :--- |
