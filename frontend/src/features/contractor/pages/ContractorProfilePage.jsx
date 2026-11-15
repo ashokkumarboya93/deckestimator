@@ -16,6 +16,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { userProfileApi } from '../../customer/api/userProfileApi';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function ContractorProfilePage() {
   const { user, contractorProfile: authContractorProfile, refreshUser } = useAuth();
@@ -495,14 +496,20 @@ export default function ContractorProfilePage() {
             }}>
               ★ {contractorTier} Partner
             </span>
-            <span style={{
-              ...styles.statusPill,
-              backgroundColor: verificationStatus === 'VERIFIED' ? '#ECFDF5' : '#FFFBEB',
-              color: verificationStatus === 'VERIFIED' ? '#15803D' : '#D97706',
-              border: `1px solid ${verificationStatus === 'VERIFIED' ? '#A7F3D0' : '#FDE68A'}`,
-            }}>
-              {verificationStatus === 'VERIFIED' ? '✓ Verified Pro' : '⏳ Verification Pending'}
-            </span>
+            {(() => {
+              const isApproved = verificationStatus === 'APPROVED' || verificationStatus === 'VERIFIED';
+              const isRejected = verificationStatus === 'REJECTED';
+              return (
+                <span style={{
+                  ...styles.statusPill,
+                  backgroundColor: isApproved ? '#ECFDF5' : isRejected ? '#FEF2F2' : '#FFFBEB',
+                  color: isApproved ? '#15803D' : isRejected ? '#DC2626' : '#D97706',
+                  border: `1px solid ${isApproved ? '#A7F3D0' : isRejected ? '#FECACA' : '#FDE68A'}`,
+                }}>
+                  {isApproved ? '✓ Verified Partner' : isRejected ? '✕ Verification Rejected' : '⏳ Verification Pending'}
+                </span>
+              );
+            })()}
           </div>
           <p style={styles.pageSubtitle}>
             Configure your contractor credentials, trade profile, and upload verified licensing documents to unlock wholesale tier discounts.
@@ -577,8 +584,13 @@ export default function ContractorProfilePage() {
           {/* Profile Picture Upload Row (Shows in Navbar Circle) */}
           <div style={styles.avatarRow}>
             <div style={styles.avatarWrap}>
-              {avatar ? (
-                <img src={avatar} alt={fullName} style={styles.avatarImg} />
+              {avatar && resolveAvatarUrl(avatar) ? (
+                <img
+                  src={resolveAvatarUrl(avatar)}
+                  alt={fullName}
+                  style={styles.avatarImg}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               ) : (
                 <div style={styles.avatarPlaceholder}>
                   {fullName ? fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'CP'}

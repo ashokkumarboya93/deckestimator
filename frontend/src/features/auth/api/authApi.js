@@ -53,4 +53,24 @@ export const authApi = {
       method: 'GET',
     });
   },
+
+  /**
+   * Request password reset token.
+   */
+  async forgotPassword(email) {
+    return apiClient(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /**
+   * Reset password with token.
+   */
+  async resetPassword({ token, newPassword, confirmPassword }) {
+    return apiClient(ENDPOINTS.AUTH.RESET_PASSWORD, {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword, confirmPassword }),
+    });
+  },
 };

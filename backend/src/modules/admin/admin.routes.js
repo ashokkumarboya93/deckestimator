@@ -60,11 +60,14 @@ router.patch('/contractor-documents/:id', adminController.reviewContractorDocume
 // 4. Projects & Progress Tracking
 router.get('/projects', adminController.listProjects);
 router.patch('/projects/:id/progress', adminController.updateProjectProgress);
+router.delete('/projects/:id', adminController.deleteProject);
+router.post('/projects/bulk-delete', adminController.bulkDeleteProjects);
 router.get('/projects/export', adminController.exportProjects);
 router.get('/projects/:id/export', adminController.exportSingleProjectDossier);
 
 // 5. Lead Management (4 Tabs & Auto Hot Priority)
 router.get('/leads', adminController.listLeads);
+router.delete('/leads/:id', adminController.deleteLead);
 router.get('/leads/export', adminController.exportLeads);
 router.get('/leads/:id/export', adminController.exportSingleLeadDossier);
 router.get('/leads/:id', adminController.getLeadDetails);

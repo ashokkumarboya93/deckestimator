@@ -222,6 +222,25 @@ async function exportProjects(req, res, next) {
   }
 }
 
+async function deleteProject(req, res, next) {
+  try {
+    const result = await adminService.deleteProject(req.params.id);
+    res.status(200).json({ success: true, message: result.message, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteProjects(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.projectIds || [];
+    const result = await adminService.bulkDeleteProjects(ids);
+    res.status(200).json({ success: true, message: result.message, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 5. Leads Management
 async function listLeads(req, res, next) {
   try {
@@ -262,6 +281,15 @@ async function exportSingleLeadDossier(req, res, next) {
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
     res.status(200).send(file.data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteLead(req, res, next) {
+  try {
+    const result = await adminService.deleteLead(req.params.id);
+    res.status(200).json({ success: true, message: result.message, data: result });
   } catch (err) {
     next(err);
   }
@@ -657,9 +685,12 @@ module.exports = {
   getVerificationHistory,
   listProjects,
   updateProjectProgress,
+  deleteProject,
+  bulkDeleteProjects,
   exportProjects,
   listLeads,
   getLeadDetails,
+  deleteLead,
   exportSingleLeadDossier,
   exportLeads,
   listEstimatorFields,

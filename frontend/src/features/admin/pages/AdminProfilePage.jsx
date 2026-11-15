@@ -14,6 +14,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { ConfirmModal } from '../../../components/common';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function AdminProfilePage() {
   const { user } = useAuth();
@@ -96,8 +98,10 @@ export default function AdminProfilePage() {
         });
       }
 
-      if (hierRes.status === 'fulfilled' && hierRes.value?.data) {
-        setHierarchy(hierRes.value.data);
+      if (hierRes.status === 'fulfilled' && hierRes.value) {
+        const rawHier = hierRes.value;
+        const hierPayload = rawHier.admins ? rawHier : (rawHier.data?.admins ? rawHier.data : (rawHier.data || rawHier));
+        setHierarchy(hierPayload);
       }
     } catch {
       // Graceful fallback
@@ -197,21 +201,28 @@ export default function AdminProfilePage() {
     }
   };
 
-  // Delete Child Admin (Parent Admin Only)
-  const handleDeleteChildAdmin = async (adminId, adminEmail) => {
-    if (!window.confirm(`Are you sure you want to delete child administrator "${adminEmail}"? This action cannot be undone.`)) {
-      return;
-    }
+  // Delete Child Admin Confirmation State
+  const [confirmDeleteAdmin, setConfirmDeleteAdmin] = useState(null);
 
-    setDeletingId(adminId);
+  // Delete Child Admin (Parent Admin Only)
+  const handleDeleteChildAdmin = (adminId, adminEmail) => {
+    setConfirmDeleteAdmin({ id: adminId, email: adminEmail });
+  };
+
+  const handleExecuteDeleteChildAdmin = async () => {
+    if (!confirmDeleteAdmin) return;
+    const { id } = confirmDeleteAdmin;
+    setDeletingId(id);
     setSuccessMsg(null);
     setErrorMsg(null);
     try {
-      const res = await adminApi.deleteChildAdmin(adminId);
+      const res = await adminApi.deleteChildAdmin(id);
       setSuccessMsg(`✓ ${res.message || 'Child administrator successfully deleted.'}`);
+      setConfirmDeleteAdmin(null);
       loadAllAdminData();
     } catch (err) {
       setErrorMsg(err?.message || 'Failed to delete child administrator.');
+      setConfirmDeleteAdmin(null);
     } finally {
       setDeletingId(null);
     }
@@ -260,10 +271,11 @@ export default function AdminProfilePage() {
         {/* ======================================================== */}
         <div style={styles.accountCard}>
           <div style={{ position: 'relative', display: 'inline-block', margin: '0 auto 16px' }}>
-            {profile.avatar ? (
+            {profile.avatar && resolveAvatarUrl(profile.avatar) ? (
               <img
-                src={profile.avatar}
+                src={resolveAvatarUrl(profile.avatar)}
                 alt={profile.name || 'Admin'}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 style={styles.avatarImg}
               />
             ) : (
@@ -525,7 +537,7 @@ export default function AdminProfilePage() {
 
         {/* Active Admins Directory Table */}
         <h4 style={{ margin: '20px 0 10px', fontSize: '14px', fontWeight: '800', color: '#334155' }}>
-          Registered Platform Administrators ({hierarchy.admins?.length || 1})
+          Registered Platform Administrators ({hierarchy.admins?.length || 0})
         </h4>
 
         <div style={styles.tableResponsive}>
@@ -547,9 +559,18 @@ export default function AdminProfilePage() {
                   <tr key={adm._id || adm.id} style={styles.tr}>
                     <td style={styles.td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={styles.tableAvatar}>
-                          {(adm.name || adm.fullName || adm.email || 'A').charAt(0).toUpperCase()}
-                        </div>
+                        {adm.avatar && resolveAvatarUrl(adm.avatar) ? (
+                          <img
+                            src={resolveAvatarUrl(adm.avatar)}
+                            alt={adm.name || 'Admin'}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={styles.tableAvatar}>
+                            {(adm.name || adm.fullName || adm.email || 'A').charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <strong>{adm.name || adm.fullName || 'Administrator'}</strong>
                           {isCurrentAdmin && (
@@ -612,6 +633,18 @@ export default function AdminProfilePage() {
           </table>
         </div>
       </div>
+
+      {/* Enterprise Delete Child Admin Confirm Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmDeleteAdmin)}
+        title="Delete Child Administrator?"
+        message={`Are you sure you want to revoke and delete child administrator account "${confirmDeleteAdmin?.email}"? This account will permanently lose platform access.`}
+        confirmLabel="Delete Account"
+        variant="danger"
+        isLoading={Boolean(deletingId)}
+        onConfirm={handleExecuteDeleteChildAdmin}
+        onClose={() => !deletingId && setConfirmDeleteAdmin(null)}
+      />
     </div>
   );
 }

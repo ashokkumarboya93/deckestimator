@@ -8,6 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../../../api/apiErrors';
 import mainLogo from '../../../assets/images/Main_Logo_v2.png';
+import { authApi } from '../api/authApi';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -23,6 +24,18 @@ export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [loginSuccess, setLoginSuccess] = useState(null);
+
+  // Password Recovery Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotError, setForgotError] = useState(null);
+  const [forgotSuccess, setForgotSuccess] = useState(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -99,6 +112,73 @@ export function LoginForm() {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRequestReset = async (e) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+    const email = forgotEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setForgotError('Please enter a valid email address.');
+      return;
+    }
+    setForgotSubmitting(true);
+    try {
+      const res = await authApi.forgotPassword(email);
+      setForgotSuccess(res?.message || 'Password reset token generated.');
+      if (res?.data?.resetToken) {
+        setResetToken(res.data.resetToken);
+      }
+      setForgotStep(2);
+    } catch (err) {
+      setForgotError(getErrorMessage(err) || 'Failed to request password reset.');
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
+  const handleConfirmReset = async (e) => {
+    e.preventDefault();
+    setForgotError(null);
+    if (!resetToken.trim()) {
+      setForgotError('Reset token is required.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setForgotError('Password must be at least 8 characters.');
+      return;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
+      setForgotError('Password must include uppercase, lowercase, number, and special character.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+    setForgotSubmitting(true);
+    try {
+      const res = await authApi.resetPassword({
+        token: resetToken.trim(),
+        newPassword,
+        confirmPassword,
+      });
+      setForgotSuccess(res?.message || 'Password reset successfully! You can now sign in.');
+      setFormData((prev) => ({ ...prev, email: forgotEmail, password: '' }));
+      setTimeout(() => {
+        setShowForgotModal(false);
+        setForgotStep(1);
+        setForgotSuccess(null);
+        setResetToken('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }, 1800);
+    } catch (err) {
+      setForgotError(getErrorMessage(err) || 'Failed to reset password. Token may be expired or invalid.');
+    } finally {
+      setForgotSubmitting(false);
     }
   };
 
@@ -185,6 +265,20 @@ export function LoginForm() {
         <div style={styles.fieldGroup} className="auth-field-group">
           <div style={styles.labelRow} className="auth-label-row">
             <label htmlFor="login-password" style={styles.label} className="auth-label">Password *</label>
+            <button
+              type="button"
+              onClick={() => {
+                setForgotEmail(formData.email || '');
+                setForgotStep(1);
+                setForgotError(null);
+                setForgotSuccess(null);
+                setShowForgotModal(true);
+              }}
+              style={styles.forgotBtn}
+              className="auth-forgot-btn"
+            >
+              Forgot password?
+            </button>
           </div>
           <div
             className="auth-input-wrap"
@@ -273,6 +367,154 @@ export function LoginForm() {
           Create Account
         </Link>
       </div>
+
+      {/* Forgot Password Recovery Modal */}
+      {showForgotModal && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => !forgotSubmitting && setShowForgotModal(false)}
+        >
+          <div
+            style={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>
+                {forgotStep === 1 ? 'Reset Your Password' : 'Set New Password'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => !forgotSubmitting && setShowForgotModal(false)}
+                style={styles.modalCloseBtn}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={styles.modalSubtitle}>
+              {forgotStep === 1
+                ? 'Enter your registered email address and we will generate a secure reset token.'
+                : 'Enter your reset token and your desired new password.'}
+            </p>
+
+            {forgotSuccess && (
+              <div style={styles.modalSuccessBanner}>
+                <span>✓ {forgotSuccess}</span>
+              </div>
+            )}
+
+            {forgotError && (
+              <div style={styles.modalErrorBanner}>
+                <span>⚠ {forgotError}</span>
+              </div>
+            )}
+
+            {forgotStep === 1 ? (
+              <form onSubmit={handleRequestReset} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={styles.modalLabel}>Registered Email *</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    style={styles.modalInput}
+                    required
+                    autoFocus
+                    disabled={forgotSubmitting}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    style={styles.modalSecondaryBtn}
+                    disabled={forgotSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ ...styles.modalPrimaryBtn, opacity: forgotSubmitting ? 0.7 : 1 }}
+                    disabled={forgotSubmitting}
+                  >
+                    {forgotSubmitting ? 'Generating...' : 'Generate Reset Token'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleConfirmReset} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={styles.modalLabel}>Reset Token *</label>
+                  <input
+                    type="text"
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    placeholder="64-character token"
+                    style={styles.modalInput}
+                    required
+                    disabled={forgotSubmitting}
+                  />
+                </div>
+                <div>
+                  <label style={styles.modalLabel}>New Password * (min 8 chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      style={styles.modalInput}
+                      required
+                      disabled={forgotSubmitting}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((p) => !p)}
+                      style={styles.modalEyeBtn}
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style={styles.modalLabel}>Confirm New Password *</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    style={styles.modalInput}
+                    required
+                    disabled={forgotSubmitting}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    style={styles.modalSecondaryBtn}
+                    disabled={forgotSubmitting}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ ...styles.modalPrimaryBtn, opacity: forgotSubmitting ? 0.7 : 1 }}
+                    disabled={forgotSubmitting}
+                  >
+                    {forgotSubmitting ? 'Updating...' : 'Set New Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -475,5 +717,137 @@ const styles = {
     fontWeight: '700',
     textDecoration: 'none',
     marginLeft: '4px',
+  },
+  forgotBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#0A58CA',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    padding: 0,
+    textDecoration: 'none',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    padding: '16px',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '16px',
+    width: '100%',
+    maxWidth: '420px',
+    padding: '24px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    position: 'relative',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '8px',
+  },
+  modalTitle: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#0F172A',
+    margin: 0,
+  },
+  modalCloseBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '18px',
+    color: '#94A3B8',
+    cursor: 'pointer',
+    padding: '4px',
+    lineHeight: 1,
+  },
+  modalSubtitle: {
+    fontSize: '13px',
+    color: '#64748B',
+    margin: '0 0 16px 0',
+    lineHeight: 1.4,
+  },
+  modalSuccessBanner: {
+    padding: '10px 12px',
+    backgroundColor: '#ECFDF5',
+    border: '1px solid #10B981',
+    borderRadius: '8px',
+    color: '#065F46',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    marginBottom: '12px',
+  },
+  modalErrorBanner: {
+    padding: '10px 12px',
+    backgroundColor: '#FEF2F2',
+    border: '1px solid #F87171',
+    borderRadius: '8px',
+    color: '#991B1B',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    marginBottom: '12px',
+  },
+  modalLabel: {
+    display: 'block',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: '5px',
+  },
+  modalInput: {
+    width: '100%',
+    boxSizing: 'border-box',
+    height: '42px',
+    padding: '0 12px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    fontSize: '13.5px',
+    outline: 'none',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+  },
+  modalEyeBtn: {
+    position: 'absolute',
+    right: '10px',
+    top: '11px',
+    background: 'none',
+    border: 'none',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: '#64748B',
+    cursor: 'pointer',
+  },
+  modalPrimaryBtn: {
+    flex: 1,
+    height: '40px',
+    borderRadius: '8px',
+    backgroundColor: '#0A58CA',
+    border: 'none',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  modalSecondaryBtn: {
+    height: '40px',
+    padding: '0 16px',
+    borderRadius: '8px',
+    backgroundColor: '#F1F5F9',
+    border: '1px solid #CBD5E1',
+    color: '#475569',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
   },
 };

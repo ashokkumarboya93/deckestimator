@@ -21,6 +21,7 @@ import { getEstimates, getEstimateById, deleteEstimate, requestProjectEstimate }
 import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
+import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 const DEFAULT_THUMBS = [
   ESTIMATOR_IMAGES.shapes.rectangle.references[1] || ESTIMATOR_IMAGES.shapes.rectangle.main,
@@ -114,7 +115,8 @@ export default function CustomerEstimatesPage() {
     if (isRefresh) hydratedCacheRef.current.clear();
     try {
       const data = await getEstimates({ limit: 50, compact: '1' });
-      setEstimates(data?.estimates || []);
+      const list = data?.estimates || data?.data?.estimates || (Array.isArray(data) ? data : []);
+      setEstimates(Array.isArray(list) ? list : []);
     } catch (err) {
       setError(err.message || 'Failed to fetch your estimates.');
     } finally {
@@ -567,7 +569,9 @@ export default function CustomerEstimatesPage() {
           </div>
           <div style={{ minWidth: 0 }}>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Total Estimates</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.total}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
+              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.total}
+            </strong>
           </div>
         </div>
 
@@ -581,7 +585,9 @@ export default function CustomerEstimatesPage() {
           </div>
           <div style={{ minWidth: 0 }}>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Created</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.created}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
+              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.created}
+            </strong>
           </div>
         </div>
 
@@ -596,7 +602,9 @@ export default function CustomerEstimatesPage() {
           </div>
           <div style={{ minWidth: 0 }}>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Requested / Active</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.inReview}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
+              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.inReview}
+            </strong>
           </div>
         </div>
 
@@ -610,7 +618,9 @@ export default function CustomerEstimatesPage() {
           </div>
           <div style={{ minWidth: 0 }}>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Completed</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>{kpis.completed}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
+              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.completed}
+            </strong>
           </div>
         </div>
       </div>
@@ -786,11 +796,8 @@ export default function CustomerEstimatesPage() {
       {/* 4. ESTIMATES LIST TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
-          <div style={styles.loadingBox}>
-            <div style={styles.spinner} />
-            <p style={{ marginTop: '12px', color: '#64748b', fontSize: '13.5px' }}>
-              Loading your deck project estimations...
-            </p>
+          <div style={{ padding: '8px' }}>
+            <SkeletonTable rows={5} columns={6} />
           </div>
         ) : filteredEstimates.length === 0 ? (
           <div style={styles.emptyBox}>

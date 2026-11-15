@@ -399,8 +399,27 @@ export default function AdminUserManagementPage() {
                         <button
                           type="button"
                           onClick={() => setRequestModal({ open: true, request: req, notes: req.adminNotes || '' })}
-                          style={styles.actionBtnOutline}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: '#1d4ed8',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Review User Appeal"
                         >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
                           View Request
                         </button>
                       </td>
@@ -829,21 +848,21 @@ export default function AdminUserManagementPage() {
                 />
               </div>
 
-              <div style={{ ...styles.modalActions, marginTop: '20px' }}>
+              <div style={styles.appealModalFooter}>
                 <button
                   type="button"
                   onClick={() => setRequestModal({ open: false, request: null, notes: '' })}
-                  style={styles.actionBtnSecondary}
+                  style={styles.appealBtnClose}
                 >
                   Close
                 </button>
                 {requestModal.request.status === 'pending' && (
-                  <>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button
                       type="button"
                       disabled={requestSubmitting}
                       onClick={() => handleResolveRequest(requestModal.request._id || requestModal.request.id, 'reject')}
-                      style={styles.actionBtnDangerLg}
+                      style={styles.appealBtnReject}
                     >
                       {requestSubmitting ? 'Processing...' : 'Reject Appeal'}
                     </button>
@@ -851,11 +870,11 @@ export default function AdminUserManagementPage() {
                       type="button"
                       disabled={requestSubmitting}
                       onClick={() => handleResolveRequest(requestModal.request._id || requestModal.request.id, 'approve')}
-                      style={styles.actionBtnSuccessLg}
+                      style={styles.appealBtnApprove}
                     >
                       {requestSubmitting ? 'Processing...' : '✓ Unblock Account & Approve'}
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -1666,5 +1685,50 @@ const styles = {
     fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
+  },
+  appealModalFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '12px',
+    marginTop: '24px',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0',
+    flexWrap: 'wrap',
+  },
+  appealBtnClose: {
+    padding: '9px 18px',
+    backgroundColor: '#ffffff',
+    color: '#475569',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  appealBtnReject: {
+    padding: '9px 18px',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.25)',
+  },
+  appealBtnApprove: {
+    padding: '9px 20px',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
   },
 };

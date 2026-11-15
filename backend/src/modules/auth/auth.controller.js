@@ -101,10 +101,44 @@ async function getMe(req, res, next) {
   }
 }
 
+/**
+ * Handle password reset request.
+ */
+async function forgotPassword(req, res, next) {
+  try {
+    const result = await authService.requestPasswordReset(req.body.email);
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Handle password reset completion.
+ */
+async function resetPassword(req, res, next) {
+  try {
+    const result = await authService.resetPasswordWithToken(req.body.token, req.body.newPassword);
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   register,
   login,
   adminLogin,
   logout,
   getMe,
+  forgotPassword,
+  resetPassword,
 };

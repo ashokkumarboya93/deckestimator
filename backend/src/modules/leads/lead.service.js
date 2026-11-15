@@ -81,6 +81,8 @@ async function createCustomerLead(customerUser, payload) {
       throw error;
     }
 
+    const minJobFloor = estimate.pricingSnapshot?.minimumJobPrice ?? estimate.minimumJobPrice ?? 2500;
+    const isMinApplied = Boolean(estimate.pricingSnapshot?.minJobApplied ?? estimate.minJobApplied ?? (estimate.minimumAdjustment > 0));
     estimateSnapshot = {
       estimateId: estimate._id,
       estimateReference:
@@ -94,6 +96,10 @@ async function createCustomerLead(customerUser, payload) {
         estimate.totalEstimateAmount ??
         0,
       currency: estimate.currency || 'USD',
+      minimumJobPrice: minJobFloor,
+      minJobApplied: isMinApplied,
+      minJobAdjustment: estimate.minimumAdjustment || estimate.pricingSnapshot?.minJobAdjustment || 0,
+      calculatedTotal: estimate.subtotal || estimate.pricingSnapshot?.calculatedTotal || estimate.totalAmount || 0,
     };
   }
 
@@ -102,9 +108,9 @@ async function createCustomerLead(customerUser, payload) {
 
   const deckSnapshot = {
     projectName: deck.projectName || 'My Deck',
-    city: deck.location?.city || '',
-    state: deck.location?.state || '',
-    postalCode: deck.location?.postalCode || '',
+    city: deck.propertyAddress?.city || deck.location?.city || customerUser.address?.city || '',
+    state: deck.propertyAddress?.state || deck.location?.state || customerUser.address?.state || '',
+    postalCode: deck.propertyAddress?.zipCode || deck.location?.postalCode || customerUser.address?.zipCode || '',
     area: deck.measurements?.totalAreaSqFt || deck.measurements?.area || 0,
     shape: deck.measurements?.shape || 'RECTANGULAR',
     surfaceMaterial: deck.surfaceDetails?.material || '',
@@ -865,6 +871,62 @@ async function submitReachOutEnquiry(user, payload = {}) {
     query.estimateId = null;
   }
 
+  // Resolve associated Deck and Estimate snapshots if IDs are present
+  let resolvedDeck = null;
+  if (payload.deckId) {
+    resolvedDeck = await Deck.findById(payload.deckId).lean();
+  }
+  let resolvedEstimate = null;
+  if (payload.estimateId) {
+    resolvedEstimate = await Estimate.findById(payload.estimateId).lean();
+    if (!resolvedDeck && resolvedEstimate?.deckDetails?.deckId) {
+      resolvedDeck = await Deck.findById(resolvedEstimate.deckDetails.deckId).lean();
+    }
+  }
+
+  const resolvedCity = (payload.propertyAddress?.city || payload.location?.city || resolvedDeck?.propertyAddress?.city || resolvedDeck?.location?.city || user.address?.city || '').trim();
+  const resolvedState = (payload.propertyAddress?.state || payload.location?.state || resolvedDeck?.propertyAddress?.state || resolvedDeck?.location?.state || user.address?.state || '').trim();
+  const resolvedPostal = (payload.propertyAddress?.zipCode || payload.location?.zipCode || resolvedDeck?.propertyAddress?.zipCode || resolvedDeck?.location?.postalCode || user.address?.zipCode || '').trim();
+
+  let deckSnapshot = undefined;
+  if (resolvedDeck || payload.propertyAddress || payload.projectName) {
+    const photoCount = resolvedDeck ? await DeckImage.countDocuments({ deckId: resolvedDeck._id }) : 0;
+    deckSnapshot = {
+      projectName: resolvedDeck?.projectName || payload.projectName || 'My Deck',
+      city: resolvedCity,
+      state: resolvedState,
+      postalCode: resolvedPostal,
+      area: resolvedDeck?.measurements?.totalAreaSqFt || resolvedDeck?.measurements?.area || resolvedEstimate?.deckDetails?.areaSqFt || 0,
+      shape: resolvedDeck?.measurements?.shape || resolvedEstimate?.deckDetails?.deckShape || 'RECTANGULAR',
+      surfaceMaterial: resolvedDeck?.surfaceDetails?.material || resolvedEstimate?.deckDetails?.surfaceMaterial || '',
+      conditionLevel: resolvedDeck?.condition?.level ?? null,
+      conditionLabel: resolvedDeck?.condition?.label ?? null,
+      photoCount,
+    };
+  }
+
+  let estimateSnapshot = undefined;
+  if (resolvedEstimate) {
+    const minJobFloor = resolvedEstimate.pricingSnapshot?.minimumJobPrice ?? resolvedEstimate.minimumJobPrice ?? 2500;
+    const isMinApplied = Boolean(
+      resolvedEstimate.pricingSnapshot?.minJobApplied ??
+      resolvedEstimate.minJobApplied ??
+      (resolvedEstimate.minimumAdjustment > 0) ??
+      (resolvedEstimate.totalAmount === minJobFloor && resolvedEstimate.subtotal < minJobFloor)
+    );
+    estimateSnapshot = {
+      estimateId: resolvedEstimate._id,
+      estimateReference: resolvedEstimate.estimateNumber || `EST-${resolvedEstimate._id.toString().slice(-6)}`,
+      estimateVersion: resolvedEstimate.version || 1,
+      totalAmount: resolvedEstimate.totalAmount ?? 0,
+      currency: resolvedEstimate.currency || 'USD',
+      minimumJobPrice: minJobFloor,
+      minJobApplied: isMinApplied,
+      minJobAdjustment: resolvedEstimate.minimumAdjustment || resolvedEstimate.pricingSnapshot?.minJobAdjustment || 0,
+      calculatedTotal: resolvedEstimate.subtotal || resolvedEstimate.pricingSnapshot?.calculatedTotal || resolvedEstimate.totalAmount || 0,
+    };
+  }
+
   let lead = await Lead.findOne(query).sort({ createdAt: -1 });
   const now = new Date();
   const finalSubject = subjectText || `${source} Enquiry`;
@@ -872,6 +934,8 @@ async function submitReachOutEnquiry(user, payload = {}) {
   if (lead) {
     if (payload.deckId) lead.deckId = payload.deckId;
     if (payload.estimateId) lead.estimateId = payload.estimateId;
+    if (deckSnapshot) lead.deckSnapshot = deckSnapshot;
+    if (estimateSnapshot) lead.estimateSnapshot = estimateSnapshot;
     lead.contactCount = (lead.contactCount || 1) + 1;
     lead.latestContactDate = now;
     lead.contactSource = source;
@@ -920,8 +984,10 @@ async function submitReachOutEnquiry(user, payload = {}) {
       customerId: isCustomer ? userId : null,
       contractorId: isContractor ? userId : null,
       contractorProfileId: cp?._id || null,
-      deckId: payload.deckId || null,
-      estimateId: payload.estimateId || null,
+      deckId: payload.deckId || (resolvedDeck ? resolvedDeck._id : null),
+      estimateId: payload.estimateId || (resolvedEstimate ? resolvedEstimate._id : null),
+      deckSnapshot,
+      estimateSnapshot,
       customerSnapshot: isCustomer ? {
         name: resolvedName,
         email: resolvedEmail,
@@ -984,9 +1050,31 @@ async function submitReachOutEnquiry(user, payload = {}) {
   return lead;
 }
 
+/**
+ * Delete a lead record (Admin operation)
+ */
+async function deleteLead(leadId) {
+  const query = mongoose.Types.ObjectId.isValid(leadId)
+    ? { _id: leadId }
+    : { leadNumber: leadId };
+
+  const lead = await Lead.findOne(query);
+  if (!lead) {
+    throw new BadRequestError('Lead record not found.');
+  }
+
+  // Clean up associated activity entries asynchronously
+  LeadActivity.deleteMany({ leadId: lead._id }).catch(() => {});
+  LeadAssignmentHistory.deleteMany({ leadId: lead._id }).catch(() => {});
+
+  await Lead.deleteOne({ _id: lead._id });
+  return { id: leadId, leadNumber: lead.leadNumber, message: 'Lead deleted successfully.' };
+}
+
 module.exports = {
   submitReachOutEnquiry,
   createCustomerLead,
+  deleteLead,
   getCustomerLeads,
   getLeadById,
   getAdminLeads,

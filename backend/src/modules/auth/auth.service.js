@@ -4,12 +4,13 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const User = require('../users/users.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
 const VerificationHistory = require('../contractors/verificationHistory.model');
 const { env } = require('../../config/env');
 const { ROLES, ACCOUNT_STATUS, VERIFICATION_STATUS } = require('../../shared/constants');
-const { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError } = require('../../shared/errors');
+const { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError, BadRequestError } = require('../../shared/errors');
 
 function formatLeanDoc(doc, { stripPassword = false } = {}) {
   if (!doc) return null;
@@ -243,10 +244,79 @@ async function getCurrentUser(userId) {
   };
 }
 
+/**
+ * Initiate password recovery — generates a secure, single-use, 1-hour reset token.
+ */
+async function requestPasswordReset(email) {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    return {
+      message: 'If an account exists with that email address, password reset instructions have been generated.',
+    };
+  }
+
+  // Cryptographically secure 32-byte hex token
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  user.passwordResetToken = hashedToken;
+  user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+  await user.save({ validateBeforeSave: false });
+
+  console.log(`[PASSWORD_RESET] Token generated for ${user.email}`);
+
+  return {
+    message: 'If an account exists with that email address, password reset instructions have been generated.',
+    resetToken: rawToken,
+  };
+}
+
+/**
+ * Complete password reset using valid, unexpired reset token.
+ */
+async function resetPasswordWithToken(rawToken, newPassword) {
+  if (!rawToken || !newPassword) {
+    throw new BadRequestError('Reset token and new password are required.');
+  }
+
+  const hashedToken = crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new BadRequestError('Password reset token is invalid or has expired.');
+  }
+
+  user.passwordHash = await User.hashPassword(newPassword);
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+  await user.save();
+
+  try {
+    const { invalidateAuthCache } = require('../../middleware/authenticate');
+    if (typeof invalidateAuthCache === 'function') {
+      invalidateAuthCache(user._id);
+    }
+  } catch (err) {
+    // ignore
+  }
+
+  return {
+    message: 'Password has been reset successfully. You can now log in with your new password.',
+  };
+}
+
 module.exports = {
   generateToken,
   registerUser,
   loginUser,
   loginAdmin,
   getCurrentUser,
+  requestPasswordReset,
+  resetPasswordWithToken,
 };

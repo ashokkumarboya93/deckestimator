@@ -4,6 +4,7 @@
 
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const User = require('../users/users.model');
 const Estimate = require('./estimate.model');
 const EstimateRevision = require('./estimateRevision.model');
 const Deck = require('../decks/deck.model');
@@ -278,14 +279,17 @@ async function createEstimate(data, user, ipAddress) {
       };
     }
 
-    const applyMinJob = Boolean(data.applyMinJobPrice);
     const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
     const minJobThreshold = clientCalc.minJob || 2500;
+    const isBelowFloor = pureCalculated < minJobThreshold;
+    // Default to pure calculated price without applying min job floor unless explicitly checked
+    const applyMinJob = data.applyMinJobPrice === true;
+
     const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
     const chosenBase = applyMinJob ? floorAmount : pureCalculated;
 
     subtotalAmount = pureCalculated;
-    minAdjustmentAmount = applyMinJob && clientCalc.minJobApplied ? (minJobThreshold - pureCalculated) : 0;
+    minAdjustmentAmount = applyMinJob && isBelowFloor ? (minJobThreshold - pureCalculated) : 0;
     minJobPriceVal = minJobThreshold;
     preTaxAmount = chosenBase;
     taxPercentageVal = 0;
@@ -294,6 +298,9 @@ async function createEstimate(data, user, ipAddress) {
     pricingSnapshotData = {
       ...clientCalc,
       applyMinJobPrice: applyMinJob,
+      minJobApplied: applyMinJob && isBelowFloor,
+      minimumJobPrice: minJobThreshold,
+      minJobAdjustment: minAdjustmentAmount,
       calculatedTotal: pureCalculated,
       floorTotal: floorAmount,
       total: chosenBase,
@@ -545,10 +552,20 @@ async function getEstimates(query = {}, user) {
     const userObjId = mongoose.Types.ObjectId.isValid(rawId)
       ? new mongoose.Types.ObjectId(rawId)
       : rawId;
+
+    const assignedLeads = await Lead.find({
+      $or: [
+        { assignedContractorId: userObjId },
+        { contractorId: userObjId },
+      ],
+    }).select('estimateId').lean();
+    const assignedEstimateIds = assignedLeads.map((l) => l.estimateId).filter(Boolean);
+
     filter.$or = [
       { createdBy: userObjId },
       { ownerId: userObjId },
       { createdFor: userObjId },
+      ...(assignedEstimateIds.length > 0 ? [{ _id: { $in: assignedEstimateIds } }] : []),
     ];
   }
 
@@ -818,14 +835,15 @@ async function deleteEstimate(id, user, ipAddress) {
     }
   }
 
-  await recordAuditLog({
+  // Asynchronously record audit log without blocking fast client response
+  recordAuditLog({
     performedBy: user.id || user._id,
     action: 'DELETE_ESTIMATE',
     entityId: estimate._id,
     oldValue: oldValues,
     newValue: null,
     ipAddress,
-  });
+  }).catch((err) => console.warn('[AUDIT_LOG_NON_BLOCKING_WARN]:', err?.message));
 
   return { id, message: 'Estimate deleted successfully.' };
 }

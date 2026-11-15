@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { getEstimates } from '../../customer/api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { downloadEstimatePdf } from '../../../utils/reportExport';
+import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 export default function ContractorEstimatesPage() {
   const navigate = useNavigate();
@@ -183,7 +184,9 @@ export default function ContractorEstimatesPage() {
           </div>
           <div style={styles.kpiTextCol}>
             <span style={styles.kpiLabel}>Total Estimates</span>
-            <span style={styles.kpiVal}>{totalEstimates}</span>
+            <span style={styles.kpiVal}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : totalEstimates}
+            </span>
           </div>
         </div>
 
@@ -196,7 +199,9 @@ export default function ContractorEstimatesPage() {
           </div>
           <div style={styles.kpiTextCol}>
             <span style={styles.kpiLabel}>Sent / Active</span>
-            <span style={styles.kpiVal}>{sentCount}</span>
+            <span style={styles.kpiVal}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : sentCount}
+            </span>
           </div>
         </div>
 
@@ -209,7 +214,9 @@ export default function ContractorEstimatesPage() {
           </div>
           <div style={styles.kpiTextCol}>
             <span style={styles.kpiLabel}>Won Jobs</span>
-            <span style={styles.kpiVal}>{wonCount}</span>
+            <span style={styles.kpiVal}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : wonCount}
+            </span>
           </div>
         </div>
 
@@ -223,7 +230,9 @@ export default function ContractorEstimatesPage() {
           </div>
           <div style={styles.kpiTextCol}>
             <span style={styles.kpiLabel}>Total Value</span>
-            <span style={styles.kpiVal}>${Number(totalValNum).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+            <span style={styles.kpiVal}>
+              {loading ? <SkeletonShimmer width="60px" height="22px" borderRadius="4px" /> : `$${Number(totalValNum).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            </span>
           </div>
         </div>
       </div>
@@ -273,8 +282,8 @@ export default function ContractorEstimatesPage() {
       {/* 4. ESTIMATES TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-            Loading estimates...
+          <div style={{ padding: '8px' }}>
+            <SkeletonTable rows={5} columns={7} />
           </div>
         ) : (
           <table style={styles.table}>

@@ -23,6 +23,7 @@ import ContractorVerificationRequestPage from './ContractorVerificationRequestPa
 import bannerBg from '../../../assets/images/contractor_banner_bg.png';
 import productImg from '../../../assets/images/deck_restoration_products.jpg';
 import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
+import { SkeletonTable, SkeletonCard, SkeletonShimmer } from '../../../components/common';
 
 export default function ContractorDashboardPage() {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ export default function ContractorDashboardPage() {
   const totalRevenue = estimates.reduce((sum, est) => {
     const price = Number(est.pricingSnapshot?.finalTotal || est.totalAmount || est.subtotal || 0);
     return sum + Math.round(price * 0.20);
-  }, 0) || (commissionSummary?.totalEarned ? Number(commissionSummary.totalEarned) : 3840);
+  }, 0) + (commissionSummary?.totalEarned ? Number(commissionSummary.totalEarned) : 0);
 
   // 4. Total Estimations Value: sum of all estimations' prices calculated by contractor
   const totalEstimationsValue = estimates.reduce((sum, est) => {
@@ -134,9 +135,26 @@ export default function ContractorDashboardPage() {
 
   if (loading && !profile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px - 260px)', width: '100%', boxSizing: 'border-box' }}>
-        <div style={{ width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: '#0B2447', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p style={{ marginTop: '14px', color: '#64748B', fontSize: '14px', fontWeight: '500' }}>Loading Contractor Dashboard...</p>
+      <div style={{ padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <SkeletonShimmer width="220px" height="28px" borderRadius="8px" />
+            <SkeletonShimmer width="360px" height="14px" />
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <SkeletonShimmer width="120px" height="38px" borderRadius="20px" />
+            <SkeletonShimmer width="120px" height="38px" borderRadius="20px" />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' }}>
+          <SkeletonTable rows={5} columns={6} />
+        </div>
       </div>
     );
   }

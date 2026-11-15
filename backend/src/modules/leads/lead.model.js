@@ -110,6 +110,10 @@ const leadSchema = new mongoose.Schema(
       estimateVersion: { type: Number, default: null },
       totalAmount: { type: Number, default: null },
       currency: { type: String, default: 'USD' },
+      minimumJobPrice: { type: Number, default: 2500 },
+      minJobApplied: { type: Boolean, default: false },
+      minJobAdjustment: { type: Number, default: 0 },
+      calculatedTotal: { type: Number, default: 0 },
     },
     assignedContractorId: {
       type: mongoose.Schema.Types.ObjectId,

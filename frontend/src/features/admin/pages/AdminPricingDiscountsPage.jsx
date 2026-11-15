@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '../api/adminApi';
+import { ConfirmModal, SkeletonShimmer, SkeletonTable, SkeletonCard } from '../../../components/common';
 
 // The 6 Approved Tabs (<= 6 tabs, contractor discounts on its own separate tab)
 const TABS = [
@@ -312,73 +313,53 @@ export default function AdminPricingDiscountsPage() {
     handleSaveEngineConfig(updated);
   };
 
-  const handleDeleteWoodSpecies = (key) => {
-    if (!window.confirm(`Are you sure you want to delete wood species "${engineConfig.wood[key]?.label || key}"?`)) return;
-    const updatedWood = { ...engineConfig, wood: updatedWood };
-    delete updatedWood[key];
-    const updated = { ...engineConfig, wood: updatedWood };
-    handleSaveEngineConfig(updated);
-  };
+  // Reusable Enterprise Delete Modal State
+  const [deleteItemConfirm, setDeleteItemConfirm] = useState(null);
 
-  // --------------------------------------------------------------------------
-  // Tab 4 Handlers: Deck Components (Add / Edit / Delete)
-  // --------------------------------------------------------------------------
-  const handleSaveComponent = () => {
-    const rawKey = componentModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
-    if (!rawKey || !componentModal.label.trim()) {
-      alert('Please provide a valid component key and title.');
-      return;
-    }
-    const updatedAreas = {
-      ...engineConfig.areas,
-      [rawKey]: {
-        label: componentModal.label.trim(),
-        unit: componentModal.unit || 'Linear Feet (LF)',
-        factor: Number(componentModal.factor),
-        desc: componentModal.desc || 'Architectural deck component',
-      },
-    };
-    const updated = { ...engineConfig, areas: updatedAreas };
-    setComponentModal({ open: false, isEdit: false, key: '', label: '', unit: '', factor: 1.0, desc: '' });
-    handleSaveEngineConfig(updated);
+  const handleDeleteWoodSpecies = (key) => {
+    setDeleteItemConfirm({
+      type: 'wood',
+      key,
+      title: 'Delete Wood Species?',
+      label: engineConfig.wood[key]?.label || key,
+    });
   };
 
   const handleDeleteComponent = (key) => {
-    if (!window.confirm(`Are you sure you want to delete deck component "${engineConfig.areas[key]?.label || key}"?`)) return;
-    const updatedAreas = { ...engineConfig.areas };
-    delete updatedAreas[key];
-    const updated = { ...engineConfig, areas: updatedAreas };
-    handleSaveEngineConfig(updated);
-  };
-
-  // --------------------------------------------------------------------------
-  // Tab 5 Handlers: Scope of Work / Production Speeds (Add / Edit / Delete)
-  // --------------------------------------------------------------------------
-  const handleSaveService = () => {
-    const rawKey = serviceModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
-    if (!rawKey || !serviceModal.label.trim()) {
-      alert('Please provide a valid service key and name.');
-      return;
-    }
-    const updatedProd = {
-      ...engineConfig.production,
-      [rawKey]: {
-        label: serviceModal.label.trim(),
-        speed: Number(serviceModal.speed),
-        category: serviceModal.category || 'Preparation',
-      },
-    };
-    const updated = { ...engineConfig, production: updatedProd };
-    setServiceModal({ open: false, isEdit: false, key: '', label: '', speed: 100, category: 'Preparation' });
-    handleSaveEngineConfig(updated);
+    setDeleteItemConfirm({
+      type: 'component',
+      key,
+      title: 'Delete Deck Component?',
+      label: engineConfig.areas[key]?.label || key,
+    });
   };
 
   const handleDeleteService = (key) => {
-    if (!window.confirm(`Are you sure you want to delete restoration service "${engineConfig.production[key]?.label || key}"?`)) return;
-    const updatedProd = { ...engineConfig.production };
-    delete updatedProd[key];
-    const updated = { ...engineConfig, production: updatedProd };
-    handleSaveEngineConfig(updated);
+    setDeleteItemConfirm({
+      type: 'service',
+      key,
+      title: 'Delete Restoration Service?',
+      label: engineConfig.production[key]?.label || key,
+    });
+  };
+
+  const executeDeleteItemConfirm = () => {
+    if (!deleteItemConfirm) return;
+    const { type, key } = deleteItemConfirm;
+    if (type === 'wood') {
+      const updatedWood = { ...engineConfig.wood };
+      delete updatedWood[key];
+      handleSaveEngineConfig({ ...engineConfig, wood: updatedWood });
+    } else if (type === 'component') {
+      const updatedAreas = { ...engineConfig.areas };
+      delete updatedAreas[key];
+      handleSaveEngineConfig({ ...engineConfig, areas: updatedAreas });
+    } else if (type === 'service') {
+      const updatedProd = { ...engineConfig.production };
+      delete updatedProd[key];
+      handleSaveEngineConfig({ ...engineConfig, production: updatedProd });
+    }
+    setDeleteItemConfirm(null);
   };
 
   // --------------------------------------------------------------------------
@@ -482,11 +463,23 @@ export default function AdminPricingDiscountsPage() {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner} />
-        <p style={{ marginTop: '16px', color: '#0F2C59', fontWeight: '700' }}>
-          Loading Estimator Pricing & Configuration Engine...
-        </p>
+      <div style={{ padding: '24px', maxWidth: '1440px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <SkeletonShimmer width="240px" height="28px" borderRadius="8px" />
+            <SkeletonShimmer width="380px" height="14px" />
+          </div>
+          <SkeletonShimmer width="130px" height="38px" borderRadius="20px" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' }}>
+          <SkeletonTable rows={6} columns={5} />
+        </div>
       </div>
     );
   }
@@ -1636,6 +1629,17 @@ export default function AdminPricingDiscountsPage() {
           </div>
         </div>
       )}
+
+      {/* Enterprise Delete Item Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteItemConfirm)}
+        title={deleteItemConfirm?.title || 'Delete Item?'}
+        message={`Are you sure you want to delete "${deleteItemConfirm?.label}"? This will update the estimator configuration matrix immediately.`}
+        confirmLabel="Delete Item"
+        variant="danger"
+        onConfirm={executeDeleteItemConfirm}
+        onClose={() => setDeleteItemConfirm(null)}
+      />
     </div>
   );
 }

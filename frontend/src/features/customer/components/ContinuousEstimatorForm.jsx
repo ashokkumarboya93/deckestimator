@@ -892,7 +892,7 @@ export default function ContinuousEstimatorForm({
   const [applyContractorDiscount, setApplyContractorDiscount] = useState(true);
   const [contractorDiscountPercent, setContractorDiscountPercent] = useState(10);
 
-  // Minimum Job Mobilization Price Toggle (Default FALSE: pure calculated price without min job applied)
+  // Minimum Job Mobilization Price Toggle (Default FALSE: pure calculated price without minimum job price)
   const [applyMinJobPrice, setApplyMinJobPrice] = useState(false);
 
   // Fetch Contractor's Active or Admin-tuned discount rate
@@ -1769,6 +1769,9 @@ export default function ContinuousEstimatorForm({
         contactSource: 'Official Estimator Conversion',
         subject: `Estimate Booking: ${projectName} ($${officialEstimate.total.toLocaleString()})`,
         message: `Customer converted official estimate ${officialEstimate.ref} for a ${woodSpecies} deck of ${floorArea} sqft. Estimate: $${officialEstimate.total.toLocaleString()}. Ready for certified contractor assignment & inspection.`,
+        propertyAddress: { street: address, city, state, zipCode, country: 'USA' },
+        location: `${city || ''}${state ? `, ${state}` : ''}`,
+        projectName: projectName || 'Deck Restoration Project',
       });
 
       // Synchronize estimate status to IN_REVIEW in database
@@ -3130,8 +3133,11 @@ export default function ContinuousEstimatorForm({
 
               {/* CLIENT Q12 STRICT COMPLIANCE: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown */}
               {!isContractor ? (
-                <div style={styles.customerTotalBox} className="estimator-official-total-box">
-                  <span style={styles.customerTotalSub}>Official Guaranteed Estimate Total</span>
+                <div style={{ ...styles.customerTotalBox, border: '2px solid #22C55E', backgroundColor: '#F0FDF4', boxShadow: '0 8px 28px rgba(34, 197, 94, 0.15)' }} className="estimator-official-total-box">
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '3px 12px', borderRadius: '9999px', fontSize: '11.5px', fontWeight: '800', marginBottom: '6px' }}>
+                    ★ SUBMITTED ESTIMATE • PURE CALCULATED PRICE
+                  </div>
+                  <span style={{ ...styles.customerTotalSub, color: '#15803D' }}>Official Guaranteed Estimate Total</span>
                   <strong style={styles.customerTotalAmt} className="estimator-official-amt">
                     ${((applyMinJobPrice
                       ? Math.max(
@@ -3185,8 +3191,11 @@ export default function ContinuousEstimatorForm({
                 </div>
               ) : (
                 /* CONTRACTOR VIEW: Full Operational Estimation Summary (Matches customer box styling & full width) */
-                <div style={styles.customerTotalBox}>
-                  <span style={styles.customerTotalSub}>Contractor Quoted Total</span>
+                <div style={{ ...styles.customerTotalBox, border: '2px solid #16A34A', backgroundColor: '#F0FDF4', boxShadow: '0 8px 28px rgba(22, 163, 74, 0.15)' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '3px 12px', borderRadius: '9999px', fontSize: '11.5px', fontWeight: '800', marginBottom: '6px' }}>
+                    ★ OFFICIAL CONTRACTOR QUOTE • PURE CALCULATED
+                  </div>
+                  <span style={{ ...styles.customerTotalSub, color: '#15803D' }}>Contractor Quoted Total</span>
 
                   {(() => {
                     const pureBase = officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total;
@@ -3616,13 +3625,24 @@ export default function ContinuousEstimatorForm({
             {/* If officialEstimate exists or contractor pricing, show total header (Hidden on mobile where Official Estimate box is primary) */}
             {!isContractor ? (
               officialEstimate && (
-                <div id="sidebar-guaranteed-estimate" className="estimator-mobile-hide-guaranteed" style={{ ...styles.customerSidebarResult, marginBottom: '16px' }}>
-                  <span style={styles.customerResultLabel}>Guaranteed Estimate</span>
-                  <strong style={styles.customerResultAmt}>${officialEstimate.total.toLocaleString()}</strong>
+                <div id="sidebar-guaranteed-estimate" className="estimator-mobile-hide-guaranteed" style={{ ...styles.customerSidebarResult, marginBottom: '16px', backgroundColor: '#F0FDF4', border: '1.5px solid #86EFAC' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ ...styles.customerResultLabel, color: '#15803D' }}>Guaranteed Estimate</span>
+                    <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>Submitted</span>
+                  </div>
+                  <strong style={{ ...styles.customerResultAmt, color: '#15803D' }}>
+                    ${((applyMinJobPrice
+                      ? Math.max(
+                          officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total,
+                          officialEstimate.minJobAmount || 2500
+                        )
+                      : (officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total)
+                    )).toLocaleString()}
+                  </strong>
                   <span style={styles.customerResultSub}>Ref: {officialEstimate.ref}</span>
-                  {officialEstimate.minJobApplies && (
+                  {applyMinJobPrice && officialEstimate.minJobApplies && (
                     <div style={styles.sidebarMinNotice}>
-                      <span>Min Job Price (${officialEstimate.minJobAmount.toLocaleString()}) applies upon dispatch.</span>
+                      <span>Min Job Price (${officialEstimate.minJobAmount.toLocaleString()}) applied upon request.</span>
                     </div>
                   )}
                 </div>
@@ -3647,13 +3667,28 @@ export default function ContinuousEstimatorForm({
                     <strong>${contractorPricing.labourAdj || 0}</strong>
                   </div>
                   <div style={styles.divider} />
-                  <div style={styles.totalBox}>
-                    <span style={styles.totalLabel}>Estimate Total</span>
-                    <strong style={styles.totalAmount}>${Number(contractorPricing.total || contractorPricing.calculatedTotal || 2500).toLocaleString()}</strong>
+                  <div style={{ ...styles.totalBox, backgroundColor: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ ...styles.totalLabel, color: '#15803D', fontWeight: '800' }}>Estimate Total</span>
+                      <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '2px 6px', borderRadius: '4px' }}>Pure Rate</span>
+                    </div>
+                    <strong style={{ ...styles.totalAmount, color: '#15803D', fontSize: '24px' }}>
+                      ${(() => {
+                        const baseAmt = applyMinJobPrice
+                          ? (contractorPricing.floorTotal || Math.max(contractorPricing.calculatedTotal || 0, 2500))
+                          : (contractorPricing.calculatedTotal || contractorPricing.total || 0);
+                        const finalAmt = applyContractorDiscount
+                          ? Math.round(baseAmt * (1 - contractorDiscountPercent / 100))
+                          : baseAmt;
+                        return Number(finalAmt || baseAmt || 0).toLocaleString();
+                      })()}
+                    </strong>
                   </div>
                   <div style={styles.rangeRow}>
                     <span>Low – High Range:</span>
-                    <strong>${Number(contractorPricing.low || contractorPricing.lowCalculated || 2500).toLocaleString()} – ${Number(contractorPricing.high || contractorPricing.highCalculated || 2500).toLocaleString()}</strong>
+                    <strong>
+                      ${Number(applyMinJobPrice ? (contractorPricing.low || 2500) : (contractorPricing.lowCalculated || contractorPricing.low || contractorPricing.calculatedTotal || 0)).toLocaleString()} – ${Number(applyMinJobPrice ? (contractorPricing.high || 2500) : (contractorPricing.highCalculated || contractorPricing.high || contractorPricing.calculatedTotal || 0)).toLocaleString()}
+                    </strong>
                   </div>
                 </div>
               ) : null

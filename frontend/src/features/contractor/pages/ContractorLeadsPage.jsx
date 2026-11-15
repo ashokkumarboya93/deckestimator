@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { contractorLeadApi } from '../api/contractorLeadApi';
+import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 export default function ContractorLeadsPage() {
   const navigate = useNavigate();
@@ -199,7 +200,9 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Total Leads</div>
-            <div style={styles.kpiValue}>{totalLeads}</div>
+            <div style={styles.kpiValue}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : totalLeads}
+            </div>
           </div>
         </div>
 
@@ -212,7 +215,9 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>New Leads</div>
-            <div style={styles.kpiValue}>{newLeadsCount}</div>
+            <div style={styles.kpiValue}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : newLeadsCount}
+            </div>
           </div>
         </div>
 
@@ -226,7 +231,9 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>In Progress</div>
-            <div style={styles.kpiValue}>{inProgressCount}</div>
+            <div style={styles.kpiValue}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : inProgressCount}
+            </div>
           </div>
         </div>
 
@@ -239,7 +246,9 @@ export default function ContractorLeadsPage() {
           </div>
           <div>
             <div style={styles.kpiLabel}>Converted</div>
-            <div style={styles.kpiValue}>{convertedCount}</div>
+            <div style={styles.kpiValue}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : convertedCount}
+            </div>
           </div>
         </div>
       </div>
@@ -287,8 +296,13 @@ export default function ContractorLeadsPage() {
 
       {/* 4. LEADS TABLE */}
       <div style={styles.tableCard}>
-        <div style={styles.tableResponsive}>
-          <table style={styles.table}>
+        {loading ? (
+          <div style={{ padding: '8px' }}>
+            <SkeletonTable rows={5} columns={6} />
+          </div>
+        ) : (
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>Customer / Project</th>
@@ -351,6 +365,7 @@ export default function ContractorLeadsPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Pagination Bar */}
         <div style={styles.paginationRow}>

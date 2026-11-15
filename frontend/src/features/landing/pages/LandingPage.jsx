@@ -12,6 +12,7 @@ import mainNavLogo from '../../../assets/images/Main_Logo_v2.png';
 import footerLogo from '../../../assets/images/MainLodo.png';
 import wizardHeroImg from '../../../assets/images/Wizard Hat Deck Finishing Portrait.jpg';
 import calculatorDeckImg from '../../../assets/images/Round Wooden Deck with Wicker Seating.webp';
+import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 // Service Visuals (100% matched local high-resolution deck restoration assets)
 import cleaningImg from '../../../assets/images/Input_images/section6/Deep Cleaning/Deep Cleaning_Main.webp';
@@ -1636,40 +1637,39 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Col 2: Site Map */}
+          {/* Col 2: Official Site Map (from deckandwoodstain.com) */}
           <div style={styles.footerCol}>
             <h4 style={styles.footerColHeading}>Site Map</h4>
             <ul style={styles.footerList}>
               <li><a href="https://www.deckrestorationplus.com/home" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Home</a></li>
-              <li><a href="https://www.deckrestorationplus.com/about-drp" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">About</a></li>
-              <li><a href="https://www.deckrestorationplus.com/services" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Services</a></li>
-              <li><a href="https://www.deckrestorationplus.com/shop" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Supplies</a></li>
-              <li><a href="https://www.deckrestorationplus.com/portfolio" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Portfolio</a></li>
-              <li><a href="https://www.deckrestorationplus.com/shop" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Shop</a></li>
-              <li><a href="https://www.deckrestorationplus.com/blog" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Blog</a></li>
-              <li><a href="https://www.deckrestorationplus.com/distributors" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Distributors</a></li>
-              <li><a href="https://www.deckrestorationplus.com/shop/p/manual" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Deck Restoration Manual</a></li>
+              <li><a href="https://www.deckrestorationplus.com/about-drp" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">About Us</a></li>
+              <li><a href="https://www.deckrestorationplus.com/services" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Deck Restoration</a></li>
+              <li><a href="https://www.deckrestorationplus.com/services" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Log Home Restoration</a></li>
+              <li><a href="https://www.deckrestorationplus.com/services" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">House &amp; Roof Washing</a></li>
+              <li><a href="https://www.deckrestorationplus.com/shop" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Supplies &amp; Products</a></li>
+              <li><a href="https://www.deckrestorationplus.com/portfolio" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Project Portfolio</a></li>
+              <li><a href="https://www.deckrestorationplus.com/blog" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Educational Blog</a></li>
+              <li><a href="https://www.deckrestorationplus.com/shop/p/manual" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Restoration Manual</a></li>
             </ul>
           </div>
 
-          {/* Col 3: Policies & Platform */}
+          {/* Col 3: Policies & Portals (De-duplicated) */}
           <div style={styles.footerCol}>
-            <h4 style={styles.footerColHeading}>Policies</h4>
+            <h4 style={styles.footerColHeading}>Policies &amp; Legal</h4>
             <ul style={styles.footerList}>
               <li><a href="https://www.deckrestorationplus.com/privacy-policy" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Privacy Policy</a></li>
               <li><a href="https://www.deckrestorationplus.com/refund-policy" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Refund Policy</a></li>
               <li><a href="https://www.deckrestorationplus.com/terms-of-use" target="_blank" rel="noopener noreferrer" style={styles.footerLink} className="drp-footer-link">Terms of Use</a></li>
             </ul>
 
-            <h4 style={{ ...styles.footerColHeading, marginTop: '22px' }}>Estimator Portal</h4>
+            <h4 style={{ ...styles.footerColHeading, marginTop: '22px' }}>Estimator Portals</h4>
             <ul style={styles.footerList}>
-              <li><Link to="/login" style={styles.footerLink} className="drp-footer-link">Deck Calculator (Sign In)</Link></li>
-              <li><Link to="/register" style={styles.footerLink} className="drp-footer-link">Contractor &amp; Customer Sign Up</Link></li>
-              <li><Link to="/login" style={styles.footerLink} className="drp-footer-link">Sign In</Link></li>
+              <li><Link to="/login" style={styles.footerLink} className="drp-footer-link">Deck Estimator Calculator</Link></li>
+              <li><Link to="/register" style={styles.footerLink} className="drp-footer-link">Contractor &amp; Customer Registration</Link></li>
             </ul>
           </div>
 
-          {/* Col 4: Contact */}
+          {/* Col 4: Official Contact & Hours (from deckandwoodstain.com) */}
           <div style={styles.footerCol} className="landing-footer-contact">
             <h4 style={styles.footerColHeading}>Contact</h4>
             <div style={styles.footerContactCompany}>Deck Restoration Plus</div>
@@ -1724,6 +1724,8 @@ export default function LandingPage() {
                 info@deckrestorationplus.com
               </a>
             </div>
+
+            <OperatingHoursBlock variant="dark" style={{ marginTop: '10px' }} />
           </div>
         </div>
 

@@ -14,6 +14,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { ConfirmModal, SkeletonTable, SkeletonShimmer, EmptyState } from '../../../components/common';
+import { designTokens, colors, radii, shadows, typography } from '../../../theme';
 
 const STAGES = [
   { id: 'all', label: 'All Stages' },
@@ -178,6 +180,71 @@ export default function AdminProjectsPage() {
     setIsDetailsModalOpen(true);
   };
 
+  // Enterprise Confirmation Modal States
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    id: null,
+    name: '',
+    loading: false,
+  });
+  const [bulkDeleteModalState, setBulkDeleteModalState] = useState({
+    isOpen: false,
+    loading: false,
+  });
+
+  const handleDeleteProject = (id, name) => {
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      name: name || 'Selected Project',
+      loading: false,
+    });
+  };
+
+  const executeConfirmDeleteProject = async () => {
+    const { id, name } = deleteModalState;
+    if (!id) return;
+    setDeleteModalState((prev) => ({ ...prev, loading: true }));
+    setProjects((prev) => prev.filter((p) => (p._id || p.id) !== id));
+    setSelectedProjectIds((prev) => prev.filter((x) => x !== id));
+    if (selectedProject && (selectedProject._id === id || selectedProject.id === id)) {
+      setIsDetailsModalOpen(false);
+      setSelectedProject(null);
+    }
+    try {
+      await adminApi.deleteProject(id);
+      setSuccessMsg(`Project "${name}" deleted successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      setDeleteModalState({ isOpen: false, id: null, name: '', loading: false });
+    } catch (err) {
+      setError(`Failed to delete project: ${err.message}`);
+      setDeleteModalState({ isOpen: false, id: null, name: '', loading: false });
+      fetchProjects(page, statusFilter, searchTerm);
+    }
+  };
+
+  const handleBulkDeleteProjects = () => {
+    if (selectedProjectIds.length === 0) return;
+    setBulkDeleteModalState({ isOpen: true, loading: false });
+  };
+
+  const executeConfirmBulkDelete = async () => {
+    setBulkDeleteModalState({ isOpen: true, loading: true });
+    const idsToDelete = [...selectedProjectIds];
+    setProjects((prev) => prev.filter((p) => !idsToDelete.includes(p._id || p.id)));
+    setSelectedProjectIds([]);
+    try {
+      await adminApi.bulkDeleteProjects(idsToDelete);
+      setSuccessMsg(`Successfully deleted ${idsToDelete.length} projects.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      setBulkDeleteModalState({ isOpen: false, loading: false });
+    } catch (err) {
+      setError(`Failed to delete selected projects: ${err.message}`);
+      setBulkDeleteModalState({ isOpen: false, loading: false });
+      fetchProjects(page, statusFilter, searchTerm);
+    }
+  };
+
   const renderStageBadge = (stage) => {
     const s = (stage || 'created').toLowerCase();
     if (s === 'completed') {
@@ -300,7 +367,13 @@ export default function AdminProjectsPage() {
               </div>
               <div>
                 <div style={styles.cardRefLabelBlue}>TOTAL ESTIMATIONS</div>
-                <div style={styles.cardRefValueBlue}>{loading ? '...' : (counts.total ?? projects.length)}</div>
+                <div style={styles.cardRefValueBlue}>
+                  {loading ? (
+                    <SkeletonShimmer width="48px" height="26px" borderRadius="6px" style={{ marginTop: '2px' }} />
+                  ) : (
+                    counts.total ?? projects.length
+                  )}
+                </div>
               </div>
             </div>
             <div style={styles.chevronBlue}>›</div>
@@ -319,7 +392,13 @@ export default function AdminProjectsPage() {
               </div>
               <div>
                 <div style={styles.cardRefLabelAmber}>REQUESTED PROJECTS</div>
-                <div style={styles.cardRefValueAmber}>{loading ? '...' : (counts.requested ?? 0)}</div>
+                <div style={styles.cardRefValueAmber}>
+                  {loading ? (
+                    <SkeletonShimmer width="48px" height="26px" borderRadius="6px" style={{ marginTop: '2px' }} />
+                  ) : (
+                    counts.requested ?? 0
+                  )}
+                </div>
               </div>
             </div>
             <div style={styles.chevronAmber}>›</div>
@@ -338,7 +417,13 @@ export default function AdminProjectsPage() {
               </div>
               <div>
                 <div style={styles.cardRefLabelPurple}>IN PROGRESS</div>
-                <div style={styles.cardRefValuePurple}>{loading ? '...' : (counts.inProgress ?? 0)}</div>
+                <div style={styles.cardRefValuePurple}>
+                  {loading ? (
+                    <SkeletonShimmer width="48px" height="26px" borderRadius="6px" style={{ marginTop: '2px' }} />
+                  ) : (
+                    counts.inProgress ?? 0
+                  )}
+                </div>
               </div>
             </div>
             <div style={styles.chevronPurple}>›</div>
@@ -357,7 +442,13 @@ export default function AdminProjectsPage() {
               </div>
               <div>
                 <div style={styles.cardRefLabelGreen}>COMPLETED PROJECTS</div>
-                <div style={styles.cardRefValueGreen}>{loading ? '...' : (counts.completed ?? 0)}</div>
+                <div style={styles.cardRefValueGreen}>
+                  {loading ? (
+                    <SkeletonShimmer width="48px" height="26px" borderRadius="6px" style={{ marginTop: '2px' }} />
+                  ) : (
+                    counts.completed ?? 0
+                  )}
+                </div>
               </div>
             </div>
             <div style={styles.chevronGreen}>›</div>
@@ -443,27 +534,64 @@ export default function AdminProjectsPage() {
         <button
           type="button"
           onClick={() => handleExport('csv')}
-          style={styles.exportBtnOutline}
+          style={styles.shinyExportBtn}
           title="Export records to CSV"
         >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
           Export CSV{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
         </button>
         <button
           type="button"
           onClick={() => handleExport('excel')}
-          style={styles.exportBtnGreen}
+          style={styles.shinyExportGreenBtn}
           title="Export records to Excel Spreadsheet"
         >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
           Export Excel{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
         </button>
+
+        {selectedProjectIds.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkDeleteProjects}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 3px rgba(185, 28, 28, 0.1)',
+            }}
+            title="Permanently delete all selected project estimations"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            Delete Selected ({selectedProjectIds.length})
+          </button>
+        )}
       </div>
 
       {/* 4. Projects Table */}
       <div style={styles.card}>
         {loading ? (
-          <div style={styles.loaderBox}>
-            <div style={styles.spinner} />
-            <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 600 }}>Loading project estimations from database...</span>
+          <div style={{ padding: '4px' }}>
+            <SkeletonTable rows={5} columns={7} />
           </div>
         ) : projects.length === 0 ? (
           <div style={styles.emptyBox}>
@@ -485,11 +613,12 @@ export default function AdminProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                  <th style={{ ...styles.th, width: '48px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={allCurrentPageSelected}
                       onChange={toggleSelectAll}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#1d4ed8' }}
                       title="Select all projects on this page"
                     />
                   </th>
@@ -505,11 +634,12 @@ export default function AdminProjectsPage() {
               <tbody>
                 {projects.map((p) => (
                   <tr key={p._id || p.id} style={styles.tr}>
-                    <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                    <td style={{ ...styles.td, width: '48px', textAlign: 'center' }}>
                       <input
                         type="checkbox"
                         checked={selectedProjectIds.includes(p._id || p.id)}
                         onChange={() => toggleSelectProject(p._id || p.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#1d4ed8' }}
                       />
                     </td>
                     {/* Project & Ref */}
@@ -585,6 +715,29 @@ export default function AdminProjectsPage() {
                           title="View Full Estimation Dossier"
                         >
                           View Details
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(p._id || p.id, p.title || p.projectName || 'Project')}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Permanently delete project estimation"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -1080,6 +1233,30 @@ export default function AdminProjectsPage() {
 
               <button
                 type="button"
+                onClick={() => handleDeleteProject(selectedProject._id || selectedProject.id, selectedProject.title || selectedProject.projectName || 'Project')}
+                style={{
+                  padding: '9px 16px',
+                  backgroundColor: '#fee2e2',
+                  color: '#b91c1c',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Permanently delete project estimation"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                <span>Delete Project</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsDetailsModalOpen(false)}
                 style={styles.btnCancel}
               >
@@ -1161,6 +1338,36 @@ export default function AdminProjectsPage() {
           </div>
         </div>
       )}
+
+      {/* Enterprise Single Project Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={deleteModalState.isOpen}
+        title="Delete Project Estimation?"
+        message={`Are you sure you want to delete project "${deleteModalState.name}"? This will permanently remove the estimation record and all associated specifications.`}
+        confirmLabel="Delete Project"
+        variant="danger"
+        isLoading={deleteModalState.loading}
+        onConfirm={executeConfirmDeleteProject}
+        onClose={() =>
+          !deleteModalState.loading &&
+          setDeleteModalState({ isOpen: false, id: null, name: '', loading: false })
+        }
+      />
+
+      {/* Enterprise Bulk Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteModalState.isOpen}
+        title={`Delete ${selectedProjectIds.length} Selected Projects?`}
+        message={`Are you sure you want to permanently delete these ${selectedProjectIds.length} selected project estimations? This action cannot be undone.`}
+        confirmLabel="Delete Selected"
+        variant="danger"
+        isLoading={bulkDeleteModalState.loading}
+        onConfirm={executeConfirmBulkDelete}
+        onClose={() =>
+          !bulkDeleteModalState.loading &&
+          setBulkDeleteModalState({ isOpen: false, loading: false })
+        }
+      />
     </div>
   );
 }
@@ -1478,6 +1685,20 @@ const styles = {
     cursor: 'pointer',
     boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
     transition: 'all 0.15s ease',
+  },
+  shinySelect: {
+    padding: '6px 14px',
+    borderRadius: '9999px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#334155',
+    outline: 'none',
+    cursor: 'pointer',
+    height: '34px',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+    transition: 'border-color 0.15s ease',
   },
 
   // Main Card & Table

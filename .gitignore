@@ -30,6 +30,11 @@ Thumbs.db
 
 # Uploads (local dev only)
 uploads/
+backend/uploads/
+
+# Database backups (local dev only)
+backups/
+backend/backups/
 
 # Generated reports
 generated/

@@ -1359,10 +1359,11 @@ export default function AdminVerificationProgressPage() {
                       <circle cx="12" cy="10" r="3" />
                     </svg>
                     <span>
-                      {viewContractorModal.location?.street ? `${viewContractorModal.location.street}, ` : ''}
-                      {viewContractorModal.location?.city || viewContractorModal.businessAddress?.city || 'Shamong'}, {' '}
-                      {viewContractorModal.location?.state || viewContractorModal.businessAddress?.state || 'NJ'}, {' '}
-                      {viewContractorModal.location?.zipCode || viewContractorModal.businessAddress?.zipCode || '08088'}, USA
+                      {viewContractorModal.location?.street ? `${viewContractorModal.location.street}, ` : (viewContractorModal.businessAddress?.street ? `${viewContractorModal.businessAddress.street}, ` : '')}
+                      {(viewContractorModal.location?.city || viewContractorModal.businessAddress?.city) ? `${viewContractorModal.location?.city || viewContractorModal.businessAddress?.city}, ` : ''}
+                      {(viewContractorModal.location?.state || viewContractorModal.businessAddress?.state) ? `${viewContractorModal.location?.state || viewContractorModal.businessAddress?.state} ` : ''}
+                      {viewContractorModal.location?.zipCode || viewContractorModal.businessAddress?.zipCode || ''}
+                      {(!viewContractorModal.location?.city && !viewContractorModal.businessAddress?.city) && 'Location Pending'}
                     </span>
                   </div>
                 </div>
