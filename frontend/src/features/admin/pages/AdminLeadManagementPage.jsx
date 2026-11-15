@@ -215,6 +215,27 @@ export default function AdminLeadManagementPage() {
     setAcceptErrorNotice(null);
   };
 
+  const handleDeleteLead = async (id, leadIdentifier) => {
+    if (!window.confirm(`Are you sure you want to permanently delete lead "${leadIdentifier}"? This action cannot be undone.`)) {
+      return;
+    }
+    // Instant optimistic UI update
+    setLeads((prev) => prev.filter((item) => (item._id || item.id) !== id));
+    if (selectedLead && (selectedLead._id === id || selectedLead.id === id)) {
+      setIsModalOpen(false);
+      setSelectedLead(null);
+      setLeadDossier(null);
+    }
+    try {
+      await adminApi.deleteLead(id);
+      setSuccessMsg(`Lead "${leadIdentifier}" deleted successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(`Failed to delete lead: ${err.message}`);
+      fetchLeads(activeTab, pagination.page);
+    }
+  };
+
   const getTabCount = (tabId) => {
     if (tabId === 'hot') return counts.hotPriority || 0;
     if (tabId === 'customer') return counts.customerLeads || 0;
@@ -254,7 +275,7 @@ export default function AdminLeadManagementPage() {
       const contactTime = new Date(l.latestContactDate || l.createdAt || Date.now());
       const daysDiff = Math.floor((Date.now() - contactTime.getTime()) / (1000 * 60 * 60 * 24));
       const priorityText = daysDiff <= 7 ? 'HOT' : 'REQUESTED';
-      const locText = (l.location && l.location !== '—' && l.location !== '-') ? l.location : 'Shamong, NJ';
+      const locText = (l.location && l.location !== '—' && l.location !== '-' && l.location !== 'Shamong, NJ') ? l.location : (l.city ? `${l.city}${l.state ? `, ${l.state}` : ''}` : 'Location Pending');
       const dateText = contactTime.toLocaleDateString('en-US');
       const timeText = contactTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
       const estValue = l.estimatedValue > 0 ? `${Number(l.estimatedValue).toFixed(2)}` : '$0.00';
@@ -536,7 +557,7 @@ export default function AdminLeadManagementPage() {
                   // Type & Source label
                   const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
                   const typeSourceText = isEstimation ? 'Estimation Service' : (l.contactSource || (isCust ? 'Customer Reach Out' : 'Contractor Portal'));
-                  const leadLocation = (l.location && l.location !== '—' && l.location !== '-') ? l.location : (l.address?.city ? `${l.address.city}, ${l.address.state || ''}` : 'Shamong, NJ');
+                  const leadLocation = (l.location && l.location !== '—' && l.location !== '-' && l.location !== 'Shamong, NJ') ? l.location : (l.city ? `${l.city}${l.state ? `, ${l.state}` : ''}` : (l.address?.city ? `${l.address.city}, ${l.address.state || ''}` : 'Location Pending'));
 
                   return (
                     <tr key={l._id || l.id} style={styles.tr}>
@@ -578,6 +599,23 @@ export default function AdminLeadManagementPage() {
                         {l.estimatedValue > 0 && (
                           <div style={styles.estimatedValueBadge}>
                             Estimated: ${Number(l.estimatedValue).toLocaleString()}
+                          </div>
+                        )}
+                        {(l.minJobApplied || l.isMinJobApplied) && (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '3px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: '#b45309',
+                            backgroundColor: '#fef3c7',
+                            border: '1px solid #fde68a',
+                            padding: '2px 7px',
+                            borderRadius: '9999px',
+                          }}>
+                            ⚡ Min Job Floor ($2,500 Applied)
                           </div>
                         )}
                       </td>
@@ -625,14 +663,40 @@ export default function AdminLeadManagementPage() {
 
                       {/* 7. Actions */}
                       <td style={{ ...styles.td, textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenLeadDetails(l)}
-                          style={styles.btnViewDetails}
-                          title="View Full Lead & Estimation Dossier"
-                        >
-                          View Details
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLeadDetails(l)}
+                            style={styles.btnViewDetails}
+                            title="View Full Lead & Estimation Dossier"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLead(l._id || l.id, l.name || l.leadNumber)}
+                            style={{
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
+                              borderRadius: '6px',
+                              padding: '6px 10px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title="Permanently delete lead"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -720,7 +784,7 @@ export default function AdminLeadManagementPage() {
                       </span>
                     </div>
                     <p style={{ ...styles.modalSub, wordBreak: 'break-word' }}>
-                      {(selectedLead.userType || 'Customer').toUpperCase()} • Contact Date: {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()} • {selectedLead.location || 'New Jersey'}
+                      {(selectedLead.userType || 'Customer').toUpperCase()} • Contact Date: {new Date(selectedLead.latestContactDate || selectedLead.createdAt || Date.now()).toLocaleString()} • {(selectedLead.location && selectedLead.location !== 'Shamong, NJ' && selectedLead.location !== 'New Jersey') ? selectedLead.location : (selectedLead.city ? `${selectedLead.city}${selectedLead.state ? `, ${selectedLead.state}` : ''}` : 'Location Pending')}
                     </p>
                   </div>
                 </div>
@@ -789,6 +853,11 @@ export default function AdminLeadManagementPage() {
                         <span style={styles.bannerValAmount}>
                           ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500).toLocaleString()}
                         </span>
+                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) && (
+                          <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '700', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde68a', marginTop: '2px', display: 'inline-block' }}>
+                            ⚡ Min Job Floor ($2,500 Applied)
+                          </span>
+                        )}
                       </div>
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Contact Timestamp</span>
@@ -850,7 +919,9 @@ export default function AdminLeadManagementPage() {
                           <span style={styles.dossierVal}>
                             {combinedLead.propertyAddress?.street
                               ? `${combinedLead.propertyAddress.street}, ${combinedLead.propertyAddress.city || ''} ${combinedLead.propertyAddress.state || ''}`
-                              : (selectedLead.location || 'New Jersey')}
+                              : ((selectedLead.location && selectedLead.location !== 'Shamong, NJ' && selectedLead.location !== 'New Jersey')
+                                ? selectedLead.location
+                                : (combinedLead.propertyAddress?.city ? `${combinedLead.propertyAddress.city}, ${combinedLead.propertyAddress.state || ''}` : 'Location Pending'))}
                           </span>
                         </div>
                       </div>
@@ -884,6 +955,14 @@ export default function AdminLeadManagementPage() {
                           <span style={styles.dossierLabel}>Inputs Summary:</span>
                           <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Full Deck Restoration'}</span>
                         </div>
+                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) && (
+                          <div style={{ ...styles.dossierItem, backgroundColor: '#fef3c7', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                            <span style={{ ...styles.dossierLabel, color: '#92400e' }}>⚡ Mobilization Pricing Floor:</span>
+                            <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '800' }}>
+                              $2,500 Applied (Pure Subtotal: ${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()})
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1074,6 +1153,30 @@ export default function AdminLeadManagementPage() {
                         ? '✓ Request Accepted (IN PROGRESS)'
                         : 'Accept Request (Start In Progress)'}
                     </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteLead(selectedLead._id || selectedLead.id, selectedLead.name || selectedLead.leadNumber)}
+                    style={{
+                      padding: '9px 16px',
+                      backgroundColor: '#fee2e2',
+                      color: '#b91c1c',
+                      border: '1px solid #fecaca',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    title="Permanently delete lead"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    <span>Delete Lead</span>
                   </button>
 
                   <button

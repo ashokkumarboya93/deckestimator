@@ -892,8 +892,8 @@ export default function ContinuousEstimatorForm({
   const [applyContractorDiscount, setApplyContractorDiscount] = useState(true);
   const [contractorDiscountPercent, setContractorDiscountPercent] = useState(10);
 
-  // Minimum Job Mobilization Price Toggle (Default FALSE: pure calculated price without min job applied)
-  const [applyMinJobPrice, setApplyMinJobPrice] = useState(false);
+  // Minimum Job Mobilization Price Toggle (Default TRUE: enforces commercial mobilization floor $2,500)
+  const [applyMinJobPrice, setApplyMinJobPrice] = useState(true);
 
   // Fetch Contractor's Active or Admin-tuned discount rate
   useEffect(() => {
@@ -1769,6 +1769,9 @@ export default function ContinuousEstimatorForm({
         contactSource: 'Official Estimator Conversion',
         subject: `Estimate Booking: ${projectName} ($${officialEstimate.total.toLocaleString()})`,
         message: `Customer converted official estimate ${officialEstimate.ref} for a ${woodSpecies} deck of ${floorArea} sqft. Estimate: $${officialEstimate.total.toLocaleString()}. Ready for certified contractor assignment & inspection.`,
+        propertyAddress: { street: address, city, state, zipCode, country: 'USA' },
+        location: `${city || ''}${state ? `, ${state}` : ''}`,
+        projectName: projectName || 'Deck Restoration Project',
       });
 
       // Synchronize estimate status to IN_REVIEW in database

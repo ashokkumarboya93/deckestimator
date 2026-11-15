@@ -399,8 +399,27 @@ export default function AdminUserManagementPage() {
                         <button
                           type="button"
                           onClick={() => setRequestModal({ open: true, request: req, notes: req.adminNotes || '' })}
-                          style={styles.actionBtnOutline}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            color: '#1d4ed8',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Review User Appeal"
                         >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
                           View Request
                         </button>
                       </td>

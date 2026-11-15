@@ -241,27 +241,60 @@ export default function AdminContractorVerificationPage() {
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button
                           type="button"
-                          onClick={() =>handleOpenReview(contractorId)}
-                          style={styles.reviewBtn}
+                          onClick={() => handleOpenReview(contractorId)}
+                          style={{
+                            ...styles.reviewBtn,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            backgroundColor: '#eff6ff',
+                            color: '#1d4ed8',
+                            border: '1px solid #bfdbfe',
+                            fontWeight: '700',
+                          }}
                           title="View full application details"
-                        >Review
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                          Review
                         </button>
                         {status !== 'approved' && (
                           <button
                             type="button"
-                            onClick={() =>handleQuickApprove(contractorId, c.businessName)}
-                            style={styles.quickApproveBtn}
+                            onClick={() => handleQuickApprove(contractorId, c.businessName)}
+                            style={{
+                              ...styles.quickApproveBtn,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
                             title="Approve contractor immediately"
-                          >Approve
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            Approve
                           </button>
                         )}
                         {status !== 'rejected' && (
                           <button
                             type="button"
-                            onClick={() =>handleQuickReject(contractorId, c.businessName)}
-                            style={styles.quickRejectBtn}
+                            onClick={() => handleQuickReject(contractorId, c.businessName)}
+                            style={{
+                              ...styles.quickRejectBtn,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
                             title="Reject contractor application"
-                          >Reject
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                            Reject
                           </button>
                         )}
                       </div>
@@ -287,10 +320,25 @@ export default function AdminContractorVerificationPage() {
               </div>
               <button
                 type="button"
-                onClick={() =>setSelectedApp(null)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}
+                onClick={() => setSelectedApp(null)}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  width: '32px',
+                  height: '32px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Close Modal"
               >
-                
+                ✕
               </button>
             </div>
 

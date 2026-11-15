@@ -178,6 +178,44 @@ export default function AdminProjectsPage() {
     setIsDetailsModalOpen(true);
   };
 
+  const handleDeleteProject = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete project "${name}"? This will permanently remove the estimation record.`)) {
+      return;
+    }
+    setProjects((prev) => prev.filter((p) => (p._id || p.id) !== id));
+    setSelectedProjectIds((prev) => prev.filter((x) => x !== id));
+    if (selectedProject && (selectedProject._id === id || selectedProject.id === id)) {
+      setIsDetailsModalOpen(false);
+      setSelectedProject(null);
+    }
+    try {
+      await adminApi.deleteProject(id);
+      setSuccessMsg(`Project "${name}" deleted successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(`Failed to delete project: ${err.message}`);
+      fetchProjects(page, statusFilter, searchTerm);
+    }
+  };
+
+  const handleBulkDeleteProjects = async () => {
+    if (selectedProjectIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete these ${selectedProjectIds.length} selected project estimations?`)) {
+      return;
+    }
+    const idsToDelete = [...selectedProjectIds];
+    setProjects((prev) => prev.filter((p) => !idsToDelete.includes(p._id || p.id)));
+    setSelectedProjectIds([]);
+    try {
+      await adminApi.bulkDeleteProjects(idsToDelete);
+      setSuccessMsg(`Successfully deleted ${idsToDelete.length} projects.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(`Failed to delete selected projects: ${err.message}`);
+      fetchProjects(page, statusFilter, searchTerm);
+    }
+  };
+
   const renderStageBadge = (stage) => {
     const s = (stage || 'created').toLowerCase();
     if (s === 'completed') {
@@ -456,6 +494,33 @@ export default function AdminProjectsPage() {
         >
           Export Excel{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
         </button>
+
+        {selectedProjectIds.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkDeleteProjects}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#fee2e2',
+              color: '#b91c1c',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 3px rgba(185, 28, 28, 0.1)',
+            }}
+            title="Permanently delete all selected project estimations"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            Delete Selected ({selectedProjectIds.length})
+          </button>
+        )}
       </div>
 
       {/* 4. Projects Table */}
@@ -485,11 +550,12 @@ export default function AdminProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                  <th style={{ ...styles.th, width: '48px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={allCurrentPageSelected}
                       onChange={toggleSelectAll}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#1d4ed8' }}
                       title="Select all projects on this page"
                     />
                   </th>
@@ -505,11 +571,12 @@ export default function AdminProjectsPage() {
               <tbody>
                 {projects.map((p) => (
                   <tr key={p._id || p.id} style={styles.tr}>
-                    <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                    <td style={{ ...styles.td, width: '48px', textAlign: 'center' }}>
                       <input
                         type="checkbox"
                         checked={selectedProjectIds.includes(p._id || p.id)}
                         onChange={() => toggleSelectProject(p._id || p.id)}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#1d4ed8' }}
                       />
                     </td>
                     {/* Project & Ref */}
@@ -585,6 +652,29 @@ export default function AdminProjectsPage() {
                           title="View Full Estimation Dossier"
                         >
                           View Details
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(p._id || p.id, p.title || p.projectName || 'Project')}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title="Permanently delete project estimation"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -1077,6 +1167,30 @@ export default function AdminProjectsPage() {
                   Download Excel
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteProject(selectedProject._id || selectedProject.id, selectedProject.title || selectedProject.projectName || 'Project')}
+                style={{
+                  padding: '9px 16px',
+                  backgroundColor: '#fee2e2',
+                  color: '#b91c1c',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Permanently delete project estimation"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                <span>Delete Project</span>
+              </button>
 
               <button
                 type="button"

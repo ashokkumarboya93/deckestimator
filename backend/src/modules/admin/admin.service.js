@@ -29,6 +29,8 @@ const PermissionsPolicy = require('./permissionsPolicy.model');
 const AuditLog = require('../../shared/models/auditLog.model');
 const UserRequest = require('../users/userRequest.model');
 const VerificationDocument = require('../contractors/verificationDocument.model');
+const LeadActivity = require('../leads/leadActivity.model');
+const LeadAssignmentHistory = require('../leads/leadAssignmentHistory.model');
 const { DEFAULT_PRICING_CONFIG } = require('../pricing/pricingEngine');
 const { invalidateActivePricingCache } = require('../pricing/pricing.service');
 
@@ -1264,6 +1266,10 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     const customerName = isContractor ? 'Contractor Partner' : (userDoc?.fullName || e.customerSnapshot?.name || 'Customer');
     const contractorName = isContractor ? (userDoc?.fullName || 'Contractor') : (e.assignedContractorName || 'Deck Restoration Plus Staff');
 
+    const projCity = (e.deckDetails?.location?.city || e.deckDetails?.city || e.deckId?.propertyAddress?.city || e.deckId?.location?.city || userDoc?.address?.city || '').trim();
+    const projState = (e.deckDetails?.location?.state || e.deckDetails?.state || e.deckId?.propertyAddress?.state || e.deckId?.location?.state || userDoc?.address?.state || '').trim();
+    const location = projCity ? `${projCity}${projState ? `, ${projState}` : ''}` : 'Location Pending';
+
     return {
       _id: e._id.toString(),
       id: e._id.toString(),
@@ -1283,7 +1289,9 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
       stage,
       progress: stage === 'completed' ? 100 : stage === 'in_progress' ? 65 : stage === 'requested' ? 30 : 10,
       woodSpecies: e.deckDetails?.woodSpecies || e.deckDetails?.surfaceMaterial || 'Redwood / Pine',
-      location: e.deckDetails?.city ? `${e.deckDetails.city}, ${e.deckDetails.state || 'NJ'}` : 'New Jersey, USA',
+      location,
+      city: projCity,
+      state: projState,
       createdAt: e.createdAt,
       updatedAt: e.updatedAt,
       deckSpecs: {
@@ -1774,15 +1782,19 @@ async function listLeads({
     const priorityLabel = isHot ? 'HOT' : 'REQUESTED';
 
     const deckAddr = l.deckId?.propertyAddress;
-    const locationStr = (l.deckSnapshot?.city && l.deckSnapshot.city.trim())
-      ? `${l.deckSnapshot.city.trim()}${l.deckSnapshot.state ? `, ${l.deckSnapshot.state.trim()}` : ', NJ'}`
-      : (deckAddr?.city && deckAddr.city.trim()
-        ? `${deckAddr.city.trim()}${deckAddr.state ? `, ${deckAddr.state.trim()}` : ', NJ'}`
-        : (userObj?.address?.city && userObj.address.city.trim()
-          ? `${userObj.address.city.trim()}${userObj.address.state ? `, ${userObj.address.state.trim()}` : ', NJ'}`
-          : (cpObj?.businessAddress?.city && cpObj.businessAddress.city.trim()
-            ? `${cpObj.businessAddress.city.trim()}${cpObj.businessAddress.state ? `, ${cpObj.businessAddress.state.trim()}` : ', NJ'}`
-            : 'Shamong, NJ')));
+    const resolvedCity = (l.deckSnapshot?.city && l.deckSnapshot.city.trim()) ||
+                         (deckAddr?.city && deckAddr.city.trim()) ||
+                         (userObj?.address?.city && userObj.address.city.trim()) ||
+                         (cpObj?.businessAddress?.city && cpObj.businessAddress.city.trim()) ||
+                         '';
+    const resolvedState = (l.deckSnapshot?.state && l.deckSnapshot.state.trim()) ||
+                          (deckAddr?.state && deckAddr.state.trim()) ||
+                          (userObj?.address?.state && userObj.address.state.trim()) ||
+                          (cpObj?.businessAddress?.state && cpObj.businessAddress.state.trim()) ||
+                          '';
+    const locationStr = resolvedCity
+      ? `${resolvedCity}${resolvedState ? `, ${resolvedState}` : ''}`
+      : (l.location || 'Location Pending');
 
     const est = l.estimateId;
     const requestedMessage = l.enquiry?.message || l.enquiry?.subject || (l.contactHistory?.[0]?.notes) || 'Project Service Request';
@@ -1793,6 +1805,16 @@ async function listLeads({
     const deckLen = est?.deckDetails?.deckLength || l.deckId?.dimensions?.length;
     const deckWid = est?.deckDetails?.deckWidth || l.deckId?.dimensions?.width;
     const deckDimensions = (deckLen && deckWid) ? `${deckLen} ft × ${deckWid} ft` : (deckArea > 0 ? `${deckArea} sq ft` : '—');
+
+    const minJobThreshold = est?.pricingSnapshot?.minimumJobPrice ?? est?.minimumJobPrice ?? l.estimateSnapshot?.minimumJobPrice ?? 2500;
+    const minJobAdjustment = est?.minimumAdjustment ?? est?.pricingSnapshot?.minJobAdjustment ?? l.estimateSnapshot?.minJobAdjustment ?? 0;
+    const pureCalculated = est?.subtotal ?? est?.pricingSnapshot?.calculatedTotal ?? l.estimateSnapshot?.calculatedTotal ?? (estimatedValue || 0);
+    const minJobApplied = Boolean(
+      est?.pricingSnapshot?.minJobApplied ??
+      l.estimateSnapshot?.minJobApplied ??
+      (minJobAdjustment > 0) ??
+      (estimatedValue === minJobThreshold && pureCalculated > 0 && pureCalculated < minJobThreshold)
+    );
 
     const spec = est?.pricingSnapshot?.spec || {};
     const sectionInputs = [];
@@ -1822,8 +1844,8 @@ async function listLeads({
       estimateStatus: est?.estimateStatus || (l.status === 'quote_in_progress' ? 'IN_PROGRESS' : l.status === 'converted' ? 'COMPLETED' : undefined),
       estimateIdStr: est?._id?.toString() || l.estimateSnapshot?.estimateId?.toString() || null,
       location: locationStr,
-      city: l.deckSnapshot?.city || deckAddr?.city || '',
-      state: l.deckSnapshot?.state || deckAddr?.state || '',
+      city: resolvedCity,
+      state: resolvedState,
       businessName: cpObj?.businessName || l.contractorSnapshot?.businessName || '',
       licenseNumber: cpObj?.licenseNumber || l.contractorSnapshot?.licenseNumber || '',
       licenseJurisdiction: cpObj?.licenseJurisdiction || '',
@@ -1831,6 +1853,11 @@ async function listLeads({
       requestedMessage,
       isEstimationService,
       estimatedValue,
+      minJobApplied,
+      isMinJobApplied: minJobApplied,
+      minJobAmount: minJobThreshold,
+      minJobAdjustment,
+      pureCalculated,
       deckDimensions,
       woodSpecies,
       deckArea,
@@ -1879,7 +1906,7 @@ async function getLeadDetails(leadId) {
     .populate('contractorId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
     .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt businessAddress')
     .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
-    .populate('estimateId', 'estimateNumber estimateReference totalCost totalAmount estimateStatus deckDetails pricingSnapshot')
+    .populate('estimateId', 'estimateNumber estimateReference subtotal minimumAdjustment minimumJobPrice totalCost totalAmount estimateStatus deckDetails pricingSnapshot')
     .lean();
 
   if (!lead) {
@@ -1935,6 +1962,14 @@ async function getLeadDetails(leadId) {
       email: userObj?.email || (isCust ? lead.customerSnapshot?.email : lead.contractorSnapshot?.email) || 'N/A',
       phone: userObj?.phone || (isCust ? lead.customerSnapshot?.phone : lead.contractorSnapshot?.phone) || '—',
       userType: isCust ? 'Customer' : 'Contractor',
+      minJobApplied: Boolean(
+        lead.estimateId?.pricingSnapshot?.minJobApplied ??
+        lead.estimateSnapshot?.minJobApplied ??
+        (lead.estimateId?.minimumAdjustment > 0)
+      ),
+      minJobAmount: lead.estimateId?.pricingSnapshot?.minimumJobPrice ?? lead.estimateId?.minimumJobPrice ?? lead.estimateSnapshot?.minimumJobPrice ?? 2500,
+      minJobAdjustment: lead.estimateId?.minimumAdjustment ?? lead.estimateId?.pricingSnapshot?.minJobAdjustment ?? lead.estimateSnapshot?.minJobAdjustment ?? 0,
+      pureCalculated: lead.estimateId?.subtotal ?? lead.estimateId?.pricingSnapshot?.calculatedTotal ?? lead.estimateSnapshot?.calculatedTotal ?? 0,
     },
     user: userObj ? {
       _id: userObj._id.toString(),
@@ -3192,6 +3227,62 @@ async function changeAdminPassword(adminUserId, { currentPassword, newPassword }
   return { success: true, message: 'Password updated successfully.' };
 }
 
+async function deleteProject(projectId) {
+  const query = mongoose.Types.ObjectId.isValid(projectId)
+    ? { _id: projectId }
+    : { estimateNumber: projectId };
+
+  const estimate = await Estimate.findOne(query);
+  if (!estimate) {
+    throw new NotFoundError('Project / Estimation not found.');
+  }
+
+  const deckId = estimate.deckDetails?.deckId;
+  await Estimate.deleteOne({ _id: estimate._id });
+
+  if (deckId) {
+    try {
+      const remainingCount = await Estimate.countDocuments({ 'deckDetails.deckId': deckId });
+      if (remainingCount === 0) {
+        await Deck.deleteOne({ _id: deckId });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return { id: projectId, message: 'Project estimation deleted successfully.' };
+}
+
+async function bulkDeleteProjects(projectIds = []) {
+  if (!Array.isArray(projectIds) || projectIds.length === 0) {
+    throw new BadRequestError('No project IDs provided.');
+  }
+  const validIds = projectIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) {
+    return { deletedCount: 0, message: 'No valid project IDs provided.' };
+  }
+  const res = await Estimate.deleteMany({ _id: { $in: validIds } });
+  return { deletedCount: res.deletedCount, message: `Successfully deleted ${res.deletedCount} project estimations.` };
+}
+
+async function deleteLead(leadId) {
+  const query = mongoose.Types.ObjectId.isValid(leadId)
+    ? { _id: leadId }
+    : { leadNumber: leadId };
+
+  const lead = await Lead.findOne(query);
+  if (!lead) {
+    throw new NotFoundError('Lead record not found.');
+  }
+
+  LeadActivity.deleteMany({ leadId: lead._id }).catch(() => {});
+  LeadAssignmentHistory.deleteMany({ leadId: lead._id }).catch(() => {});
+
+  await Lead.deleteOne({ _id: lead._id });
+  return { id: leadId, leadNumber: lead.leadNumber, message: 'Lead deleted successfully.' };
+}
+
 module.exports = {
   // 1. Dashboard
   getDashboardSummary,
@@ -3218,11 +3309,14 @@ module.exports = {
   // 4. Projects & Progress
   listProjects,
   updateProjectProgress,
+  deleteProject,
+  bulkDeleteProjects,
   exportProjectsData,
 
   // 5. Leads
   listLeads,
   getLeadDetails,
+  deleteLead,
   exportSingleLeadDossier,
   exportLeadsData,
 

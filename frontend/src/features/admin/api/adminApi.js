@@ -86,6 +86,14 @@ export const adminApi = {
     const res = await client.patch(`/admin/projects/${id}/progress`, payload);
     return res.data;
   },
+  deleteProject: async (id) => {
+    const res = await client.delete(`/admin/projects/${id}`);
+    return res.data;
+  },
+  bulkDeleteProjects: async (ids) => {
+    const res = await client.post('/admin/projects/bulk-delete', { ids });
+    return res.data;
+  },
   exportProjectsUrl: (format = 'csv', status = 'all') => {
     return `${BASE_URL}/admin/projects/export?format=${format}&status=${status}`;
   },
@@ -96,6 +104,10 @@ export const adminApi = {
   // 5. Leads
   getLeads: async (params = {}) => {
     return client.get('/admin/leads', { params });
+  },
+  deleteLead: async (id) => {
+    const res = await client.delete(`/admin/leads/${id}`);
+    return res.data;
   },
   getLeadDetails: async (id) => {
     const res = await client.get(`/admin/leads/${id}`);
