@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminVerificationApi } from '../api/adminVerificationApi';
+import { ConfirmModal } from '../../../components/common';
 
 export default function AdminContractorVerificationPage() {
   const [contractors, setContractors] = useState([]);
@@ -92,10 +93,23 @@ export default function AdminContractorVerificationPage() {
     }
   }
 
-  async function handleQuickApprove(contractorId, businessName) {
-    if (!window.confirm(`Are you sure you want to approve contractor "${businessName}"? This will activate their account and grant access to the contractor portal.`)) {
-      return;
-    }
+  const [quickApproveModal, setQuickApproveModal] = useState({
+    isOpen: false,
+    contractorId: null,
+    businessName: '',
+  });
+
+  function handleQuickApprove(contractorId, businessName) {
+    setQuickApproveModal({
+      isOpen: true,
+      contractorId,
+      businessName: businessName || 'Contractor',
+    });
+  }
+
+  async function executeQuickApprove() {
+    const { contractorId, businessName } = quickApproveModal;
+    if (!contractorId) return;
     setLoading(true);
     setError(null);
     try {
@@ -104,33 +118,18 @@ export default function AdminContractorVerificationPage() {
         notes: 'Approved via quick action by administrator.',
       });
       setActionSuccess(`Contractor "${businessName}" approved successfully.`);
+      setQuickApproveModal({ isOpen: false, contractorId: null, businessName: '' });
       await loadContractors(pagination.page);
     } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Approval failed.');
+      setQuickApproveModal({ isOpen: false, contractorId: null, businessName: '' });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleQuickReject(contractorId, businessName) {
-    const reason = window.prompt(`Enter rejection reason for contractor "${businessName}":`, 'License credentials could not be verified.');
-    if (!reason || !reason.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      await adminVerificationApi.reviewApplication(contractorId, {
-        action: 'REJECT',
-        reason: reason.trim(),
-        notes: 'Rejected by administrator via review dashboard.',
-      });
-      setActionSuccess(`Contractor "${businessName}" application rejected.`);
-      await loadContractors(pagination.page);
-    } catch (err) {
-      setError(err?.response?.data?.error?.message || err.message || 'Rejection failed.');
-    } finally {
-      setLoading(false);
-    }
+  function handleQuickReject(contractorId) {
+    handleOpenReview(contractorId);
   }
 
   const statusColors = {
@@ -451,6 +450,21 @@ export default function AdminContractorVerificationPage() {
           </div>
         </div>
       )}
+
+      {/* Enterprise Quick Approve Modal */}
+      <ConfirmModal
+        isOpen={quickApproveModal.isOpen}
+        title="Approve Contractor Partner?"
+        message={`Are you sure you want to approve contractor "${quickApproveModal.businessName}"? This will activate their credentials and grant full access to the contractor portal.`}
+        confirmLabel="Approve Contractor"
+        variant="primary"
+        isLoading={loading}
+        onConfirm={executeQuickApprove}
+        onClose={() =>
+          !loading &&
+          setQuickApproveModal({ isOpen: false, contractorId: null, businessName: '' })
+        }
+      />
     </div>
   );
 }

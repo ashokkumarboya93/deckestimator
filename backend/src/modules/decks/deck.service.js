@@ -2,6 +2,7 @@
 // Deck Estimator — Deck Service
 // =============================================
 
+const User = require('../users/users.model');
 const Deck = require('./deck.model');
 const DeckImage = require('../files/deckImage.model');
 const storageProvider = require('../files/storageProvider');
@@ -75,11 +76,21 @@ async function getDecks(user, { page = 1, limit = 10 } = {}) {
     query = {};
   } else if (user.role === ROLES.CONTRACTOR) {
     const Lead = require('../leads/lead.model');
-    const assignedLeads = await Lead.find({ assignedContractorId: user.id }).select('deckId');
+    const mongoose = require('mongoose');
+    const rawId = user.id || user._id;
+    const userObjId = mongoose.Types.ObjectId.isValid(rawId)
+      ? new mongoose.Types.ObjectId(rawId)
+      : rawId;
+    const assignedLeads = await Lead.find({
+      $or: [
+        { assignedContractorId: userObjId },
+        { contractorId: userObjId },
+      ],
+    }).select('deckId');
     const assignedDeckIds = assignedLeads.map((l) => l.deckId).filter(Boolean);
     query = {
       $or: [
-        { ownerId: user.id },
+        { ownerId: userObjId },
         { _id: { $in: assignedDeckIds } },
       ],
     };

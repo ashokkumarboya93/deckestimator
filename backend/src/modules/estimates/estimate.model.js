@@ -328,6 +328,8 @@ estimateSchema.index({ ownerId: 1, createdAt: -1 });
 estimateSchema.index({ createdBy: 1, createdAt: -1 });
 estimateSchema.index({ createdFor: 1, createdAt: -1 });
 estimateSchema.index({ deckId: 1, createdAt: -1 });
+estimateSchema.index({ estimateStatus: 1, updatedAt: -1 });
+estimateSchema.index({ updatedAt: -1 });
 
 const Estimate = mongoose.model('Estimate', estimateSchema, 'estimates');
 

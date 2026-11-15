@@ -67,14 +67,28 @@ export async function compressAvatarImage(file, maxDimension = 256, quality = 0.
  */
 export function resolveAvatarUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const trimmed = rawUrl.trim();
   if (
-    rawUrl.startsWith('data:') ||
-    rawUrl.startsWith('blob:') ||
-    rawUrl.startsWith('http://') ||
-    rawUrl.startsWith('https://')
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
   ) {
-    return rawUrl;
+    return trimmed;
   }
-  return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+
+  // Map relative paths like /uploads/... to backend origin
+  try {
+    const apiUrl = import.meta.env?.VITE_API_URL || '';
+    if (apiUrl.startsWith('http')) {
+      const url = new URL(apiUrl);
+      const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+      return `${url.origin}${cleanPath}`;
+    }
+  } catch {
+    // Fallback if URL parsing fails
+  }
+
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
 }
 

@@ -26,6 +26,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../api/adminApi';
 import { BASE_URL } from '../../../api/client';
+import { ConfirmModal, EmptyState, LoadingSpinner, SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 const TABS = [
   { id: 'hot', label: 'Hot Priority Requests' },
@@ -215,21 +216,42 @@ export default function AdminLeadManagementPage() {
     setAcceptErrorNotice(null);
   };
 
-  const handleDeleteLead = async (id, leadIdentifier) => {
-    if (!window.confirm(`Are you sure you want to permanently delete lead "${leadIdentifier}"? This action cannot be undone.`)) {
-      return;
-    }
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    id: null,
+    identifier: '',
+    loading: false,
+  });
+
+  const promptDeleteLead = (id, leadIdentifier) => {
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      identifier: leadIdentifier || 'Selected Lead',
+      loading: false,
+    });
+  };
+
+  const handleDeleteLead = (id, leadIdentifier) => {
+    promptDeleteLead(id, leadIdentifier);
+  };
+
+  const handleConfirmDeleteLead = async () => {
+    const { id, identifier } = deleteModalState;
+    if (!id) return;
     // Instant optimistic UI update
     setLeads((prev) => prev.filter((item) => (item._id || item.id) !== id));
     if (selectedLead && (selectedLead._id === id || selectedLead.id === id)) {
-      setIsModalOpen(false);
       setSelectedLead(null);
       setLeadDossier(null);
     }
+    // Instant dismiss so user is not stuck on "Processing..."
+    setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false });
+    setSuccessMsg(`Lead "${identifier}" deleted successfully.`);
+    setTimeout(() => setSuccessMsg(null), 3000);
+
     try {
       await adminApi.deleteLead(id);
-      setSuccessMsg(`Lead "${leadIdentifier}" deleted successfully.`);
-      setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(`Failed to delete lead: ${err.message}`);
       fetchLeads(activeTab, pagination.page);
@@ -505,11 +527,8 @@ export default function AdminLeadManagementPage() {
       {/* 4. Table Content Card */}
       <div style={styles.card}>
         {loading ? (
-          <div style={styles.loaderBox}>
-            <div style={styles.spinner} />
-            <p style={{ color: '#64748b', fontSize: '14px', marginTop: '12px', fontWeight: 600 }}>
-              Loading lead enquiries from database...
-            </p>
+          <div style={{ padding: '8px' }}>
+            <SkeletonTable rows={5} columns={6} />
           </div>
         ) : error ? (
           <div style={styles.errorBox}>
@@ -517,21 +536,17 @@ export default function AdminLeadManagementPage() {
             <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{error}</p>
           </div>
         ) : leads.length === 0 ? (
-          <div style={styles.emptyBox}>
-            <div style={styles.emptyIconCircle}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            </div>
-            <h3 style={styles.emptyTitle}>No leads found in this queue</h3>
-            <p style={styles.emptySub}>
-              {searchTerm
+          <EmptyState
+            icon="inbox"
+            title="No leads found in this queue"
+            description={
+              searchTerm
                 ? 'Try adjusting your search keywords or clearing active filters.'
-                : 'Customer and contractor inquiries or booking reach-outs will appear here in real time.'}
-            </p>
-          </div>
+                : 'Customer and contractor inquiries or booking reach-outs will appear here in real time.'
+            }
+            actionLabel={searchTerm ? 'Clear Search' : null}
+            onAction={searchTerm ? () => setSearchTerm('') : null}
+          />
         ) : (
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
@@ -851,11 +866,15 @@ export default function AdminLeadManagementPage() {
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Estimated Value</span>
                         <span style={styles.bannerValAmount}>
-                          ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500).toLocaleString()}
+                          ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
                         </span>
-                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) && (
+                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
                           <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '700', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde68a', marginTop: '2px', display: 'inline-block' }}>
                             ⚡ Min Job Floor ($2,500 Applied)
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', border: '1px solid #a7f3d0', marginTop: '2px', display: 'inline-block' }}>
+                            ✓ Pure Calculated (No Min Job Floor)
                           </span>
                         )}
                       </div>
@@ -1045,14 +1064,27 @@ export default function AdminLeadManagementPage() {
                     {/* Financial Breakdown & Pricing Snapshot */}
                     <div style={styles.dossierSectionCard}>
                       <h4 style={styles.dossierSectionTitle}>💰 Financial Breakdown & Pricing</h4>
-                      <div style={styles.dossierItem}>
-                        <span style={styles.dossierLabel}>Minimum Job Dispatch Price:</span>
-                        <span style={styles.dossierVal}>$2,500.00</span>
-                      </div>
+                      {Boolean(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
+                        <>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Minimum Job Dispatch Price:</span>
+                            <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '700' }}>$2,500.00 (Enforced)</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Pure Scope Subtotal:</span>
+                            <span style={styles.dossierVal}>${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Standard Mobilization Floor:</span>
+                          <span style={{ ...styles.dossierVal, color: '#64748b' }}>$2,500.00 (Not Applied • Pure Rate Billed)</span>
+                        </div>
+                      )}
                       <div style={{ ...styles.dossierItem, borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', marginTop: '6px' }}>
-                        <span style={{ ...styles.dossierLabel, fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>Guaranteed Estimate Total:</span>
+                        <span style={{ ...styles.dossierLabel, fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>Calculated Estimate Total:</span>
                         <span style={{ ...styles.dossierVal, fontSize: '18px', fontWeight: '900', color: '#047857' }}>
-                          ${Number(selectedLead.estimatedValue || leadDossier?.estimateDetails?.totalAmount || 2500).toLocaleString()}
+                          ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -1254,6 +1286,21 @@ export default function AdminLeadManagementPage() {
           </div>
         </div>
       )}
+
+      {/* Enterprise Delete Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={deleteModalState.isOpen}
+        title="Permanently Delete Lead Record?"
+        message={`Are you sure you want to permanently delete lead "${deleteModalState.identifier}"? All associated inquiries and audit records for this lead will be removed.`}
+        confirmLabel="Delete Lead"
+        variant="danger"
+        isLoading={deleteModalState.loading}
+        onConfirm={handleConfirmDeleteLead}
+        onClose={() =>
+          !deleteModalState.loading &&
+          setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false })
+        }
+      />
     </div>
   );
 }

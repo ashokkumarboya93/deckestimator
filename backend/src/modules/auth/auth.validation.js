@@ -72,7 +72,35 @@ const loginSchema = {
   }),
 };
 
+const forgotPasswordSchema = {
+  body: Joi.object({
+    email: Joi.string().trim().email().required().messages({
+      'string.empty': 'Email is required',
+      'string.email': 'Please enter a valid email address',
+    }),
+  }),
+};
+
+const resetPasswordSchema = {
+  body: Joi.object({
+    token: Joi.string().trim().required().messages({
+      'string.empty': 'Reset token is required',
+    }),
+    newPassword: Joi.string()
+      .min(8)
+      .max(128)
+      .required()
+      .messages({
+        'string.empty': 'New password is required',
+        'string.min': 'Password must be at least 8 characters long',
+      }),
+    confirmPassword: Joi.string().optional(),
+  }),
+};
+
 module.exports = {
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

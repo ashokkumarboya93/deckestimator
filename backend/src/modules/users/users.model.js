@@ -74,6 +74,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    passwordResetToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     moderationHistory: [
       {
         status: { type: String, required: true },
@@ -91,6 +101,8 @@ const userSchema = new mongoose.Schema(
         delete ret._id;
         delete ret.__v;
         delete ret.passwordHash;
+        delete ret.passwordResetToken;
+        delete ret.passwordResetExpires;
         return ret;
       },
     },

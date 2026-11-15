@@ -37,7 +37,7 @@ export function setStoredSession(user, contractorProfile = null) {
     const { avatar: _omitHeavyAvatar, ...lightUser } = user;
     const safeUser = {
       ...lightUser,
-      ...(typeof user.avatar === 'string' && user.avatar.length < 32768 ? { avatar: user.avatar } : {}),
+      ...(typeof user.avatar === 'string' && user.avatar.length < 524288 ? { avatar: user.avatar } : {}),
     };
     localStorage.setItem(
       AUTH_SESSION_KEY,

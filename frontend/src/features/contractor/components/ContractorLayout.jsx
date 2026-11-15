@@ -22,6 +22,7 @@ import RouteLoadingFallback from '../../../components/common/RouteLoadingFallbac
 import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
@@ -738,10 +739,11 @@ export default function ContractorLayout() {
                 }}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
-                {user?.avatar ? (
+                {user?.avatar && resolveAvatarUrl(user.avatar) ? (
                   <img
-                    src={user.avatar}
+                    src={resolveAvatarUrl(user.avatar)}
                     alt={user?.fullName || 'Contractor'}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     style={styles.avatarImg}
                   />
                 ) : (

@@ -4,6 +4,7 @@
 
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const User = require('../users/users.model');
 const Estimate = require('./estimate.model');
 const EstimateRevision = require('./estimateRevision.model');
 const Deck = require('../decks/deck.model');
@@ -281,10 +282,8 @@ async function createEstimate(data, user, ipAddress) {
     const pureCalculated = clientCalc.calculatedTotal || clientCalc.rawSubtotal || clientCalc.total || 2500;
     const minJobThreshold = clientCalc.minJob || 2500;
     const isBelowFloor = pureCalculated < minJobThreshold;
-    // Apply min job floor by default when scope is below mobilization threshold
-    const applyMinJob = data.applyMinJobPrice !== undefined
-      ? Boolean(data.applyMinJobPrice)
-      : (Boolean(clientCalc.minJobApplied) || isBelowFloor);
+    // Default to pure calculated price without applying min job floor unless explicitly checked
+    const applyMinJob = data.applyMinJobPrice === true;
 
     const floorAmount = clientCalc.floorTotal || Math.max(pureCalculated, minJobThreshold);
     const chosenBase = applyMinJob ? floorAmount : pureCalculated;
@@ -553,10 +552,20 @@ async function getEstimates(query = {}, user) {
     const userObjId = mongoose.Types.ObjectId.isValid(rawId)
       ? new mongoose.Types.ObjectId(rawId)
       : rawId;
+
+    const assignedLeads = await Lead.find({
+      $or: [
+        { assignedContractorId: userObjId },
+        { contractorId: userObjId },
+      ],
+    }).select('estimateId').lean();
+    const assignedEstimateIds = assignedLeads.map((l) => l.estimateId).filter(Boolean);
+
     filter.$or = [
       { createdBy: userObjId },
       { ownerId: userObjId },
       { createdFor: userObjId },
+      ...(assignedEstimateIds.length > 0 ? [{ _id: { $in: assignedEstimateIds } }] : []),
     ];
   }
 

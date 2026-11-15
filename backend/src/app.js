@@ -16,6 +16,7 @@ const { corsOptions } = require('./config/cors');
 const { env } = require('./config/env');
 const { requestId } = require('./middleware/requestId');
 const { apiLimiter } = require('./middleware/rateLimiters');
+const { sanitizeInput } = require('./middleware/sanitize');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
 
@@ -29,11 +30,22 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors(corsOptions));
 app.use(compression({ threshold: 1024 }));
 
-// --------------- Request parsing ---------------
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// --------------- Request parsing & NoSQL Sanitization ---------------
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(cookieParser());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(sanitizeInput);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { maxAge: '7d', etag: true }));
+
+// Pre-register all Mongoose schemas to guarantee zero MissingSchemaError during population
+require('./modules/users/users.model');
+require('./modules/contractors/contractorProfile.model');
+require('./modules/decks/deck.model');
+require('./modules/estimates/estimate.model');
+require('./modules/leads/lead.model');
+require('./modules/catalogs/material.model');
+require('./modules/catalogs/service.model');
+require('./modules/admin/project.model');
 
 // --------------- Request tracing ---------------
 app.use(requestId);
@@ -129,6 +141,7 @@ app.get('/api/v1/settings/public', async (req, res, next) => {
   try {
     const PlatformSetting = require('./modules/admin/platformSetting.model');
     const settings = await PlatformSetting.find({ isPublic: true });
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.status(200).json({ success: true, data: settings });
   } catch (err) {
     next(err);

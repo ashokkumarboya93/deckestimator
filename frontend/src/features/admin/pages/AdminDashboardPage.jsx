@@ -308,10 +308,6 @@ export default function AdminDashboardPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={styles.title}>Dashboard</h1>
-            <div style={styles.liveBadge} title="Real-time continuous sync with MongoDB">
-              <span style={styles.liveDot} />
-              <span>LIVE MONGODB SYNC</span>
-            </div>
           </div>
           <p style={styles.subtitle}>
             Business overview and key insights for Deck Restoration Plus.
@@ -502,8 +498,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Card 7: TOTAL ESTIMATES (Soft Purple) */}
-        <div style={styles.cardPurpleRef} onClick={() => navigate('/admin/pricing')}>
+        {/* Card 7: TOTAL ESTIMATES (Soft Purple) — Links to Projects */}
+        <div style={styles.cardPurpleRef} onClick={() => navigate('/admin/projects')} title="View All Projects & Estimates">
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={styles.iconCircleWhite}>
@@ -525,8 +521,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) */}
-        <div style={styles.cardGreenRef} onClick={() => navigate('/admin/pricing')}>
+        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) — Informational Static Metric Card */}
+        <div style={{ ...styles.cardGreenRef, cursor: 'default' }} title="Total Pipeline Value">
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>
               <div style={styles.iconCircleWhite}>
@@ -543,7 +539,6 @@ export default function AdminDashboardPage() {
                 {renderGrowthPill(s.growth?.value)}
               </div>
             </div>
-            <div style={styles.chevronGreen}>›</div>
           </div>
         </div>
       </div>

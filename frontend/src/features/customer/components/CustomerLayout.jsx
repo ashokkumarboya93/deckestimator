@@ -22,6 +22,7 @@ import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuth();
@@ -680,10 +681,11 @@ export default function CustomerLayout() {
                 }}
                 aria-label="User Profile Menu"
               >
-                {user?.avatar ? (
+                {user?.avatar && resolveAvatarUrl(user.avatar) ? (
                   <img
-                    src={user.avatar}
+                    src={resolveAvatarUrl(user.avatar)}
                     alt={user.fullName || 'User'}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     style={{
                       width: isSmallMobile ? '28px' : '32px',
                       height: isSmallMobile ? '28px' : '32px',

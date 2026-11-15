@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { userProfileApi } from '../api/userProfileApi';
-import { compressAvatarImage } from '../../../utils/imageOptimizer';
+import { compressAvatarImage, resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 function EyeToggleIcon({ visible }) {
   return visible ? (
@@ -453,8 +453,13 @@ export default function CustomerProfilePage() {
 
             <div className="drp-prof-avatar-row" style={styles.avatarSection}>
               <div className="drp-prof-avatar-circle" style={styles.avatarWrap}>
-                {avatar ? (
-                  <img src={avatar} alt={fullName || 'Profile'} style={styles.avatarImage} />
+                {avatar && resolveAvatarUrl(avatar) ? (
+                  <img
+                    src={resolveAvatarUrl(avatar)}
+                    alt={fullName || 'Profile'}
+                    style={styles.avatarImage}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 ) : (
                   <div className="drp-prof-avatar-fallback" style={styles.avatarFallback}>{initials}</div>
                 )}

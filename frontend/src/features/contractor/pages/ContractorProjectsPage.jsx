@@ -18,6 +18,7 @@ import { getEstimates, deleteEstimate, requestProjectEstimate } from '../../cust
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
+import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 export default function ContractorProjectsPage() {
   const navigate = useNavigate();
@@ -91,8 +92,9 @@ export default function ContractorProjectsPage() {
     else setLoading(true);
     setError(null);
     try {
-      const data = await getEstimates({ limit: 100 });
-      setEstimates(data?.estimates || []);
+      const data = await getEstimates({ limit: 100, compact: '1' });
+      const list = data?.estimates || data?.data?.estimates || (Array.isArray(data) ? data : []);
+      setEstimates(Array.isArray(list) ? list : []);
     } catch (err) {
       setError(err.message || 'Failed to fetch your projects and estimates.');
     } finally {
@@ -144,13 +146,19 @@ export default function ContractorProjectsPage() {
       return formatCurrency(est.totalAmount);
     }
     const snap = est.pricingSnapshot;
+    if (snap?.pureCalculatedPrice !== undefined) {
+      return formatCurrency(snap.pureCalculatedPrice);
+    }
     if (snap?.calculatedTotal !== undefined) {
       return formatCurrency(snap.calculatedTotal);
+    }
+    if (snap?.finalTotal !== undefined) {
+      return formatCurrency(snap.finalTotal);
     }
     if (snap?.total !== undefined) {
       return formatCurrency(snap.total);
     }
-    return '$2,500.00';
+    return formatCurrency(0);
   }
 
   // Get Deck Area & Dimensions
@@ -252,7 +260,7 @@ export default function ContractorProjectsPage() {
       if (s === 'In Review') inReviewCount++;
       if (s === 'Completed') completedCount++;
 
-      const amt = Number(e.pricingSnapshot?.calculatedTotal ?? e.totalAmount ?? 2500);
+      const amt = Number(e.pricingSnapshot?.calculatedTotal ?? e.pricingSnapshot?.finalTotal ?? e.totalAmount ?? 0);
       if (!isNaN(amt)) totalPortfolioVal += amt;
     });
 
@@ -633,7 +641,9 @@ export default function ContractorProjectsPage() {
           </div>
           <div>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Total Projects</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#1E3A63' }}>{stats.total}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#1E3A63' }}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.total}
+            </strong>
             <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Tracked in active portfolio</span>
           </div>
         </div>
@@ -648,7 +658,9 @@ export default function ContractorProjectsPage() {
           </div>
           <div>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>In Review</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#B45309' }}>{stats.inReviewCount}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#B45309' }}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.inReviewCount}
+            </strong>
             <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Pending homeowner approval</span>
           </div>
         </div>
@@ -663,7 +675,9 @@ export default function ContractorProjectsPage() {
           </div>
           <div>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Completed</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#15803D' }}>{stats.completedCount}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#15803D' }}>
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.completedCount}
+            </strong>
             <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Finished projects</span>
           </div>
         </div>
@@ -678,7 +692,9 @@ export default function ContractorProjectsPage() {
           </div>
           <div>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Pipeline Value</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#7E22CE' }}>{formatCurrency(stats.totalPortfolioVal)}</strong>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#7E22CE' }}>
+              {loading ? <SkeletonShimmer width="72px" height="22px" borderRadius="4px" /> : formatCurrency(stats.totalPortfolioVal)}
+            </strong>
             <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Total estimated volume</span>
           </div>
         </div>
@@ -900,9 +916,8 @@ export default function ContractorProjectsPage() {
       {/* 4. PROJECTS & ESTIMATES TABLE */}
       <div style={styles.tableCard}>
         {loading ? (
-          <div style={styles.loadingWrap}>
-            <div style={styles.spinner} />
-            <p style={{ marginTop: '12px', fontSize: '13px', color: '#64748B' }}>Loading projects &amp; estimates from database...</p>
+          <div style={{ padding: '8px' }}>
+            <SkeletonTable rows={5} columns={7} />
           </div>
         ) : filteredEstimates.length === 0 ? (
           <div style={styles.emptyWrap}>

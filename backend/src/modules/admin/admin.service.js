@@ -2978,10 +2978,10 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       { label: 'On Hold', percentage: projectCount > 0 ? Math.round((onHoldProjectsCount / projectCount) * 100) : 0, count: onHoldProjectsCount, color: '#f59e0b' },
     ],
     leadFunnel: [
-      { step: 'New Leads', count: newLeadsCount, color: '#1d4ed8' },
-      { step: 'Hot Priority', count: hotLeadsCount, color: '#ef4444' },
-      { step: 'In Progress / Assigned', count: Math.max(0, leadCount - newLeadsCount), color: '#f59e0b' },
-      { step: 'Converted to Project', count: projectCount, color: '#10b981' },
+      { step: '1. Lead Inquiries Raised', count: leadCount, conversion: leadCount > 0 ? 100 : 0, color: '#2563eb', desc: 'Customer & contractor quote requests' },
+      { step: '2. Estimates Calculated', count: Math.max(estCount, projectCount), conversion: leadCount > 0 ? Math.min(100, Math.round((Math.max(estCount, projectCount) / leadCount) * 100)) : 0, color: '#6366f1', desc: 'Deck scope & continuous pricing generated' },
+      { step: '3. Dispatched & In Progress', count: activeProjectsCount, conversion: Math.max(estCount, projectCount) > 0 ? Math.min(100, Math.round((activeProjectsCount / Math.max(estCount, projectCount)) * 100)) : 0, color: '#f59e0b', desc: 'Contractor mobilization & surface prep' },
+      { step: '4. Completed Restorations', count: completedProjectsCount, conversion: activeProjectsCount > 0 ? Math.min(100, Math.round((completedProjectsCount / activeProjectsCount) * 100)) : 0, color: '#10b981', desc: 'Customer approved & warranty issued' },
     ],
     materialSelection,
     monthlyRevenue,
@@ -3268,18 +3268,23 @@ async function bulkDeleteProjects(projectIds = []) {
 
 async function deleteLead(leadId) {
   const query = mongoose.Types.ObjectId.isValid(leadId)
-    ? { _id: leadId }
+    ? { _id: new mongoose.Types.ObjectId(leadId) }
     : { leadNumber: leadId };
 
-  const lead = await Lead.findOne(query);
+  const lead = await Lead.findOne(query).select('_id leadNumber');
   if (!lead) {
-    throw new NotFoundError('Lead record not found.');
+    invalidateAdminDashboardCache();
+    return { id: leadId, message: 'Lead already deleted.' };
   }
 
-  LeadActivity.deleteMany({ leadId: lead._id }).catch(() => {});
-  LeadAssignmentHistory.deleteMany({ leadId: lead._id }).catch(() => {});
+  // Fire-and-forget background cleanup of secondary activities to eliminate blocking delays
+  Promise.allSettled([
+    LeadActivity.deleteMany({ leadId: lead._id }),
+    LeadAssignmentHistory.deleteMany({ leadId: lead._id })
+  ]).catch(() => {});
 
   await Lead.deleteOne({ _id: lead._id });
+  invalidateAdminDashboardCache();
   return { id: leadId, leadNumber: lead.leadNumber, message: 'Lead deleted successfully.' };
 }
 
