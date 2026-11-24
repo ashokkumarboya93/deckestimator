@@ -23,7 +23,7 @@
 //     * In-modal Export CSV / Excel
 // - Export functionality exports currently filtered records with section-wise inputs and amounts
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import { BASE_URL } from '../../../api/client';
@@ -60,10 +60,12 @@ export default function AdminLeadManagementPage() {
       return new Set();
     }
   });
-  const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
+  const [pageSize, setPageSize] = useState(25);
+  const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const dateInputRef = useRef(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -124,19 +126,28 @@ export default function AdminLeadManagementPage() {
         note: noteMsg,
       });
       setAcceptSuccessNotice('✓ Request In Progress! Notification sent: "We will contact you soon!"');
-      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'quote_in_progress' } : null);
+      setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'in_progress', isAccepted: true, isOpened: true } : null);
+      setLeads((prev) =>
+        prev.map((item) => {
+          const leadKey = item._id || item.id || item.leadNumber;
+          const isMatch = leadKey === targetId || leadKey === lead._id || leadKey === lead.id || leadKey === lead.leadNumber;
+          return isMatch
+            ? { ...item, status: 'in_progress', estimateStatus: 'IN_PROGRESS', isAccepted: true, isOpened: true }
+            : item;
+        })
+      );
       setLeadDossier((prev) =>
         prev
           ? {
               ...prev,
-              lead: prev.lead ? { ...prev.lead, status: 'quote_in_progress' } : prev.lead,
+              lead: prev.lead ? { ...prev.lead, status: 'in_progress', isAccepted: true, isOpened: true } : prev.lead,
               estimateDetails: prev.estimateDetails
                 ? { ...prev.estimateDetails, estimateStatus: 'IN_PROGRESS' }
                 : prev.estimateDetails,
             }
           : prev
       );
-      await fetchLeads(pagination.page || 1);
+      await fetchLeads(pagination.page || 1, pageSize);
     } catch (err) {
       setAcceptErrorNotice(err?.response?.data?.message || err.message || 'Failed to update request.');
     } finally {
@@ -162,12 +173,9 @@ export default function AdminLeadManagementPage() {
     }
   };
 
-  useEffect(() => {
-    fetchLeads(1);
-  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter]);
-
-  const fetchLeads = useCallback(async (pageToFetch = pagination.page) => {
+  const fetchLeads = useCallback(async (pageToFetch = pagination.page, limitToFetch = pageSize) => {
     const safePage = Number(pageToFetch) > 0 ? Number(pageToFetch) : 1;
+    const safeLimit = Number(limitToFetch) > 0 ? Number(limitToFetch) : 25;
     setLoading(true);
     setIsRefreshing(true);
     setError(null);
@@ -179,20 +187,36 @@ export default function AdminLeadManagementPage() {
         dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
         lastDate: lastDateFilter ? lastDateFilter : undefined,
         page: safePage,
-        limit: 15,
+        limit: safeLimit,
       });
 
       setLeads(res.data || []);
       if (res.counts) setCounts(res.counts);
       if (res.unopenedCounts) setUnopenedCounts(res.unopenedCounts);
-      if (res.pagination) setPagination(res.pagination);
+      if (res.pagination) {
+        setPagination({
+          page: res.pagination.page || safePage,
+          limit: res.pagination.limit || safeLimit,
+          total: res.pagination.total ?? (res.data?.length || 0),
+          totalPages: res.pagination.totalPages || Math.ceil((res.pagination.total ?? (res.data?.length || 0)) / safeLimit) || 1,
+        });
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load leads from database.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter, searchTerm, pagination.page]);
+  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter, searchTerm, pagination.page, pageSize]);
+
+  useEffect(() => {
+    fetchLeads(1, pageSize);
+  }, [activeTab, dateRangeFilter, statusFilter, lastDateFilter]);
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    fetchLeads(1, newSize);
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -457,7 +481,7 @@ export default function AdminLeadManagementPage() {
             <h1 style={styles.title}>Lead & Reach-Out Inquiries</h1>
             <span style={styles.liveDbPill}>
               <span style={styles.pulseDot} />
-              Live MongoDB Leads
+              Live Updates
             </span>
           </div>
           
@@ -580,21 +604,35 @@ export default function AdminLeadManagementPage() {
           ))}
         </select>
 
-        {/* Optional Last Date Cutoff Selector */}
-        <div style={styles.lastDateWrapper}>
-          <span style={styles.filterGroupLabel}>Cutoff Date:</span>
+        {/* Date Selector Button (opens calendar on click, no "Cutoff Date:" text, matches height & button styling) */}
+        <div
+          style={styles.shinyDateWrapper}
+          onClick={() => dateInputRef.current?.showPicker?.()}
+          title="Click to filter by date"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" style={{ flexShrink: 0 }}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
           <input
+            ref={dateInputRef}
             type="date"
             value={lastDateFilter}
             onChange={(e) => setLastDateFilter(e.target.value)}
             style={styles.shinyDateInput}
-            title="Filter records up to this cutoff date"
+            title="Filter records up to this date"
           />
           {lastDateFilter && (
             <button
-              onClick={() => setLastDateFilter('')}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLastDateFilter('');
+              }}
               style={styles.clearDateBtn}
-              title="Clear date cutoff"
+              title="Clear date filter"
             >
               ✕
             </button>
@@ -698,6 +736,13 @@ export default function AdminLeadManagementPage() {
 
                   const leadKey = l._id || l.id || l.leadNumber;
                   const isUnopened = !l.isOpened && !openedLeadIds.has(leadKey);
+                  const isAccepted =
+                    l.status === 'in_progress' ||
+                    l.status === 'quote_in_progress' ||
+                    l.status === 'contacted' ||
+                    l.status === 'converted' ||
+                    l.estimateStatus === 'IN_PROGRESS' ||
+                    Boolean(l.isAccepted);
 
                   // Type & Source label
                   const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
@@ -784,7 +829,15 @@ export default function AdminLeadManagementPage() {
 
                       {/* 3. Priority */}
                       <td style={styles.td}>
-                        {isHot ? (
+                        {isAccepted ? (
+                          <span style={styles.openedPill} title="Admin accepted / In Progress">
+                            OPENED
+                          </span>
+                        ) : !isUnopened && isHot ? (
+                          <span style={styles.viewedPill} title="Inquiry opened & viewed">
+                            VIEWED
+                          </span>
+                        ) : isHot ? (
                           <span style={styles.hotPill}>
                             HOT
                           </span>
@@ -883,30 +936,64 @@ export default function AdminLeadManagementPage() {
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {pagination.totalPages > 1 && (
-          <div style={styles.paginationRow}>
-            <span style={styles.paginationText}>
-              Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total leads)
+        {/* Pagination Controls with Range Selector */}
+        <div style={styles.paginationBar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={styles.paginationInfo}>
+              Showing {leads.length > 0 ? (pagination.page - 1) * pageSize + 1 : 0} to{' '}
+              {Math.min(pagination.page * pageSize, pagination.total || leads.length)} of{' '}
+              {pagination.total || leads.length} leads
             </span>
-            <div style={styles.paginationBtns}>
-              <button
-                onClick={() => fetchLeads(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                style={styles.pageBtn}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Show:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                style={styles.pageSizeSelect}
+                title="Select number of leads per page"
               >
-                Previous
-              </button>
-              <button
-                onClick={() => fetchLeads(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-                style={styles.pageBtn}
-              >
-                Next
-              </button>
+                <option value={25}>25 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
             </div>
           </div>
-        )}
+
+          <div style={styles.paginationBtns}>
+            <button
+              type="button"
+              disabled={pagination.page <= 1 || loading}
+              onClick={() => fetchLeads(pagination.page - 1, pageSize)}
+              style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: Math.min(5, pagination.totalPages || 1) }, (_, i) => {
+              const pNum = i + 1;
+              const isCurrent = pagination.page === pNum;
+              return (
+                <button
+                  key={pNum}
+                  type="button"
+                  onClick={() => fetchLeads(pNum, pageSize)}
+                  style={isCurrent ? styles.pageBtnActive : styles.pageBtn}
+                >
+                  {pNum}
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              disabled={pagination.page >= (pagination.totalPages || 1) || loading}
+              onClick={() => fetchLeads(pagination.page + 1, pageSize)}
+              style={pagination.page >= (pagination.totalPages || 1) ? styles.pageBtnDisabled : styles.pageBtn}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 5. View Details Large Dossier Modal (Expanded Comprehensive Report Preview) */}
@@ -1807,22 +1894,30 @@ const styles = {
     borderColor: '#0f172a',
     boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)',
   },
-  lastDateWrapper: {
-    display: 'flex',
+  shinyDateWrapper: {
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #cbd5e1',
-    borderRadius: '9999px',
-    padding: '4px 10px',
+    height: '36px',
+    padding: '0 10px',
+    borderRadius: '8px',
+    border: '1.5px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s ease',
   },
   shinyDateInput: {
     border: 'none',
     outline: 'none',
     backgroundColor: 'transparent',
-    fontSize: '11px',
+    fontSize: '12px',
     color: '#0f172a',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    padding: 0,
+    margin: 0,
   },
   clearDateBtn: {
     background: 'none',
@@ -1830,6 +1925,7 @@ const styles = {
     fontSize: '11px',
     color: '#64748b',
     cursor: 'pointer',
+    padding: '0 2px',
   },
   shinySelect: {
     padding: '7px 12px',
@@ -1867,6 +1963,8 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
     overflow: 'hidden',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   tableResponsive: {
     overflowX: 'auto',
@@ -1876,24 +1974,26 @@ const styles = {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
-    fontSize: '13px',
+    fontSize: '12.5px',
+    tableLayout: 'auto',
   },
   th: {
-    padding: '12px 14px',
+    padding: '10px 10px',
     backgroundColor: '#f8fafc',
     color: '#475569',
     fontSize: '11px',
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.4px',
     borderBottom: '1px solid #e2e8f0',
+    whiteSpace: 'nowrap',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.1s ease',
   },
   td: {
-    padding: '12px 14px',
+    padding: '9px 10px',
     verticalAlign: 'middle',
   },
 
@@ -2048,6 +2148,32 @@ const styles = {
     padding: '3px 8px',
     borderRadius: '9999px',
   },
+  openedPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#047857',
+    backgroundColor: '#dcfce7',
+    border: '1px solid #86efac',
+    padding: '3px 8px',
+    borderRadius: '9999px',
+    letterSpacing: '0.04em',
+  },
+  viewedPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#0284c7',
+    backgroundColor: '#e0f2fe',
+    border: '1px solid #7dd3fc',
+    padding: '3px 8px',
+    borderRadius: '9999px',
+    letterSpacing: '0.04em',
+  },
   standardPill: {
     fontSize: '10px',
     fontWeight: '700',
@@ -2098,31 +2224,31 @@ const styles = {
     fontWeight: '500',
   },
   btnActionProfile: {
-    height: '32px',
-    padding: '0 10px',
+    height: '28px',
+    padding: '0 8px',
     borderRadius: '6px',
     backgroundColor: '#eff6ff',
     border: '1px solid #bfdbfe',
     color: '#1d4ed8',
-    fontSize: '12px',
+    fontSize: '11.5px',
     fontWeight: '700',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '4px',
+    gap: '3px',
     transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
   },
   btnViewDetails: {
-    height: '32px',
-    padding: '0 12px',
+    height: '28px',
+    padding: '0 10px',
     borderRadius: '6px',
     backgroundColor: '#0f172a',
     border: 'none',
     color: '#ffffff',
-    fontSize: '12px',
+    fontSize: '11.5px',
     fontWeight: '700',
     cursor: 'pointer',
     display: 'inline-flex',
@@ -2133,25 +2259,87 @@ const styles = {
     boxSizing: 'border-box',
   },
   btnDeleteLead: {
-    height: '32px',
-    padding: '0 12px',
+    height: '28px',
+    padding: '0 8px',
     borderRadius: '6px',
     backgroundColor: '#fee2e2',
     color: '#b91c1c',
     border: '1px solid #fecaca',
-    fontSize: '12px',
+    fontSize: '11.5px',
     fontWeight: '700',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '4px',
+    gap: '3px',
     transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
   },
 
   // Pagination
+  paginationBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    borderTop: '1px solid #f1f5f9',
+    backgroundColor: '#f8fafc',
+    fontSize: '12px',
+    color: '#64748b',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  paginationInfo: {
+    fontWeight: '600',
+    color: '#475569',
+  },
+  pageSizeSelect: {
+    padding: '4px 8px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    fontSize: '12px',
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  paginationBtns: {
+    display: 'flex',
+    gap: '6px',
+    alignItems: 'center',
+  },
+  pageBtn: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  pageBtnActive: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    border: '1px solid #0f172a',
+    backgroundColor: '#0f172a',
+    fontSize: '11.5px',
+    fontWeight: '800',
+    color: '#ffffff',
+    cursor: 'pointer',
+  },
+  pageBtnDisabled: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#f1f5f9',
+    fontSize: '11.5px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    cursor: 'not-allowed',
+  },
   paginationRow: {
     display: 'flex',
     alignItems: 'center',

@@ -191,7 +191,7 @@ export default function AdminLayout() {
   const getPageMeta = () => {
     if (currentPath.includes('/admin/users')) return { title: 'User Management', category: '' };
     if (currentPath.includes('/admin/verification-progress')) return { title: 'Verification & Progress', category: '' };
-    if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: 'Enquiries Hub' };
+    if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: '' };
     if (currentPath.includes('/admin/projects')) return { title: 'Projects', category: 'Deck Project Directory' };
     if (currentPath.includes('/admin/pricing') || currentPath.includes('/admin/discounts')) return { title: 'Pricing & Discounts', category: 'Calculation & Incentives' };
     if (currentPath.includes('/admin/reports')) return { title: 'Reports & Analytics', category: 'Business Insights' };
