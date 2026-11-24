@@ -540,6 +540,16 @@ async function setContractorIndividualDiscount(req, res, next) {
   }
 }
 
+async function resetContractorIndividualDiscount(req, res, next) {
+  try {
+    const { reason } = req.body || {};
+    const result = await adminService.resetContractorIndividualDiscount(req.user, req.params.contractorId, reason);
+    res.status(200).json({ success: true, data: result, message: 'Contractor discount reset to platform default.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 10. System Settings & Info
 async function getSystemSettings(req, res, next) {
   try {
@@ -749,6 +759,7 @@ module.exports = {
   getDiscountsOverview,
   updateDefaultContractorDiscount,
   setContractorIndividualDiscount,
+  resetContractorIndividualDiscount,
   getSystemSettings,
   updateSystemSettings,
   dispatchNotification,

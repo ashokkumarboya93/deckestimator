@@ -1,19 +1,19 @@
 // =============================================
 // Deck Estimator — Admin Pricing & Discounts Management Hub
 // =============================================
-// Replaced & Modernized with 6 Dedicated Tabs:
+// 6 Dedicated Operational Tabs:
 // - Tab 1: Master Rates & Thresholds (Labor Rate $250/hr, Rate Position 50%, Addon $1/sqft, Min Job $2500/$3000, Travel)
 // - Tab 2: Base Rate Card Matrix (12-cell sqft matrix across Clean, Strip, Strip & Sand + 4 Finishes with live preview)
-// - Tab 3: Wood Species & Materials (Table of 9 wood species, Multiplier %, Add New, Edit, Delete)
-// - Tab 4: Deck Architectural Components (Table of 9 components, Area conversion factors, Add New, Edit, Delete)
-// - Tab 5: Restoration Scope & Production (Table of 9 services, Production speeds sqft/hr, Add New, Edit, Delete)
-// - Tab 6: Contractor Trade Discounts (Dedicated Separate Tab: Default 10%, Individual Contractor Overrides & History)
+// - Tab 3: Wood Species & Materials (Dynamic species list, Multiplier %, Add New, Edit, Delete)
+// - Tab 4: Deck Components (Dynamic architectural components, Area conversion factors, Add New, Edit, Delete)
+// - Tab 5: Scope of Work (Dynamic restoration services, Production speeds sqft/hr, Add New, Edit, Delete)
+// - Tab 6: Contractor Discounts (Global Default Wholesale Rate, Individual Contractor Tuning & Search, Overrides Matrix, Audit Logs)
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { ConfirmModal, SkeletonShimmer, SkeletonTable, SkeletonCard } from '../../../components/common';
 
-// The 6 Approved Tabs (<= 6 tabs, contractor discounts on its own separate tab)
+// The 6 Approved Tabs
 const TABS = [
   { id: 'master_rates', label: '1. Master Rates & Thresholds' },
   { id: 'rate_card', label: '2. Base Rate Card Matrix' },
@@ -145,35 +145,62 @@ export default function AdminPricingDiscountsPage() {
   // Core Engine Config State
   const [engineConfig, setEngineConfig] = useState(DEFAULT_ENGINE_CONFIG);
 
-  // Contractor Discounts State
+  // Contractor Discounts & Policy State
   const [discountData, setDiscountData] = useState(null);
   const [defaultDiscountVal, setDefaultDiscountVal] = useState(10);
   const [defaultReason, setDefaultReason] = useState('');
   const [savingDefaultDiscount, setSavingDefaultDiscount] = useState(false);
-  const [contractorSearch, setContractorSearch] = useState('');
-  const [contractorTierFilter, setContractorTierFilter] = useState('all');
-  const [editingContractorDiscounts, setEditingContractorDiscounts] = useState({});
-  const [savingContractorId, setSavingContractorId] = useState(null);
 
-  // Contractor Override Modal State
-  const [selectedContractor, setSelectedContractor] = useState(null);
-  const [contractorCustomDiscount, setContractorCustomDiscount] = useState(10);
-  const [overrideReason, setOverrideReason] = useState('');
-  const [savingOverride, setSavingOverride] = useState(false);
+  // Individual Contractor Tuning Section State
+  const [contractorSearchQuery, setContractorSearchQuery] = useState('');
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [selectedContractorForTuning, setSelectedContractorForTuning] = useState(null);
+  const [tuneDiscountVal, setTuneDiscountVal] = useState(15);
+  const [tuneReasonVal, setTuneReasonVal] = useState('');
+  const [savingIndividualDiscount, setSavingIndividualDiscount] = useState(false);
 
-  // Modals for Dynamic Add / Edit
+  // Table directory filters
+  const [directorySearch, setDirectorySearch] = useState('');
+  const [directoryTierFilter, setDirectoryTierFilter] = useState('all'); // 'all' | 'custom' | 'default'
+
+  // Modals for Dynamic Add / Edit items
   const [woodModal, setWoodModal] = useState({ open: false, isEdit: false, key: '', label: '', pct: 0, allowed: 'All Services' });
   const [componentModal, setComponentModal] = useState({ open: false, isEdit: false, key: '', label: '', unit: '', factor: 1.0, desc: '' });
   const [serviceModal, setServiceModal] = useState({ open: false, isEdit: false, key: '', label: '', speed: 100, category: 'Preparation' });
 
-  // Search/Filter queries for dynamic tables
+  // Search queries for dynamic tables
   const [woodSearch, setWoodSearch] = useState('');
   const [componentSearch, setComponentSearch] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
 
+  // Universal Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm & Save',
+    cancelLabel: 'Cancel',
+    variant: 'primary',
+    isLoading: false,
+    onConfirm: null,
+  });
+
+  const searchBoxRef = useRef(null);
+
   // Initial Data Load
   useEffect(() => {
     loadAllData();
+  }, []);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadAllData = async () => {
@@ -218,8 +245,37 @@ export default function AdminPricingDiscountsPage() {
     }
   };
 
+  // Helper to open confirmation dialog
+  const promptConfirmation = ({
+    title,
+    message,
+    confirmLabel = 'Confirm & Save',
+    variant = 'primary',
+    onConfirm,
+  }) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      confirmLabel,
+      cancelLabel: 'Cancel',
+      variant,
+      isLoading: false,
+      onConfirm: async () => {
+        try {
+          setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+          await onConfirm();
+        } finally {
+          setConfirmModal((prev) => ({ ...prev, isOpen: false, isLoading: false }));
+        }
+      },
+    });
+  };
+
+  // --------------------------------------------------------------------------
   // Save Engine Configuration (Tabs 1 through 5)
-  const handleSaveEngineConfig = async (overrideData = null) => {
+  // --------------------------------------------------------------------------
+  const executeSaveEngineConfig = async (overrideData = null, successNote = null) => {
     setSaving(true);
     setError(null);
     setSuccessMsg(null);
@@ -231,13 +287,24 @@ export default function AdminPricingDiscountsPage() {
         minimumJobPrice: dataToSave.minJob?.near || 2500,
       });
       setEngineConfig(dataToSave);
-      setSuccessMsg('Estimator pricing configuration successfully saved to MongoDB and synchronized live!');
+      setSuccessMsg(successNote || 'Estimator pricing configuration successfully saved and live calculation engine synchronized!');
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err) {
       setError(err?.message || 'Failed to save pricing configuration.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveEngineConfig = (overrideData = null, customNote = null) => {
+    promptConfirmation({
+      title: 'Publish Pricing Engine Configuration?',
+      message:
+        'Are you sure you want to save and publish these rates? The live calculation engine, instant customer quotes, and contractor portal estimates will immediately reflect these updated rates across the platform.',
+      confirmLabel: 'Confirm & Publish Rates',
+      variant: 'primary',
+      onConfirm: () => executeSaveEngineConfig(overrideData, customNote),
+    });
   };
 
   // --------------------------------------------------------------------------
@@ -292,7 +359,7 @@ export default function AdminPricingDiscountsPage() {
   };
 
   // --------------------------------------------------------------------------
-  // Tab 3 Handlers: Wood Species & Materials (Add / Edit / Delete)
+  // Tab 3 Handlers: Wood Species & Materials
   // --------------------------------------------------------------------------
   const handleSaveWoodSpecies = () => {
     const rawKey = woodModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
@@ -310,136 +377,258 @@ export default function AdminPricingDiscountsPage() {
     };
     const updated = { ...engineConfig, wood: updatedWood };
     setWoodModal({ open: false, isEdit: false, key: '', label: '', pct: 0, allowed: 'All Services' });
-    handleSaveEngineConfig(updated);
+    promptConfirmation({
+      title: woodModal.isEdit ? 'Update Wood Species?' : 'Add Wood Species?',
+      message: `Confirm saving wood species "${woodModal.label.trim()}". This will immediately update questionnaire options and quote calculations.`,
+      confirmLabel: 'Save Species',
+      onConfirm: () => executeSaveEngineConfig(updated, `Wood species "${woodModal.label.trim()}" saved.`),
+    });
   };
 
-  // Reusable Enterprise Delete Modal State
-  const [deleteItemConfirm, setDeleteItemConfirm] = useState(null);
-
   const handleDeleteWoodSpecies = (key) => {
-    setDeleteItemConfirm({
-      type: 'wood',
-      key,
+    const label = engineConfig.wood[key]?.label || key;
+    promptConfirmation({
       title: 'Delete Wood Species?',
-      label: engineConfig.wood[key]?.label || key,
+      message: `Are you sure you want to permanently delete "${label}" (${key})? This will update the estimator matrix immediately.`,
+      confirmLabel: 'Delete Species',
+      variant: 'danger',
+      onConfirm: () => {
+        const updatedWood = { ...engineConfig.wood };
+        delete updatedWood[key];
+        return executeSaveEngineConfig({ ...engineConfig, wood: updatedWood }, `Wood species "${label}" deleted.`);
+      },
+    });
+  };
+
+  // --------------------------------------------------------------------------
+  // Tab 4 Handlers: Deck Components
+  // --------------------------------------------------------------------------
+  const handleSaveComponent = () => {
+    const rawKey = componentModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
+    if (!rawKey || !componentModal.label.trim()) {
+      alert('Please provide a valid component key and title.');
+      return;
+    }
+    const updatedAreas = {
+      ...engineConfig.areas,
+      [rawKey]: {
+        label: componentModal.label.trim(),
+        unit: componentModal.unit.trim() || 'Unit',
+        factor: Number(componentModal.factor),
+        desc: componentModal.desc.trim() || '',
+      },
+    };
+    const updated = { ...engineConfig, areas: updatedAreas };
+    setComponentModal({ open: false, isEdit: false, key: '', label: '', unit: '', factor: 1.0, desc: '' });
+    promptConfirmation({
+      title: componentModal.isEdit ? 'Update Deck Component?' : 'Add Deck Component?',
+      message: `Confirm saving deck component "${componentModal.label.trim()}". Surface area calculations will update across all portals.`,
+      confirmLabel: 'Save Component',
+      onConfirm: () => executeSaveEngineConfig(updated, `Deck component "${componentModal.label.trim()}" saved.`),
     });
   };
 
   const handleDeleteComponent = (key) => {
-    setDeleteItemConfirm({
-      type: 'component',
-      key,
+    const label = engineConfig.areas[key]?.label || key;
+    promptConfirmation({
       title: 'Delete Deck Component?',
-      label: engineConfig.areas[key]?.label || key,
+      message: `Are you sure you want to permanently delete component "${label}" (${key})?`,
+      confirmLabel: 'Delete Component',
+      variant: 'danger',
+      onConfirm: () => {
+        const updatedAreas = { ...engineConfig.areas };
+        delete updatedAreas[key];
+        return executeSaveEngineConfig({ ...engineConfig, areas: updatedAreas }, `Component "${label}" deleted.`);
+      },
+    });
+  };
+
+  // --------------------------------------------------------------------------
+  // Tab 5 Handlers: Scope of Work & Production Speeds
+  // --------------------------------------------------------------------------
+  const handleSaveService = () => {
+    const rawKey = serviceModal.key.trim().toLowerCase().replace(/[\s\/-]+/g, '_');
+    if (!rawKey || !serviceModal.label.trim()) {
+      alert('Please provide a valid service key and name.');
+      return;
+    }
+    const updatedProd = {
+      ...engineConfig.production,
+      [rawKey]: {
+        label: serviceModal.label.trim(),
+        speed: Number(serviceModal.speed),
+        category: serviceModal.category || 'Preparation',
+      },
+    };
+    const updated = { ...engineConfig, production: updatedProd };
+    setServiceModal({ open: false, isEdit: false, key: '', label: '', speed: 100, category: 'Preparation' });
+    promptConfirmation({
+      title: serviceModal.isEdit ? 'Update Restoration Service?' : 'Add Restoration Service?',
+      message: `Confirm saving service "${serviceModal.label.trim()}" with speed ${serviceModal.speed} sq ft/hr. Billable labor calculations will synchronize.`,
+      confirmLabel: 'Save Service',
+      onConfirm: () => executeSaveEngineConfig(updated, `Restoration service "${serviceModal.label.trim()}" saved.`),
     });
   };
 
   const handleDeleteService = (key) => {
-    setDeleteItemConfirm({
-      type: 'service',
-      key,
+    const label = engineConfig.production[key]?.label || key;
+    promptConfirmation({
       title: 'Delete Restoration Service?',
-      label: engineConfig.production[key]?.label || key,
+      message: `Are you sure you want to permanently delete service "${label}" (${key})?`,
+      confirmLabel: 'Delete Service',
+      variant: 'danger',
+      onConfirm: () => {
+        const updatedProd = { ...engineConfig.production };
+        delete updatedProd[key];
+        return executeSaveEngineConfig({ ...engineConfig, production: updatedProd }, `Service "${label}" deleted.`);
+      },
     });
   };
 
-  const executeDeleteItemConfirm = () => {
-    if (!deleteItemConfirm) return;
-    const { type, key } = deleteItemConfirm;
-    if (type === 'wood') {
-      const updatedWood = { ...engineConfig.wood };
-      delete updatedWood[key];
-      handleSaveEngineConfig({ ...engineConfig, wood: updatedWood });
-    } else if (type === 'component') {
-      const updatedAreas = { ...engineConfig.areas };
-      delete updatedAreas[key];
-      handleSaveEngineConfig({ ...engineConfig, areas: updatedAreas });
-    } else if (type === 'service') {
-      const updatedProd = { ...engineConfig.production };
-      delete updatedProd[key];
-      handleSaveEngineConfig({ ...engineConfig, production: updatedProd });
-    }
-    setDeleteItemConfirm(null);
-  };
-
   // --------------------------------------------------------------------------
-  // Tab 6 Handlers: Contractor Trade Discounts (Dedicated Separate Tab)
+  // Tab 6 Handlers: Global Default & Individual Contractor Discounts
   // --------------------------------------------------------------------------
-  const handleSaveDefaultDiscount = async () => {
-    setSavingDefaultDiscount(true);
-    setError(null);
-    try {
-      await adminApi.updateDefaultDiscount(Number(defaultDiscountVal), defaultReason || 'Admin updated wholesale partner rate');
-      setSuccessMsg(`Default contractor trade discount updated to ${defaultDiscountVal}%.`);
-      setTimeout(() => setSuccessMsg(null), 4000);
-      loadAllData();
-    } catch (err) {
-      setError(err?.message || 'Failed to update default contractor discount.');
-    } finally {
-      setSavingDefaultDiscount(false);
-    }
-  };
-
-  const handleSaveContractorOverride = async () => {
-    if (!selectedContractor) return;
-    setSavingOverride(true);
-    setError(null);
-    try {
-      await adminApi.setContractorDiscount(
-        selectedContractor._id || selectedContractor.id,
-        Number(contractorCustomDiscount),
-        overrideReason || `Custom tier applied for ${selectedContractor.fullName}`
-      );
-      setSuccessMsg(`Custom discount set to ${contractorCustomDiscount}% for ${selectedContractor.fullName}.`);
-      setSelectedContractor(null);
-      setTimeout(() => setSuccessMsg(null), 4000);
-      loadAllData();
-    } catch (err) {
-      setError(err?.message || 'Failed to update contractor custom discount.');
-    } finally {
-      setSavingOverride(false);
-    }
-  };
-
-  const handleSaveInlineContractorDiscount = async (contractorId) => {
-    const rawVal = editingContractorDiscounts[contractorId];
-    if (rawVal === undefined || rawVal === '') {
-      alert('Please enter a discount percentage.');
+  const handleSaveDefaultDiscount = () => {
+    const targetVal = Number(defaultDiscountVal);
+    if (isNaN(targetVal) || targetVal < 0 || targetVal > 50) {
+      alert('Default wholesale discount must be between 0% and 50%.');
       return;
     }
-    const discountVal = Number(rawVal);
-    if (isNaN(discountVal) || discountVal < 0 || discountVal > 50) {
-      alert('Discount rate must be between 0% and 50%.');
+    promptConfirmation({
+      title: 'Update Global Default Wholesale Discount?',
+      message: `Are you sure you want to change the platform-wide default contractor discount to ${targetVal}%? All contractors without an individual custom override will automatically receive this new discount rate immediately in their portal and quote calculations. Contractors with customized overrides will remain unaffected.`,
+      confirmLabel: 'Update Global Default %',
+      variant: 'primary',
+      onConfirm: async () => {
+        setSavingDefaultDiscount(true);
+        setError(null);
+        try {
+          await adminApi.updateDefaultDiscount(targetVal, defaultReason || 'Admin updated platform default wholesale trade discount');
+          setSuccessMsg(`✓ Global default contractor discount updated to ${targetVal}%.`);
+          setTimeout(() => setSuccessMsg(null), 4500);
+          await loadAllData();
+        } catch (err) {
+          setError(err?.message || 'Failed to update default contractor discount.');
+        } finally {
+          setSavingDefaultDiscount(false);
+        }
+      },
+    });
+  };
+
+  const handleSelectContractorForTuning = (contractor) => {
+    setSelectedContractorForTuning(contractor);
+    const existingVal = contractor.hasCustomDiscount ? contractor.customDiscount : (contractor.rawDiscount || defaultDiscountVal);
+    setTuneDiscountVal(existingVal);
+    setTuneReasonVal(contractor.overrideReason || '');
+    setIsSearchDropdownOpen(false);
+    setContractorSearchQuery('');
+  };
+
+  const handleApplyIndividualDiscount = () => {
+    if (!selectedContractorForTuning) return;
+    const targetVal = Number(tuneDiscountVal);
+    if (isNaN(targetVal) || targetVal < 0 || targetVal > 50) {
+      alert('Custom discount rate must be between 0% and 50%.');
       return;
     }
-    setSavingContractorId(contractorId);
-    try {
-      await adminApi.setContractorDiscount(
-        contractorId,
-        discountVal,
-        'Admin tuned individual contractor trade discount'
-      );
-      setSuccessMsg(`✓ Contractor discount saved to ${discountVal}% in database.`);
-      setTimeout(() => setSuccessMsg(null), 4000);
-      setDiscountData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          contractors: (prev.contractors || []).map((c) =>
-            ((c._id || c.id) === contractorId)
-              ? { ...c, customDiscount: discountVal }
-              : c
-          ),
-        };
+
+    const contractorName = selectedContractorForTuning.fullName || selectedContractorForTuning.name;
+    const contractorId = selectedContractorForTuning.id || selectedContractorForTuning._id;
+
+    promptConfirmation({
+      title: 'Apply Individual Contractor Custom Discount?',
+      message: `Are you sure you want to assign an isolated ${targetVal}% custom discount for ${contractorName}? This contractor will retain this override permanently, completely isolated from global platform default changes.`,
+      confirmLabel: 'Apply Custom Rate',
+      variant: 'primary',
+      onConfirm: async () => {
+        setSavingIndividualDiscount(true);
+        setError(null);
+        try {
+          await adminApi.setContractorDiscount(
+            contractorId,
+            targetVal,
+            tuneReasonVal || `Admin tuned custom discount for ${contractorName}`
+          );
+          setSuccessMsg(`✓ Custom trade discount of ${targetVal}% saved for ${contractorName}.`);
+          setTimeout(() => setSuccessMsg(null), 4500);
+          setSelectedContractorForTuning(null);
+          await loadAllData();
+        } catch (err) {
+          setError(err?.message || 'Failed to update contractor custom discount.');
+        } finally {
+          setSavingIndividualDiscount(false);
+        }
+      },
+    });
+  };
+
+  const handleResetContractorDiscount = (contractor) => {
+    const contractorName = contractor.fullName || contractor.name;
+    const contractorId = contractor.id || contractor._id;
+
+    promptConfirmation({
+      title: 'Reset to Platform Default Discount?',
+      message: `Are you sure you want to remove the custom override for ${contractorName} and revert them back to the active platform default (${defaultDiscountVal}%)?`,
+      confirmLabel: 'Reset to Default',
+      variant: 'danger',
+      onConfirm: async () => {
+        setError(null);
+        try {
+          await adminApi.resetContractorDiscount(
+            contractorId,
+            `Admin reset ${contractorName} to global default discount`
+          );
+          setSuccessMsg(`✓ Reverted ${contractorName} to platform default discount (${defaultDiscountVal}%).`);
+          setTimeout(() => setSuccessMsg(null), 4500);
+          if (selectedContractorForTuning && (selectedContractorForTuning.id === contractorId || selectedContractorForTuning._id === contractorId)) {
+            setSelectedContractorForTuning(null);
+          }
+          await loadAllData();
+        } catch (err) {
+          setError(err?.message || 'Failed to reset contractor discount.');
+        }
+      },
+    });
+  };
+
+  // Filtered Search Results for Dropdown
+  const searchDropdownResults = useMemo(() => {
+    if (!contractorSearchQuery.trim() || !discountData?.contractors) return [];
+    const q = contractorSearchQuery.toLowerCase();
+    return discountData.contractors.filter((c) => {
+      const name = (c.fullName || c.name || '').toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      const biz = (c.businessName || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || biz.includes(q);
+    });
+  }, [discountData?.contractors, contractorSearchQuery]);
+
+  // Filtered Contractor Directory Matrix
+  const filteredContractors = useMemo(() => {
+    if (!discountData?.contractors) return [];
+    let list = [...discountData.contractors];
+
+    if (directoryTierFilter === 'custom') {
+      list = list.filter((c) => c.hasCustomDiscount);
+    } else if (directoryTierFilter === 'default') {
+      list = list.filter((c) => !c.hasCustomDiscount);
+    }
+
+    if (directorySearch.trim()) {
+      const q = directorySearch.toLowerCase();
+      list = list.filter((c) => {
+        const name = (c.fullName || c.name || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        const biz = (c.businessName || '').toLowerCase();
+        return name.includes(q) || email.includes(q) || biz.includes(q);
       });
-    } catch (err) {
-      alert(`Error updating contractor discount: ${err?.message || 'Failed to save'}`);
-    } finally {
-      setSavingContractorId(null);
     }
-  };
 
-  // Filtered Lists for Dynamic Search
+    return list;
+  }, [discountData?.contractors, directoryTierFilter, directorySearch]);
+
+  // Filtered Lists for Dynamic Search (Tabs 3-5)
   const filteredWood = useMemo(() => {
     return Object.entries(engineConfig.wood || {}).filter(([key, item]) => {
       const q = woodSearch.toLowerCase();
@@ -484,6 +673,9 @@ export default function AdminPricingDiscountsPage() {
     );
   }
 
+  const customOverridesCount = discountData?.contractors?.filter((c) => c.hasCustomDiscount)?.length || 0;
+  const totalContractorsCount = discountData?.contractors?.length || 0;
+
   return (
     <div style={styles.pageContainer}>
       {/* HEADER SECTION */}
@@ -506,7 +698,7 @@ export default function AdminPricingDiscountsPage() {
               <polyline points="17 21 17 13 7 13 7 21" />
               <polyline points="7 3 7 8 15 8" />
             </svg>
-            {saving ? 'Saving to Database...' : 'Save & Publish Pricing'}
+            {saving ? 'Publishing Matrix...' : 'Save & Publish Pricing'}
           </button>
         </div>
       </div>
@@ -525,7 +717,7 @@ export default function AdminPricingDiscountsPage() {
         </div>
       )}
 
-      {/* HORIZONTAL TAB BAR (6 TABS MAXIMUM) */}
+      {/* HORIZONTAL TAB BAR (6 APPROVED TABS) */}
       <div style={styles.tabBar}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -554,6 +746,13 @@ export default function AdminPricingDiscountsPage() {
                 Universal macro-pricing levers that directly control labor adjustments, multi-coat surcharges, and crew dispatch minimums.
               </p>
             </div>
+            <button
+              onClick={() => handleSaveEngineConfig(null, 'Master rates & thresholds successfully saved.')}
+              disabled={saving}
+              style={styles.sectionSaveBtn}
+            >
+              Save Master Rates
+            </button>
           </div>
 
           <div style={styles.formGrid}>
@@ -762,11 +961,20 @@ export default function AdminPricingDiscountsPage() {
                 Edit low and high square foot rates for each chemical preparation tier across all finish coatings.
               </p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '12px', color: '#64748B' }}>Current Active Interpolator: </span>
-              <strong style={{ color: '#034EA2' }}>
-                {Math.round((engineConfig.ratePosition !== undefined ? engineConfig.ratePosition : 0.5) * 100)}% Midpoint
-              </strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>Active Interpolator: </span>
+                <strong style={{ color: '#034EA2' }}>
+                  {Math.round((engineConfig.ratePosition !== undefined ? engineConfig.ratePosition : 0.5) * 100)}% Midpoint
+                </strong>
+              </div>
+              <button
+                onClick={() => handleSaveEngineConfig(null, 'Base rate card matrix successfully saved.')}
+                disabled={saving}
+                style={styles.sectionSaveBtn}
+              >
+                Save Rate Matrix
+              </button>
             </div>
           </div>
 
@@ -899,7 +1107,7 @@ export default function AdminPricingDiscountsPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* TAB 3: WOOD SPECIES & MATERIALS (DYNAMIC ADD / EDIT / DELETE) */}
+      {/* TAB 3: WOOD SPECIES & MATERIALS */}
       {/* ==================================================================== */}
       {activeTab === 'wood_species' && (
         <div style={styles.tabContentCard}>
@@ -954,18 +1162,16 @@ export default function AdminPricingDiscountsPage() {
                       <span
                         style={{
                           ...styles.difficultyBadge,
-                          backgroundColor: isPositive ? '#FEF2F2' : isNegative ? '#EFF6FF' : '#F8FAFC',
-                          color: isPositive ? '#B91C1C' : isNegative ? '#034EA2' : '#475569',
-                          borderColor: isPositive ? '#FECACA' : isNegative ? '#BFDBFE' : '#E2E8F0',
+                          backgroundColor: isPositive ? '#FEF3C7' : isNegative ? '#DCFCE7' : '#F1F5F9',
+                          color: isPositive ? '#92400E' : isNegative ? '#15803D' : '#475569',
+                          borderColor: isPositive ? '#FCD34D' : isNegative ? '#86EFAC' : '#CBD5E1',
                         }}
                       >
-                        {isPositive ? `+${pctVal}% Labor Surcharge` : isNegative ? `${pctVal}% Labor Discount` : '0% Baseline Pine'}
+                        {isPositive ? `+${pctVal}% labor difficulty` : isNegative ? `${pctVal}% discount` : '0% standard'}
                       </span>
                     </td>
                     <td style={styles.tableTd}>
-                      <span style={{ fontSize: '12px', color: '#475569' }}>
-                        {item.allowed || (key === 'composite' || key === 'trex' ? 'Cleaning Only' : 'All Services')}
-                      </span>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>{item.allowed || 'All Services'}</span>
                     </td>
                     <td style={{ ...styles.tableTd, textAlign: 'right' }}>
                       <button
@@ -980,23 +1186,15 @@ export default function AdminPricingDiscountsPage() {
                           })
                         }
                         style={styles.editActionBtn}
-                        title="Edit Species"
+                        title="Edit Wood Species"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteWoodSpecies(key)}
                         style={styles.deleteActionBtn}
-                        title="Delete Species"
+                        title="Delete Wood Species"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
                         Delete
                       </button>
                     </td>
@@ -1009,15 +1207,15 @@ export default function AdminPricingDiscountsPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* TAB 4: DECK ARCHITECTURAL COMPONENTS (DYNAMIC ADD / EDIT / DELETE) */}
+      {/* TAB 4: DECK ARCHITECTURAL COMPONENTS */}
       {/* ==================================================================== */}
       {activeTab === 'deck_components' && (
         <div style={styles.tabContentCard}>
           <div style={styles.sectionHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>Deck Architectural Components & Surface Area Multipliers</h2>
+              <h2 style={styles.sectionTitle}>Deck Architectural Components & Conversion Factors</h2>
               <p style={styles.sectionDesc}>
-                Manage components customers can add and calibrate how dimensions or counts convert to billable square feet ($A$).
+                Configure surface conversion multipliers for railings, stairs, benches, fascia, and framing elements.
               </p>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1029,10 +1227,10 @@ export default function AdminPricingDiscountsPage() {
                 style={styles.searchInput}
               />
               <button
-                onClick={() => setComponentModal({ open: true, isEdit: false, key: '', label: '', unit: 'Linear Feet (LF)', factor: 2.0, desc: '' })}
+                onClick={() => setComponentModal({ open: true, isEdit: false, key: '', label: '', unit: 'Linear Feet (LF)', factor: 1.5, desc: '' })}
                 style={styles.addItemBtn}
               >
-                + Add Deck Component
+                + Add Component
               </button>
             </div>
           </div>
@@ -1041,86 +1239,75 @@ export default function AdminPricingDiscountsPage() {
             <thead>
               <tr>
                 <th style={styles.tableTh}>Component Key</th>
-                <th style={styles.tableTh}>Architectural Feature</th>
-                <th style={styles.tableTh}>Measurement Unit</th>
-                <th style={styles.tableTh}>Area Conversion Multiplier</th>
-                <th style={styles.tableTh}>Formula Description</th>
+                <th style={styles.tableTh}>Feature Title</th>
+                <th style={styles.tableTh}>Input Measurement Unit</th>
+                <th style={styles.tableTh}>Area Conversion Factor</th>
+                <th style={styles.tableTh}>Calculation Formula / Description</th>
                 <th style={{ ...styles.tableTh, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredComponents.map(([key, item]) => {
-                return (
-                  <tr key={key} style={styles.tableRow}>
-                    <td style={styles.tableTd}>
-                      <code style={styles.codeBadge}>{key}</code>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <strong>{item.label}</strong>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <span style={{ fontSize: '12px', color: '#475569' }}>{item.unit}</span>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <strong style={{ color: '#034EA2', fontSize: '14px' }}>
-                        {item.factor} {item.unit?.includes('%') ? 'of floor' : 'sq ft / unit'}
-                      </strong>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <span style={{ fontSize: '12px', color: '#64748B' }}>{item.desc || 'Standard component calculation'}</span>
-                    </td>
-                    <td style={{ ...styles.tableTd, textAlign: 'right' }}>
-                      <button
-                        onClick={() =>
-                          setComponentModal({
-                            open: true,
-                            isEdit: true,
-                            key,
-                            label: item.label,
-                            unit: item.unit,
-                            factor: item.factor,
-                            desc: item.desc,
-                          })
-                        }
-                        style={styles.editActionBtn}
-                        title="Edit Multiplier"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteComponent(key)}
-                        style={styles.deleteActionBtn}
-                        title="Delete Component"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredComponents.map(([key, item]) => (
+                <tr key={key} style={styles.tableRow}>
+                  <td style={styles.tableTd}>
+                    <code style={styles.codeBadge}>{key}</code>
+                  </td>
+                  <td style={styles.tableTd}>
+                    <strong>{item.label}</strong>
+                  </td>
+                  <td style={styles.tableTd}>
+                    <span style={styles.categoryPill}>{item.unit}</span>
+                  </td>
+                  <td style={styles.tableTd}>
+                    <strong style={{ color: '#034EA2', fontSize: '14px' }}>&times;{item.factor}</strong>
+                    <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '4px' }}>sq ft / unit</span>
+                  </td>
+                  <td style={styles.tableTd}>
+                    <span style={{ fontSize: '12px', color: '#475569' }}>{item.desc || '—'}</span>
+                  </td>
+                  <td style={{ ...styles.tableTd, textAlign: 'right' }}>
+                    <button
+                      onClick={() =>
+                        setComponentModal({
+                          open: true,
+                          isEdit: true,
+                          key,
+                          label: item.label,
+                          unit: item.unit,
+                          factor: item.factor,
+                          desc: item.desc || '',
+                        })
+                      }
+                      style={styles.editActionBtn}
+                      title="Edit Component"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteComponent(key)}
+                      style={styles.deleteActionBtn}
+                      title="Delete Component"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
       {/* ==================================================================== */}
-      {/* TAB 5: RESTORATION SCOPE & PRODUCTION (DYNAMIC ADD / EDIT / DELETE) */}
+      {/* TAB 5: SCOPE OF WORK & PRODUCTION */}
       {/* ==================================================================== */}
       {activeTab === 'scope_of_work' && (
         <div style={styles.tabContentCard}>
           <div style={styles.sectionHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>Restoration Scope & Production Speeds</h2>
+              <h2 style={styles.sectionTitle}>Scope of Work & Production Speeds</h2>
               <p style={styles.sectionDesc}>
-                Manage active restoration services and technician production rates. Lowering production speeds increases billable labor hours.
+                Define production speeds (sq ft per man-hour) for each restoration phase to calculate billable technician hours.
               </p>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1135,7 +1322,7 @@ export default function AdminPricingDiscountsPage() {
                 onClick={() => setServiceModal({ open: true, isEdit: false, key: '', label: '', speed: 80, category: 'Preparation' })}
                 style={styles.addItemBtn}
               >
-                + Add Restoration Service
+                + Add Service
               </button>
             </div>
           </div>
@@ -1146,7 +1333,7 @@ export default function AdminPricingDiscountsPage() {
                 <th style={styles.tableTh}>Service Key</th>
                 <th style={styles.tableTh}>Service Name</th>
                 <th style={styles.tableTh}>Category</th>
-                <th style={styles.tableTh}>Production Rate (sq ft / man-hour)</th>
+                <th style={styles.tableTh}>Production Speed</th>
                 <th style={styles.tableTh}>Estimated Time for 500 sq ft</th>
                 <th style={{ ...styles.tableTh, textAlign: 'right' }}>Actions</th>
               </tr>
@@ -1188,10 +1375,6 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.editActionBtn}
                         title="Edit Production Speed"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
                         Edit
                       </button>
                       <button
@@ -1199,10 +1382,6 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.deleteActionBtn}
                         title="Delete Service"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
                         Delete
                       </button>
                     </td>
@@ -1215,129 +1394,575 @@ export default function AdminPricingDiscountsPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* TAB 6: CONTRACTOR TRADE DISCOUNTS (DEDICATED SEPARATE TAB) */}
+      {/* TAB 6: CONTRACTOR TRADE DISCOUNTS (ENHANCED WITH TUNING & AUDIT LOGS) */}
       {/* ==================================================================== */}
       {activeTab === 'contractor_discounts' && (
         <div style={styles.tabContentCard}>
           <div style={styles.sectionHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>Contractor Partner Trade Discounts & Overrides</h2>
+              <h2 style={styles.sectionTitle}>Contractor Partner Trade Discounts & Tuning Hub</h2>
               <p style={styles.sectionDesc}>
-                Manage platform wholesale discount policies for certified contractors, including tier adjustments and individual contractor incentives.
+                Manage global wholesale trade discount policies and tune isolated discount overrides for individual contractor partners with live audit trails.
               </p>
             </div>
           </div>
 
-          {/* Default Wholesale Discount Card */}
+          {/* KPI Mini-Cards */}
+          <div style={styles.kpiRow}>
+            <div style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Global Default Wholesale</span>
+              <strong style={{ ...styles.kpiVal, color: '#15803D' }}>{defaultDiscountVal}%</strong>
+              <span style={styles.kpiSub}>Platform Baseline for All Partners</span>
+            </div>
+            <div style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Custom Overrides Active</span>
+              <strong style={{ ...styles.kpiVal, color: '#B45309' }}>{customOverridesCount}</strong>
+              <span style={styles.kpiSub}>Isolated Negotiated Contractor Rates</span>
+            </div>
+            <div style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Standard Platform Tier</span>
+              <strong style={{ ...styles.kpiVal, color: '#034EA2' }}>{totalContractorsCount - customOverridesCount}</strong>
+              <span style={styles.kpiSub}>Contractors on Default Policy</span>
+            </div>
+            <div style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Calculation Engine Status</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }}></span>
+                <strong style={{ fontSize: '15px', color: '#0F2C59' }}>Online & Synchronized</strong>
+              </div>
+              <span style={styles.kpiSub}>Quotes update in real-time</span>
+            </div>
+          </div>
+
+          {/* SECTION 1: GLOBAL DEFAULT POLICY CARD */}
           <div style={styles.discountHighlightBox}>
-            <div>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '800', color: '#15803D' }}>
-                Active Platform Default Policy
-              </span>
-              <h3 style={{ margin: '4px 0', fontSize: '20px', color: '#065F46' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '800', color: '#15803D', letterSpacing: '0.04em' }}>
+                  Active Platform Default Policy
+                </span>
+                <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '12px', fontWeight: '800' }}>
+                  GLOBAL SETTING
+                </span>
+              </div>
+              <h3 style={{ margin: '2px 0 6px 0', fontSize: '20px', color: '#065F46', fontWeight: '800' }}>
                 Standard Wholesale Trade Tier ({defaultDiscountVal}%)
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#047857' }}>
-                Automatically applied on contractor quote cards in the Contractor Portal unless customized below.
+              <p style={{ margin: 0, fontSize: '13px', color: '#047857', lineHeight: '1.45' }}>
+                Automatically applies on contractor quote calculations in the Contractor Portal. Updating this global rate applies to all partners <strong>except</strong> those with an individual customized override below.
               </p>
+
+              {/* Quick Preset Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', color: '#065F46', fontWeight: '700' }}>Presets:</span>
+                {[5, 8, 10, 12, 15, 20].map((rate) => (
+                  <button
+                    key={rate}
+                    type="button"
+                    onClick={() => setDefaultDiscountVal(rate)}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: defaultDiscountVal === rate ? '1.5px solid #059669' : '1px solid #A7F3D0',
+                      backgroundColor: defaultDiscountVal === rate ? '#059669' : '#FFFFFF',
+                      color: defaultDiscountVal === rate ? '#FFFFFF' : '#047857',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {rate}%
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={styles.inputPrefixWrap}>
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
-                  step="0.5"
-                  value={defaultDiscountVal}
-                  onChange={(e) => setDefaultDiscountVal(e.target.value)}
-                  style={{ ...styles.numericInput, width: '80px', color: '#15803D', fontWeight: '900' }}
-                />
-                <span style={styles.inputSuffix}>%</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end', minWidth: '240px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={styles.inputPrefixWrap}>
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    step="0.5"
+                    value={defaultDiscountVal}
+                    onChange={(e) => setDefaultDiscountVal(e.target.value)}
+                    style={{ ...styles.numericInput, width: '85px', color: '#15803D', fontWeight: '900', fontSize: '16px' }}
+                  />
+                  <span style={styles.inputSuffix}>%</span>
+                </div>
+                <button
+                  onClick={handleSaveDefaultDiscount}
+                  disabled={savingDefaultDiscount}
+                  style={styles.secondarySaveBtn}
+                >
+                  {savingDefaultDiscount ? 'Saving...' : 'Update Default %'}
+                </button>
               </div>
-              <button
-                onClick={handleSaveDefaultDiscount}
-                disabled={savingDefaultDiscount}
-                style={styles.secondarySaveBtn}
-              >
-                {savingDefaultDiscount ? 'Saving...' : 'Update Default %'}
-              </button>
+              <input
+                type="text"
+                placeholder="Optional reason for audit log..."
+                value={defaultReason}
+                onChange={(e) => setDefaultReason(e.target.value)}
+                style={{ ...styles.searchInput, width: '240px', fontSize: '11.5px', padding: '6px 10px' }}
+              />
             </div>
           </div>
 
-          {/* Individual Contractor Directory with Custom Overrides */}
-          <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F2C59', marginTop: '28px', marginBottom: '12px' }}>
-            Registered Contractors & Custom Overrides ({discountData?.contractors?.length || 0})
-          </h3>
+          {/* SECTION 2: TUNE INDIVIDUAL CONTRACTOR DISCOUNT (DIRECT SEARCH & ASSIGN) */}
+          <div style={styles.tuningContainerCard}>
+            <div style={styles.tuningHeaderRow}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={styles.tuningSectionBadge}>INDIVIDUAL TUNING ENGINE</span>
+                  <span style={{ fontSize: '11px', color: '#64748B' }}>Isolated Contractor Overrides</span>
+                </div>
+                <h3 style={{ margin: '4px 0 2px 0', fontSize: '17px', color: '#0F2C59', fontWeight: '800' }}>
+                  Tune Individual Contractor Trade Discount
+                </h3>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#64748B' }}>
+                  Search for any registered contractor to tune an isolated custom discount percentage. This custom rate will <strong>never</strong> be altered when global default discounts change.
+                </p>
+              </div>
+            </div>
 
-          <table style={styles.dataTable}>
-            <thead>
-              <tr>
-                <th style={styles.tableTh}>Contractor Name & Company</th>
-                <th style={styles.tableTh}>Email Address</th>
-                <th style={styles.tableTh}>Verification Tier</th>
-                <th style={styles.tableTh}>Completed Projects</th>
-                <th style={styles.tableTh}>Effective Trade Discount</th>
-                <th style={{ ...styles.tableTh, textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(discountData?.contractors || []).map((contractor) => {
-                const effective = contractor.customDiscount !== undefined ? contractor.customDiscount : defaultDiscountVal;
-                const hasCustom = contractor.customDiscount !== undefined;
-                return (
-                  <tr key={contractor._id || contractor.id} style={styles.tableRow}>
-                    <td style={styles.tableTd}>
-                      <strong>{contractor.fullName}</strong>
-                      <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>
-                        {contractor.businessName || 'Independent Pro'}
+            {/* Contractor Search Dropdown / Autocomplete */}
+            <div style={{ position: 'relative', marginTop: '16px' }} ref={searchBoxRef}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ position: 'relative', flex: 1, maxWidth: '520px' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search contractor by name, company, or email to tune discount..."
+                    value={contractorSearchQuery}
+                    onFocus={() => setIsSearchDropdownOpen(true)}
+                    onChange={(e) => {
+                      setContractorSearchQuery(e.target.value);
+                      setIsSearchDropdownOpen(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '13px',
+                      color: '#0F2C59',
+                      outline: 'none',
+                    }}
+                  />
+                  {contractorSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setContractorSearchQuery('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '14px',
+                        color: '#94A3B8',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  or click <strong>"Tune Discount"</strong> on any contractor in the directory table below.
+                </span>
+              </div>
+
+              {/* Autocomplete Dropdown */}
+              {isSearchDropdownOpen && searchDropdownResults.length > 0 && (
+                <div style={styles.searchDropdownList}>
+                  {searchDropdownResults.map((c) => (
+                    <div
+                      key={c.id || c._id}
+                      onClick={() => handleSelectContractorForTuning(c)}
+                      style={styles.searchDropdownItem}
+                    >
+                      <div style={styles.contractorAvatarBadge}>
+                        {(c.fullName || c.name || 'C')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ fontSize: '13px', color: '#0F2C59', display: 'block' }}>
+                          {c.fullName || c.name}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>
+                          {c.businessName || 'Independent Pro'} • {c.email}
+                        </span>
+                      </div>
+                      <div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: c.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
+                            color: c.hasCustomDiscount ? '#B45309' : '#15803D',
+                          }}
+                        >
+                          {c.hasCustomDiscount ? `Custom: ${c.customDiscount}%` : `Default: ${defaultDiscountVal}%`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Contractor Active Tuning Panel */}
+            {selectedContractorForTuning ? (
+              <div style={styles.activeTuningBox}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ ...styles.contractorAvatarBadge, width: '42px', height: '42px', fontSize: '18px' }}>
+                      {(selectedContractorForTuning.fullName || selectedContractorForTuning.name || 'C')[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', color: '#0F2C59', fontWeight: '800' }}>
+                          {selectedContractorForTuning.fullName || selectedContractorForTuning.name}
+                        </h4>
+                        <span style={styles.verifiedTierPill}>
+                          ✓ {selectedContractorForTuning.verificationStatus || 'APPROVED'}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '12px', color: '#64748B' }}>
+                        {selectedContractorForTuning.businessName || 'Independent Pro'} • {selectedContractorForTuning.email}
                       </span>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <span style={{ fontSize: '13px', color: '#334155' }}>{contractor.email}</span>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <span style={styles.verifiedTierPill}>
-                        ✓ {contractor.verificationStatus || 'APPROVED'}
-                      </span>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <strong style={{ color: '#034EA2' }}>{contractor.completedJobsCount || 0} jobs</strong>
-                    </td>
-                    <td style={styles.tableTd}>
-                      <span
-                        style={{
-                          ...styles.discountRatePill,
-                          backgroundColor: hasCustom ? '#FEF3C7' : '#DCFCE7',
-                          color: hasCustom ? '#92400E' : '#15803D',
-                          borderColor: hasCustom ? '#FCD34D' : '#86EFAC',
-                        }}
-                      >
-                        {effective}% {hasCustom ? '(Custom Override)' : '(Default Platform)'}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.tableTd, textAlign: 'right' }}>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>Current Status:</span>
+                    <span
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        backgroundColor: selectedContractorForTuning.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
+                        color: selectedContractorForTuning.hasCustomDiscount ? '#92400E' : '#15803D',
+                        border: selectedContractorForTuning.hasCustomDiscount ? '1px solid #FCD34D' : '1px solid #86EFAC',
+                      }}
+                    >
+                      {selectedContractorForTuning.hasCustomDiscount
+                        ? `★ Custom Override (${selectedContractorForTuning.customDiscount}%)`
+                        : `✓ Global Default (${defaultDiscountVal}%)`}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Assign Custom Trade Discount (%):
+                    </label>
+                    <div style={styles.inputPrefixWrap}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        step="1"
+                        value={tuneDiscountVal}
+                        onChange={(e) => setTuneDiscountVal(e.target.value)}
+                        style={{ ...styles.numericInput, width: '90px', fontWeight: '800', color: '#0F2C59' }}
+                      />
+                      <span style={styles.inputSuffix}>%</span>
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+                      Reason / Incentive Agreement (Saved in Audit Log):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Platinum Partner (high volume commercial projects)"
+                      value={tuneReasonVal}
+                      onChange={(e) => setTuneReasonVal(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                    <button
+                      type="button"
+                      onClick={handleApplyIndividualDiscount}
+                      disabled={savingIndividualDiscount}
+                      style={styles.modalSaveBtn}
+                    >
+                      {savingIndividualDiscount ? 'Saving...' : 'Apply Custom %'}
+                    </button>
+
+                    {selectedContractorForTuning.hasCustomDiscount && (
                       <button
-                        onClick={() => {
-                          setSelectedContractor(contractor);
-                          setContractorCustomDiscount(effective);
-                          setOverrideReason('');
-                        }}
-                        style={styles.editActionBtn}
+                        type="button"
+                        onClick={() => handleResetContractorDiscount(selectedContractorForTuning)}
+                        style={styles.deleteActionBtn}
+                        title="Revert back to Global Default"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
-                          <circle cx="12" cy="12" r="10" />
-                          <circle cx="12" cy="12" r="6" />
-                          <circle cx="12" cy="12" r="2" />
-                        </svg>
-                        Set Custom %
+                        Reset to Default ({defaultDiscountVal}%)
                       </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedContractorForTuning(null)}
+                      style={styles.cancelBtn}
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preset Chips for tuning */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Quick Presets:</span>
+                  {[8, 10, 12, 15, 18, 20, 25].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      onClick={() => setTuneDiscountVal(rate)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        border: Number(tuneDiscountVal) === rate ? '1.5px solid #0F2C59' : '1px solid #E2E8F0',
+                        backgroundColor: Number(tuneDiscountVal) === rate ? '#0F2C59' : '#F8FAFC',
+                        color: Number(tuneDiscountVal) === rate ? '#FFFFFF' : '#334155',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {rate}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={styles.tuningEmptyHint}>
+                <span>👆 Select any contractor via the search box above or click "Tune Discount" below to assign a customized trade discount.</span>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 3: REGISTERED CONTRACTORS & CUSTOM OVERRIDES MATRIX */}
+          <div style={{ marginTop: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F2C59' }}>
+                  Contractor Trade Discount Directory ({filteredContractors.length})
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Full roster of certified contractors showing effective discounts and override standing
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={directoryTierFilter}
+                  onChange={(e) => setDirectoryTierFilter(e.target.value)}
+                  style={styles.filterSelect}
+                >
+                  <option value="all">All Contractors ({totalContractorsCount})</option>
+                  <option value="custom">Custom Overrides Only ({customOverridesCount})</option>
+                  <option value="default">Default Policy Only ({totalContractorsCount - customOverridesCount})</option>
+                </select>
+
+                <input
+                  type="text"
+                  placeholder="Filter contractors..."
+                  value={directorySearch}
+                  onChange={(e) => setDirectorySearch(e.target.value)}
+                  style={styles.searchInput}
+                />
+              </div>
+            </div>
+
+            <table style={styles.dataTable}>
+              <thead>
+                <tr>
+                  <th style={styles.tableTh}>Contractor Name & Company</th>
+                  <th style={styles.tableTh}>Contact Info</th>
+                  <th style={styles.tableTh}>Verification Status</th>
+                  <th style={styles.tableTh}>Completed Projects</th>
+                  <th style={styles.tableTh}>Effective Trade Discount</th>
+                  <th style={styles.tableTh}>Override Note</th>
+                  <th style={{ ...styles.tableTh, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredContractors.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}>
+                      No contractors match the current filter criteria.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ) : (
+                  filteredContractors.map((contractor) => {
+                    const hasCustom = contractor.hasCustomDiscount;
+                    const effective = hasCustom ? contractor.customDiscount : defaultDiscountVal;
+                    return (
+                      <tr key={contractor.id || contractor._id} style={styles.tableRow}>
+                        <td style={styles.tableTd}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={styles.contractorAvatarBadge}>
+                              {(contractor.fullName || contractor.name || 'C')[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <strong>{contractor.fullName || contractor.name}</strong>
+                              <span style={{ display: 'block', fontSize: '11px', color: '#64748B' }}>
+                                {contractor.businessName || 'Independent Pro'}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span style={{ fontSize: '13px', color: '#334155', display: 'block' }}>{contractor.email}</span>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>{contractor.phone || 'No phone'}</span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span style={styles.verifiedTierPill}>
+                            ✓ {contractor.verificationStatus || 'APPROVED'}
+                          </span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <strong style={{ color: '#034EA2' }}>{contractor.completedJobsCount || 0} jobs</strong>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span
+                            style={{
+                              ...styles.discountRatePill,
+                              backgroundColor: hasCustom ? '#FEF3C7' : '#DCFCE7',
+                              color: hasCustom ? '#92400E' : '#15803D',
+                              borderColor: hasCustom ? '#FCD34D' : '#86EFAC',
+                            }}
+                          >
+                            {effective}% {hasCustom ? '(Custom Override)' : '(Platform Default)'}
+                          </span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>
+                            {contractor.overrideReason || (hasCustom ? 'Individual override' : 'Default platform tier')}
+                          </span>
+                        </td>
+                        <td style={{ ...styles.tableTd, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={() => handleSelectContractorForTuning(contractor)}
+                            style={styles.editActionBtn}
+                            title="Tune Discount Rate"
+                          >
+                            Tune Discount
+                          </button>
+                          {hasCustom && (
+                            <button
+                              onClick={() => handleResetContractorDiscount(contractor)}
+                              style={styles.deleteActionBtn}
+                              title="Reset to Platform Default"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* SECTION 4: DISCOUNT TUNING AUDIT LOGS */}
+          <div style={{ marginTop: '36px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F2C59' }}>
+                  Discount Tuning & Policy Audit Logs ({discountData?.auditHistory?.length || 0})
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Real-time database records of all platform-wide and contractor-specific discount adjustments
+                </span>
+              </div>
+            </div>
+
+            <table style={styles.dataTable}>
+              <thead>
+                <tr>
+                  <th style={styles.tableTh}>Date & Time</th>
+                  <th style={styles.tableTh}>Target Contractor / Scope</th>
+                  <th style={styles.tableTh}>Adjustment Type</th>
+                  <th style={styles.tableTh}>Discount Rate Change</th>
+                  <th style={styles.tableTh}>Reason / Administrative Note</th>
+                  <th style={styles.tableTh}>Modified By Admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!discountData?.auditHistory || discountData.auditHistory.length === 0) ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: '#64748B' }}>
+                      No discount modifications recorded yet. All changes are automatically recorded here.
+                    </td>
+                  </tr>
+                ) : (
+                  discountData.auditHistory.map((log) => {
+                    const isDefault = log.discountType === 'default';
+                    return (
+                      <tr key={log.id || log._id} style={styles.tableRow}>
+                        <td style={styles.tableTd}>
+                          <span style={{ fontSize: '12px', color: '#334155' }}>
+                            {log.createdAt ? new Date(log.createdAt).toLocaleString() : 'Recent'}
+                          </span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <strong>{log.contractorName || 'All Contractors (Default)'}</strong>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              backgroundColor: isDefault ? '#DCFCE7' : '#FEF3C7',
+                              color: isDefault ? '#15803D' : '#92400E',
+                            }}
+                          >
+                            {isDefault ? 'GLOBAL DEFAULT' : 'CUSTOM OVERRIDE'}
+                          </span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: '#64748B', textDecoration: 'line-through', fontSize: '12px' }}>
+                              {log.previousDiscount}%
+                            </span>
+                            <span style={{ color: '#034EA2', fontWeight: '800', fontSize: '13px' }}>
+                              → {log.newDiscount}%
+                            </span>
+                          </div>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span style={{ fontSize: '12px', color: '#475569' }}>
+                            {log.reason || 'Administrative adjustment'}
+                          </span>
+                        </td>
+                        <td style={styles.tableTd}>
+                          <span style={{ fontSize: '12px', color: '#0F2C59', fontWeight: '600' }}>
+                            {log.updatedByName || 'Admin User'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1578,67 +2203,18 @@ export default function AdminPricingDiscountsPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* MODAL: SET CONTRACTOR CUSTOM DISCOUNT */}
+      {/* UNIVERSAL CONFIRMATION MODAL */}
       {/* ==================================================================== */}
-      {selectedContractor && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalBox}>
-            <h3 style={styles.modalTitle}>Set Custom Contractor Trade Discount</h3>
-            <p style={{ margin: '4px 0 16px 0', fontSize: '13px', color: '#64748B' }}>
-              Assigning a custom discount for <strong>{selectedContractor.fullName}</strong> ({selectedContractor.businessName || 'Independent Pro'}).
-            </p>
-            <div style={styles.modalField}>
-              <label style={styles.modalLabel}>Custom Wholesale Discount (%):</label>
-              <input
-                type="number"
-                min="0"
-                max="50"
-                step="1"
-                value={contractorCustomDiscount}
-                onChange={(e) => setContractorCustomDiscount(e.target.value)}
-                style={styles.modalInput}
-              />
-            </div>
-            <div style={styles.modalField}>
-              <label style={styles.modalLabel}>Reason for Override / Tier Assignment:</label>
-              <input
-                type="text"
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="e.g. Platinum Partner (>10 completed projects)"
-                style={styles.modalInput}
-              />
-            </div>
-            <div style={styles.modalBtnRow}>
-              <button
-                type="button"
-                onClick={() => setSelectedContractor(null)}
-                style={styles.cancelBtn}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveContractorOverride}
-                disabled={savingOverride}
-                style={styles.modalSaveBtn}
-              >
-                {savingOverride ? 'Applying...' : 'Apply Custom %'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Enterprise Delete Item Modal */}
       <ConfirmModal
-        isOpen={Boolean(deleteItemConfirm)}
-        title={deleteItemConfirm?.title || 'Delete Item?'}
-        message={`Are you sure you want to delete "${deleteItemConfirm?.label}"? This will update the estimator configuration matrix immediately.`}
-        confirmLabel="Delete Item"
-        variant="danger"
-        onConfirm={executeDeleteItemConfirm}
-        onClose={() => setDeleteItemConfirm(null)}
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
@@ -1653,21 +2229,6 @@ const styles = {
     backgroundColor: '#F8FAFC',
     minHeight: '100vh',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '70vh',
-  },
-  spinner: {
-    width: '40px',
-    height: '40px',
-    border: '4px solid #E2E8F0',
-    borderTop: '4px solid #034EA2',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
   },
   headerBanner: {
     display: 'flex',
@@ -1701,15 +2262,17 @@ const styles = {
     fontSize: '13.5px',
     color: '#64748B',
     margin: 0,
-    maxWidth: '750px',
-    lineHeight: 1.45,
+    lineHeight: '1.45',
   },
   headerActions: {
     display: 'flex',
-    alignItems: 'center',
     gap: '12px',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   primarySaveBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
     padding: '11px 22px',
     backgroundColor: '#15803D',
     color: '#FFFFFF',
@@ -1718,52 +2281,52 @@ const styles = {
     fontWeight: '800',
     fontSize: '13.5px',
     cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(21,128,61,0.25)',
+    boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
     transition: 'all 0.15s ease',
   },
-  secondarySaveBtn: {
-    padding: '9px 16px',
-    backgroundColor: '#034EA2',
+  sectionSaveBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '9px 18px',
+    backgroundColor: '#0F2C59',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: '12.5px',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   successAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    backgroundColor: '#DCFCE7',
-    border: '1px solid #86EFAC',
-    color: '#15803D',
+    backgroundColor: '#ECFDF5',
+    color: '#065F46',
+    border: '1px solid #A7F3D0',
     padding: '12px 18px',
     borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '13px',
+    fontSize: '13.5px',
+    fontWeight: '600',
     marginBottom: '16px',
   },
   errorAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    backgroundColor: '#FEE2E2',
-    border: '1px solid #FCA5A5',
-    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
+    color: '#991B1B',
+    border: '1px solid #FECACA',
     padding: '12px 18px',
     borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '13px',
+    fontSize: '13.5px',
+    fontWeight: '600',
     marginBottom: '16px',
   },
   tabBar: {
     display: 'flex',
-    gap: '6px',
-    backgroundColor: '#FFFFFF',
-    padding: '6px',
-    borderRadius: '10px',
-    border: '1px solid #E2E8F0',
+    gap: '8px',
+    borderBottom: '2px solid #E2E8F0',
     marginBottom: '20px',
     overflowX: 'auto',
   },
@@ -1771,48 +2334,49 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '10px 18px',
-    backgroundColor: 'transparent',
+    padding: '12px 18px',
     border: 'none',
-    borderRadius: '8px',
+    backgroundColor: 'transparent',
     color: '#64748B',
     fontWeight: '700',
     fontSize: '13px',
     cursor: 'pointer',
-    whiteSpace: 'nowrap',
+    borderBottom: '2px solid transparent',
+    marginBottom: '-2px',
     transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
   },
   activeTabBtn: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '10px 18px',
-    backgroundColor: '#0F2C59',
-    color: '#FFFFFF',
+    padding: '12px 18px',
     border: 'none',
-    borderRadius: '8px',
-    fontWeight: '800',
+    backgroundColor: '#FFFFFF',
+    color: '#034EA2',
+    fontWeight: '900',
     fontSize: '13px',
     cursor: 'pointer',
+    borderBottom: '3px solid #034EA2',
+    marginBottom: '-2px',
+    borderRadius: '8px 8px 0 0',
+    boxShadow: '0 -2px 6px rgba(0,0,0,0.02)',
     whiteSpace: 'nowrap',
-    boxShadow: '0 2px 4px rgba(15,44,89,0.2)',
   },
   tabContentCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: '12px',
     border: '1px solid #E2E8F0',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
     padding: '24px 28px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
   },
   sectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px solid #F1F5F9',
-    paddingBottom: '16px',
+    alignItems: 'flex-start',
     marginBottom: '20px',
-    gap: '16px',
     flexWrap: 'wrap',
+    gap: '12px',
   },
   sectionTitle: {
     fontSize: '18px',
@@ -1832,12 +2396,9 @@ const styles = {
   },
   formCard: {
     backgroundColor: '#F8FAFC',
-    borderRadius: '10px',
     border: '1px solid #E2E8F0',
+    borderRadius: '10px',
     padding: '18px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
   },
   cardHeaderRow: {
     display: 'flex',
@@ -1846,17 +2407,22 @@ const styles = {
     marginBottom: '6px',
   },
   cardIcon: {
-    fontSize: '18px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
   },
   cardTitle: {
-    fontSize: '13.5px',
+    fontSize: '14px',
+    fontWeight: '800',
     color: '#0F2C59',
   },
   cardHelp: {
     fontSize: '12px',
     color: '#64748B',
-    margin: '0 0 14px 0',
-    lineHeight: 1.4,
+    margin: '0 0 12px 0',
+    lineHeight: '1.4',
   },
   inputPrefixWrap: {
     display: 'flex',
@@ -1864,32 +2430,37 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1.5px solid #CBD5E1',
     borderRadius: '8px',
-    padding: '0 10px',
+    overflow: 'hidden',
+    width: 'fit-content',
   },
   inputPrefix: {
-    color: '#64748B',
-    fontWeight: '700',
+    padding: '8px 10px',
     fontSize: '14px',
+    fontWeight: '800',
+    color: '#64748B',
+    backgroundColor: '#F1F5F9',
+    borderRight: '1px solid #CBD5E1',
   },
   inputSuffix: {
+    padding: '8px 10px',
+    fontSize: '12.5px',
+    fontWeight: '700',
     color: '#64748B',
-    fontSize: '12px',
-    paddingLeft: '6px',
+    backgroundColor: '#F1F5F9',
+    borderLeft: '1px solid #CBD5E1',
   },
   numericInput: {
     border: 'none',
-    outline: 'none',
-    padding: '10px 8px',
-    fontSize: '15px',
-    fontWeight: '800',
+    padding: '8px 12px',
+    fontSize: '14px',
+    fontWeight: '700',
     color: '#0F2C59',
-    width: '100%',
-    backgroundColor: 'transparent',
+    outline: 'none',
+    width: '100px',
   },
   numericInputSmall: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '8px 10px',
+    width: '80px',
+    padding: '6px 8px',
     borderRadius: '6px',
     border: '1px solid #CBD5E1',
     fontSize: '13px',
@@ -1897,35 +2468,32 @@ const styles = {
     color: '#0F2C59',
   },
   badgePill: {
-    display: 'inline-block',
     padding: '4px 10px',
-    borderRadius: '6px',
+    borderRadius: '20px',
     backgroundColor: '#DBEAFE',
-    color: '#1E40AF',
+    color: '#1D4ED8',
+    fontSize: '12.5px',
     fontWeight: '800',
-    fontSize: '12px',
   },
   matrixTable: {
     width: '100%',
-    borderCollapse: 'separate',
-    borderSpacing: '8px',
+    borderCollapse: 'collapse',
   },
   matrixTh: {
-    textAlign: 'center',
-    fontSize: '12px',
+    backgroundColor: '#0F2C59',
+    color: '#FFFFFF',
+    padding: '12px 14px',
+    fontSize: '12.5px',
     fontWeight: '800',
-    color: '#0F2C59',
-    padding: '10px',
-    backgroundColor: '#F1F5F9',
-    borderRadius: '6px',
+    textAlign: 'left',
+    border: '1px solid #1E3A8A',
   },
   matrixRowHeader: {
     backgroundColor: '#F8FAFC',
-    borderRadius: '8px',
     padding: '14px',
-    verticalAlign: 'middle',
     border: '1px solid #E2E8F0',
-    width: '220px',
+    verticalAlign: 'middle',
+    width: '240px',
   },
   matrixSubtext: {
     display: 'block',
@@ -1934,18 +2502,14 @@ const styles = {
     marginTop: '2px',
   },
   matrixCell: {
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #E2E8F0',
-    borderRadius: '8px',
-    padding: '12px',
-    textAlign: 'center',
+    padding: '14px',
+    border: '1px solid #E2E8F0',
     verticalAlign: 'middle',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+    backgroundColor: '#FFFFFF',
   },
   cellRangeInputs: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: '6px',
   },
   cellInput: {
@@ -2036,13 +2600,143 @@ const styles = {
   discountHighlightBox: {
     backgroundColor: '#ECFDF5',
     border: '1.5px solid #A7F3D0',
-    borderRadius: '10px',
-    padding: '18px 24px',
+    borderRadius: '12px',
+    padding: '20px 24px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '20px',
+    gap: '24px',
     flexWrap: 'wrap',
+    marginBottom: '24px',
+  },
+  secondarySaveBtn: {
+    padding: '9px 18px',
+    backgroundColor: '#15803D',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    fontWeight: '800',
+    fontSize: '12.5px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  },
+  kpiRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gap: '14px',
+    marginBottom: '20px',
+  },
+  kpiCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '10px',
+    padding: '14px 18px',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+  },
+  kpiLabel: {
+    fontSize: '11px',
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  kpiVal: {
+    fontSize: '24px',
+    fontWeight: '900',
+    margin: '4px 0 2px 0',
+  },
+  kpiSub: {
+    fontSize: '11px',
+    color: '#94A3B8',
+  },
+  tuningContainerCard: {
+    backgroundColor: '#F8FAFC',
+    border: '1.5px solid #CBD5E1',
+    borderRadius: '12px',
+    padding: '20px 24px',
+    marginBottom: '24px',
+  },
+  tuningHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  tuningSectionBadge: {
+    fontSize: '10px',
+    fontWeight: '800',
+    color: '#034EA2',
+    backgroundColor: '#DBEAFE',
+    padding: '2px 8px',
+    borderRadius: '10px',
+    letterSpacing: '0.04em',
+  },
+  searchDropdownList: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    width: '100%',
+    maxWidth: '520px',
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #CBD5E1',
+    borderRadius: '8px',
+    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+    zIndex: 100,
+    maxHeight: '260px',
+    overflowY: 'auto',
+    marginTop: '4px',
+  },
+  searchDropdownItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '10px 14px',
+    borderBottom: '1px solid #F1F5F9',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
+  },
+  contractorAvatarBadge: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#0F2C59',
+    color: '#FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    fontWeight: '800',
+    flexShrink: 0,
+  },
+  activeTuningBox: {
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #93C5FD',
+    borderRadius: '10px',
+    padding: '18px 20px',
+    marginTop: '16px',
+    boxShadow: '0 2px 6px rgba(3, 78, 162, 0.06)',
+  },
+  tuningEmptyHint: {
+    marginTop: '12px',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#F1F5F9',
+    border: '1px dashed #CBD5E1',
+    fontSize: '12.5px',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid #CBD5E1',
+    fontSize: '12.5px',
+    color: '#0F2C59',
+    backgroundColor: '#FFFFFF',
+    outline: 'none',
+    fontWeight: '600',
   },
   searchInput: {
     padding: '8px 14px',
@@ -2064,7 +2758,7 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   editActionBtn: {
-    padding: '5px 10px',
+    padding: '6px 12px',
     backgroundColor: '#F1F5F9',
     border: '1px solid #CBD5E1',
     borderRadius: '6px',
@@ -2073,9 +2767,10 @@ const styles = {
     color: '#0F2C59',
     cursor: 'pointer',
     marginRight: '6px',
+    transition: 'all 0.15s ease',
   },
   deleteActionBtn: {
-    padding: '5px 10px',
+    padding: '6px 12px',
     backgroundColor: '#FEF2F2',
     border: '1px solid #FECACA',
     borderRadius: '6px',
@@ -2083,6 +2778,7 @@ const styles = {
     fontWeight: '700',
     color: '#DC2626',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   modalOverlay: {
     position: 'fixed',

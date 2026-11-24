@@ -273,6 +273,10 @@ export const adminApi = {
     const res = await client.put(`/admin/discounts/contractors/${contractorId}`, { discount, reason });
     return res.data;
   },
+  resetContractorDiscount: async (contractorId, reason = '') => {
+    const res = await client.post(`/admin/discounts/contractors/${contractorId}/reset`, { reason });
+    return res.data;
+  },
 
   // 10. System Settings & Info
   getSystemSettings: async () => {

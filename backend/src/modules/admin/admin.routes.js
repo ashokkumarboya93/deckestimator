@@ -112,6 +112,8 @@ router.put('/pricing', adminController.updatePricingConfig);
 router.get('/discounts', adminController.getDiscountsOverview);
 router.put('/discounts/default', adminController.updateDefaultContractorDiscount);
 router.put('/discounts/contractors/:contractorId', adminController.setContractorIndividualDiscount);
+router.post('/discounts/contractors/:contractorId/reset', adminController.resetContractorIndividualDiscount);
+router.delete('/discounts/contractors/:contractorId', adminController.resetContractorIndividualDiscount);
 
 // 10. System Settings & Information
 router.get('/settings', adminController.getSystemSettings);

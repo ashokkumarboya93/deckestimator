@@ -289,20 +289,12 @@ async function getContractorApplicableDiscounts(contractorUserId) {
  * Gets effective discount rate for contractor (assigned or default 10%).
  */
 async function getContractorEffectiveDiscount(contractorUserId) {
-  let rate = 5;
+  let rate = 10;
   let policyName = 'Contractor Wholesale Discount';
-  let policyCode = 'CONTRACTOR_WHOLESALE';
+  let policyCode = 'CONTRACTOR_DEFAULT_10';
 
   try {
-    // 1. Check contractor profile specific discount tier tuned by admin
-    const profile = await ContractorProfile.findOne({ userId: contractorUserId }).select('wholesaleDiscountTier').lean();
-    if (profile && typeof profile.wholesaleDiscountTier === 'number' && profile.wholesaleDiscountTier > 0) {
-      rate = profile.wholesaleDiscountTier;
-      policyName = `Contractor Wholesale Discount (${rate}%)`;
-      policyCode = `CONTRACTOR_TIER_${rate}`;
-      return { rate, policyName, policyCode };
-    }
-
+    // 1. Check for active individual contractor discount override assignment
     const assignment = await DiscountAssignment.findOne({
       contractorId: contractorUserId,
       status: 'active',
@@ -310,21 +302,23 @@ async function getContractorEffectiveDiscount(contractorUserId) {
 
     if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
       rate = assignment.discountPolicyId.discountValue;
-      policyName = assignment.discountPolicyId.name || policyName;
-      policyCode = assignment.discountPolicyId.code || policyCode;
-    } else {
-      const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-      if (defaultPol && typeof defaultPol.discountValue === 'number') {
-        rate = defaultPol.discountValue;
-        policyName = defaultPol.name;
-        policyCode = defaultPol.code;
-      }
+      policyName = assignment.discountPolicyId.name || `Contractor Custom Discount (${rate}%)`;
+      policyCode = assignment.discountPolicyId.code || `CONTRACTOR_CUSTOM_${rate}`;
+      return { rate, policyName, policyCode, isCustom: true };
+    }
+
+    // 2. Fall back to Platform Default Wholesale Discount policy
+    const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+    if (defaultPol && typeof defaultPol.discountValue === 'number') {
+      rate = defaultPol.discountValue;
+      policyName = defaultPol.name;
+      policyCode = defaultPol.code;
     }
   } catch (err) {
     console.warn('[Get Contractor Effective Discount Warning]:', err.message);
   }
 
-  return { rate, policyName, policyCode };
+  return { rate, policyName, policyCode, isCustom: false };
 }
 
 /**

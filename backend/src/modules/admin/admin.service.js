@@ -2754,19 +2754,29 @@ async function updatePricingConfig(adminUser, updates) {
 // ====================================================================
 
 async function getDiscountsOverview() {
-  const defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-  const defaultDiscount = defaultPolicy?.discountValue || 10;
+  let defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+  if (!defaultPolicy) {
+    defaultPolicy = await DiscountPolicy.create({
+      name: 'Standard Wholesale Contractor Discount',
+      code: 'CONTRACTOR_DEFAULT_10',
+      discountType: 'percentage',
+      discountValue: 10,
+      status: 'active',
+    });
+  }
+  const defaultDiscount = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
 
-  const contractors = await User.find({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } });
+  const contractors = await User.find({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }).lean();
   const contractorIds = contractors.map((c) => c._id);
 
-  const [completedProjects, assignments, auditLogs] = await Promise.all([
+  const [completedProjects, assignments, profiles, auditLogs] = await Promise.all([
     Project.aggregate([
       { $match: { contractorId: { $in: contractorIds }, status: 'completed' } },
       { $group: { _id: '$contractorId', count: { $sum: 1 } } },
     ]),
-    DiscountAssignment.find({ contractorId: { $in: contractorIds }, status: 'active' }).populate('discountPolicyId'),
-    DiscountAuditLog.find().sort({ createdAt: -1 }).limit(10),
+    DiscountAssignment.find({ contractorId: { $in: contractorIds }, status: 'active' }).populate('discountPolicyId').lean(),
+    ContractorProfile.find({ userId: { $in: contractorIds } }).lean(),
+    DiscountAuditLog.find().sort({ createdAt: -1 }).limit(100).lean(),
   ]);
 
   const projectCountMap = {};
@@ -2774,32 +2784,54 @@ async function getDiscountsOverview() {
     projectCountMap[p._id.toString()] = p.count;
   });
 
+  const profileMap = {};
+  profiles.forEach((p) => {
+    profileMap[p.userId.toString()] = p;
+  });
+
   const assignmentMap = {};
   assignments.forEach((a) => {
-    if (a.discountPolicyId) {
-      assignmentMap[a.contractorId.toString()] = a.discountPolicyId.discountValue;
+    if (a.discountPolicyId && typeof a.discountPolicyId.discountValue === 'number') {
+      assignmentMap[a.contractorId.toString()] = {
+        discountValue: a.discountPolicyId.discountValue,
+        notes: a.notes,
+        createdAt: a.createdAt,
+      };
     }
   });
 
   const contractorList = contractors.map((c) => {
     const idStr = c._id.toString();
     const custom = assignmentMap[idStr];
+    const prof = profileMap[idStr];
+    const hasCustom = Boolean(custom);
+    const effectiveVal = hasCustom ? custom.discountValue : defaultDiscount;
+
     return {
       id: c._id,
+      _id: c._id,
       contractorId: `CT-${idStr.slice(-4).toUpperCase()}`,
       name: c.fullName,
+      fullName: c.fullName,
       email: c.email,
+      phone: c.phone || prof?.businessPhone || '',
+      businessName: prof?.businessName || c.company || c.businessName || 'Independent Pro',
+      verificationStatus: prof?.verificationStatus || c.verificationStatus || 'APPROVED',
       completedProjects: projectCountMap[idStr] || 0,
+      completedJobsCount: projectCountMap[idStr] || 0,
       defaultDiscount: `${defaultDiscount}%`,
-      currentDiscount: custom ? `${custom}%` : `${defaultDiscount}%`,
-      discountType: custom ? 'Individual' : 'Default',
-      rawDiscount: custom || defaultDiscount,
+      currentDiscount: `${effectiveVal}%`,
+      discountType: hasCustom ? 'Individual' : 'Default',
+      hasCustomDiscount: hasCustom,
+      customDiscount: hasCustom ? custom.discountValue : null,
+      rawDiscount: effectiveVal,
+      overrideReason: custom?.notes || '',
     };
   });
 
   return {
     defaultDiscount,
-    contractorsWithDiscounts: contractorList.length,
+    contractorsWithDiscounts: contractorList.filter((c) => c.hasCustomDiscount).length,
     activeDiscountRules: Object.keys(assignmentMap).length,
     contractors: contractorList,
     auditHistory: auditLogs,
@@ -2808,33 +2840,35 @@ async function getDiscountsOverview() {
 
 async function updateDefaultContractorDiscount(adminUser, newDiscountPercentage, reason = '') {
   let policy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-  const prev = policy?.discountValue || 10;
+  const prev = policy?.discountValue !== undefined ? policy.discountValue : 10;
+  const newRate = Number(newDiscountPercentage);
 
   if (!policy) {
     policy = new DiscountPolicy({
       name: 'Default Contractor Discount',
       code: 'CONTRACTOR_DEFAULT_10',
       discountType: 'percentage',
+      discountValue: newRate,
       status: 'active',
       createdBy: adminUser.id || adminUser._id,
     });
+  } else {
+    policy.discountValue = newRate;
   }
-
-  policy.discountValue = Number(newDiscountPercentage);
   await policy.save();
 
   await DiscountAuditLog.create({
     contractorId: null,
     contractorName: 'All Contractors (Default)',
     previousDiscount: prev,
-    newDiscount: Number(newDiscountPercentage),
+    newDiscount: newRate,
     discountType: 'default',
-    reason: reason || 'Updated default contractor discount',
+    reason: reason || 'Updated platform default contractor discount',
     updatedBy: adminUser.id || adminUser._id,
     updatedByName: adminUser.fullName || 'Admin User',
   });
 
-  await logAdminAction(adminUser, 'DEFAULT_DISCOUNT_UPDATE', 'DiscountPolicy', policy._id, { discount: prev }, { discount: newDiscountPercentage, reason });
+  await logAdminAction(adminUser, 'DEFAULT_DISCOUNT_UPDATE', 'DiscountPolicy', policy._id, { discount: prev }, { discount: newRate, reason });
 
   return policy;
 }
@@ -2843,21 +2877,26 @@ async function setContractorIndividualDiscount(adminUser, contractorUserId, disc
   const contractor = await User.findById(contractorUserId);
   if (!contractor) throw new NotFoundError('Contractor not found.');
 
+  const newRate = Number(discountPercentage);
   const policyCode = `CONTRACTOR_CUSTOM_${contractor._id.toString().slice(-6).toUpperCase()}`;
   let policy = await DiscountPolicy.findOne({ code: policyCode });
-  const prevDiscount = policy ? policy.discountValue : 10;
+
+  const activeAssignment = await DiscountAssignment.findOne({ contractorId: contractor._id, status: 'active' }).populate('discountPolicyId');
+  const defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
+  const prevDiscount = activeAssignment?.discountPolicyId?.discountValue !== undefined ? activeAssignment.discountPolicyId.discountValue : defaultVal;
 
   if (!policy) {
     policy = await DiscountPolicy.create({
       name: `Custom Discount for ${contractor.fullName}`,
       code: policyCode,
       discountType: 'percentage',
-      discountValue: Number(discountPercentage),
+      discountValue: newRate,
       status: 'active',
       createdBy: adminUser.id || adminUser._id,
     });
   } else {
-    policy.discountValue = Number(discountPercentage);
+    policy.discountValue = newRate;
     policy.status = 'active';
     await policy.save();
   }
@@ -2868,25 +2907,69 @@ async function setContractorIndividualDiscount(adminUser, contractorUserId, disc
       discountPolicyId: policy._id,
       assignedBy: adminUser.id || adminUser._id,
       status: 'active',
-      notes: reason,
+      notes: reason || `Individual custom discount tuned by admin`,
     },
     { upsert: true, new: true }
+  );
+
+  await ContractorProfile.findOneAndUpdate(
+    { userId: contractor._id },
+    { wholesaleDiscountTier: newRate }
   );
 
   await DiscountAuditLog.create({
     contractorId: contractor._id,
     contractorName: contractor.fullName,
     previousDiscount: prevDiscount,
-    newDiscount: Number(discountPercentage),
+    newDiscount: newRate,
     discountType: 'individual',
     reason: reason || 'Contractor performance discount adjustment',
     updatedBy: adminUser.id || adminUser._id,
     updatedByName: adminUser.fullName || 'Admin User',
   });
 
-  await logAdminAction(adminUser, 'INDIVIDUAL_DISCOUNT_SET', 'DiscountAssignment', contractor._id, { prevDiscount }, { newDiscount: discountPercentage, reason });
+  await logAdminAction(adminUser, 'INDIVIDUAL_DISCOUNT_SET', 'DiscountAssignment', contractor._id, { prevDiscount }, { newDiscount: newRate, reason });
 
-  return { success: true, discountPercentage: Number(discountPercentage) };
+  return { success: true, discountPercentage: newRate };
+}
+
+async function resetContractorIndividualDiscount(adminUser, contractorUserId, reason = '') {
+  const contractor = await User.findById(contractorUserId);
+  if (!contractor) throw new NotFoundError('Contractor not found.');
+
+  const defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
+
+  const activeAssignment = await DiscountAssignment.findOne({ contractorId: contractor._id, status: 'active' }).populate('discountPolicyId');
+  const prevDiscount = activeAssignment?.discountPolicyId?.discountValue !== undefined ? activeAssignment.discountPolicyId.discountValue : defaultVal;
+
+  if (activeAssignment) {
+    activeAssignment.status = 'inactive';
+    await activeAssignment.save();
+  }
+
+  const policyCode = `CONTRACTOR_CUSTOM_${contractor._id.toString().slice(-6).toUpperCase()}`;
+  await DiscountPolicy.updateOne({ code: policyCode }, { status: 'inactive' });
+
+  await ContractorProfile.findOneAndUpdate(
+    { userId: contractor._id },
+    { wholesaleDiscountTier: defaultVal }
+  );
+
+  await DiscountAuditLog.create({
+    contractorId: contractor._id,
+    contractorName: contractor.fullName,
+    previousDiscount: prevDiscount,
+    newDiscount: defaultVal,
+    discountType: 'default',
+    reason: reason || 'Reverted contractor override back to platform default',
+    updatedBy: adminUser.id || adminUser._id,
+    updatedByName: adminUser.fullName || 'Admin User',
+  });
+
+  await logAdminAction(adminUser, 'INDIVIDUAL_DISCOUNT_RESET', 'DiscountAssignment', contractor._id, { prevDiscount }, { newDiscount: defaultVal, reason });
+
+  return { success: true, defaultDiscount: defaultVal };
 }
 
 // ====================================================================
@@ -3606,6 +3689,7 @@ module.exports = {
   getDiscountsOverview,
   updateDefaultContractorDiscount,
   setContractorIndividualDiscount,
+  resetContractorIndividualDiscount,
 
   // 10. Settings & System Info
   getSystemSettings,
