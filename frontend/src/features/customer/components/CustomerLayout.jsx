@@ -444,8 +444,8 @@ export default function CustomerLayout() {
           height: isSmallMobile ? '56px' : (isMobile ? '60px' : '65px'),
           padding: isMobile ? '0 14px' : '0 24px',
           backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #E2E8F0',
-          boxShadow: isMobile ? '0 1px 3px rgba(15, 23, 42, 0.04)' : '0 1px 3px rgba(0, 0, 0, 0.02)',
+          borderBottom: '2.5px solid #C96D22',
+          boxShadow: isMobile ? '0 2px 5px rgba(201, 109, 34, 0.08)' : '0 2px 6px rgba(201, 109, 34, 0.08)',
         }}>
           {/* Left: Hamburger (mobile) + Dynamic Back Button / Project Name / Brand Logo */}
           <div style={{ ...styles.headerLeft, gap: isSmallMobile ? '6px' : '12px', minWidth: 0 }}>
@@ -1025,7 +1025,8 @@ const styles = {
   topHeader: {
     height: '65px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '2.5px solid #C96D22',
+    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

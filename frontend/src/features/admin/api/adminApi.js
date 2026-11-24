@@ -43,6 +43,10 @@ export const adminApi = {
     const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, body: JSON.stringify({ reason, permanent }) });
     return res.data;
   },
+  bulkDeleteUsers: async (userIds = [], reason = '') => {
+    const res = await client.post('/admin/users/bulk-delete', { ids: userIds, reason });
+    return res.data;
+  },
   getUserRequests: async (params = {}) => {
     return client.get('/admin/user-requests', { params });
   },
@@ -63,6 +67,10 @@ export const adminApi = {
   },
   reviewContractorDocument: async (id, status, notes = '') => {
     const res = await client.patch(`/admin/contractor-documents/${id}/review`, { status, notes });
+    return res.data;
+  },
+  bulkDeleteContractorDocuments: async (docIds = []) => {
+    const res = await client.post('/admin/contractor-documents/bulk-delete', { ids: docIds });
     return res.data;
   },
   approveVerification: async (id) => {
@@ -88,6 +96,18 @@ export const adminApi = {
   },
   rejectDiscountRequest: async (id, adminNotes = '') => {
     const res = await client.post(`/discounts/admin/requests/${id}/reject`, { adminNotes });
+    return res.data;
+  },
+  deleteDiscountRequest: async (id) => {
+    const res = await client.delete(`/discounts/admin/requests/${id}`);
+    return res.data;
+  },
+  bulkDeleteDiscountRequests: async (requestIds = []) => {
+    const res = await client.post('/discounts/admin/requests/bulk-delete', { ids: requestIds });
+    return res.data;
+  },
+  replyDiscountRequest: async (id, message = '') => {
+    const res = await client.post(`/discounts/admin/requests/${id}/reply`, { message });
     return res.data;
   },
 

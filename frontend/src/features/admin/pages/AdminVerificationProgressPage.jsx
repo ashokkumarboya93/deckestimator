@@ -14,7 +14,166 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import { getStoredToken, BASE_URL } from '../../../api/client';
 
-const PAGE_SIZE = 10;
+const matchesDaysFilter = (dateVal, filter) => {
+  if (!filter || filter === 'all') return true;
+  if (!dateVal) return false;
+  const itemDate = new Date(dateVal).getTime();
+  if (isNaN(itemDate)) return true;
+  const now = Date.now();
+  const diffMs = now - itemDate;
+  if (diffMs < 0) return true;
+  const diffHours = diffMs / (1000 * 60 * 60);
+  if (filter === 'today') return diffHours <= 24;
+  if (filter === '2d') return diffHours <= 48;
+  if (filter === '7d') return diffHours <= 24 * 7;
+  if (filter === '15d') return diffHours <= 24 * 15;
+  if (filter === '30d') return diffHours <= 24 * 30;
+  if (filter === '60d') return diffHours <= 24 * 60;
+  return true;
+};
+
+function BulkActionBar({
+  selectedCount,
+  onDeselectAll,
+  onExportCSV,
+  onExportJSON,
+  onDeleteSelected,
+  styles,
+}) {
+  if (selectedCount <= 0) return null;
+  return (
+    <div style={styles.bulkActionBar}>
+      <div style={styles.bulkActionLeft}>
+        <span style={styles.bulkSelectedCount}>
+          <strong>{selectedCount}</strong> {selectedCount === 1 ? 'record' : 'records'} selected
+        </span>
+        <button
+          type="button"
+          onClick={onDeselectAll}
+          style={styles.bulkDeselectBtn}
+        >
+          Deselect All
+        </button>
+      </div>
+      <div style={styles.bulkActionRight}>
+        <button
+          type="button"
+          onClick={onExportCSV}
+          style={styles.bulkExportBtn}
+          title="Export selected as CSV"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
+        <button
+          type="button"
+          onClick={onExportJSON}
+          style={styles.bulkExportBtn}
+          title="Export selected as JSON"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export JSON
+        </button>
+        <button
+          type="button"
+          onClick={onDeleteSelected}
+          style={styles.bulkDeleteBtn}
+          title="Delete selected records"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+          Delete Selected ({selectedCount})
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  totalRecords,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  styles,
+}) {
+  const startRec = totalRecords > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endRec = Math.min(currentPage * pageSize, totalRecords);
+
+  return (
+    <div style={styles.paginationBar}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <span style={styles.paginationInfo}>
+          Showing {startRec} to {endRec} of {totalRecords} records
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Show:</label>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              fontSize: '12px',
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            <option value={25}>25 per page</option>
+            <option value={50}>50 per page</option>
+            <option value={100}>100 per page</option>
+          </select>
+        </div>
+      </div>
+      <div style={styles.paginationBtns}>
+        <button
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          style={currentPage <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+        >
+          Previous
+        </button>
+        {Array.from({ length: Math.min(5, totalPages || 1) }, (_, i) => {
+          const pNum = i + 1;
+          const isCurrent = currentPage === pNum;
+          return (
+            <button
+              key={pNum}
+              onClick={() => onPageChange(pNum)}
+              style={isCurrent ? styles.pageBtnActive : styles.pageBtn}
+            >
+              {pNum}
+            </button>
+          );
+        })}
+        <button
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          style={currentPage >= totalPages ? styles.pageBtnDisabled : styles.pageBtn}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const TABS = [
   { id: 'verifications', label: 'Verifications' },
@@ -45,9 +204,13 @@ export default function AdminVerificationProgressPage() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Shared / Tab Filter States
+  // Shared / Tab Filter & Multi-Select States
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [daysFilter, setDaysFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [activeMenuId, setActiveMenuId] = useState(null);
 
   // Status filters
   const [verifFilter, setVerifFilter] = useState('all');
@@ -83,11 +246,22 @@ export default function AdminVerificationProgressPage() {
   const [tuneModal, setTuneModal] = useState({ open: false, request: null, discountPercent: 10, adminNotes: '' });
   const [rejectReqModal, setRejectReqModal] = useState({ open: false, request: null, adminNotes: '' });
   const [contractorDocsModal, setContractorDocsModal] = useState({ open: false, request: null });
+  const [inspectDiscountModal, setInspectDiscountModal] = useState(null);
+  const [replyModal, setReplyModal] = useState({ open: false, request: null, message: '', submitting: false });
 
-  // Reset page and search when switching tabs
+  // Outside click listener to dismiss 3-dots menus
+  useEffect(() => {
+    const handleOutsideClick = () => setActiveMenuId(null);
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  // Reset page, search, and selection when switching tabs
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     setSearchTerm('');
+    setSelectedIds([]);
+    setActiveMenuId(null);
     setPage(1);
   };
 
@@ -251,6 +425,130 @@ export default function AdminVerificationProgressPage() {
     }
   };
 
+  // Selection & Bulk Handlers for Active Tab
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = (items) => {
+    const pageItemIds = items.map((i) => i._id || i.id);
+    const isAllSelected = pageItemIds.length > 0 && pageItemIds.every((id) => selectedIds.includes(id));
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageItemIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageItemIds])));
+    }
+  };
+
+  const handleExportTab = (format = 'csv') => {
+    let itemsToExport = [];
+    if (activeTab === 'verifications') itemsToExport = filteredVerifications;
+    else if (activeTab === 'documents') itemsToExport = filteredContractorDocs;
+    else if (activeTab === 'customers') itemsToExport = filteredCustomers;
+    else if (activeTab === 'contractors') itemsToExport = filteredContractors;
+    else if (activeTab === 'discount_requests') itemsToExport = filteredDiscountRequests;
+
+    if (selectedIds.length > 0) {
+      itemsToExport = itemsToExport.filter((i) => selectedIds.includes(i._id || i.id));
+    }
+
+    if (itemsToExport.length === 0) {
+      alert('No records available to export.');
+      return;
+    }
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(itemsToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activeTab}_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      let headers = [];
+      let rows = [];
+      if (activeTab === 'verifications') {
+        headers = ['ID', 'Contractor', 'Email', 'Company', 'License', 'Status', 'Submitted Date'];
+        rows = itemsToExport.map((i) => [i._id || i.id, i.contractorName, i.contractorEmail, i.companyName, i.licenseNumber, i.status, i.submittedAt]);
+      } else if (activeTab === 'documents') {
+        headers = ['ID', 'File Name', 'Document Type', 'Contractor', 'Status', 'Uploaded Date'];
+        rows = itemsToExport.map((i) => [i._id || i.id, i.originalFileName, i.documentType, i.contractorId?.businessName || i.userId?.fullName, i.documentStatus, i.uploadedAt]);
+      } else if (activeTab === 'customers') {
+        headers = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Joined Date'];
+        rows = itemsToExport.map((i) => [i._id || i.id, i.fullName || i.name, i.email, i.phone, i.accountStatus || i.status, i.createdAt]);
+      } else if (activeTab === 'contractors') {
+        headers = ['ID', 'Name', 'Email', 'Company', 'License', 'Verification Status', 'Joined Date'];
+        rows = itemsToExport.map((i) => [i._id || i.id, i.fullName || i.name, i.email, i.contractorProfile?.companyName, i.contractorProfile?.licenseNumber, i.contractorProfile?.verificationStatus, i.createdAt]);
+      } else {
+        headers = ['ID', 'Business Name', 'Contact Name', 'Contact Email', 'Request Type', 'Status', 'Submitted Date'];
+        rows = itemsToExport.map((i) => [i._id || i.id, i.businessName, i.contactName, i.contactEmail, i.requestType, i.status, i.createdAt]);
+      }
+
+      const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activeTab}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
+    setLoading(true);
+    try {
+      if (activeTab === 'documents') {
+        await adminApi.bulkDeleteContractorDocuments(selectedIds);
+      } else if (activeTab === 'customers' || activeTab === 'contractors') {
+        await adminApi.bulkDeleteUsers(selectedIds);
+      } else if (activeTab === 'discount_requests') {
+        await adminApi.bulkDeleteDiscountRequests(selectedIds);
+      } else if (activeTab === 'verifications') {
+        for (const id of selectedIds) {
+          try { await adminApi.rejectVerification(id, 'Bulk verification rejection'); } catch {}
+        }
+      }
+      setSuccessMsg(`Successfully deleted ${selectedIds.length} record(s).`);
+      setSelectedIds([]);
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to complete bulk delete.');
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSingleDiscountRequest = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this discount request?')) return;
+    try {
+      await adminApi.deleteDiscountRequest(id);
+      setSuccessMsg('Discount request deleted successfully.');
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to delete discount request.');
+    }
+  };
+
+  const handleSendReplyToContractor = async () => {
+    if (!replyModal.request || !replyModal.message.trim()) {
+      alert('Please enter a reply message for the contractor.');
+      return;
+    }
+    setReplyModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      await adminApi.replyDiscountRequest(replyModal.request._id || replyModal.request.id, replyModal.message);
+      setSuccessMsg(`Reply delivered to ${replyModal.request.businessName || 'contractor'}.`);
+      setReplyModal({ open: false, request: null, message: '', submitting: false });
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to send reply to contractor.');
+      setReplyModal((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
   // =========================================================================
   // TAB FILTERING & PAGINATION DERIVATIONS
   // =========================================================================
@@ -259,6 +557,7 @@ export default function AdminVerificationProgressPage() {
   const filteredVerifications = useMemo(() => {
     return verifications.filter((item) => {
       if (verifFilter !== 'all' && item.status !== verifFilter) return false;
+      if (!matchesDaysFilter(item.submittedAt || item.createdAt, daysFilter)) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       return (
@@ -268,19 +567,20 @@ export default function AdminVerificationProgressPage() {
         (item.licenseNumber || '').toLowerCase().includes(q)
       );
     });
-  }, [verifications, verifFilter, searchTerm]);
+  }, [verifications, verifFilter, daysFilter, searchTerm]);
 
-  const totalVerifPages = Math.max(1, Math.ceil(filteredVerifications.length / PAGE_SIZE));
+  const totalVerifPages = Math.max(1, Math.ceil(filteredVerifications.length / pageSize));
   const currentVerifications = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredVerifications.slice(start, start + PAGE_SIZE);
-  }, [filteredVerifications, page]);
+    const start = (page - 1) * pageSize;
+    return filteredVerifications.slice(start, start + pageSize);
+  }, [filteredVerifications, page, pageSize]);
 
   // Tab 2: Contractor Documents
   const filteredContractorDocs = useMemo(() => {
     return contractorDocs.filter((doc) => {
       const docStatus = doc.documentStatus || 'pending_review';
       if (docsFilter !== 'all' && docStatus !== docsFilter) return false;
+      if (!matchesDaysFilter(doc.uploadedAt || doc.createdAt, daysFilter)) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       const cont = doc.contractorId || {};
@@ -293,19 +593,20 @@ export default function AdminVerificationProgressPage() {
         (user.email || '').toLowerCase().includes(q)
       );
     });
-  }, [contractorDocs, docsFilter, searchTerm]);
+  }, [contractorDocs, docsFilter, daysFilter, searchTerm]);
 
-  const totalDocsPages = Math.max(1, Math.ceil(filteredContractorDocs.length / PAGE_SIZE));
+  const totalDocsPages = Math.max(1, Math.ceil(filteredContractorDocs.length / pageSize));
   const currentContractorDocs = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredContractorDocs.slice(start, start + PAGE_SIZE);
-  }, [filteredContractorDocs, page]);
+    const start = (page - 1) * pageSize;
+    return filteredContractorDocs.slice(start, start + pageSize);
+  }, [filteredContractorDocs, page, pageSize]);
 
   // Tab 3: Customers
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
       const st = (c.accountStatus || c.status || 'active').toLowerCase();
       if (customerStatusFilter !== 'all' && st !== customerStatusFilter.toLowerCase()) return false;
+      if (!matchesDaysFilter(c.createdAt, daysFilter)) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       return (
@@ -314,13 +615,13 @@ export default function AdminVerificationProgressPage() {
         (c.phone || '').toLowerCase().includes(q)
       );
     });
-  }, [customers, customerStatusFilter, searchTerm]);
+  }, [customers, customerStatusFilter, daysFilter, searchTerm]);
 
-  const totalCustPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const totalCustPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
   const currentCustomers = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredCustomers.slice(start, start + PAGE_SIZE);
-  }, [filteredCustomers, page]);
+    const start = (page - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, page, pageSize]);
 
   // Tab 4: Contractors
   const filteredContractors = useMemo(() => {
@@ -333,6 +634,7 @@ export default function AdminVerificationProgressPage() {
         if (contractorStatusFilter === 'pending' && vStatus !== 'pending') return false;
         if (contractorStatusFilter === 'suspended' && accStatus !== 'suspended') return false;
       }
+      if (!matchesDaysFilter(c.createdAt, daysFilter)) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       return (
@@ -342,19 +644,20 @@ export default function AdminVerificationProgressPage() {
         (c.contractorProfile?.licenseNumber || '').toLowerCase().includes(q)
       );
     });
-  }, [contractors, contractorStatusFilter, searchTerm]);
+  }, [contractors, contractorStatusFilter, daysFilter, searchTerm]);
 
-  const totalContPages = Math.max(1, Math.ceil(filteredContractors.length / PAGE_SIZE));
+  const totalContPages = Math.max(1, Math.ceil(filteredContractors.length / pageSize));
   const currentContractors = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredContractors.slice(start, start + PAGE_SIZE);
-  }, [filteredContractors, page]);
+    const start = (page - 1) * pageSize;
+    return filteredContractors.slice(start, start + pageSize);
+  }, [filteredContractors, page, pageSize]);
 
   // Tab 5: Discount Requests Derivation
   const filteredDiscountRequests = useMemo(() => {
     return discountRequests.filter((item) => {
       const st = (item.status || 'PENDING').toUpperCase();
       if (discountReqFilter !== 'all' && st !== discountReqFilter.toUpperCase()) return false;
+      if (!matchesDaysFilter(item.createdAt, daysFilter)) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       const cont = item.contractorId || {};
@@ -366,13 +669,13 @@ export default function AdminVerificationProgressPage() {
         (item.description || '').toLowerCase().includes(q)
       );
     });
-  }, [discountRequests, discountReqFilter, searchTerm]);
+  }, [discountRequests, discountReqFilter, daysFilter, searchTerm]);
 
-  const totalDiscountPages = Math.max(1, Math.ceil(filteredDiscountRequests.length / PAGE_SIZE));
+  const totalDiscountPages = Math.max(1, Math.ceil(filteredDiscountRequests.length / pageSize));
   const currentDiscountRequests = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredDiscountRequests.slice(start, start + PAGE_SIZE);
-  }, [filteredDiscountRequests, page]);
+    const start = (page - 1) * pageSize;
+    return filteredDiscountRequests.slice(start, start + pageSize);
+  }, [filteredDiscountRequests, page, pageSize]);
 
   // Tab 5 Actions
   const handleOpenTuneModal = (item) => {
@@ -537,6 +840,26 @@ export default function AdminVerificationProgressPage() {
                 <option value="rejected">Rejected</option>
               </select>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={styles.filterLabel}>Timeframe:</label>
+                <select
+                  value={daysFilter}
+                  onChange={(e) => {
+                    setDaysFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.selectInput}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="2d">Last 2 Days</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="15d">Last 15 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="60d">Last 60 Days</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -552,6 +875,15 @@ export default function AdminVerificationProgressPage() {
               </button>
             </div>
           </div>
+
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onDeselectAll={() => setSelectedIds([])}
+            onExportCSV={() => handleExportTab('csv')}
+            onExportJSON={() => handleExportTab('json')}
+            onDeleteSelected={handleBulkDelete}
+            styles={styles}
+          />
 
           <div style={styles.card}>
             {loading ? (
@@ -573,6 +905,15 @@ export default function AdminVerificationProgressPage() {
                   <table style={styles.table}>
                     <thead>
                       <tr>
+                        <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={currentVerifications.length > 0 && currentVerifications.every((i) => selectedIds.includes(i._id || i.id))}
+                            onChange={() => toggleSelectAll(currentVerifications)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            title="Select all on this page"
+                          />
+                        </th>
                         <th style={styles.th}>Contractor / Company</th>
                         <th style={styles.th}>Submitted Date</th>
                         <th style={styles.th}>License / Documents</th>
@@ -584,8 +925,17 @@ export default function AdminVerificationProgressPage() {
                     <tbody>
                       {currentVerifications.map((item) => {
                         const itemId = item._id || item.id;
+                        const isSelected = selectedIds.includes(itemId);
                         return (
-                        <tr key={itemId} style={styles.tr}>
+                        <tr key={itemId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                          <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectOne(itemId)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </td>
                           <td style={styles.td}>
                             <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.contractorName || 'Contractor'}</div>
                             <div style={{ fontSize: '12px', color: '#64748b' }}>{item.contractorEmail}</div>
@@ -676,33 +1026,15 @@ export default function AdminVerificationProgressPage() {
                 </div>
 
                 {/* Pagination */}
-                <div style={styles.paginationBar}>
-                  <div style={styles.paginationInfo}>
-                    Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredVerifications.length)} to{' '}
-                    {Math.min(page * PAGE_SIZE, filteredVerifications.length)} of {filteredVerifications.length} applications
-                  </div>
-                  <div style={styles.paginationBtns}>
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
-                    >
-                      &larr; Previous
-                    </button>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                      Page {page} of {totalVerifPages}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={page >= totalVerifPages}
-                      onClick={() => setPage((p) => Math.min(totalVerifPages, p + 1))}
-                      style={page >= totalVerifPages ? styles.pageBtnDisabled : styles.pageBtn}
-                    >
-                      Next &rarr;
-                    </button>
-                  </div>
-                </div>
+                <PaginationControls
+                  currentPage={page}
+                  totalPages={totalVerifPages}
+                  totalRecords={filteredVerifications.length}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  styles={styles}
+                />
               </>
             )}
           </div>
@@ -768,6 +1100,26 @@ export default function AdminVerificationProgressPage() {
                 <option value="rejected">Rejected</option>
               </select>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={styles.filterLabel}>Timeframe:</label>
+                <select
+                  value={daysFilter}
+                  onChange={(e) => {
+                    setDaysFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.selectInput}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="2d">Last 2 Days</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="15d">Last 15 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="60d">Last 60 Days</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -784,10 +1136,28 @@ export default function AdminVerificationProgressPage() {
             </div>
           </div>
 
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onDeselectAll={() => setSelectedIds([])}
+            onExportCSV={() => handleExportTab('csv')}
+            onExportJSON={() => handleExportTab('json')}
+            onDeleteSelected={handleBulkDelete}
+            styles={styles}
+          />
+
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentContractorDocs.length > 0 && currentContractorDocs.every((i) => selectedIds.includes(i._id || i.id))}
+                      onChange={() => toggleSelectAll(currentContractorDocs)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th style={styles.th}>Document File</th>
                   <th style={styles.th}>Contractor / Business</th>
                   <th style={styles.th}>Status</th>
@@ -806,8 +1176,17 @@ export default function AdminVerificationProgressPage() {
                     const cont = doc.contractorId || {};
                     const user = doc.userId || {};
                     const docStatus = doc.documentStatus || 'pending_review';
+                    const isSelected = selectedIds.includes(docId);
                     return (
-                      <tr key={docId} style={styles.tr}>
+                      <tr key={docId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(docId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={styles.docFileIcon}>
@@ -887,33 +1266,15 @@ export default function AdminVerificationProgressPage() {
           </div>
 
           {/* Pagination */}
-          <div style={styles.paginationBar}>
-            <div style={styles.paginationInfo}>
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredContractorDocs.length)} to{' '}
-              {Math.min(page * PAGE_SIZE, filteredContractorDocs.length)} of {filteredContractorDocs.length} documents
-            </div>
-            <div style={styles.paginationBtns}>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                &larr; Previous
-              </button>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                Page {page} of {totalDocsPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalDocsPages}
-                onClick={() => setPage((p) => Math.min(totalDocsPages, p + 1))}
-                style={page >= totalDocsPages ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                Next &rarr;
-              </button>
-            </div>
-          </div>
+          <PaginationControls
+            currentPage={page}
+            totalPages={totalDocsPages}
+            totalRecords={filteredContractorDocs.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            styles={styles}
+          />
         </div>
       )}
 
@@ -974,6 +1335,26 @@ export default function AdminVerificationProgressPage() {
                 <option value="suspended">Suspended</option>
               </select>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={styles.filterLabel}>Timeframe:</label>
+                <select
+                  value={daysFilter}
+                  onChange={(e) => {
+                    setDaysFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.selectInput}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="2d">Last 2 Days</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="15d">Last 15 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="60d">Last 60 Days</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -990,10 +1371,28 @@ export default function AdminVerificationProgressPage() {
             </div>
           </div>
 
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onDeselectAll={() => setSelectedIds([])}
+            onExportCSV={() => handleExportTab('csv')}
+            onExportJSON={() => handleExportTab('json')}
+            onDeleteSelected={handleBulkDelete}
+            styles={styles}
+          />
+
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentCustomers.length > 0 && currentCustomers.every((i) => selectedIds.includes(i._id || i.id))}
+                      onChange={() => toggleSelectAll(currentCustomers)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th style={styles.th}>Customer</th>
                   <th style={styles.th}>Email</th>
                   <th style={styles.th}>Phone</th>
@@ -1012,8 +1411,17 @@ export default function AdminVerificationProgressPage() {
                     const custId = c._id || c.id;
                     const custName = c.fullName || c.name || 'Customer';
                     const custStatus = c.accountStatus || c.status || 'ACTIVE';
+                    const isSelected = selectedIds.includes(custId);
                     return (
-                      <tr key={custId} style={styles.tr}>
+                      <tr key={custId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(custId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <strong>{custName}</strong>
                         </td>
@@ -1050,33 +1458,15 @@ export default function AdminVerificationProgressPage() {
           </div>
 
           {/* Pagination */}
-          <div style={styles.paginationBar}>
-            <div style={styles.paginationInfo}>
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredCustomers.length)} to{' '}
-              {Math.min(page * PAGE_SIZE, filteredCustomers.length)} of {filteredCustomers.length} customers
-            </div>
-            <div style={styles.paginationBtns}>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                &larr; Previous
-              </button>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                Page {page} of {totalCustPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalCustPages}
-                onClick={() => setPage((p) => Math.min(totalCustPages, p + 1))}
-                style={page >= totalCustPages ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                Next &rarr;
-              </button>
-            </div>
-          </div>
+          <PaginationControls
+            currentPage={page}
+            totalPages={totalCustPages}
+            totalRecords={filteredCustomers.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            styles={styles}
+          />
         </div>
       )}
 
@@ -1138,6 +1528,26 @@ export default function AdminVerificationProgressPage() {
                 <option value="suspended">Suspended / Blocked</option>
               </select>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={styles.filterLabel}>Timeframe:</label>
+                <select
+                  value={daysFilter}
+                  onChange={(e) => {
+                    setDaysFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.selectInput}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="2d">Last 2 Days</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="15d">Last 15 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="60d">Last 60 Days</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -1154,10 +1564,28 @@ export default function AdminVerificationProgressPage() {
             </div>
           </div>
 
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onDeselectAll={() => setSelectedIds([])}
+            onExportCSV={() => handleExportTab('csv')}
+            onExportJSON={() => handleExportTab('json')}
+            onDeleteSelected={handleBulkDelete}
+            styles={styles}
+          />
+
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentContractorDocs.length > 0 && currentContractors.every((i) => selectedIds.includes(i._id || i.id))}
+                      onChange={() => toggleSelectAll(currentContractors)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th style={styles.th}>Contractor / Company</th>
                   <th style={styles.th}>License #</th>
                   <th style={styles.th}>Verification</th>
@@ -1177,8 +1605,17 @@ export default function AdminVerificationProgressPage() {
                     const contId = c._id || c.id;
                     const contName = c.fullName || c.name || 'Contractor';
                     const contStatus = c.accountStatus || c.status || 'ACTIVE';
+                    const isSelected = selectedIds.includes(contId);
                     return (
-                      <tr key={contId} style={styles.tr}>
+                      <tr key={contId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(contId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <strong>{contName}</strong>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>{c.contractorProfile?.companyName || c.email}</div>
@@ -1229,33 +1666,15 @@ export default function AdminVerificationProgressPage() {
           </div>
 
           {/* Pagination */}
-          <div style={styles.paginationBar}>
-            <div style={styles.paginationInfo}>
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredContractors.length)} to{' '}
-              {Math.min(page * PAGE_SIZE, filteredContractors.length)} of {filteredContractors.length} contractors
-            </div>
-            <div style={styles.paginationBtns}>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                &larr; Previous
-              </button>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                Page {page} of {totalContPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalContPages}
-                onClick={() => setPage((p) => Math.min(totalContPages, p + 1))}
-                style={page >= totalContPages ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                Next &rarr;
-              </button>
-            </div>
-          </div>
+          <PaginationControls
+            currentPage={page}
+            totalPages={totalContPages}
+            totalRecords={filteredContractors.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            styles={styles}
+          />
         </div>
       )}
 
@@ -1310,6 +1729,26 @@ export default function AdminVerificationProgressPage() {
                 <option value="REJECTED">Rejected</option>
               </select>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={styles.filterLabel}>Timeframe:</span>
+                <select
+                  value={daysFilter}
+                  onChange={(e) => {
+                    setDaysFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.filterSelect}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="2d">Last 2 Days</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="15d">Last 15 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="60d">Last 60 Days</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => loadTabData()}
@@ -1325,11 +1764,29 @@ export default function AdminVerificationProgressPage() {
             </div>
           </div>
 
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onDeselectAll={() => setSelectedIds([])}
+            onExportCSV={() => handleExportTab('csv')}
+            onExportJSON={() => handleExportTab('json')}
+            onDeleteSelected={handleBulkDelete}
+            styles={styles}
+          />
+
           {/* Requests Table */}
           <div style={styles.tableResponsive}>
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentDiscountRequests.length > 0 && currentDiscountRequests.every((i) => selectedIds.includes(i._id || i.id))}
+                      onChange={() => toggleSelectAll(currentDiscountRequests)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th style={styles.th}>Contractor &amp; Business</th>
                   <th style={styles.th}>Submitted Date</th>
                   <th style={styles.th}>Request Type &amp; Details</th>
@@ -1355,9 +1812,19 @@ export default function AdminVerificationProgressPage() {
                     const cProfile = item.contractorProfile || {};
                     const docs = item.uploadedDocs || [];
                     const status = (item.status || 'PENDING').toUpperCase();
+                    const reqId = item._id || item.id;
+                    const isSelected = selectedIds.includes(reqId);
 
                     return (
-                      <tr key={item._id || item.id} style={styles.tr}>
+                      <tr key={reqId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectOne(reqId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{
@@ -1462,82 +1929,165 @@ export default function AdminVerificationProgressPage() {
                         </td>
 
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
-                            {/* 1. Profile Button */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                             <button
                               type="button"
-                              onClick={() => {
-                                const targetId = cUser._id || cUser.id || item.contractorId;
-                                navigate(`/admin/users/${targetId}`, {
-                                  state: {
-                                    from: '/admin/verification-progress',
-                                    fromTab: 'discount_requests',
-                                    fromTitle: '← Back to Verification & Progress',
-                                  },
-                                });
-                              }}
-                              style={styles.actionBtnOutline}
-                              title="View contractor complete user dossier"
-                            >
-                              Profile
-                            </button>
-
-                            {/* 2. Check Documents Button */}
-                            <button
-                              type="button"
-                              onClick={() => setContractorDocsModal({ open: true, request: item })}
+                              onClick={() => setInspectDiscountModal(item)}
                               style={{
-                                ...styles.actionBtnOutline,
-                                color: '#0F766E',
-                                borderColor: '#99F6E4',
-                                backgroundColor: '#F0FDFA',
+                                padding: '6px 14px',
+                                backgroundColor: '#EFF6FF',
+                                color: '#1D4ED8',
+                                border: '1px solid #BFDBFE',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                transition: 'all 0.15s ease',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                               }}
-                              title="Inspect uploaded credentials & insurance certificates"
+                              title="View full discount request preview, conversions history, and moderation options"
                             >
-                              Check Docs ({docs.length})
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                              View Request
                             </button>
 
-                            {/* 3. Accept & Tune Button */}
-                            {status === 'PENDING' && (
+                            <div style={{ position: 'relative' }}>
                               <button
                                 type="button"
-                                onClick={() => handleOpenTuneModal(item)}
-                                style={{
-                                  padding: '6px 12px',
-                                  backgroundColor: '#15803D',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === reqId ? null : reqId);
                                 }}
-                                title="Approve and tune wholesale discount percentage"
-                              >
-                                Accept
-                              </button>
-                            )}
-
-                            {/* 4. Reject Button */}
-                            {status === 'PENDING' && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenRejectDiscountModal(item)}
                                 style={{
-                                  padding: '6px 10px',
+                                  width: '30px',
+                                  height: '30px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #E2E8F0',
                                   backgroundColor: '#FFFFFF',
-                                  color: '#DC2626',
-                                  border: '1px solid #FCA5A5',
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: '700',
+                                  color: '#475569',
+                                  fontSize: '18px',
+                                  lineHeight: 1,
                                   cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  transition: 'all 0.15s ease',
                                 }}
-                                title="Reject discount request with contractor notification"
+                                title="More options"
                               >
-                                Reject
+                                ⋮
                               </button>
-                            )}
+                              {activeMenuId === reqId && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    top: '34px',
+                                    backgroundColor: '#FFFFFF',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                    zIndex: 50,
+                                    minWidth: '150px',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    padding: '4px',
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      const targetId = cUser._id || cUser.id || item.contractorId;
+                                      navigate(`/admin/users/${targetId}`, {
+                                        state: {
+                                          from: '/admin/verification-progress',
+                                          fromTab: 'discount_requests',
+                                          fromTitle: '← Back to Verification & Progress',
+                                        },
+                                      });
+                                    }}
+                                    style={{
+                                      padding: '8px 12px',
+                                      textAlign: 'left',
+                                      background: 'none',
+                                      border: 'none',
+                                      fontSize: '13px',
+                                      color: '#1E293B',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontWeight: '500',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    View Profile
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      setReplyModal({ open: true, request: item, message: '', submitting: false });
+                                    }}
+                                    style={{
+                                      padding: '8px 12px',
+                                      textAlign: 'left',
+                                      background: 'none',
+                                      border: 'none',
+                                      fontSize: '13px',
+                                      color: '#1E293B',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontWeight: '500',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    Send Reply
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      handleDeleteSingleDiscountRequest(reqId);
+                                    }}
+                                    style={{
+                                      padding: '8px 12px',
+                                      textAlign: 'left',
+                                      background: 'none',
+                                      border: 'none',
+                                      fontSize: '13px',
+                                      color: '#DC2626',
+                                      cursor: 'pointer',
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontWeight: '600',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1549,33 +2099,15 @@ export default function AdminVerificationProgressPage() {
           </div>
 
           {/* Pagination */}
-          <div style={styles.paginationBar}>
-            <div style={styles.paginationInfo}>
-              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredDiscountRequests.length)} to{' '}
-              {Math.min(page * PAGE_SIZE, filteredDiscountRequests.length)} of {filteredDiscountRequests.length} requests
-            </div>
-            <div style={styles.paginationBtns}>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                &larr; Previous
-              </button>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                Page {page} of {totalDiscountPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalDiscountPages}
-                onClick={() => setPage((p) => Math.min(totalDiscountPages, p + 1))}
-                style={page >= totalDiscountPages ? styles.pageBtnDisabled : styles.pageBtn}
-              >
-                Next &rarr;
-              </button>
-            </div>
-          </div>
+          <PaginationControls
+            currentPage={page}
+            totalPages={totalDiscountPages}
+            totalRecords={filteredDiscountRequests.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            styles={styles}
+          />
         </div>
       )}
 
@@ -2219,6 +2751,176 @@ export default function AdminVerificationProgressPage() {
           </div>
         </div>
       )}
+
+      {/* INSPECT DISCOUNT REQUEST MODAL (Preview Contractor Info, Conversion Metrics & Message) */}
+      {inspectDiscountModal && (
+        <div style={styles.modalOverlay} onClick={() => setInspectDiscountModal(null)}>
+          <div style={{ ...styles.modalContent, maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h2 style={styles.modalTitle}>Contractor Discount Request Preview</h2>
+                <p style={styles.modalSub}>Detailed profile verification, conversions history, and scope metrics</p>
+              </div>
+              <button onClick={() => setInspectDiscountModal(null)} style={styles.modalCloseBtn}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              {/* Contractor Profile Summary */}
+              <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                    {inspectDiscountModal.businessName || inspectDiscountModal.contractorProfile?.businessName || inspectDiscountModal.contractorProfile?.companyName || 'Independent Contractor'}
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 700, backgroundColor: '#dbeafe', color: '#1e40af' }}>
+                    Current Tier: {inspectDiscountModal.currentTier || 5}% Off
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                  <div><strong>Contact:</strong> {inspectDiscountModal.contactName || inspectDiscountModal.contractorId?.fullName || '—'}</div>
+                  <div><strong>Email:</strong> {inspectDiscountModal.contactEmail || inspectDiscountModal.contractorId?.email || '—'}</div>
+                  <div><strong>Phone:</strong> {inspectDiscountModal.contactPhone || inspectDiscountModal.contractorId?.phone || '—'}</div>
+                  <div><strong>License:</strong> {inspectDiscountModal.contractorProfile?.licenseNumber || 'Verified on file'}</div>
+                </div>
+              </div>
+
+              {/* Estimation & Conversion Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '12px', color: '#15803d', fontWeight: 600 }}>Converted Estimations</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#166534', marginTop: '4px' }}>
+                    {inspectDiscountModal.completedEstimatesCount || 0} Builds
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#65a30d', marginTop: '2px' }}>
+                    out of {inspectDiscountModal.totalEstimatesCount || 0} total saved builds
+                  </div>
+                </div>
+                <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 600 }}>Total Completed Scope Value</div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: '#1e3a8a', marginTop: '4px' }}>
+                    ${(inspectDiscountModal.totalCompletedEstimatesCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+                    accrued completed contractor volume
+                  </div>
+                </div>
+              </div>
+
+              {/* Message / Description */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Request Subject / Tier Type:
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '10px' }}>
+                  {inspectDiscountModal.requestType || 'Request Higher Wholesale Discount'}
+                </div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Contractor Message / Justification:
+                </label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '12px', fontSize: '13px', color: '#334155', lineHeight: 1.5, maxHeight: '140px', overflowY: 'auto' }}>
+                  {inspectDiscountModal.description || 'No detailed justification message provided.'}
+                </div>
+              </div>
+
+              {/* Attached Documents if any */}
+              {inspectDiscountModal.documents && inspectDiscountModal.documents.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Attached Credentials &amp; Documents ({inspectDiscountModal.documents.length}):
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {inspectDiscountModal.documents.map((doc, idx) => (
+                      <button
+                        key={doc._id || idx}
+                        type="button"
+                        onClick={() => setViewingDocModal(doc)}
+                        style={styles.actionBtnOutline}
+                      >
+                        📄 {doc.documentType || doc.originalFileName || `Document #${idx + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setInspectDiscountModal(null)}
+                style={styles.modalBtnSecondary}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const req = inspectDiscountModal;
+                  setInspectDiscountModal(null);
+                  handleOpenRejectDiscountModal(req);
+                }}
+                style={styles.actionBtnDangerLg}
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const req = inspectDiscountModal;
+                  setInspectDiscountModal(null);
+                  handleOpenTuneModal(req);
+                }}
+                style={{ ...styles.actionBtnPrimaryLg, backgroundColor: '#16a34a' }}
+              >
+                Accept &amp; Tune %
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SEND REPLY MODAL (Dispatches direct formatted notification to contractor) */}
+      {replyModal.open && replyModal.request && (
+        <div style={styles.modalOverlay} onClick={() => setReplyModal({ open: false, request: null, message: '', submitting: false })}>
+          <div style={{ ...styles.modalContent, maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h2 style={styles.modalTitle}>Send Reply to Contractor</h2>
+                <p style={styles.modalSub}>
+                  Delivers an in-app notification directly to <strong>{replyModal.request.businessName || 'Contractor'}</strong>
+                </p>
+              </div>
+              <button onClick={() => setReplyModal({ open: false, request: null, message: '', submitting: false })} style={styles.modalCloseBtn}>✕</button>
+            </div>
+            <div style={styles.modalBody}>
+              <label style={styles.inputLabel}>Message / Notification to Contractor:</label>
+              <textarea
+                rows={4}
+                style={styles.modalTextarea}
+                placeholder="e.g. Please upload your updated commercial liability certificate before we can approve your 15% tier..."
+                value={replyModal.message}
+                onChange={(e) => setReplyModal((prev) => ({ ...prev, message: e.target.value }))}
+              />
+            </div>
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setReplyModal({ open: false, request: null, message: '', submitting: false })}
+                style={styles.modalBtnSecondary}
+                disabled={replyModal.submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendReplyToContractor}
+                style={styles.actionBtnPrimaryLg}
+                disabled={replyModal.submitting || !replyModal.message.trim()}
+              >
+                {replyModal.submitting ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2239,6 +2941,82 @@ function getVerifStatusBadge(status) {
 }
 
 const styles = {
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eff6ff',
+    border: '1.5px solid #bfdbfe',
+    borderRadius: '8px',
+    padding: '10px 16px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '10px',
+    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)',
+  },
+  bulkActionLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkSelectedCount: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1e3a8a',
+  },
+  bulkDeselectBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#3b82f6',
+    fontSize: '12px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    fontWeight: '600',
+  },
+  bulkActionRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkExportBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#dc2626',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  pageBtnActive: {
+    padding: '6px 12px',
+    backgroundColor: '#1e3a8a',
+    color: '#ffffff',
+    border: '1px solid #1e3a8a',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
   container: {
     padding: '24px 32px',
     backgroundColor: '#f8fafc',

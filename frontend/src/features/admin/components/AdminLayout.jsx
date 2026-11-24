@@ -42,7 +42,10 @@ export default function AdminLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingVerifications, setPendingVerifications] = useState(0);
+  const [pendingDiscountRequests, setPendingDiscountRequests] = useState(0);
+  const [pendingUserRequests, setPendingUserRequests] = useState(0);
   const [hotLeadsCount, setHotLeadsCount] = useState(0);
+  const [pendingProjectsCount, setPendingProjectsCount] = useState(0);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -111,7 +114,7 @@ export default function AdminLayout() {
 
   const currentPath = location.pathname;
 
-  // Load badge counts
+  // Load badge counts across core operational modules
   useEffect(() => {
     let mounted = true;
     adminApi
@@ -132,10 +135,44 @@ export default function AdminLayout() {
       })
       .catch(() => {});
 
+    adminApi
+      .getDiscountRequests({ status: 'PENDING' })
+      .then((res) => {
+        const list = res?.data?.requests || res?.data || [];
+        if (mounted && Array.isArray(list)) {
+          setPendingDiscountRequests(list.filter((r) => (r.status || '').toUpperCase() === 'PENDING').length);
+        }
+      })
+      .catch(() => {});
+
+    adminApi
+      .getUserRequests({ status: 'pending' })
+      .then((res) => {
+        const list = res?.data?.data || res?.data || [];
+        if (mounted && Array.isArray(list)) {
+          setPendingUserRequests(list.filter((r) => (r.status || '').toLowerCase() === 'pending').length);
+        }
+      })
+      .catch(() => {});
+
+    adminApi
+      .getProjects({ limit: 100 })
+      .then((res) => {
+        const list = res?.data?.projects || res?.data || [];
+        if (mounted && Array.isArray(list)) {
+          const inReview = list.filter((p) => {
+            const st = (p.status || p.projectStatus || '').toLowerCase();
+            return st === 'in_review' || st === 'requested';
+          }).length;
+          setPendingProjectsCount(inReview);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [currentPath]);
 
   const handleLogout = async () => {
     try {
@@ -150,10 +187,10 @@ export default function AdminLayout() {
     return currentPath.startsWith(path);
   };
 
-  // Compute breadcrumbs & title
+  // Compute breadcrumbs & title (Removed "Platform Governance" and "Operations & Approvals" per user requirement)
   const getPageMeta = () => {
-    if (currentPath.includes('/admin/users')) return { title: 'User Management', category: 'Platform Governance' };
-    if (currentPath.includes('/admin/verification-progress')) return { title: 'Verification & Progress', category: 'Operations & Approvals' };
+    if (currentPath.includes('/admin/users')) return { title: 'User Management', category: '' };
+    if (currentPath.includes('/admin/verification-progress')) return { title: 'Verification & Progress', category: '' };
     if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: 'Enquiries Hub' };
     if (currentPath.includes('/admin/projects')) return { title: 'Projects', category: 'Deck Project Directory' };
     if (currentPath.includes('/admin/pricing') || currentPath.includes('/admin/discounts')) return { title: 'Pricing & Discounts', category: 'Calculation & Incentives' };
@@ -166,7 +203,7 @@ export default function AdminLayout() {
 
   const meta = getPageMeta();
 
-  // Exact 11 items
+  // Exact 11 items with custom colored small bubble badges for core operational workflows
   const menuItems = [
     {
       path: '/admin/dashboard',
@@ -183,6 +220,8 @@ export default function AdminLayout() {
     {
       path: '/admin/users',
       label: 'User Management',
+      badge: pendingUserRequests > 0 ? pendingUserRequests : null,
+      badgeColor: '#2563EB',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -195,7 +234,8 @@ export default function AdminLayout() {
     {
       path: '/admin/verification-progress',
       label: 'Verification & Progress',
-      badge: pendingVerifications > 0 ? pendingVerifications : null,
+      badge: (pendingVerifications + pendingDiscountRequests) > 0 ? (pendingVerifications + pendingDiscountRequests) : null,
+      badgeColor: '#D97706',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -207,7 +247,7 @@ export default function AdminLayout() {
       path: '/admin/leads',
       label: 'Lead Management',
       badge: hotLeadsCount > 0 ? hotLeadsCount : null,
-      badgeColor: '#ef4444',
+      badgeColor: '#DC2626',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -219,6 +259,8 @@ export default function AdminLayout() {
     {
       path: '/admin/projects',
       label: 'Projects',
+      badge: pendingProjectsCount > 0 ? pendingProjectsCount : null,
+      badgeColor: '#7C3AED',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -465,7 +507,7 @@ export default function AdminLayout() {
               </button>
             )}
             <div>
-              <div style={styles.breadcrumbCategory}>{meta.category}</div>
+              {meta.category ? <div style={styles.breadcrumbCategory}>{meta.category}</div> : null}
               <h1 style={{ ...styles.breadcrumbTitle, fontSize: isMobile ? '1rem' : '1.18rem' }}>{meta.title}</h1>
             </div>
           </div>
@@ -681,11 +723,16 @@ const styles = {
     textOverflow: 'ellipsis',
   },
   badge: {
-    fontSize: '10px',
+    fontSize: '10.5px',
     fontWeight: '700',
     color: '#ffffff',
     borderRadius: '10px',
     padding: '1px 7px',
+    marginLeft: 'auto',
+    minWidth: '18px',
+    textAlign: 'center',
+    lineHeight: '1.4',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
   },
   navDivider: {
     height: '1px',
@@ -712,7 +759,8 @@ const styles = {
   header: {
     height: '66px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '2.5px solid #C96D22',
+    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

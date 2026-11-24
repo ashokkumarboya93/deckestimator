@@ -32,15 +32,29 @@ const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
  * Retrieve contractor profile for the authenticated contractor user.
  */
 async function getProfileByUserId(userId) {
-  const profile = await ContractorProfile.findOne({ userId })
+  let profile = await ContractorProfile.findOne({ userId })
     .populate('userId', 'fullName firstName lastName email role accountStatus')
     .populate('servicesOffered', 'name serviceCode description categoryId');
 
   if (!profile) {
-    const error = new Error('Contractor profile not found.');
-    error.statusCode = 404;
-    error.code = 'PROFILE_NOT_FOUND';
-    throw error;
+    const u = await User.findById(userId).lean();
+    if (u && (u.role === 'contractor' || u.role === 'admin')) {
+      await ContractorProfile.create({
+        userId,
+        businessName: u.businessName || u.companyName || u.fullName || 'Trade Contractor Partner',
+        businessEmail: u.email || '',
+        businessPhone: u.phone || '',
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+      });
+      profile = await ContractorProfile.findOne({ userId })
+        .populate('userId', 'fullName firstName lastName email role accountStatus')
+        .populate('servicesOffered', 'name serviceCode description categoryId');
+    } else {
+      const error = new Error('Contractor profile not found.');
+      error.statusCode = 404;
+      error.code = 'PROFILE_NOT_FOUND';
+      throw error;
+    }
   }
   return profile;
 }
@@ -49,12 +63,23 @@ async function getProfileByUserId(userId) {
  * Update permitted business fields on contractor profile.
  */
 async function updateProfile(userId, updateData) {
-  const profile = await ContractorProfile.findOne({ userId });
+  let profile = await ContractorProfile.findOne({ userId });
   if (!profile) {
-    const error = new Error('Contractor profile not found.');
-    error.statusCode = 404;
-    error.code = 'PROFILE_NOT_FOUND';
-    throw error;
+    const u = await User.findById(userId).lean();
+    if (u) {
+      profile = await ContractorProfile.create({
+        userId,
+        businessName: u.businessName || u.companyName || u.fullName || 'Trade Contractor Partner',
+        businessEmail: u.email || '',
+        businessPhone: u.phone || '',
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+      });
+    } else {
+      const error = new Error('Contractor profile not found.');
+      error.statusCode = 404;
+      error.code = 'PROFILE_NOT_FOUND';
+      throw error;
+    }
   }
 
   // Whitelist of contractor-editable fields
@@ -105,12 +130,23 @@ async function updateProfile(userId, updateData) {
  * Submit contractor application for verification.
  */
 async function submitVerification(userId, notes = '') {
-  const profile = await ContractorProfile.findOne({ userId });
+  let profile = await ContractorProfile.findOne({ userId });
   if (!profile) {
-    const error = new Error('Contractor profile not found.');
-    error.statusCode = 404;
-    error.code = 'PROFILE_NOT_FOUND';
-    throw error;
+    const u = await User.findById(userId).lean();
+    if (u) {
+      profile = await ContractorProfile.create({
+        userId,
+        businessName: u.businessName || u.companyName || u.fullName || 'Trade Contractor Partner',
+        businessEmail: u.email || '',
+        businessPhone: u.phone || '',
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+      });
+    } else {
+      const error = new Error('Contractor profile not found.');
+      error.statusCode = 404;
+      error.code = 'PROFILE_NOT_FOUND';
+      throw error;
+    }
   }
 
   const allowableStatuses = [
@@ -195,12 +231,23 @@ async function uploadDocument(userId, file, documentType, notes = '') {
     throw error;
   }
 
-  const profile = await ContractorProfile.findOne({ userId });
+  let profile = await ContractorProfile.findOne({ userId });
   if (!profile) {
-    const error = new Error('Contractor profile not found.');
-    error.statusCode = 404;
-    error.code = 'PROFILE_NOT_FOUND';
-    throw error;
+    const u = await User.findById(userId).lean();
+    if (u) {
+      profile = await ContractorProfile.create({
+        userId,
+        businessName: u.businessName || u.companyName || u.fullName || 'Trade Contractor Partner',
+        businessEmail: u.email || '',
+        businessPhone: u.phone || '',
+        verificationStatus: VERIFICATION_STATUS.PENDING,
+      });
+    } else {
+      const error = new Error('Contractor profile not found.');
+      error.statusCode = 404;
+      error.code = 'PROFILE_NOT_FOUND';
+      throw error;
+    }
   }
 
   // Save to secure storage

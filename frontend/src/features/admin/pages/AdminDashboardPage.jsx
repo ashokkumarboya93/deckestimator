@@ -521,7 +521,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) — Informational Static Metric Card */}
+        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) — Aggregated Live Pipeline Value Metric Card */}
         <div style={{ ...styles.cardGreenRef, cursor: 'default' }} title="Total Pipeline Value">
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>

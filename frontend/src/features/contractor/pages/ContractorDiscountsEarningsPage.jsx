@@ -446,20 +446,6 @@ export default function ContractorDiscountsEarningsPage() {
           display: none;
         }
 
-        .contractor-discounts-kpi-grid {
-          display: grid !important;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          gap: 10px !important;
-          margin-bottom: 16px !important;
-          width: 100% !important;
-        }
-        @media (min-width: 1025px) {
-          .contractor-discounts-kpi-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-            gap: 16px !important;
-            margin-bottom: 22px !important;
-          }
-        }
         @media (max-width: 1024px) {
           .contractor-discounts-bottom-grid {
             display: flex !important;
@@ -471,6 +457,10 @@ export default function ContractorDiscountsEarningsPage() {
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box !important;
+          }
+          .contractor-discounts-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
           .contractor-discounts-desktop-table {
             display: none !important;
@@ -511,8 +501,15 @@ export default function ContractorDiscountsEarningsPage() {
         </div>
       </section>
 
-      {/* 2. Summary KPI Cards — Glass Effect & Pale Colors with Real MongoDB Data (2x2 on Mobile, 4 on Desktop) */}
-      <div className="contractor-discounts-kpi-grid">
+      {/* 2. Summary KPI Cards — Glass Effect & Pale Colors with Real MongoDB Data */}
+      <div
+        className="contractor-discounts-kpi-grid"
+        style={{
+          ...styles.kpiGrid,
+          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+          gap: isMobile ? '10px' : '16px',
+        }}
+      >
         {/* Card 1: Wholesale Tier Discount */}
         <div
           style={{

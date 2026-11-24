@@ -37,6 +37,7 @@ router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
 
 // 2. User Management & Moderation
 router.get('/users', adminController.listUsers);
+router.post('/users/bulk-delete', adminController.bulkDeleteUsers);
 router.get('/users/:id/export', adminController.exportSingleUserDossier);
 router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.updateUserStatus);
@@ -52,6 +53,7 @@ router.post('/verifications/:id/approve', adminController.approveContractorVerif
 router.post('/verifications/:id/reject', adminController.rejectContractorVerification);
 router.get('/verifications/:contractorId/history', adminController.getVerificationHistory);
 router.get('/contractor-documents', adminController.listContractorDocuments);
+router.post('/contractor-documents/bulk-delete', adminController.bulkDeleteContractorDocuments);
 router.get('/contractor-documents/:id/file', adminController.downloadContractorDocument);
 router.get('/contractor-documents/:id/stream', adminController.downloadContractorDocument);
 router.patch('/contractor-documents/:id/review', adminController.reviewContractorDocument);

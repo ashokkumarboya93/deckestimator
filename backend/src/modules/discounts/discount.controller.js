@@ -204,6 +204,49 @@ async function rejectDiscountRequest(req, res, next) {
   }
 }
 
+async function deleteDiscountRequest(req, res, next) {
+  try {
+    const request = await discountService.deleteDiscountRequest(req.params.id);
+    res.status(200).json({
+      success: true,
+      data: { request },
+      message: 'Discount request deleted successfully.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteDiscountRequests(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.requestIds || [];
+    const result = await discountService.bulkDeleteDiscountRequests(ids);
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function replyDiscountRequest(req, res, next) {
+  try {
+    const request = await discountService.replyDiscountRequest(
+      req.params.id,
+      req.body,
+      req.user
+    );
+    res.status(200).json({
+      success: true,
+      data: { request },
+      message: 'Reply sent directly to contractor notification inbox.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createPolicy,
   getPolicies,
@@ -219,4 +262,7 @@ module.exports = {
   getAdminDiscountRequests,
   approveDiscountRequest,
   rejectDiscountRequest,
+  deleteDiscountRequest,
+  bulkDeleteDiscountRequests,
+  replyDiscountRequest,
 };

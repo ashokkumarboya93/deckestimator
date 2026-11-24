@@ -48,8 +48,14 @@ export default function AdminUserManagementPage() {
   // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [daysFilter, setDaysFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+
+  // Multi-select & Bulk Actions
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [bulkDeleteModal, setBulkDeleteModal] = useState({ open: false, reason: '' });
 
   // Modals & User Requests
   const [selectedUser, setSelectedUser] = useState(null);
@@ -61,7 +67,7 @@ export default function AdminUserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, [activeTab, statusFilter, page]);
+  }, [activeTab, statusFilter, daysFilter, page, pageSize]);
 
   // Live auto-filter search while typing (debounced)
   useEffect(() => {
@@ -72,6 +78,24 @@ export default function AdminUserManagementPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const matchesDaysFilter = (dateVal, filter) => {
+    if (!filter || filter === 'all') return true;
+    if (!dateVal) return false;
+    const itemDate = new Date(dateVal).getTime();
+    if (isNaN(itemDate)) return true;
+    const now = Date.now();
+    const diffMs = now - itemDate;
+    if (diffMs < 0) return true;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    if (filter === 'today') return diffHours <= 24;
+    if (filter === '2d') return diffHours <= 48;
+    if (filter === '7d') return diffHours <= 24 * 7;
+    if (filter === '15d') return diffHours <= 24 * 15;
+    if (filter === '30d') return diffHours <= 24 * 30;
+    if (filter === '60d') return diffHours <= 24 * 60;
+    return true;
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -79,37 +103,42 @@ export default function AdminUserManagementPage() {
       if (activeTab === 'requests') {
         const res = await adminApi.getUserRequests({
           page,
-          limit: 12,
+          limit: pageSize,
           status: statusFilter !== 'all' ? statusFilter : undefined,
           search: searchTerm.trim() || undefined,
         });
         const reqList = res.data?.data || res.data || [];
-        setUserRequests(reqList);
-        setPagination(res.data?.pagination || res.pagination || { page: 1, totalPages: 1, total: reqList.length });
+        const filteredReqs = daysFilter !== 'all' ? reqList.filter((r) => matchesDaysFilter(r.createdAt, daysFilter)) : reqList;
+        setUserRequests(filteredReqs);
+        setPagination(res.data?.pagination || res.pagination || { page: 1, totalPages: Math.ceil(filteredReqs.length / pageSize) || 1, total: filteredReqs.length });
         return;
       }
 
       const params = {
         page,
-        limit: 12,
+        limit: pageSize,
         search: searchTerm.trim() || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        registrationDate: daysFilter !== 'all' ? daysFilter : undefined,
       };
 
       if (activeTab === 'customer') params.role = 'customer';
       else if (activeTab === 'contractor') params.role = 'contractor';
 
       const res = await adminApi.getUsers(params);
-      const userList = res.data || [];
+      let userList = res.data || [];
+      if (daysFilter !== 'all') {
+        userList = userList.filter((u) => matchesDaysFilter(u.createdAt, daysFilter));
+      }
       setUsers(userList);
-      if (activeTab === 'all' && !searchTerm.trim() && statusFilter === 'all' && page === 1) {
+      if (activeTab === 'all' && !searchTerm.trim() && statusFilter === 'all' && daysFilter === 'all' && page === 1) {
         try {
           localStorage.setItem('drp_admin_users_cache', JSON.stringify(userList));
         } catch {
           // Ignore
         }
       }
-      setPagination(res.pagination || { page: 1, totalPages: 1, total: userList.length });
+      setPagination(res.pagination || { page: 1, totalPages: Math.ceil(userList.length / pageSize) || 1, total: userList.length });
     } catch (err) {
       setError(err?.message || 'Failed to load users');
     } finally {
@@ -166,6 +195,81 @@ export default function AdminUserManagementPage() {
       setError(err?.message || 'Failed to process user appeal.');
     } finally {
       setRequestSubmitting(false);
+    }
+  };
+
+  // Selection & Bulk Handlers
+  const toggleSelectUser = (id) => {
+    setSelectedUserIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const isAllCurrentPageSelected = users.length > 0 && users.every((u) => selectedUserIds.includes(u._id || u.id));
+
+  const toggleSelectAllCurrentPage = () => {
+    if (isAllCurrentPageSelected) {
+      const currentIds = new Set(users.map((u) => u._id || u.id));
+      setSelectedUserIds((prev) => prev.filter((id) => !currentIds.has(id)));
+    } else {
+      const currentIds = users.map((u) => u._id || u.id);
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
+
+  const handleExportSelected = (format = 'csv') => {
+    const listToExport = selectedUserIds.length > 0
+      ? users.filter((u) => selectedUserIds.includes(u._id || u.id))
+      : users;
+
+    if (listToExport.length === 0) {
+      alert('No user records available to export.');
+      return;
+    }
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(listToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = ['ID', 'Full Name', 'Email', 'Role', 'Status', 'Phone', 'Company', 'Joined Date'];
+      const rows = listToExport.map((u) => [
+        u._id || u.id || '',
+        u.fullName || u.name || '',
+        u.email || '',
+        u.role || '',
+        u.accountStatus || u.status || '',
+        u.phone || '',
+        u.contractorProfile?.companyName || '',
+        u.createdAt ? new Date(u.createdAt).toISOString() : '',
+      ]);
+      const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    setActionSubmitting(true);
+    setError(null);
+    try {
+      await adminApi.bulkDeleteUsers(selectedUserIds, bulkDeleteModal.reason);
+      setSuccessMsg(`Successfully deleted ${selectedUserIds.length} user account(s).`);
+      setSelectedUserIds([]);
+      setBulkDeleteModal({ open: false, reason: '' });
+      fetchUsers();
+    } catch (err) {
+      setError(err?.message || 'Failed to bulk delete users.');
+    } finally {
+      setActionSubmitting(false);
     }
   };
 
@@ -304,6 +408,24 @@ export default function AdminUserManagementPage() {
             )}
           </select>
 
+          <label style={styles.filterLabel}>Days Range:</label>
+          <select
+            value={daysFilter}
+            onChange={(e) => {
+              setDaysFilter(e.target.value);
+              setPage(1);
+            }}
+            style={styles.selectInput}
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="2d">Last 2 Days</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="15d">Last 15 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="60d">Last 60 Days</option>
+          </select>
+
           <button
             type="button"
             onClick={fetchUsers}
@@ -330,6 +452,64 @@ export default function AdminUserManagementPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk Action Bar (When users are selected) */}
+      {selectedUserIds.length > 0 && activeTab !== 'activity' && (
+        <div style={styles.bulkActionBar}>
+          <div style={styles.bulkActionLeft}>
+            <span style={styles.bulkSelectedCount}>
+              <strong>{selectedUserIds.length}</strong> {selectedUserIds.length === 1 ? 'user' : 'users'} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedUserIds([])}
+              style={styles.bulkDeselectBtn}
+            >
+              Deselect All
+            </button>
+          </div>
+          <div style={styles.bulkActionRight}>
+            <button
+              type="button"
+              onClick={() => handleExportSelected('csv')}
+              style={styles.bulkExportBtn}
+              title="Download selected accounts as CSV"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportSelected('json')}
+              style={styles.bulkExportBtn}
+              title="Download selected accounts as JSON"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkDeleteModal({ open: true, reason: '' })}
+              style={styles.bulkDeleteBtn}
+              title="Bulk delete selected user accounts"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Delete Selected ({selectedUserIds.length})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Requests Tab View */}
       {activeTab === 'requests' ? (
@@ -520,6 +700,15 @@ export default function AdminUserManagementPage() {
                 <table style={styles.table}>
                   <thead>
                     <tr>
+                      <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isAllCurrentPageSelected}
+                          onChange={toggleSelectAllCurrentPage}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          title="Select all on this page"
+                        />
+                      </th>
                       <th style={styles.th}>User / Entity</th>
                       <th style={styles.th}>Role</th>
                       <th style={styles.th}>Status</th>
@@ -533,8 +722,17 @@ export default function AdminUserManagementPage() {
                       const userId = u._id || u.id;
                       const userName = u.fullName || u.name || 'Unnamed User';
                       const userStatus = u.accountStatus || u.status || 'ACTIVE';
+                      const isSelected = selectedUserIds.includes(userId);
                       return (
-                      <tr key={userId} style={styles.tr}>
+                      <tr key={userId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '40px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectUser(userId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <div style={styles.userCell}>
                             <div style={styles.avatarPill}>
@@ -619,30 +817,67 @@ export default function AdminUserManagementPage() {
               </div>
             )}
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div style={styles.paginationBar}>
+            {/* Pagination with Range Selector */}
+            <div style={styles.paginationBar}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <span style={styles.paginationInfo}>
-                  Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} users)
+                  Showing {users.length > 0 ? (page - 1) * pageSize + 1 : 0} to {Math.min(page * pageSize, pagination.total || users.length)} of {pagination.total || users.length} records
                 </span>
-                <div style={styles.paginationBtns}>
-                  <button
-                    disabled={pagination.page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Show:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '12px',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
                   >
-                    Previous
-                  </button>
-                  <button
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                    style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-                  >
-                    Next
-                  </button>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                  </select>
                 </div>
               </div>
-            )}
+              <div style={styles.paginationBtns}>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.min(5, Math.ceil((pagination.total || users.length) / pageSize) || 1) }, (_, i) => {
+                  const pNum = i + 1;
+                  const isCurrent = page === pNum;
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => setPage(pNum)}
+                      style={isCurrent ? styles.pageBtnActive : styles.pageBtn}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  disabled={page >= Math.ceil((pagination.total || users.length) / pageSize)}
+                  onClick={() => setPage((p) => p + 1)}
+                  style={page >= Math.ceil((pagination.total || users.length) / pageSize) ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -799,6 +1034,48 @@ export default function AdminUserManagementPage() {
         </div>
       )}
 
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {bulkDeleteModal.open && (
+        <div style={styles.modalOverlay} onClick={() => setBulkDeleteModal({ open: false, reason: '' })}>
+          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ ...styles.modalTitle, color: '#dc2626' }}>Confirm Bulk Account Deletion</h3>
+            <p style={styles.modalSub}>
+              Are you sure you want to delete <strong>{selectedUserIds.length}</strong> selected user accounts? Their login access will be disabled and records flagged for retention.
+            </p>
+
+            <div style={{ marginTop: '16px' }}>
+              <label style={styles.inputLabel}>Administrative Reason (Optional):</label>
+              <textarea
+                rows={2}
+                style={styles.modalTextarea}
+                placeholder="e.g. Bulk cleanup of duplicate or unverified testing accounts..."
+                value={bulkDeleteModal.reason}
+                onChange={(e) => setBulkDeleteModal({ ...bulkDeleteModal, reason: e.target.value })}
+              />
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteModal({ open: false, reason: '' })}
+                style={styles.modalBtnSecondary}
+                disabled={actionSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                style={styles.actionBtnDangerLg}
+                disabled={actionSubmitting}
+              >
+                {actionSubmitting ? 'Deleting...' : `Confirm Delete (${selectedUserIds.length})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* USER REQUEST DETAILS & APPEAL REVIEW MODAL */}
       {requestModal.open && requestModal.request && (
         <div style={styles.modalOverlay} onClick={() => setRequestModal({ open: false, request: null, notes: '' })}>
@@ -927,6 +1204,82 @@ function getStatusBadgeStyle(status) {
 
 // Component Styles
 const styles = {
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eff6ff',
+    border: '1.5px solid #bfdbfe',
+    borderRadius: '8px',
+    padding: '10px 16px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '10px',
+    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)',
+  },
+  bulkActionLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkSelectedCount: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1e3a8a',
+  },
+  bulkDeselectBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#3b82f6',
+    fontSize: '12px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    fontWeight: '600',
+  },
+  bulkActionRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkExportBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#dc2626',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  pageBtnActive: {
+    padding: '6px 12px',
+    backgroundColor: '#1e3a8a',
+    color: '#ffffff',
+    border: '1px solid #1e3a8a',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
   container: {
     padding: '24px 32px',
     backgroundColor: '#f8fafc',

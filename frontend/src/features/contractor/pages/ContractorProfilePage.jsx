@@ -296,8 +296,15 @@ export default function ContractorProfilePage() {
     // Refresh documents list from backend
     try {
       const freshDocs = await contractorLeadApi.getMyDocuments();
-      if (freshDocs?.data && Array.isArray(freshDocs.data)) {
-        setDocuments(freshDocs.data);
+      const list = Array.isArray(freshDocs?.data)
+        ? freshDocs.data
+        : Array.isArray(freshDocs)
+        ? freshDocs
+        : Array.isArray(freshDocs?.documents)
+        ? freshDocs.documents
+        : [];
+      if (list.length > 0) {
+        setDocuments(list);
       } else if (newDocs.length > 0) {
         setDocuments((prev) => [...newDocs, ...prev]);
       }
@@ -839,7 +846,7 @@ export default function ContractorProfilePage() {
                   style={styles.input}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <input
                   type="text"
                   value={businessState}

@@ -99,6 +99,17 @@ async function softDeleteUser(req, res, next) {
   }
 }
 
+async function bulkDeleteUsers(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.userIds || [];
+    const reason = req.body.reason || 'Bulk administrative deletion';
+    const result = await adminService.bulkDeleteUsers(req.user, ids, reason);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getUserRequests(req, res, next) {
   try {
     const result = await adminService.listUserRequests(req.query);
@@ -149,6 +160,16 @@ async function reviewContractorDocument(req, res, next) {
     const { status, notes } = req.body;
     const result = await adminService.reviewContractorDocument(req.user, req.params.id, { status, notes });
     res.status(200).json({ success: true, data: result, message: `Document successfully ${status === 'verified' ? 'approved' : 'rejected'}.` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteContractorDocuments(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.docIds || [];
+    const result = await adminService.bulkDeleteContractorDocuments(req.user, ids);
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
@@ -674,11 +695,13 @@ module.exports = {
   exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
+  bulkDeleteUsers,
   getUserRequests,
   handleUserRequest,
   listContractorDocuments,
   downloadContractorDocument,
   reviewContractorDocument,
+  bulkDeleteContractorDocuments,
   listVerifications,
   approveContractorVerification,
   rejectContractorVerification,

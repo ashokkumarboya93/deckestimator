@@ -601,16 +601,34 @@ async function getAllDiscountRequests(query = {}) {
   const enriched = await Promise.all(
     requests.map(async (r) => {
       const cId = r.contractorId?._id || r.contractorId;
-      const [prof, docs] = await Promise.all([
+      const [prof, docs, estimates] = await Promise.all([
         ContractorProfile.findOne({ userId: cId }).lean(),
         VerificationDocument.find({ contractorId: cId, status: { $ne: 'deleted' } }).lean(),
+        Estimate.find({ contractorId: cId }).select('totalPrice finalPrice pricing status createdAt').lean(),
       ]);
+
+      const completedEsts = (estimates || []).filter((e) => {
+        const s = String(e.status || '').toUpperCase();
+        return s === 'COMPLETED' || s === 'ACCEPTED' || s === 'APPROVED' || s === 'CONVERTED';
+      });
+
+      const totalCompletedEstimatesCost = completedEsts.reduce((sum, e) => {
+        return sum + (e.finalPrice || e.totalPrice || e.pricing?.totalPrice || e.pricing?.totalCost || 0);
+      }, 0);
+
+      const totalEstimatesCost = (estimates || []).reduce((sum, e) => {
+        return sum + (e.finalPrice || e.totalPrice || e.pricing?.totalPrice || e.pricing?.totalCost || 0);
+      }, 0);
 
       return {
         ...r,
         contractorProfile: prof || null,
         documents: docs || [],
         currentTier: prof?.wholesaleDiscountTier || 5,
+        totalEstimatesCount: (estimates || []).length,
+        completedEstimatesCount: completedEsts.length,
+        totalCompletedEstimatesCost: Math.round(totalCompletedEstimatesCost * 100) / 100,
+        totalEstimatesCost: Math.round(totalEstimatesCost * 100) / 100,
       };
     })
   );
@@ -696,6 +714,63 @@ async function rejectDiscountRequest(requestId, { adminNotes = '' }, adminUser) 
   return reqDoc;
 }
 
+/**
+ * Delete a discount request.
+ */
+async function deleteDiscountRequest(requestId) {
+  const reqDoc = await DiscountRequest.findByIdAndDelete(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+  return reqDoc;
+}
+
+/**
+ * Bulk delete discount requests.
+ */
+async function bulkDeleteDiscountRequests(requestIds = []) {
+  if (!Array.isArray(requestIds) || requestIds.length === 0) {
+    return { success: true, count: 0, message: 'No requests selected.' };
+  }
+  const res = await DiscountRequest.deleteMany({ _id: { $in: requestIds } });
+  return { success: true, count: res.deletedCount, message: `Successfully deleted ${res.deletedCount} discount request(s).` };
+}
+
+/**
+ * Send an administrative reply to a contractor regarding their discount request.
+ */
+async function replyDiscountRequest(requestId, { message = '' }, adminUser) {
+  const reqDoc = await DiscountRequest.findById(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+
+  const trimmed = (message || '').trim();
+  if (!trimmed) {
+    throw new BadRequestError('Reply message cannot be empty.');
+  }
+
+  reqDoc.adminNotes = (reqDoc.adminNotes ? reqDoc.adminNotes + '\n\n' : '') + `[Admin Reply by ${adminUser.fullName || 'Admin'} on ${new Date().toLocaleDateString()}]: ${trimmed}`;
+  await reqDoc.save();
+
+  try {
+    await Notification.create({
+      recipientType: 'specific',
+      userId: reqDoc.contractorId,
+      targetRole: 'contractor',
+      title: 'Deck Restoration Plus: Message Regarding Your Wholesale Discount',
+      message: trimmed,
+      category: 'SUPPORT',
+      notificationType: 'DISCOUNT_REPLY',
+      isRead: false,
+    });
+  } catch (notifErr) {
+    console.warn('[Notification Error]:', notifErr.message);
+  }
+
+  return reqDoc;
+}
+
 module.exports = {
   createDiscountPolicy,
   getDiscountPolicies,
@@ -712,4 +787,7 @@ module.exports = {
   getAllDiscountRequests,
   approveDiscountRequest,
   rejectDiscountRequest,
+  deleteDiscountRequest,
+  bulkDeleteDiscountRequests,
+  replyDiscountRequest,
 };

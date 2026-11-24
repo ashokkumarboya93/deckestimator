@@ -179,20 +179,13 @@ export default function ContractorDashboardPage() {
           display: none;
         }
 
-        /* KPI Grid: 2 columns on mobile/tablet, 4 on desktop (Same as Customer Portal) */
+        /* Desktop KPI Grid: 4 columns */
         .contractor-kpi-grid {
           display: grid !important;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          gap: 10px !important;
-          margin-bottom: 16px !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 14px !important;
+          margin-bottom: 20px !important;
           width: 100% !important;
-        }
-        @media (min-width: 1025px) {
-          .contractor-kpi-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-            gap: 14px !important;
-            margin-bottom: 20px !important;
-          }
         }
         .contractor-kpi-card {
           border-radius: 14px;
@@ -1769,7 +1762,7 @@ const styles = {
   },
   contactGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(2, 1fr)',
     gap: '16px',
   },
   contactItemBox: {

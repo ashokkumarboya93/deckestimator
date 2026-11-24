@@ -531,8 +531,11 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
     const now = new Date();
     let past = new Date();
     if (registrationDate === 'today') past.setHours(0, 0, 0, 0);
+    else if (registrationDate === '2d') past.setDate(now.getDate() - 2);
     else if (registrationDate === '7d') past.setDate(now.getDate() - 7);
+    else if (registrationDate === '15d') past.setDate(now.getDate() - 15);
     else if (registrationDate === '30d') past.setDate(now.getDate() - 30);
+    else if (registrationDate === '60d') past.setDate(now.getDate() - 60);
     else if (registrationDate === 'this_month') past = new Date(now.getFullYear(), now.getMonth(), 1);
     query.createdAt = { $gte: past };
   }
@@ -859,6 +862,31 @@ async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative 
   return { success: true, message: 'Account deactivated and scheduled for retention compliance.' };
 }
 
+async function bulkDeleteUsers(adminUser, userIds = [], reason = 'Bulk administrative deletion') {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return { success: true, count: 0, message: 'No users selected.' };
+  }
+  let count = 0;
+  for (const uid of userIds) {
+    try {
+      await softDeleteUser(adminUser, uid, reason, false);
+      count++;
+    } catch (err) {
+      console.warn(`[BulkDeleteUser] Skipped ${uid}:`, err.message);
+    }
+  }
+  return { success: true, count, message: `Successfully deleted ${count} user(s).` };
+}
+
+async function bulkDeleteContractorDocuments(adminUser, docIds = []) {
+  if (!Array.isArray(docIds) || docIds.length === 0) {
+    return { success: true, count: 0, message: 'No documents selected.' };
+  }
+  const res = await VerificationDocument.deleteMany({ _id: { $in: docIds } });
+  await logAdminAction(adminUser, 'CONTRACTOR_DOCS_BULK_DELETED', 'VerificationDocument', null, null, { count: res.deletedCount, docIds });
+  return { success: true, count: res.deletedCount, message: `Successfully deleted ${res.deletedCount} document(s).` };
+}
+
 // --------------------------------------------------------------------
 // User Appeals & Requests Management
 // --------------------------------------------------------------------
@@ -987,6 +1015,33 @@ async function reviewContractorDocument(adminUser, docId, { status, notes = '' }
   await doc.save();
 
   await logAdminAction(adminUser, 'CONTRACTOR_DOC_REVIEWED', 'VerificationDocument', doc._id, null, { status, notes });
+
+  // Dispatch live notification to contractor
+  try {
+    const isApproved = status === 'verified' || status === 'approved';
+    let targetUserId = doc.userId;
+    if (!targetUserId && doc.contractorId) {
+      const p = await ContractorProfile.findById(doc.contractorId).lean();
+      targetUserId = p?.userId;
+    }
+    if (targetUserId) {
+      await Notification.create({
+        recipientType: 'specific',
+        userId: targetUserId,
+        targetRole: 'contractor',
+        title: isApproved ? 'Compliance Document Verified ✓' : 'Compliance Document Review Update',
+        message: isApproved
+          ? `Your trade compliance document (${doc.originalFileName || doc.documentType}) has been inspected and approved by administration.`
+          : `Your trade compliance document (${doc.originalFileName || doc.documentType}) was reviewed and not accepted. Notes: ${notes || 'Please upload a clear, updated copy in Profile Settings.'}`,
+        category: isApproved ? 'VERIFICATION' : 'SYSTEM',
+        notificationType: isApproved ? 'DOCUMENT_APPROVED' : 'DOCUMENT_REJECTED',
+        isRead: false,
+      });
+    }
+  } catch (notifErr) {
+    console.warn('[Doc Review Notification Error]:', notifErr.message);
+  }
+
   return doc;
 }
 
@@ -1123,6 +1178,23 @@ async function approveContractorVerification(adminUser, profileId) {
   await logAdminAction(adminUser, 'CONTRACTOR_VERIFICATION_APPROVED', 'ContractorProfile', profile._id, { status: previousStatus }, { status: 'approved' });
   invalidateAdminDashboardCache();
 
+  try {
+    if (profile.userId) {
+      await Notification.create({
+        recipientType: 'specific',
+        userId: profile.userId,
+        targetRole: 'contractor',
+        title: 'Contractor Verification Approved! 🎉',
+        message: 'Congratulations! Your contractor partner verification has been approved by Deck Restoration Plus. You now have full access to wholesale pricing and project conversions.',
+        category: 'VERIFICATION',
+        notificationType: 'VERIFICATION_APPROVED',
+        isRead: false,
+      });
+    }
+  } catch (notifErr) {
+    console.warn('[Verification Approved Notif Error]:', notifErr.message);
+  }
+
   return profile.toJSON();
 }
 
@@ -1161,6 +1233,23 @@ async function rejectContractorVerification(adminUser, profileId, reason) {
 
   await logAdminAction(adminUser, 'CONTRACTOR_VERIFICATION_REJECTED', 'ContractorProfile', profile._id, { status: previousStatus }, { status: 'rejected', reason: reason.trim() });
   invalidateAdminDashboardCache();
+
+  try {
+    if (profile.userId) {
+      await Notification.create({
+        recipientType: 'specific',
+        userId: profile.userId,
+        targetRole: 'contractor',
+        title: 'Verification Application Update',
+        message: `Your contractor verification application was reviewed and not approved. Reason: ${reason.trim()}`,
+        category: 'VERIFICATION',
+        notificationType: 'VERIFICATION_REJECTED',
+        isRead: false,
+      });
+    }
+  } catch (notifErr) {
+    console.warn('[Verification Rejected Notif Error]:', notifErr.message);
+  }
 
   return profile.toJSON();
 }
@@ -3354,10 +3443,12 @@ module.exports = {
   exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
+  bulkDeleteUsers,
   listUserRequests,
   resolveUserRequest,
   listContractorDocuments,
   reviewContractorDocument,
+  bulkDeleteContractorDocuments,
 
   // 3. Verifications
   listVerifications,

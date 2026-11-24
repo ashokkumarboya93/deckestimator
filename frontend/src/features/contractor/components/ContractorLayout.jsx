@@ -1010,7 +1010,8 @@ const styles = {
   topHeader: {
     height: '65px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '2.5px solid #C96D22',
+    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
