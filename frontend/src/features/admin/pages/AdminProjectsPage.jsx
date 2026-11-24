@@ -11,7 +11,7 @@
 // - Comprehensive View Details modal showing deck specs, customer & contractor info, amounts, and history
 // - Export to CSV & Excel
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import { ConfirmModal, SkeletonTable, SkeletonShimmer, EmptyState } from '../../../components/common';
@@ -25,6 +25,15 @@ const STAGES = [
   { id: 'completed', label: 'Completed' },
 ];
 
+const DATE_RANGE_OPTIONS = [
+  { value: 'all', label: 'All Time' },
+  { value: 'today', label: 'Today' },
+  { value: '7d', label: 'Last 7 Days' },
+  { value: '15d', label: 'Last 15 Days' },
+  { value: '30d', label: 'Last 30 Days' },
+  { value: '60d', label: 'Last 60 Days' },
+];
+
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [counts, setCounts] = useState({ total: 0, created: 0, requested: 0, inProgress: 0, completed: 0, totalValue: 0 });
@@ -32,12 +41,15 @@ export default function AdminProjectsPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateRangeFilter, setDateRangeFilter] = useState('all');
+  const [lastDateFilter, setLastDateFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const dateInputRef = useRef(null);
 
   // Pagination & Select All
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(25);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProjects, setTotalProjects] = useState(0);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
@@ -45,15 +57,23 @@ export default function AdminProjectsPage() {
   // Modals
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [stageModal, setStageModal] = useState({ open: false, project: null, stage: 'in_progress', note: '' });
   const [savingStage, setSavingStage] = useState(false);
 
   useEffect(() => {
-    fetchProjects(1, statusFilter, searchTerm);
-  }, [statusFilter]);
+    fetchProjects(1, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
+  }, [statusFilter, dateRangeFilter, lastDateFilter]);
 
-  const fetchProjects = async (pageNum = page, filter = statusFilter, search = searchTerm) => {
+  const fetchProjects = async (
+    pageNum = page,
+    filter = statusFilter,
+    search = searchTerm,
+    dateRange = dateRangeFilter,
+    lastDate = lastDateFilter,
+    limit = pageSize
+  ) => {
     setLoading(true);
     setIsRefreshing(true);
     setError(null);
@@ -61,8 +81,10 @@ export default function AdminProjectsPage() {
       const res = await adminApi.getProjects({
         status: filter !== 'all' ? filter : undefined,
         search: (search || '').trim() ? search.trim() : undefined,
+        dateRange: dateRange !== 'all' ? dateRange : undefined,
+        lastDate: lastDate ? lastDate : undefined,
         page: pageNum,
-        limit: pageSize,
+        limit,
       });
       setProjects(res.data || []);
       if (res.counts) {
@@ -160,14 +182,18 @@ export default function AdminProjectsPage() {
     if (!stageModal.project) return;
     setSavingStage(true);
     try {
-      await adminApi.updateProjectProgress(stageModal.project._id, {
+      const targetId = stageModal.project._id || stageModal.project.id;
+      await adminApi.updateProjectProgress(targetId, {
         stage: stageModal.stage,
         status: stageModal.stage,
         note: stageModal.note || `Stage updated to ${stageModal.stage.replace('_', ' ').toUpperCase()} by Administrator`,
       });
       setSuccessMsg(`Project stage updated to "${stageModal.stage.replace('_', ' ').toUpperCase()}" successfully.`);
+      if (selectedProject && (selectedProject._id === targetId || selectedProject.id === targetId)) {
+        setSelectedProject((prev) => ({ ...prev, stage: stageModal.stage, status: stageModal.stage }));
+      }
       setStageModal({ open: false, project: null, stage: 'in_progress', note: '' });
-      fetchProjects(page, statusFilter, searchTerm);
+      fetchProjects(page, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
     } catch (err) {
       setError(err?.message || 'Failed to update project stage.');
     } finally {
@@ -175,9 +201,21 @@ export default function AdminProjectsPage() {
     }
   };
 
-  const handleOpenDetails = (proj) => {
+  const handleOpenDetails = async (proj) => {
     setSelectedProject(proj);
     setIsDetailsModalOpen(true);
+    setLoadingDetails(true);
+    try {
+      const targetId = proj._id || proj.id;
+      const full = await adminApi.getProjectDetails(targetId);
+      if (full && (full.data || full._id)) {
+        setSelectedProject(full.data || full);
+      }
+    } catch {
+      // Keep optimistic project
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   // Enterprise Confirmation Modal States
@@ -288,7 +326,7 @@ export default function AdminProjectsPage() {
             <h1 style={styles.title}>Project Management</h1>
             <span style={styles.liveDbPill}>
               <span style={styles.pulseDot} />
-              Live Database Connected
+              Live Projects
             </span>
           </div>
           <p style={styles.subtitle}>
@@ -296,26 +334,24 @@ export default function AdminProjectsPage() {
           </p>
         </div>
         <div style={styles.headerActions}>
-          <a
-            href={adminApi.exportProjectsUrl('csv', statusFilter)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => handleExport('csv')}
             style={styles.shinyExportBtn}
-            title="Export filtered projects as CSV"
+            title={selectedProjectIds.length > 0 ? `Export ${selectedProjectIds.length} selected project(s) as CSV` : 'Export filtered projects as CSV'}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Export CSV
-          </a>
-          <a
-            href={adminApi.exportProjectsUrl('excel', statusFilter)}
-            target="_blank"
-            rel="noreferrer"
+            Export CSV{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExport('excel')}
             style={styles.shinyExportGreenBtn}
-            title="Export filtered projects as Excel"
+            title={selectedProjectIds.length > 0 ? `Export ${selectedProjectIds.length} selected project(s) as Excel` : 'Export filtered projects as Excel'}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -323,8 +359,8 @@ export default function AdminProjectsPage() {
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            Export Excel
-          </a>
+            Export Excel{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
+          </button>
         </div>
       </div>
 
@@ -456,7 +492,7 @@ export default function AdminProjectsPage() {
         </div>
       </div>
 
-      {/* 3. Controls Bar: Single Row [Search | Stage Filter | Refresh | Exports] */}
+      {/* 3. Controls Bar: Single Row [Search | Stage Filter | Days Range | Date Picker | Refresh | Bulk Delete] */}
       <div style={styles.controlBar}>
         {/* Search Input */}
         <div style={styles.shinySearchWrapper}>
@@ -473,13 +509,13 @@ export default function AdminProjectsPage() {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 setPage(1);
-                fetchProjects(1, statusFilter, searchTerm);
+                fetchProjects(1, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
               }
             }}
             style={styles.shinySearchInput}
           />
           {searchTerm && (
-            <button onClick={() => { setSearchTerm(''); setPage(1); fetchProjects(1, statusFilter, ''); }} style={styles.clearSearchBtn} title="Clear search">✕</button>
+            <button onClick={() => { setSearchTerm(''); setPage(1); fetchProjects(1, statusFilter, '', dateRangeFilter, lastDateFilter, pageSize); }} style={styles.clearSearchBtn} title="Clear search">✕</button>
           )}
         </div>
 
@@ -490,7 +526,7 @@ export default function AdminProjectsPage() {
             const val = e.target.value;
             setStatusFilter(val);
             setPage(1);
-            fetchProjects(1, val, searchTerm);
+            fetchProjects(1, val, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
           }}
           style={styles.shinySelect}
           title="Filter by life cycle stage"
@@ -502,9 +538,68 @@ export default function AdminProjectsPage() {
           <option value="completed">Completed ({counts.completed || 0})</option>
         </select>
 
+        {/* Days Range Dropdown Filter */}
+        <select
+          value={dateRangeFilter}
+          onChange={(e) => {
+            const val = e.target.value;
+            setDateRangeFilter(val);
+            setPage(1);
+            fetchProjects(1, statusFilter, searchTerm, val, lastDateFilter, pageSize);
+          }}
+          style={styles.shinySelect}
+          title="Filter by date range"
+        >
+          {DATE_RANGE_OPTIONS.map((d) => (
+            <option key={d.value} value={d.value}>{d.label}</option>
+          ))}
+        </select>
+
+        {/* Date Selector Button (opens calendar on click, matches row height & button styling) */}
+        <div
+          style={styles.shinyDateWrapper}
+          onClick={() => dateInputRef.current?.showPicker?.()}
+          title="Click to filter by date"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" style={{ flexShrink: 0 }}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={lastDateFilter}
+            onChange={(e) => {
+              const val = e.target.value;
+              setLastDateFilter(val);
+              setPage(1);
+              fetchProjects(1, statusFilter, searchTerm, dateRangeFilter, val, pageSize);
+            }}
+            style={styles.shinyDateInput}
+            title="Filter records up to this date"
+          />
+          {lastDateFilter && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLastDateFilter('');
+                setPage(1);
+                fetchProjects(1, statusFilter, searchTerm, dateRangeFilter, '', pageSize);
+              }}
+              style={styles.clearDateBtn}
+              title="Clear date filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         {/* Refresh Button */}
         <button
-          onClick={() => fetchProjects(page, statusFilter, searchTerm)}
+          onClick={() => fetchProjects(page, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize)}
           style={styles.shinyRefreshBtn}
           title="Refresh Projects Database"
           disabled={loading}
@@ -530,53 +625,11 @@ export default function AdminProjectsPage() {
           Refresh
         </button>
 
-        {/* Direct CSV / Excel Export Buttons */}
-        <button
-          type="button"
-          onClick={() => handleExport('csv')}
-          style={styles.shinyExportBtn}
-          title="Export records to CSV"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export CSV{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleExport('excel')}
-          style={styles.shinyExportGreenBtn}
-          title="Export records to Excel Spreadsheet"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          Export Excel{selectedProjectIds.length > 0 ? ` (${selectedProjectIds.length})` : ''}
-        </button>
-
         {selectedProjectIds.length > 0 && (
           <button
             type="button"
             onClick={handleBulkDeleteProjects}
-            style={{
-              padding: '8px 14px',
-              backgroundColor: '#fee2e2',
-              color: '#b91c1c',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 3px rgba(185, 28, 28, 0.1)',
-            }}
+            style={styles.shinyBulkDeleteBtn}
             title="Permanently delete all selected project estimations"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -748,9 +801,30 @@ export default function AdminProjectsPage() {
 
             {/* Pagination Controls */}
             <div style={styles.paginationBar}>
-              <div style={styles.paginationInfo}>
-                Showing {totalProjects === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalProjects)} of {totalProjects} project estimations
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={styles.paginationInfo}>
+                  Showing {totalProjects === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalProjects)} of {totalProjects} project estimations
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Show:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const newSize = Number(e.target.value);
+                      setPageSize(newSize);
+                      setPage(1);
+                      fetchProjects(1, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, newSize);
+                    }}
+                    style={styles.pageSizeSelect}
+                    title="Select number of projects per page"
+                  >
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                  </select>
+                </div>
               </div>
+
               <div style={styles.paginationActions}>
                 <button
                   type="button"
@@ -758,26 +832,42 @@ export default function AdminProjectsPage() {
                   onClick={() => {
                     const nextP = Math.max(1, page - 1);
                     setPage(nextP);
-                    fetchProjects(nextP, statusFilter, searchTerm);
+                    fetchProjects(nextP, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
                   }}
                   style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
                 >
-                  &larr; Previous
+                  Previous
                 </button>
-                <span style={styles.pageIndicator}>
-                  Page {page} of {Math.max(1, totalPages)}
-                </span>
+
+                {Array.from({ length: Math.min(5, totalPages || 1) }, (_, i) => {
+                  const pNum = i + 1;
+                  const isCurrent = page === pNum;
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => {
+                        setPage(pNum);
+                        fetchProjects(pNum, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
+                      }}
+                      style={isCurrent ? styles.pageBtnActive : styles.pageBtn}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+
                 <button
                   type="button"
                   disabled={page >= totalPages || loading}
                   onClick={() => {
                     const nextP = Math.min(totalPages, page + 1);
                     setPage(nextP);
-                    fetchProjects(nextP, statusFilter, searchTerm);
+                    fetchProjects(nextP, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize);
                   }}
                   style={page >= totalPages ? styles.pageBtnDisabled : styles.pageBtn}
                 >
-                  Next &rarr;
+                  Next
                 </button>
               </div>
             </div>
@@ -898,6 +988,18 @@ export default function AdminProjectsPage() {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenStageModal(selectedProject)}
+                  style={styles.modalBtnUpdateStage}
+                  title="Update Life Cycle Stage"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 4 }}>
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  <span>Update Stage</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => downloadEstimatePdf(selectedProject, {
@@ -1687,18 +1789,66 @@ const styles = {
     transition: 'all 0.15s ease',
   },
   shinySelect: {
-    padding: '6px 14px',
-    borderRadius: '9999px',
-    border: '1px solid #cbd5e1',
+    padding: '7px 12px',
+    borderRadius: '8px',
+    border: '1.5px solid #cbd5e1',
     backgroundColor: '#ffffff',
     fontSize: '12px',
     fontWeight: '700',
     color: '#334155',
     outline: 'none',
     cursor: 'pointer',
-    height: '34px',
+    height: '36px',
     boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
     transition: 'border-color 0.15s ease',
+  },
+  shinyDateWrapper: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '36px',
+    padding: '0 10px',
+    borderRadius: '8px',
+    border: '1.5px solid #cbd5e1',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s ease',
+  },
+  shinyDateInput: {
+    border: 'none',
+    outline: 'none',
+    backgroundColor: 'transparent',
+    fontSize: '12px',
+    color: '#0f172a',
+    fontWeight: '700',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    padding: 0,
+    margin: 0,
+  },
+  clearDateBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '11px',
+    color: '#64748b',
+    cursor: 'pointer',
+    padding: '0 2px',
+  },
+  shinyBulkDeleteBtn: {
+    padding: '7px 12px',
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '36px',
+    boxShadow: '0 1px 2px rgba(185, 28, 28, 0.08)',
   },
 
   // Main Card & Table
@@ -1708,6 +1858,8 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
     overflow: 'hidden',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   tableResponsive: {
     overflowX: 'auto',
@@ -1717,24 +1869,26 @@ const styles = {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
-    fontSize: '13px',
+    fontSize: '12.5px',
+    tableLayout: 'auto',
   },
   th: {
-    padding: '12px 16px',
+    padding: '10px 12px',
     backgroundColor: '#f8fafc',
     color: '#475569',
     fontSize: '11px',
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.4px',
     borderBottom: '1px solid #e2e8f0',
+    whiteSpace: 'nowrap',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.1s ease',
   },
   td: {
-    padding: '14px 16px',
+    padding: '9px 12px',
     verticalAlign: 'middle',
   },
 
@@ -1811,74 +1965,86 @@ const styles = {
   badgeCreated: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    borderRadius: '9999px',
-    backgroundColor: '#f1f5f9',
-    color: '#334155',
-    border: '1px solid #cbd5e1',
+    gap: '5px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#f8fafc',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
     fontSize: '11px',
     fontWeight: '700',
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
   },
   badgeDotSlate: {
-    width: '6px',
-    height: '6px',
+    width: '5px',
+    height: '5px',
     borderRadius: '50%',
-    backgroundColor: '#64748b',
+    backgroundColor: '#94a3b8',
+    flexShrink: 0,
   },
   badgeRequested: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    borderRadius: '9999px',
-    backgroundColor: '#fef3c7',
-    color: '#92400e',
-    border: '1px solid #fcd34d',
+    gap: '5px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#fffbeb',
+    color: '#d97706',
+    border: '1px solid #fde68a',
     fontSize: '11px',
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
   },
   badgeDotAmber: {
-    width: '6px',
-    height: '6px',
+    width: '5px',
+    height: '5px',
     borderRadius: '50%',
-    backgroundColor: '#d97706',
+    backgroundColor: '#f59e0b',
+    flexShrink: 0,
   },
   badgeInProgress: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    borderRadius: '9999px',
-    backgroundColor: '#dbeafe',
-    color: '#1e40af',
-    border: '1px solid #93c5fd',
+    gap: '5px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#eff6ff',
+    color: '#2563eb',
+    border: '1px solid #bfdbfe',
     fontSize: '11px',
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
   },
   badgeDotBlue: {
-    width: '6px',
-    height: '6px',
+    width: '5px',
+    height: '5px',
     borderRadius: '50%',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#3b82f6',
+    flexShrink: 0,
   },
   badgeCompleted: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    borderRadius: '9999px',
-    backgroundColor: '#dcfce7',
-    color: '#166534',
-    border: '1px solid #86efac',
+    gap: '5px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#ecfdf5',
+    color: '#059669',
+    border: '1px solid #a7f3d0',
     fontSize: '11px',
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: '0.02em',
+    whiteSpace: 'nowrap',
   },
   badgeDotGreen: {
-    width: '6px',
-    height: '6px',
+    width: '5px',
+    height: '5px',
     borderRadius: '50%',
-    backgroundColor: '#16a34a',
+    backgroundColor: '#10b981',
+    flexShrink: 0,
   },
 
   // Actions
@@ -2218,49 +2384,83 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
+  modalBtnUpdateStage: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    borderRadius: '7px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
   paginationBar: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '14px 18px',
+    padding: '12px 16px',
     backgroundColor: '#ffffff',
     borderTop: '1px solid #e2e8f0',
     flexWrap: 'wrap',
     gap: '12px',
   },
   paginationInfo: {
-    fontSize: '13px',
+    fontSize: '12px',
     color: '#64748b',
     fontWeight: '600',
+  },
+  pageSizeSelect: {
+    padding: '4px 8px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    fontSize: '12px',
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+    cursor: 'pointer',
+    fontWeight: 600,
   },
   paginationActions: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
   },
   pageBtn: {
-    padding: '6px 14px',
+    padding: '5px 10px',
     borderRadius: '6px',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
-    color: '#1e3a63',
-    fontSize: '12.5px',
+    color: '#334155',
+    fontSize: '11.5px',
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
+  pageBtnActive: {
+    padding: '5px 10px',
+    borderRadius: '6px',
+    border: '1px solid #0f172a',
+    backgroundColor: '#0f172a',
+    fontSize: '11.5px',
+    fontWeight: '800',
+    color: '#ffffff',
+    cursor: 'pointer',
+  },
   pageBtnDisabled: {
-    padding: '6px 14px',
+    padding: '5px 10px',
     borderRadius: '6px',
     backgroundColor: '#f1f5f9',
     border: '1px solid #e2e8f0',
     color: '#94a3b8',
-    fontSize: '12.5px',
+    fontSize: '11.5px',
     fontWeight: '600',
     cursor: 'not-allowed',
   },
   pageIndicator: {
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: '700',
     color: '#0f172a',
     padding: '0 6px',

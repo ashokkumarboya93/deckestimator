@@ -1278,7 +1278,7 @@ async function getVerificationHistoryList(contractorProfileId) {
 // 4. PROJECTS & PROGRESS TRACKING (With History & Export)
 // ====================================================================
 
-async function listProjects({ page = 1, limit = 50, status = 'all', search = '', contractorId, customerId }) {
+async function listProjects({ page = 1, limit = 50, status = 'all', search = '', dateRange = 'all', lastDate, contractorId, customerId }) {
   const query = {};
   if (status && status !== 'all') {
     const s = status.toLowerCase();
@@ -1289,6 +1289,26 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     else query.estimateStatus = s;
   }
   if (customerId) query.ownerId = customerId;
+
+  if (dateRange && dateRange !== 'all') {
+    const now = new Date();
+    let days = 0;
+    if (dateRange === 'today') days = 1;
+    else if (dateRange === '7d' || dateRange === '7') days = 7;
+    else if (dateRange === '15d' || dateRange === '15') days = 15;
+    else if (dateRange === '30d' || dateRange === '30') days = 30;
+    else if (dateRange === '60d' || dateRange === '60') days = 60;
+    if (days > 0) {
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      query.createdAt = { $gte: cutoff };
+    }
+  }
+
+  if (lastDate) {
+    const end = new Date(lastDate);
+    end.setHours(23, 59, 59, 999);
+    query.createdAt = query.createdAt ? { ...query.createdAt, $lte: end } : { $lte: end };
+  }
 
   if (search && search.trim()) {
     const reg = new RegExp(search.trim(), 'i');
@@ -1305,10 +1325,10 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
   // Both Customer and Contractor Estimations are monitored as Projects
   const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
     Estimate.find(query)
-      .select('-photos -deckDetails.photos -__v')
-      .populate('ownerId', 'fullName email phone role')
-      .populate('createdBy', 'fullName email phone role')
-      .populate('deckId', '-photos -__v')
+      .select('-__v')
+      .populate('ownerId', 'fullName email phone role avatar address')
+      .populate('createdBy', 'fullName email phone role avatar address')
+      .populate('deckId', '-__v')
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -1359,6 +1379,12 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
     const projState = (e.deckDetails?.location?.state || e.deckDetails?.state || e.deckId?.propertyAddress?.state || e.deckId?.location?.state || userDoc?.address?.state || '').trim();
     const location = projCity ? `${projCity}${projState ? `, ${projState}` : ''}` : 'Location Pending';
 
+    const rawPhotos = [
+      ...(Array.isArray(e.photos) ? e.photos : []),
+      ...(Array.isArray(e.deckDetails?.photos) ? e.deckDetails.photos : []),
+      ...(Array.isArray(e.deckId?.photos) ? e.deckId.photos : []),
+    ];
+
     return {
       _id: e._id.toString(),
       id: e._id.toString(),
@@ -1388,7 +1414,7 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
         area: e.deckDetails?.areaSqFt || 400,
         woodSpecies: e.deckDetails?.woodSpecies || 'Pressure Treated Pine',
       },
-      photos: [], // excluded from list for performance — loaded on detail view
+      photos: rawPhotos,
       propertyAddress: e.deckId?.propertyAddress || e.deckDetails?.propertyAddress || null,
       structureDetails: e.deckId?.structureDetails || e.deckDetails?.structureDetails || null,
       surfaceDetails: e.deckId?.surfaceDetails || e.deckDetails?.surfaceDetails || null,
@@ -1414,6 +1440,86 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
       completed: statusFacetResult[0]?.completed?.[0]?.count || 0,
       totalValue: statusFacetResult[0]?.totalValue?.[0]?.total || 0,
     },
+  };
+}
+
+async function getProjectDetails(projectId) {
+  const isObjId = mongoose.Types.ObjectId.isValid(projectId);
+  const query = isObjId ? { _id: projectId } : { estimateReference: projectId };
+
+  const estimate = await Estimate.findOne(query)
+    .populate('ownerId', 'fullName email phone role avatar address')
+    .populate('createdBy', 'fullName email phone role avatar address')
+    .populate('deckId')
+    .lean();
+
+  if (!estimate) {
+    const prj = await Project.findOne(query)
+      .populate('customerId', 'fullName email phone avatar')
+      .populate('contractorId', 'fullName email phone avatar')
+      .lean();
+    if (prj) return prj;
+    throw new NotFoundError('Project or estimation not found');
+  }
+
+  const rawPhotos = [
+    ...(Array.isArray(estimate.photos) ? estimate.photos : []),
+    ...(Array.isArray(estimate.deckDetails?.photos) ? estimate.deckDetails.photos : []),
+    ...(Array.isArray(estimate.deckId?.photos) ? estimate.deckId.photos : []),
+  ];
+
+  const userDoc = estimate.ownerId || estimate.createdBy;
+  const isContractor = userDoc?.role === 'contractor' || estimate.estimateType === 'CONTRACTOR';
+  const customerName = isContractor ? 'Contractor Partner' : (userDoc?.fullName || estimate.customerSnapshot?.name || 'Customer');
+  const contractorName = isContractor ? (userDoc?.fullName || 'Contractor') : (estimate.assignedContractorName || 'Deck Restoration Plus Staff');
+
+  const projCity = (estimate.deckDetails?.location?.city || estimate.deckDetails?.city || estimate.deckId?.propertyAddress?.city || estimate.deckId?.location?.city || userDoc?.address?.city || '').trim();
+  const projState = (estimate.deckDetails?.location?.state || estimate.deckDetails?.state || estimate.deckId?.propertyAddress?.state || estimate.deckId?.location?.state || userDoc?.address?.state || '').trim();
+  const location = projCity ? `${projCity}${projState ? `, ${projState}` : ''}` : 'Location Pending';
+
+  const rawSt = (estimate.estimateStatus || 'CREATED').toLowerCase();
+  let stage = 'created';
+  if (rawSt === 'completed') stage = 'completed';
+  else if (rawSt === 'in_progress') stage = 'in_progress';
+  else if (rawSt === 'requested' || rawSt === 'in_review' || rawSt === 'submitted') stage = 'requested';
+
+  return {
+    _id: estimate._id.toString(),
+    id: estimate._id.toString(),
+    projectId: estimate.estimateReference || `PRJ-${estimate._id.toString().slice(-6).toUpperCase()}`,
+    estimateReference: estimate.estimateReference || `EST-${estimate._id.toString().slice(-6).toUpperCase()}`,
+    title: estimate.deckDetails?.projectName || `Deck Project (${estimate.estimateReference || 'Estimation'})`,
+    projectName: estimate.deckDetails?.projectName || `Deck Project (${estimate.estimateReference || 'Estimation'})`,
+    customerName,
+    contractorName,
+    userRole: isContractor ? 'contractor' : 'customer',
+    userEmail: userDoc?.email || estimate.customerSnapshot?.email || '',
+    userPhone: userDoc?.phone || estimate.customerSnapshot?.phone || '',
+    deckSize: `${estimate.deckDetails?.areaSqFt || estimate.deckDetails?.area || 400} sq ft`,
+    areaSqFt: estimate.deckDetails?.areaSqFt || estimate.deckDetails?.area || 400,
+    totalAmount: estimate.totalAmount || 0,
+    status: stage,
+    stage,
+    progress: stage === 'completed' ? 100 : stage === 'in_progress' ? 65 : stage === 'requested' ? 30 : 10,
+    woodSpecies: estimate.deckDetails?.woodSpecies || estimate.deckDetails?.surfaceMaterial || 'Redwood / Pine',
+    location,
+    city: projCity,
+    state: projState,
+    createdAt: estimate.createdAt,
+    updatedAt: estimate.updatedAt,
+    deckSpecs: {
+      dimensions: estimate.deckDetails?.dimensions || `${Math.round(Math.sqrt(estimate.deckDetails?.areaSqFt || 400))} x ${Math.round(Math.sqrt(estimate.deckDetails?.areaSqFt || 400))}`,
+      area: estimate.deckDetails?.areaSqFt || 400,
+      woodSpecies: estimate.deckDetails?.woodSpecies || 'Pressure Treated Pine',
+    },
+    photos: rawPhotos,
+    propertyAddress: estimate.deckId?.propertyAddress || estimate.deckDetails?.propertyAddress || null,
+    structureDetails: estimate.deckId?.structureDetails || estimate.deckDetails?.structureDetails || null,
+    surfaceDetails: estimate.deckId?.surfaceDetails || estimate.deckDetails?.surfaceDetails || null,
+    visibleConditions: estimate.deckId?.visibleConditions || estimate.conditionFlags || [],
+    services: estimate.services || estimate.pricingSnapshot?.services || [],
+    notes: estimate.deckId?.additionalNotes || estimate.notes || '',
+    estimateDetails: estimate,
   };
 }
 
@@ -3458,6 +3564,7 @@ module.exports = {
 
   // 4. Projects & Progress
   listProjects,
+  getProjectDetails,
   updateProjectProgress,
   deleteProject,
   bulkDeleteProjects,

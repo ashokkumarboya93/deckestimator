@@ -61,6 +61,7 @@ router.patch('/contractor-documents/:id', adminController.reviewContractorDocume
 
 // 4. Projects & Progress Tracking
 router.get('/projects', adminController.listProjects);
+router.get('/projects/:id', adminController.getProjectDetails);
 router.patch('/projects/:id/progress', adminController.updateProjectProgress);
 router.delete('/projects/:id', adminController.deleteProject);
 router.post('/projects/bulk-delete', adminController.bulkDeleteProjects);

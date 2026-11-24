@@ -222,6 +222,15 @@ async function listProjects(req, res, next) {
   }
 }
 
+async function getProjectDetails(req, res, next) {
+  try {
+    const project = await adminService.getProjectDetails(req.params.id);
+    res.status(200).json({ success: true, data: project });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function updateProjectProgress(req, res, next) {
   try {
     const result = await adminService.updateProjectProgress(req.user, req.params.id, req.body);
@@ -707,6 +716,7 @@ module.exports = {
   rejectContractorVerification,
   getVerificationHistory,
   listProjects,
+  getProjectDetails,
   updateProjectProgress,
   deleteProject,
   bulkDeleteProjects,

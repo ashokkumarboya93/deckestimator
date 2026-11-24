@@ -115,6 +115,10 @@ export const adminApi = {
   getProjects: async (params = {}) => {
     return client.get('/admin/projects', { params });
   },
+  getProjectDetails: async (id) => {
+    const res = await client.get(`/admin/projects/${id}`);
+    return res.data;
+  },
   updateProjectProgress: async (id, payload) => {
     const res = await client.patch(`/admin/projects/${id}/progress`, payload);
     return res.data;
