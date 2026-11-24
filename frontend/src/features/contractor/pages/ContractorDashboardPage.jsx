@@ -178,6 +178,133 @@ export default function ContractorDashboardPage() {
         .contractor-dash-mobile-cards {
           display: none;
         }
+
+        /* Desktop KPI Grid: 4 columns */
+        .contractor-kpi-grid {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 14px !important;
+          margin-bottom: 20px !important;
+          width: 100% !important;
+        }
+        .contractor-kpi-card {
+          border-radius: 14px;
+          padding: 14px 16px;
+          border: 1px solid;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+          cursor: pointer;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          min-width: 0 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        .contractor-kpi-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(30, 58, 99, 0.1);
+        }
+        .contractor-kpi-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        .contractor-kpi-center {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          flex: 1;
+          min-width: 0;
+        }
+        .contractor-kpi-label {
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          line-height: 1.2;
+          white-space: normal;
+          word-break: break-word;
+        }
+        .contractor-kpi-val {
+          font-size: 20px;
+          font-weight: 800;
+          line-height: 1.2;
+        }
+        .contractor-kpi-arrow {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.7;
+          flex-shrink: 0;
+        }
+
+        /* Desktop Contact Grid: Exactly 4 in a Single Complete Row */
+        .contractor-contact-grid {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 14px !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        .contractor-contact-box {
+          background-color: #FFFFFF;
+          border-radius: 12px;
+          padding: 14px 15px;
+          display: flex;
+          align-items: flex-start;
+          gap: 11px;
+          box-shadow: 0 2px 8px rgba(30, 58, 99, 0.05);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+        .contractor-contact-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(30, 58, 99, 0.1);
+        }
+        .contractor-contact-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          border: 1.5px solid;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .contractor-contact-label {
+          display: block;
+          font-size: 10.5px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+        .contractor-contact-val {
+          font-size: 14px;
+          font-weight: 800;
+          color: #1E3A63;
+          text-decoration: none;
+          display: block;
+          margin-top: 2px;
+          word-break: break-word;
+        }
+        .contractor-contact-sub {
+          font-size: 11px;
+          color: #64748B;
+          display: block;
+          margin-top: 2px;
+          line-height: 1.35;
+        }
+
+        /* Tablet & Mobile Layout (<= 1024px) */
         @media (max-width: 1024px) {
           .contractor-hero-banner {
             flex-direction: column !important;
@@ -204,23 +331,87 @@ export default function ContractorDashboardPage() {
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
             gap: 14px !important;
           }
-          .contractor-contact-grid {
-            display: flex !important;
-            flex-direction: column !important;
-            width: 100% !important;
-            gap: 12px !important;
-          }
-          .contractor-contact-grid > div {
-            width: 100% !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-          }
           .contractor-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 10px !important;
           }
+          .contractor-contact-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px !important;
+          }
         }
-        @media (max-width: 540px) {
+
+        /* Mobile Layout (<= 640px) */
+        @media (max-width: 640px) {
+          .contractor-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            margin-bottom: 14px !important;
+          }
+          .contractor-kpi-card {
+            padding: 10px 10px !important;
+            border-radius: 12px !important;
+            gap: 8px !important;
+          }
+          .contractor-kpi-icon {
+            width: 32px !important;
+            height: 32px !important;
+          }
+          .contractor-kpi-icon svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .contractor-kpi-label {
+            font-size: 9.5px !important;
+            letter-spacing: 0.2px !important;
+          }
+          .contractor-kpi-val {
+            font-size: 16.5px !important;
+          }
+          .contractor-kpi-arrow svg {
+            width: 12px !important;
+            height: 12px !important;
+          }
+
+          /* Mobile Contact Cards Grid (2 columns on mobile) */
+          .contractor-contact-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+          .contractor-contact-box {
+            padding: 10px 10px !important;
+            gap: 8px !important;
+            border-radius: 10px !important;
+          }
+          .contractor-contact-icon {
+            width: 28px !important;
+            height: 28px !important;
+            border-radius: 6px !important;
+          }
+          .contractor-contact-icon svg {
+            width: 14px !important;
+            height: 14px !important;
+          }
+          .contractor-contact-label {
+            font-size: 9px !important;
+            letter-spacing: 0.2px !important;
+          }
+          .contractor-contact-val {
+            font-size: 12px !important;
+          }
+          .contractor-contact-sub {
+            font-size: 9.5px !important;
+            line-height: 1.25 !important;
+          }
+          .contractor-contact-btn {
+            height: 26px !important;
+            padding: 0 8px !important;
+            font-size: 10px !important;
+          }
+        }
+
+        /* Narrow Mobile (<= 440px) */
+        @media (max-width: 440px) {
           .contractor-banner-btns {
             flex-direction: row !important;
             flex-wrap: wrap !important;
@@ -230,10 +421,14 @@ export default function ContractorDashboardPage() {
           .contractor-banner-btns button {
             flex: 1 1 auto !important;
             justify-content: center !important;
-            height: 38px !important;
-            padding: 0 14px !important;
-            font-size: 12.5px !important;
+            height: 36px !important;
+            padding: 0 12px !important;
+            font-size: 12px !important;
             border-radius: 8px !important;
+          }
+          .contractor-contact-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
           }
         }
       `}</style>
@@ -333,28 +528,19 @@ export default function ContractorDashboardPage() {
       </div>
 
       {/* 2. EXACTLY 4 SUMMARY CARDS IN A ROW (PALE SHINY GRADIENTS, SLIGHTLY SMALLER ICONS, NO DESCRIPTION) */}
-      <div
-        className="contractor-kpi-grid"
-        style={{
-          ...styles.kpiRowGrid,
-          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, 1fr)',
-          gap: isMobile ? '10px' : '16px',
-        }}
-      >
+      <div className="contractor-kpi-grid">
         {/* Card 1: Total Estimations (Pale Blue) */}
         <div
+          className="contractor-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '16px 18px',
-            borderRadius: isMobile ? '12px' : '16px',
             background: 'linear-gradient(135deg, #F0F7FF 0%, #E0EEFF 100%)',
             borderColor: '#BFDBFE',
           }}
           onClick={() => navigate('/contractor/projects')}
           title="Total Estimations Created"
         >
-          <div style={{ ...styles.kpiIconCircle, width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', backgroundColor: '#FFFFFF', color: '#1E3A63' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-icon" style={{ backgroundColor: '#FFFFFF', color: '#1E3A63' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
@@ -362,12 +548,12 @@ export default function ContractorDashboardPage() {
               <polyline points="10 9 9 9 8 9" />
             </svg>
           </div>
-          <div style={styles.kpiCenter}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11px', color: '#1E3A63' }}>Total Estimations</span>
-            <span style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '21px', color: '#0F2C59' }}>{totalEstimations}</span>
+          <div className="contractor-kpi-center">
+            <span className="contractor-kpi-label" style={{ color: '#1E3A63' }}>Total Estimations</span>
+            <span className="contractor-kpi-val" style={{ color: '#0F2C59' }}>{totalEstimations}</span>
           </div>
-          <div style={{ ...styles.kpiArrow, color: '#1E3A63' }}>
-            <svg width={isMobile ? '13' : '16'} height={isMobile ? '13' : '16'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-arrow" style={{ color: '#1E3A63' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
@@ -375,28 +561,26 @@ export default function ContractorDashboardPage() {
 
         {/* Card 2: Completed Projects (Pale Emerald Green) */}
         <div
+          className="contractor-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '16px 18px',
-            borderRadius: isMobile ? '12px' : '16px',
             background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
             borderColor: '#BBF7D0',
           }}
           onClick={() => navigate('/contractor/projects')}
           title="Completed Projects"
         >
-          <div style={{ ...styles.kpiIconCircle, width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', backgroundColor: '#FFFFFF', color: '#15803D' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-icon" style={{ backgroundColor: '#FFFFFF', color: '#15803D' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
-          <div style={styles.kpiCenter}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11px', color: '#166534' }}>Completed Projects</span>
-            <span style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '21px', color: '#14532D' }}>{completedProjects}</span>
+          <div className="contractor-kpi-center">
+            <span className="contractor-kpi-label" style={{ color: '#166534' }}>Completed Projects</span>
+            <span className="contractor-kpi-val" style={{ color: '#14532D' }}>{completedProjects}</span>
           </div>
-          <div style={{ ...styles.kpiArrow, color: '#15803D' }}>
-            <svg width={isMobile ? '13' : '16'} height={isMobile ? '13' : '16'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-arrow" style={{ color: '#15803D' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
@@ -404,28 +588,26 @@ export default function ContractorDashboardPage() {
 
         {/* Card 3: Total Revenue (Pale Shiny Purple) */}
         <div
+          className="contractor-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '16px 18px',
-            borderRadius: isMobile ? '12px' : '16px',
             background: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)',
             borderColor: '#E9D5FF',
           }}
           onClick={() => navigate('/contractor/discounts-earnings')}
           title="Total Revenue & Margin Savings"
         >
-          <div style={{ ...styles.kpiIconCircle, width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', backgroundColor: '#FFFFFF', color: '#7E22CE' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-icon" style={{ backgroundColor: '#FFFFFF', color: '#7E22CE' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
-          <div style={styles.kpiCenter}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11px', color: '#6B21A8' }}>Total Revenue</span>
-            <span style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '21px', color: '#581C87' }}>{fmt(totalRevenue)}</span>
+          <div className="contractor-kpi-center">
+            <span className="contractor-kpi-label" style={{ color: '#6B21A8' }}>Total Revenue</span>
+            <span className="contractor-kpi-val" style={{ color: '#581C87' }}>{fmt(totalRevenue)}</span>
           </div>
-          <div style={{ ...styles.kpiArrow, color: '#7E22CE' }}>
-            <svg width={isMobile ? '13' : '16'} height={isMobile ? '13' : '16'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-arrow" style={{ color: '#7E22CE' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
@@ -433,36 +615,34 @@ export default function ContractorDashboardPage() {
 
         {/* Card 4: Total Estimations Value (Pale Shiny Rose/Red) */}
         <div
+          className="contractor-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '16px 18px',
-            borderRadius: isMobile ? '12px' : '16px',
             background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
             borderColor: '#FECDD3',
           }}
           onClick={() => navigate('/contractor/projects')}
           title="Total Estimations Worth"
         >
-          <div style={{ ...styles.kpiIconCircle, width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', backgroundColor: '#FFFFFF', color: '#E11D48' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-icon" style={{ backgroundColor: '#FFFFFF', color: '#E11D48' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="20" x2="18" y2="10" />
               <line x1="12" y1="20" x2="12" y2="4" />
               <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
           </div>
-          <div style={styles.kpiCenter}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11px', color: '#9F1239' }}>Total Estimations Value</span>
-            <span style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '21px', color: '#881337' }}>{fmt(totalEstimationsValue)}</span>
+          <div className="contractor-kpi-center">
+            <span className="contractor-kpi-label" style={{ color: '#9F1239' }}>Total Estimations Value</span>
+            <span className="contractor-kpi-val" style={{ color: '#881337' }}>{fmt(totalEstimationsValue)}</span>
           </div>
-          <div style={{ ...styles.kpiArrow, color: '#E11D48' }}>
-            <svg width={isMobile ? '13' : '16'} height={isMobile ? '13' : '16'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="contractor-kpi-arrow" style={{ color: '#E11D48' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </div>
         </div>
       </div>
 
-      {/* 3. MAIN CONTENT GRID (LEFT: RECENT PROJECTS + CONTRACTOR SUPPORT HUB + OPERATING HOURS; RIGHT: WHOLESALE PRODUCT + TRADE DESK) */}
+      {/* 3. MAIN CONTENT GRID (LEFT: RECENT PROJECTS + TIME TABLES; RIGHT: WHOLESALE PRODUCT + TRADE DESK) */}
       <div
         className="contractor-main-grid"
         style={{
@@ -473,7 +653,7 @@ export default function ContractorDashboardPage() {
           width: '100%',
         }}
       >
-        {/* LEFT COLUMN: Projects + Support Hub + Operating Hours Cards */}
+        {/* LEFT COLUMN: Projects + Operating Hours Cards (Placed ABOVE Reachout Hub) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%' }}>
 
           {/* Recent Deck Projects Card */}
@@ -630,14 +810,14 @@ export default function ContractorDashboardPage() {
                     <div key={p._id || p.id} style={styles.mobileCard}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', wordBreak: 'break-word' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', wordBreak: 'break-word' }}>
                             {p.projectName || 'Residential Deck'}
                           </div>
                           <div style={{ fontSize: '11px', color: '#64748B' }}>
                             {p.ownerId?.fullName || p.ownerName || 'Verified Client'} • {formattedDate}
                           </div>
                         </div>
-                        <span style={{ ...statusClass, fontSize: '10.5px', padding: '2px 8px', flexShrink: 0 }}>
+                        <span style={{ ...statusClass, fontSize: '10px', padding: '2px 7px', flexShrink: 0 }}>
                           {rawStatus.replace(/_/g, ' ')}
                         </span>
                       </div>
@@ -645,7 +825,7 @@ export default function ContractorDashboardPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={styles.deckAreaPill}>{area} sq ft</span>
-                          <strong style={{ fontSize: '14.5px', color: '#15803D', fontWeight: '800' }}>
+                          <strong style={{ fontSize: '13.5px', color: '#15803D', fontWeight: '800' }}>
                             {estValStr}
                           </strong>
                         </div>
@@ -677,179 +857,10 @@ export default function ContractorDashboardPage() {
             </div>
           </div>
 
-          {/* Contractor Reachout & Support Hub */}
-          <div style={{ ...styles.contactHubCard, padding: isMobile ? '16px 14px' : '22px 24px', width: '100%', boxSizing: 'border-box' }}>
-            <div style={styles.contactHubHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 style={styles.contactHubTitle}>Contractor Reachout &amp; Support Hub</h3>
-                  <span style={styles.contactHubSubtitle}>
-                    Direct consultation for calculation formulas, chemical specs &amp; rapid dispatch
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/support')}
-                style={styles.hubLinkBtn}
-              >
-                <span>Support Hub</span>
-                <span>&rarr;</span>
-              </button>
-            </div>
-
-            <div
-              className="contractor-contact-grid"
-              style={{
-                ...styles.contactGrid,
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                gap: isMobile ? '12px' : '16px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            >
-              {/* Item 1: Direct Office (Theme Navy Outlined Card) */}
-              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#1E3A63' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
-                    <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Direct Office</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
-                      Toll-Free
-                    </span>
-                  </div>
-                  <a href="tel:8664403325" style={{ ...styles.contactBoxValue, fontSize: '15px' }}>
-                    (866) 440-DECK
-                  </a>
-                  <span style={styles.contactBoxSub}>Shamong: (609) 268-3436</span>
-
-                  <div style={{ marginTop: '10px' }}>
-                    <a href="tel:8664403325" style={styles.callNowBtn} title="Call (866) 440-DECK">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                      </svg>
-                      <span>Call Now</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Item 2: Estimates & Inquiries (Theme Orange Outlined Card) */}
-              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #E08131' }}>
-                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#E08131' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '3px' }}>
-                    <span style={{ ...styles.contactBoxLabel, color: '#C2671A' }}>Estimates &amp; Inquiries</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
-                      Official
-                    </span>
-                  </div>
-
-                  <div style={styles.emailHighlightedBox}>
-                    <a
-                      href="mailto:info@deckrestorationplus.com"
-                      style={styles.emailLink}
-                      title="Send email to info@deckrestorationplus.com"
-                    >
-                      info@deckrestorationplus.com
-                    </a>
-                  </div>
-                  <span style={styles.contactBoxSub}>Senior estimator inbox</span>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
-                    <a
-                      href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
-                      style={styles.emailUsBtn}
-                      title="Open email composer"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                      </svg>
-                      <span>Email Us</span>
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={handleCopyEmail}
-                      style={styles.copyBtn}
-                      title="Copy email to clipboard"
-                    >
-                      {copiedEmail ? (
-                        <>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          <span style={{ color: '#15803D', fontWeight: '700' }}>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Item 3: Headquarters (Theme Navy Outlined Card) */}
-              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F0FDF4', color: '#15803D', borderColor: '#1E3A63' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Headquarters</span>
-                  <strong style={styles.contactBoxValueStatic}>152 Indian Mills Road Unit #B</strong>
-                  <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block' }}>Shamong, NJ 08088</span>
-                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
-                    Distribution &amp; training facility
-                  </div>
-                </div>
-              </div>
-
-              {/* Item 4: Operating Hours Summary (Theme Navy Outlined Card) */}
-              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F8FAFC', color: '#1E3A63', borderColor: '#1E3A63' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Operating Hours</span>
-                  <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
-                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
-                    Live senior estimator dispatch
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Operating Hours Cards (Matching Customer Portal Design) - ABOVE Support Hub */}
+          <div style={{ width: '100%' }}>
+            <OperatingHoursBlock variant="cards" />
           </div>
-
-          {/* Operating Hours Cards (Matching Customer Portal Design) */}
-          <OperatingHoursBlock variant="cards" />
         </div>
 
         {/* RIGHT COLUMN: Single Product Card (Wholesale Materials) + Trade Desk Help Card */}
@@ -931,6 +942,190 @@ export default function ContractorDashboardPage() {
                 </svg>
                 <span>(866) 440-DECK</span>
               </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. CONTRACTOR REACHOUT & SUPPORT HUB - BELOW TIME TABLES IN A FULL-WIDTH SINGLE ROW */}
+      <div style={{ ...styles.contactHubCard, width: '100%', boxSizing: 'border-box', marginTop: '4px' }}>
+        <div style={styles.contactHubHeader}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </div>
+            <div>
+              <h3 style={styles.contactHubTitle}>Contractor Reachout &amp; Support Hub</h3>
+              <span style={styles.contactHubSubtitle}>
+                Direct consultation for calculation formulas, chemical specs &amp; rapid dispatch
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/contractor/support')}
+            style={styles.hubLinkBtn}
+          >
+            <span>Support Hub</span>
+            <span>&rarr;</span>
+          </button>
+        </div>
+
+        {/* Exactly 4 Contact Items in a Clean Full-Width Row on Desktop & Responsive 2x2 Grid on Mobile */}
+        <div className="contractor-contact-grid">
+          {/* Item 1: Direct Office Phone */}
+          <div className="contractor-contact-box" style={{ border: '1.5px solid #1E3A63' }}>
+            <div className="contractor-contact-icon" style={{ backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#1E3A63' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
+                <span className="contractor-contact-label" style={{ color: '#1E3A63' }}>Direct Office</span>
+                <span style={{ fontSize: '9px', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
+                  Toll-Free
+                </span>
+              </div>
+              <a href="tel:8664403325" className="contractor-contact-val">
+                (866) 440-DECK
+              </a>
+              <span className="contractor-contact-sub">Shamong: (609) 268-3436</span>
+
+              <div style={{ marginTop: '8px' }}>
+                <a href="tel:8664403325" className="contractor-contact-btn" style={styles.callNowBtn} title="Call (866) 440-DECK">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>Call Now</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Item 2: Estimates & Inquiries */}
+          <div className="contractor-contact-box" style={{ border: '1.5px solid #E08131' }}>
+            <div className="contractor-contact-icon" style={{ backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#E08131' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
+                <span className="contractor-contact-label" style={{ color: '#C2671A' }}>Inquiries</span>
+                <span style={{ fontSize: '9px', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
+                  Official
+                </span>
+              </div>
+
+              <div style={styles.emailHighlightedBox}>
+                <a
+                  href="mailto:info@deckrestorationplus.com"
+                  style={styles.emailLink}
+                  title="Send email to info@deckrestorationplus.com"
+                >
+                  info@deckrestorationplus.com
+                </a>
+              </div>
+              <span className="contractor-contact-sub">Senior estimator inbox</span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                <a
+                  href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                  className="contractor-contact-btn"
+                  style={styles.emailUsBtn}
+                  title="Open email composer"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  <span>Email</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className="contractor-contact-btn"
+                  style={styles.copyBtn}
+                  title="Copy email to clipboard"
+                >
+                  {copiedEmail ? (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span style={{ color: '#15803D', fontWeight: '700' }}>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Item 3: Headquarters */}
+          <div className="contractor-contact-box" style={{ border: '1.5px solid #1E3A63' }}>
+            <div className="contractor-contact-icon" style={{ backgroundColor: '#F0FDF4', color: '#15803D', borderColor: '#1E3A63' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="contractor-contact-label" style={{ color: '#1E3A63' }}>Headquarters</span>
+              <strong className="contractor-contact-val" style={{ color: '#0F172A' }}>
+                152 Indian Mills Rd #B
+              </strong>
+              <span className="contractor-contact-sub">Shamong, NJ 08088</span>
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BBF7D0' }}>
+                  Distribution &amp; Training
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Item 4: Rapid Dispatch & Trade Desk */}
+          <div className="contractor-contact-box" style={{ border: '1.5px solid #1E3A63' }}>
+            <div className="contractor-contact-icon" style={{ backgroundColor: '#EFF6FF', color: '#2563EB', borderColor: '#1E3A63' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
+                <span className="contractor-contact-label" style={{ color: '#1E3A63' }}>Rapid Dispatch</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }} />
+                  Live
+                </span>
+              </div>
+              <strong className="contractor-contact-val" style={{ color: '#0F172A' }}>
+                Senior Estimator Desk
+              </strong>
+              <span className="contractor-contact-sub">Fast partner tickets &amp; formula specs</span>
+              <div style={{ marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/contractor/support')}
+                  className="contractor-contact-btn"
+                  style={styles.callNowBtn}
+                  title="Open contractor support tickets"
+                >
+                  <span>Open Ticket &rarr;</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
