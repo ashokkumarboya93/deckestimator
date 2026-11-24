@@ -1143,7 +1143,7 @@ export default function ContractorProjectsPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                       gap: '8px',
                       backgroundColor: '#F8FAFC',
                       padding: '8px 10px',
@@ -2387,7 +2387,7 @@ const styles = {
   },
   modalGrid2: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '16px',
   },
   modalBox: {

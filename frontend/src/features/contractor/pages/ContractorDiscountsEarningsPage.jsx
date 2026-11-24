@@ -431,6 +431,35 @@ export default function ContractorDiscountsEarningsPage() {
   return (
     <div style={{ ...styles.page, padding: isMobile ? '12px 10px 40px 10px' : '26px 36px 60px 36px' }}>
       <style>{`
+        .contractor-discounts-kpi-grid {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 16px !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        .contractor-discounts-desktop-table {
+          display: block;
+          overflow-x: auto;
+        }
+        .contractor-discounts-mobile-cards {
+          display: none;
+        }
+
+        .contractor-discounts-kpi-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+          margin-bottom: 16px !important;
+          width: 100% !important;
+        }
+        @media (min-width: 1025px) {
+          .contractor-discounts-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 16px !important;
+            margin-bottom: 22px !important;
+          }
+        }
         @media (max-width: 1024px) {
           .contractor-discounts-bottom-grid {
             display: flex !important;
@@ -443,8 +472,12 @@ export default function ContractorDiscountsEarningsPage() {
             max-width: 100% !important;
             box-sizing: border-box !important;
           }
-          .contractor-discounts-kpi-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          .contractor-discounts-desktop-table {
+            display: none !important;
+          }
+          .contractor-discounts-mobile-cards {
+            display: flex !important;
+            flex-direction: column !important;
             gap: 10px !important;
           }
         }
@@ -478,14 +511,8 @@ export default function ContractorDiscountsEarningsPage() {
         </div>
       </section>
 
-      {/* 2. Summary KPI Cards — Glass Effect & Pale Colors with Real MongoDB Data */}
-      <div
-        style={{
-          ...styles.kpiGrid,
-          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, 1fr)',
-          gap: isMobile ? '10px' : '16px',
-        }}
-      >
+      {/* 2. Summary KPI Cards — Glass Effect & Pale Colors with Real MongoDB Data (2x2 on Mobile, 4 on Desktop) */}
+      <div className="contractor-discounts-kpi-grid">
         {/* Card 1: Wholesale Tier Discount */}
         <div
           style={{
@@ -754,8 +781,8 @@ export default function ContractorDiscountsEarningsPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div style={{ overflowX: 'auto' }}>
+            {/* Desktop Table View */}
+            <div className="contractor-discounts-desktop-table" style={{ overflowX: 'auto' }}>
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeadRow}>
@@ -888,6 +915,134 @@ export default function ContractorDiscountsEarningsPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards View (Same as Customer Portal Compact Standard) */}
+            <div className="contractor-discounts-mobile-cards">
+              {filteredEstimates.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#94A3B8' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>📋</div>
+                  <strong style={{ display: 'block', fontSize: '13.5px', color: '#1E3A63', marginBottom: '4px' }}>
+                    No Estimations Found
+                  </strong>
+                  <span style={{ fontSize: '11.5px' }}>
+                    Completed project conversions will reflect here with your calculated wholesale savings.
+                  </span>
+                </div>
+              ) : (
+                filteredEstimates.map((est) => {
+                  const estId = est._id || est.id;
+                  const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Project';
+                  const refNum = est.estimateNumber || (est._id ? `EST-${String(est._id).slice(-8).toUpperCase()}` : 'EST-PENDING');
+                  const area = getDeckArea(est);
+                  const dims = getDeckDimensions(est);
+                  const totalCost = Number(est.totalAmount || est.pricingSnapshot?.calculatedTotal || 0);
+                  const discountRate = est.discountBreakdown?.rate || activeWholesaleTier;
+                  const isCompleted = (est.estimateStatus || est.status || '').toUpperCase() === 'COMPLETED';
+                  const stBadge = getEstimateStatusBadge(est.estimateStatus || est.status);
+                  const discountSavings = Number(
+                    est.discountBreakdown?.discountAmount ||
+                    (est.discountBreakdown?.originalTotal > est.totalAmount ? est.discountBreakdown.originalTotal - est.totalAmount : 0) ||
+                    ((totalCost * discountRate) / 100)
+                  );
+
+                  return (
+                    <div
+                      key={estId}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1.5px solid #E2E8F0',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        boxShadow: '0 1px 4px rgba(15, 23, 42, 0.05)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '9px',
+                      }}
+                    >
+                      {/* Top Row: Title + Ref + Status Badge */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <h4
+                            onClick={() => navigate(`/contractor/projects/${estId}`)}
+                            style={{ margin: '0 0 2px 0', fontSize: '13.5px', fontWeight: '800', color: '#1E3A63', cursor: 'pointer', wordBreak: 'break-word' }}
+                          >
+                            {projName}
+                          </h4>
+                          <span style={{ display: 'block', fontSize: '10.5px', color: '#64748B', fontFamily: 'monospace' }}>
+                            {refNum}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2.5px 8px',
+                            borderRadius: '999px',
+                            fontSize: '10px',
+                            fontWeight: '800',
+                            backgroundColor: stBadge.bg,
+                            color: stBadge.color,
+                            border: stBadge.border,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: stBadge.color }} />
+                          {stBadge.label}
+                        </span>
+                      </div>
+
+                      {/* Specs Box */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '8px',
+                          backgroundColor: '#F8FAFC',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid #F1F5F9',
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
+                          <strong style={{ fontSize: '12px', color: '#0F172A', marginTop: '2px', display: 'block' }}>{area}</strong>
+                          {dims && <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>{dims}</span>}
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Discount Tier</span>
+                          <span style={{ display: 'inline-block', marginTop: '2px', padding: '2px 7px', borderRadius: '4px', fontSize: '11px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
+                            {discountRate}% Tier
+                          </span>
+                        </div>
+                        <div style={{ gridColumn: 'span 2', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <div>
+                            <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Total Estimate Cost</span>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#1E3A63' }}>
+                              ${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '9.5px', color: isCompleted ? '#166534' : '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>
+                              {isCompleted ? 'Earned Savings' : 'Status'}
+                            </span>
+                            {isCompleted ? (
+                              <span style={{ fontSize: '14.5px', fontWeight: '900', color: '#15803D' }}>
+                                +${discountSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '600' }}>
+                                Pending Completion
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

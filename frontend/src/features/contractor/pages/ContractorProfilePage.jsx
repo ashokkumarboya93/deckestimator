@@ -35,7 +35,8 @@ export default function ContractorProfilePage() {
 
   // Responsive state
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
-  const isMobile = windowWidth < 900;
+  const isMobile = windowWidth < 1024;
+  const isSmallMobile = windowWidth < 540;
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -483,7 +484,26 @@ export default function ContractorProfilePage() {
   }
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '12px 10px 40px 10px' : '24px 20px 60px 20px' }}>
+      <style>{`
+        .contractor-profile-desktop-table {
+          display: block;
+          overflow-x: auto;
+        }
+        .contractor-profile-mobile-cards {
+          display: none;
+        }
+        @media (max-width: 1024px) {
+          .contractor-profile-desktop-table {
+            display: none !important;
+          }
+          .contractor-profile-mobile-cards {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       {/* ======================================================== */}
       {/* 1. TOP HEADER & TOP SAVE BUTTONS ROW                     */}
       {/* ======================================================== */}
@@ -819,7 +839,7 @@ export default function ContractorProfilePage() {
                   style={styles.input}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
                 <input
                   type="text"
                   value={businessState}
@@ -976,7 +996,8 @@ export default function ContractorProfilePage() {
               )}
             </div>
 
-            <div style={styles.tableCard}>
+            {/* Desktop Table View */}
+            <div className="contractor-profile-desktop-table" style={styles.tableCard}>
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeaderRow}>
@@ -1068,6 +1089,85 @@ export default function ContractorProfilePage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards View for Documents */}
+            <div className="contractor-profile-mobile-cards">
+              {documents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '12.5px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+                  No compliance documents uploaded yet. Drag and drop your license and insurance certificates above.
+                </div>
+              ) : (
+                documents.map((doc, idx) => {
+                  const st = (doc.documentStatus || doc.status || '').toLowerCase();
+                  const isVerified = st === 'verified' || st === 'approved';
+                  const isRejected = st === 'rejected';
+                  const isPending = !isVerified && !isRejected;
+
+                  return (
+                    <div
+                      key={doc.id || doc._id || idx}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block' }}>
+                            {getDocTypeLabel(doc.documentType)}
+                          </strong>
+                          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748B', display: 'block', marginTop: '2px', wordBreak: 'break-all' }}>
+                            {doc.originalFileName || doc.fileName || doc.originalName || 'trade_document.pdf'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDoc(doc.id || doc._id)}
+                          style={{ ...styles.deleteDocBtn, width: '28px', height: '28px', flexShrink: 0 }}
+                          title="Delete document"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9', flexWrap: 'wrap', gap: '6px' }}>
+                        <div>
+                          {isVerified && (
+                            <span style={{ ...styles.docStatusBadge, fontSize: '10px', padding: '2px 8px', backgroundColor: '#ECFDF5', color: '#15803D', border: '1px solid #A7F3D0' }}>
+                              ✓ Verified
+                            </span>
+                          )}
+                          {isPending && (
+                            <span style={{ ...styles.docStatusBadge, fontSize: '10px', padding: '2px 8px', backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }}>
+                              ⏳ Pending Review
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span style={{ ...styles.docStatusBadge, fontSize: '10px', padding: '2px 8px', backgroundColor: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>
+                              ✕ Action Required
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>
+                          {doc.uploadedAt || doc.createdAt
+                            ? new Date(doc.uploadedAt || doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : 'Nov 8, 2026'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

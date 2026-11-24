@@ -589,7 +589,6 @@ export default function ContractorLayout() {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: isMobile ? (isSmallMobile ? '140px' : '220px') : 'none',
                   }}
                 >
                   {currentPath.includes('/dashboard') || currentPath === '/contractor' || currentPath === '/contractor/'
@@ -614,21 +613,21 @@ export default function ContractorLayout() {
             )}
           </div>
 
-          {/* Right: Notifications, Profile, Logout (No clipping, mobile clean spacing) */}
+          {/* Right: Notifications, Profile, Logout (No clipping, mobile clean spacing matching Customer Portal) */}
           <div style={{ ...styles.headerRight, gap: isMobile ? '6px' : '12px', flexShrink: 0 }}>
-            {/* Quick Action Button for Contractor (Hidden on estimator page itself) */}
-            {!isEstimatorPage && (
+            {/* Quick Action Button for Contractor — Desktop only to keep mobile navbar clean and uncluttered */}
+            {!isMobile && !isEstimatorPage && (
               <Link
                 to="/contractor/decks/new"
                 style={{
                   ...styles.primaryActionBtn,
-                  padding: isMobile ? '5px 8px' : '8px 18px',
-                  fontSize: isMobile ? '11px' : '13.5px',
+                  padding: '8px 18px',
+                  fontSize: '13.5px',
                   whiteSpace: 'nowrap',
                 }}
                 title="Start New Estimation"
               >
-                <span>{isMobile ? '+ New' : '+ New Estimation'}</span>
+                <span>+ New Estimation</span>
               </Link>
             )}
 

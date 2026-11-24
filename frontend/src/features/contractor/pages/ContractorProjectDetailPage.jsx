@@ -446,7 +446,7 @@ export default function ContractorProjectDetailPage() {
           </p>
         </div>
 
-        <div style={{ ...styles.priceMetricsGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '10px' : '12px' }}>
+        <div style={{ ...styles.priceMetricsGrid, gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: isMobile ? '10px' : '12px' }}>
           <div style={styles.metricItem}>
             <span style={styles.metricLabel}>Billable Area ($A$)</span>
             <strong style={styles.metricVal}>{deck.areaSqFt || snap.A || 400} sq ft</strong>
@@ -469,7 +469,7 @@ export default function ContractorProjectDetailPage() {
       </div>
 
       {/* 4. SELECTED INPUT SPECIFICATIONS (SECTIONS 1 TO 8) */}
-      <div style={{ ...styles.specificationsGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? '14px' : '20px' }}>
+      <div style={{ ...styles.specificationsGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: isMobile ? '14px' : '20px' }}>
         {/* SECTION 1: Footprint & Dimensions */}
         <div style={styles.specCard}>
           <div style={styles.specCardHeader}>

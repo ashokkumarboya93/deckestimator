@@ -23,6 +23,17 @@ import { OPERATING_HOURS_SCHEDULES } from '../../../constants/operatingHours';
 export default function ContractorSupportPage() {
   const { user } = useAuth();
 
+  // Responsive state
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
+  const isMobile = windowWidth < 1024;
+  const isSmallMobile = windowWidth < 540;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Dynamic Pricing & Discount State
   const [pricingConfig, setPricingConfig] = useState(null);
   const [currentDiscount, setCurrentDiscount] = useState(10);
@@ -204,7 +215,7 @@ export default function ContractorSupportPage() {
   ];
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '12px 10px 40px 10px' : '24px 32px 48px 32px' }}>
       <style>{`
         /* Contact Hub & Schedules Grid */
         .drp-cnt-top-grid {
@@ -229,31 +240,38 @@ export default function ContractorSupportPage() {
         }
 
         /* Responsive Tablet & Mobile Media Queries */
-        @media (max-width: 1080px) {
+        @media (max-width: 1024px) {
           .drp-cnt-top-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
-        }
-        @media (max-width: 820px) {
           .drp-cnt-schedule-grid {
             grid-template-columns: 1fr !important;
           }
           .drp-cnt-two-col-grid {
             grid-template-columns: 1fr !important;
+            gap: 14px !important;
           }
         }
         @media (max-width: 640px) {
           .drp-cnt-top-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
           }
           .drp-cnt-form-row {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 440px) {
+          .drp-cnt-top-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+        }
       `}</style>
 
       {/* 1. Header Banner */}
-      <div style={styles.headerCard}>
+      <div style={{ ...styles.headerCard, padding: isMobile ? '16px 14px' : '24px 30px' }}>
         <div style={styles.portalBadge}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -269,7 +287,7 @@ export default function ContractorSupportPage() {
       </div>
 
       {/* Direct Office Contact Redesign matching customer design specification */}
-      <div style={styles.sectionCard}>
+      <div style={{ ...styles.sectionCard, padding: isMobile ? '16px 14px' : '24px' }}>
         {/* Section Header */}
         <div style={styles.sectionHeader}>
           <div style={styles.hubHeaderIcon}>
@@ -526,7 +544,7 @@ export default function ContractorSupportPage() {
       {/* 4. Two-Column Layout: Partner Inquiry Form (Routes to Admin All Reach Outs & Contractors) + FAQ Accordion */}
       <div className="drp-cnt-two-col-grid">
         {/* Left: Submit Partner Inquiry */}
-        <div style={styles.inquiryCard}>
+        <div style={{ ...styles.inquiryCard, padding: isMobile ? '16px 14px' : '24px' }}>
           <div style={styles.sectionHeader}>
             <div style={styles.inquiryHeaderIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -631,6 +649,8 @@ export default function ContractorSupportPage() {
                   onMouseLeave={() => setBtnHover(false)}
                   style={{
                     ...styles.submitBtnOutlined,
+                    width: isMobile ? '100%' : 'auto',
+                    justifyContent: 'center',
                     backgroundColor: btnHover ? '#EFF6FF' : '#FFFFFF',
                     borderColor: btnHover ? '#0284C7' : '#1E3A63',
                     color: btnHover ? '#0284C7' : '#1E3A63',
@@ -652,7 +672,7 @@ export default function ContractorSupportPage() {
         </div>
 
         {/* Right: Contractor FAQ Accordion (10 Comprehensive Q&As) */}
-        <div style={styles.faqCard}>
+        <div style={{ ...styles.faqCard, padding: isMobile ? '16px 14px' : '24px' }}>
           <div style={styles.sectionHeader}>
             <div style={styles.faqHeaderIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

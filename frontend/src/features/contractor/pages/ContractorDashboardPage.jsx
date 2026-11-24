@@ -169,7 +169,7 @@ export default function ContractorDashboardPage() {
   }
 
   return (
-    <div style={{ ...styles.dashboardContainer, padding: isMobile ? '12px 10px 40px 10px' : '26px 36px' }}>
+    <div style={{ ...styles.dashboardContainer, padding: isMobile ? '12px 10px 40px 10px' : '26px 36px', gap: isMobile ? '14px' : '22px' }}>
       <style>{`
         .contractor-desktop-table-wrap {
           display: block;
@@ -179,13 +179,20 @@ export default function ContractorDashboardPage() {
           display: none;
         }
 
-        /* Desktop KPI Grid: 4 columns */
+        /* KPI Grid: 2 columns on mobile/tablet, 4 on desktop (Same as Customer Portal) */
         .contractor-kpi-grid {
           display: grid !important;
-          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-          gap: 14px !important;
-          margin-bottom: 20px !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+          margin-bottom: 16px !important;
           width: 100% !important;
+        }
+        @media (min-width: 1025px) {
+          .contractor-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 14px !important;
+            margin-bottom: 20px !important;
+          }
         }
         .contractor-kpi-card {
           border-radius: 14px;
@@ -332,12 +339,20 @@ export default function ContractorDashboardPage() {
             gap: 14px !important;
           }
           .contractor-kpi-grid {
+            display: grid !important;
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 10px !important;
           }
+          .contractor-kpi-arrow {
+            display: none !important;
+          }
+          .contractor-kpi-card {
+            padding: 10px 12px !important;
+            border-radius: 12px !important;
+          }
           .contractor-contact-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 12px !important;
+            gap: 10px !important;
           }
         }
 
@@ -346,10 +361,10 @@ export default function ContractorDashboardPage() {
           .contractor-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 8px !important;
-            margin-bottom: 14px !important;
+            margin-bottom: 12px !important;
           }
           .contractor-kpi-card {
-            padding: 10px 10px !important;
+            padding: 9px 10px !important;
             border-radius: 12px !important;
             gap: 8px !important;
           }
@@ -366,11 +381,11 @@ export default function ContractorDashboardPage() {
             letter-spacing: 0.2px !important;
           }
           .contractor-kpi-val {
-            font-size: 16.5px !important;
+            font-size: 17px !important;
+            font-weight: 800 !important;
           }
-          .contractor-kpi-arrow svg {
-            width: 12px !important;
-            height: 12px !important;
+          .contractor-kpi-arrow {
+            display: none !important;
           }
 
           /* Mobile Contact Cards Grid (2 columns on mobile) */
@@ -806,18 +821,20 @@ export default function ContractorDashboardPage() {
                   });
                   const area = p.dimensions?.area || p.area || 420;
 
+                  const targetUrl = projectEst ? `/contractor/projects/${projectEst._id || projectEst.id}` : '/contractor/projects';
+
                   return (
                     <div key={p._id || p.id} style={styles.mobileCard}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', wordBreak: 'break-word' }}>
+                        <div style={{ minWidth: 0, flex: 1, cursor: 'pointer' }} onClick={() => navigate(targetUrl)}>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A63', wordBreak: 'break-word' }}>
                             {p.projectName || 'Residential Deck'}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '2px' }}>
                             {p.ownerId?.fullName || p.ownerName || 'Verified Client'} • {formattedDate}
                           </div>
                         </div>
-                        <span style={{ ...statusClass, fontSize: '10px', padding: '2px 7px', flexShrink: 0 }}>
+                        <span style={{ ...statusClass, fontSize: '10px', padding: '2.5px 8px', borderRadius: '12px', flexShrink: 0 }}>
                           {rawStatus.replace(/_/g, ' ')}
                         </span>
                       </div>
@@ -831,8 +848,8 @@ export default function ContractorDashboardPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate('/contractor/projects')}
-                          style={styles.actionViewBtn}
+                          onClick={() => navigate(targetUrl)}
+                          style={{ ...styles.actionViewBtn, padding: '4px 12px', height: '28px', fontSize: '11px' }}
                         >
                           View
                         </button>
@@ -1752,7 +1769,7 @@ const styles = {
   },
   contactGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '16px',
   },
   contactItemBox: {
