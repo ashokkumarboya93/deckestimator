@@ -35,7 +35,7 @@ export default function ContractorProjectsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Pagination & Responsiveness
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 900 : false));
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
   const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 540 : false));
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -43,7 +43,7 @@ export default function ContractorProjectsPage() {
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 900);
+        setIsMobile(window.innerWidth < 1024);
         setIsSmallMobile(window.innerWidth < 540);
       }
     };
@@ -588,7 +588,46 @@ export default function ContractorProjectsPage() {
   return (
     <div style={{ ...styles.pageContainer, padding: isMobile ? '12px 10px 40px 10px' : '24px 20px 60px 20px' }}>
       <style>{`
-        @media (max-width: 900px) {
+        /* Mobile-First 2x2 KPI Grid (Same as Customer Portal) */
+        .contractor-proj-kpi-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+          margin-bottom: 16px !important;
+          width: 100% !important;
+        }
+        @media (min-width: 1025px) {
+          .contractor-proj-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 14px !important;
+          }
+        }
+        .contractor-proj-kpi-card {
+          border-radius: 12px !important;
+          padding: 10px 12px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          min-width: 0 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+          border-width: 1.5px !important;
+          border-style: solid !important;
+          cursor: pointer !important;
+          transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        .contractor-proj-kpi-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(30, 58, 99, 0.08) !important;
+        }
+        @media (max-width: 400px) {
+          .contractor-proj-kpi-card {
+            padding: 8px 8px !important;
+            gap: 6px !important;
+          }
+        }
+        @media (max-width: 1024px) {
           .contractor-controls-bar {
             flex-direction: column !important;
             align-items: stretch !important;
@@ -600,13 +639,29 @@ export default function ContractorProjectsPage() {
             min-width: 100% !important;
             max-width: 100% !important;
             width: 100% !important;
-            height: 38px !important;
+          }
+          .contractor-search-box input {
+            padding-left: 36px !important;
+            box-sizing: border-box !important;
           }
           .contractor-filter-group {
             width: 100% !important;
             justify-content: space-between !important;
             margin-left: 0 !important;
             gap: 8px !important;
+          }
+          .contractor-filter-group select {
+            height: 38px !important;
+            line-height: normal !important;
+            padding: 0 10px !important;
+            font-size: 12.5px !important;
+            box-sizing: border-box !important;
+          }
+          .contractor-filter-group button {
+            height: 38px !important;
+            padding: 0 14px !important;
+            font-size: 12.5px !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
@@ -639,160 +694,190 @@ export default function ContractorProjectsPage() {
         </div>
       </section>
 
-      {/* 2. PALE COLORED SHINY SUMMARY KPI CARDS */}
-      <div
-        style={{
-          ...styles.kpiGrid,
-          gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, 1fr)',
-          gap: isMobile ? '10px' : '16px',
-        }}
-      >
+      {/* 2. PALE COLORED SHINY SUMMARY KPI CARDS (2x2 Grid on Mobile, 4 Columns on Desktop) */}
+      <div className="contractor-proj-kpi-grid">
         {/* Total Projects */}
         <div
           onClick={() => setStatusFilter('ALL')}
+          className="contractor-proj-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '18px 20px',
             backgroundColor: '#EFF6FF',
             borderColor: statusFilter === 'ALL' ? '#3B82F6' : '#BFDBFE',
-            cursor: 'pointer',
           }}
           title="Filter by all projects"
         >
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#DBEAFE', color: '#1E3A63' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#DBEAFE', color: '#1E3A63' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 2 7 12 12 22 7 12 2" />
               <polyline points="2 17 12 22 22 17" />
               <polyline points="2 12 12 17 22 12" />
             </svg>
           </div>
-          <div>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Total Projects</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#1E3A63' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11.5px' }}>Total Projects</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#1E3A63' }}>
               {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.total}
             </strong>
-            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Tracked in active portfolio</span>
+            <span style={{ ...styles.kpiSub, fontSize: '10.5px', display: isMobile ? 'none' : 'block' }}>Tracked in active portfolio</span>
           </div>
         </div>
 
         {/* In Review & Requested */}
         <div
           onClick={() => setStatusFilter(statusFilter === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')}
+          className="contractor-proj-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '18px 20px',
             backgroundColor: '#FFFBEB',
             borderColor: statusFilter === 'IN_REVIEW' || statusFilter === 'REQUESTED' ? '#F59E0B' : '#FDE68A',
-            cursor: 'pointer',
           }}
           title="Filter by In Review & Requested projects"
         >
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#FEF3C7', color: '#B45309' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#FEF3C7', color: '#B45309' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
           </div>
-          <div>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>In Review</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#B45309' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11.5px' }}>In Review</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#B45309' }}>
               {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : (stats.inReviewCount + stats.requestedCount)}
             </strong>
-            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Pending approval / requested</span>
+            <span style={{ ...styles.kpiSub, fontSize: '10.5px', display: isMobile ? 'none' : 'block' }}>Pending approval / requested</span>
           </div>
         </div>
 
         {/* Completed Projects */}
         <div
           onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+          className="contractor-proj-kpi-card"
           style={{
-            ...styles.kpiCard,
-            padding: isMobile ? '10px 12px' : '18px 20px',
             backgroundColor: '#ECFDF5',
             borderColor: statusFilter === 'COMPLETED' ? '#10B981' : '#A7F3D0',
-            cursor: 'pointer',
           }}
           title="Filter by Completed projects"
         >
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#D1FAE5', color: '#15803D' }}>
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#D1FAE5', color: '#15803D' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
-          <div>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Completed</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#15803D' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11.5px' }}>Completed</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#15803D' }}>
               {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.completedCount}
             </strong>
-            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Finished projects</span>
+            <span style={{ ...styles.kpiSub, fontSize: '10.5px', display: isMobile ? 'none' : 'block' }}>Finished projects</span>
           </div>
         </div>
 
-        {/* Total Pipeline Value (Pale Purple as requested) */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }}>
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#F3E8FF', color: '#9333EA' }}>
+        {/* Total Pipeline Value */}
+        <div
+          className="contractor-proj-kpi-card"
+          style={{
+            backgroundColor: '#FAF5FF',
+            borderColor: '#E9D5FF',
+          }}
+        >
+          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#F3E8FF', color: '#9333EA' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
-          <div>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Pipeline Value</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#7E22CE' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '9.5px' : '11.5px' }}>Pipeline Value</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#7E22CE' }}>
               {loading ? <SkeletonShimmer width="72px" height="22px" borderRadius="4px" /> : formatCurrency(stats.totalPortfolioVal)}
             </strong>
-            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Total estimated volume</span>
+            <span style={{ ...styles.kpiSub, fontSize: '10.5px', display: isMobile ? 'none' : 'block' }}>Total estimated volume</span>
           </div>
         </div>
       </div>
 
-      {/* 3. CONTROLS BAR: SEARCH + FILTER + REFRESH */}
+      {/* 3. CONTROLS BAR: SEARCH + FILTER + REFRESH (Clean Card with Refined Mobile Spacing) */}
       <div
         className="contractor-controls-bar"
         style={{
-          ...styles.controlsRow,
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '10px',
+          padding: isMobile ? '10px 12px' : '12px 18px',
+          display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'stretch' : 'center',
-          gap: isMobile ? '10px' : '14px',
+          gap: isMobile ? '8px' : '14px',
+          marginBottom: '16px',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
           width: '100%',
+          boxSizing: 'border-box',
         }}
       >
         {/* Search Bar */}
         <div
           className="contractor-search-box"
           style={{
-            ...styles.searchWrap,
-            flex: isMobile ? '0 0 auto' : '1 1 320px',
-            minWidth: isMobile ? '100%' : '260px',
-            maxWidth: isMobile ? '100%' : '560px',
-            width: '100%',
-            height: isMobile ? '38px' : '42px',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            flex: isMobile ? 'none' : 1,
+            width: isMobile ? '100%' : 'auto',
           }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ ...styles.searchIcon, left: '14px', zIndex: 2 }}>
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <span
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              pointerEvents: 'none',
+              zIndex: 2,
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isMobile ? 'Search projects...' : 'Search by project name, reference number, or wood species...'}
+            placeholder={isMobile ? 'Search projects, ref #, wood...' : 'Search by project name, reference number, or wood species...'}
             style={{
-              ...styles.searchInput,
-              height: isMobile ? '38px' : '42px',
-              paddingLeft: '38px',
-              paddingRight: '34px',
+              width: '100%',
+              height: isMobile ? '38px' : '40px',
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              paddingLeft: '34px',
+              paddingRight: searchTerm ? '32px' : '12px',
               fontSize: isMobile ? '12.5px' : '13px',
-              textAlign: 'left',
+              backgroundColor: '#F8FAFC',
+              color: '#0F172A',
+              outline: 'none',
+              boxSizing: 'border-box',
             }}
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              style={styles.clearSearchBtn}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: '#94A3B8',
+                fontSize: '15px',
+                cursor: 'pointer',
+                padding: '2px 4px',
+                lineHeight: 1,
+              }}
               title="Clear search"
             >
               ✕
@@ -804,46 +889,29 @@ export default function ContractorProjectsPage() {
         <div
           className="contractor-filter-group"
           style={{
-            ...styles.filterActionsGroup,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             width: isMobile ? '100%' : 'auto',
-            justifyContent: isMobile ? 'space-between' : 'flex-end',
-            gap: isMobile ? '8px' : '10px',
-            marginLeft: isMobile ? '0' : 'auto',
           }}
         >
-          <div style={{ ...styles.selectWrap, flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '170px', position: 'relative' }}>
-            <svg
-              width={isMobile ? '13' : '14'}
-              height={isMobile ? '13' : '14'}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#1E3A63"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                position: 'absolute',
-                left: isMobile ? '10px' : '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                zIndex: 2,
-              }}
-            >
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
+          <div style={{ flex: isMobile ? 1 : 'none', minWidth: isMobile ? 0 : '160px' }}>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{
-                ...styles.filterSelect,
                 width: '100%',
-                height: isMobile ? '38px' : '42px',
-                paddingLeft: isMobile ? '28px' : '34px',
-                paddingRight: isMobile ? '14px' : '20px',
-                fontSize: isMobile ? '12px' : '13px',
+                height: isMobile ? '38px' : '40px',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '0 12px',
+                fontSize: isMobile ? '12.5px' : '13px',
                 fontWeight: '600',
-                textAlign: 'left',
+                color: '#1E3A63',
+                backgroundColor: '#FFFFFF',
+                outline: 'none',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
               }}
             >
               <option value="ALL">All Statuses ({estimates.length})</option>
@@ -859,12 +927,21 @@ export default function ContractorProjectsPage() {
             onClick={() => fetchProjects(true)}
             disabled={refreshing || loading}
             style={{
-              ...styles.refreshBtn,
-              height: isMobile ? '38px' : '42px',
-              padding: isMobile ? '0 12px' : '0 20px',
-              fontSize: isMobile ? '12px' : '13px',
-              gap: isMobile ? '5px' : '8px',
+              height: isMobile ? '38px' : '40px',
+              padding: isMobile ? '0 14px' : '0 18px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              fontSize: isMobile ? '12.5px' : '13px',
+              fontWeight: '700',
+              color: '#1E3A63',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
               flexShrink: 0,
+              boxSizing: 'border-box',
+              transition: 'all 0.15s ease',
             }}
             title="Refresh list from database"
           >
@@ -986,8 +1063,8 @@ export default function ContractorProjectsPage() {
             </button>
           </div>
         ) : isMobile ? (
-          /* Mobile Card View — Optimized for all smartphone viewports */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+          /* Mobile Card View — Customer Portal Standard Compact Layout */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px' }}>
             {paginatedEstimates.map((est) => {
               const estId = est._id || est.id;
               const isRowSelected = selectedIds.includes(estId);
@@ -999,6 +1076,9 @@ export default function ContractorProjectsPage() {
               const lm = getLabourAndMaterials(est);
               const statusObj = resolveStatusBadge(est.estimateStatus || est.status);
               const fullDate = formatFullDate(est.createdAt);
+              const isAlreadyRequested = ['REQUESTED', 'IN_REVIEW', 'COMPLETED', 'APPROVED', 'CONVERTED'].includes(
+                String(est.estimateStatus || est.status || '').toUpperCase()
+              );
 
               return (
                 <div
@@ -1006,14 +1086,15 @@ export default function ContractorProjectsPage() {
                   style={{
                     backgroundColor: isRowSelected ? '#F0F9FF' : '#ffffff',
                     border: `1.5px solid ${isRowSelected ? '#93C5FD' : '#E2E8F0'}`,
-                    borderRadius: '10px',
-                    padding: '10px 12px',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
                     boxShadow: '0 1px 4px rgba(15, 23, 42, 0.05)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
+                    gap: '9px',
                   }}
                 >
+                  {/* Top Row: Checkbox + Title/Ref + Status Badge */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0, flex: 1 }}>
                       <input
@@ -1038,12 +1119,18 @@ export default function ContractorProjectsPage() {
                     <div style={{ flexShrink: 0 }}>
                       <span
                         style={{
-                          ...styles.statusBadge,
                           fontSize: '10px',
-                          padding: '2px 7px',
+                          padding: '2.5px 8px',
+                          borderRadius: '12px',
                           backgroundColor: statusObj.bg,
                           color: statusObj.text,
                           borderColor: statusObj.border,
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          fontWeight: '700',
                         }}
                       >
                         <span style={{ ...styles.statusDot, backgroundColor: statusObj.dot }} />
@@ -1052,49 +1139,116 @@ export default function ContractorProjectsPage() {
                     </div>
                   </div>
 
-                  {/* Metrics Row */}
+                  {/* Middle Specs Grid */}
                   <div
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '1fr 1fr',
                       gap: '8px',
                       backgroundColor: '#F8FAFC',
-                      padding: '10px 12px',
+                      padding: '8px 10px',
                       borderRadius: '8px',
                       border: '1px solid #F1F5F9',
                     }}
                   >
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
+                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
                       <strong style={{ fontSize: '12.5px', color: '#0F172A', marginTop: '2px', display: 'block' }}>{area}</strong>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>{dims}</span>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Labour &amp; Materials</span>
-                      <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#0F172A', marginTop: '2px', lineHeight: 1.3 }}>
+                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Labour &amp; Materials</span>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#0F172A', marginTop: '2px', lineHeight: 1.3 }}>
                         <div>{lm.hours}</div>
-                        <div style={{ color: '#475569', fontWeight: '600', fontSize: '10.5px' }}>{lm.materials}</div>
+                        <div style={{ color: '#475569', fontWeight: '600', fontSize: '10px' }}>{lm.materials}</div>
                       </div>
                     </div>
-                    <div style={{ gridColumn: 'span 2', borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
+                    <div style={{ gridColumn: 'span 2', borderTop: '1px solid #E2E8F0', paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
                         Estimator Price:
                       </span>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '16px', fontWeight: '900', color: '#15803D' }}>
+                        <span style={{ fontSize: '15.5px', fontWeight: '900', color: '#15803D' }}>
                           {exactPrice}
                         </span>
-                        <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '700', display: 'block' }}>✓ Wholesale Applied</span>
+                        <span style={{ fontSize: '9.5px', color: '#16A34A', fontWeight: '700', display: 'block' }}>
+                          ✓ {est.discountBreakdown?.discountPercentage ? `${est.discountBreakdown.discountPercentage}% Wholesale Applied` : 'Wholesale Applied'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Primary Enquiry / Booking Conversion Button or Request Submitted Badge */}
+                  <div style={{ marginTop: '2px' }}>
+                    {isAlreadyRequested ? (
+                      <div
+                        style={{
+                          width: '100%',
+                          padding: '6px 10px',
+                          backgroundColor: '#F0FDF4',
+                          border: '1px solid #BBF7D0',
+                          borderRadius: '7px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          color: '#15803D',
+                          boxSizing: 'border-box',
+                        }}
+                        title="Request has already been submitted for this estimation"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>Request Submitted</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRequestEnquiry(est)}
+                        disabled={convertingId === estId}
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          backgroundColor: '#E08131',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '7px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          fontSize: '11.5px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxSizing: 'border-box',
+                          transition: 'background-color 0.15s ease',
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        <span>{convertingId === estId ? 'Submitting...' : 'Inquiry / Convert to Booking'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions Row: View, Print, More Options */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                     <button
                       type="button"
                       onClick={() => navigate(`/contractor/projects/${estId}`)}
-                      style={{ ...styles.actionViewBtn, flex: 1, justifyContent: 'center', padding: '8px 12px', height: '36px', fontSize: '12px' }}
+                      style={{
+                        ...styles.actionViewBtn,
+                        flex: 1,
+                        justifyContent: 'center',
+                        padding: '0 10px',
+                        height: '32px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                      }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1105,7 +1259,15 @@ export default function ContractorProjectsPage() {
                     <button
                       type="button"
                       onClick={() => handlePrint(est)}
-                      style={{ ...styles.actionPrintBtn, flex: 1, justifyContent: 'center', padding: '8px 12px', height: '36px', fontSize: '12px' }}
+                      style={{
+                        ...styles.actionPrintBtn,
+                        flex: 1,
+                        justifyContent: 'center',
+                        padding: '0 10px',
+                        height: '32px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                      }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="6 9 6 2 18 2 18 9" />
@@ -1131,7 +1293,7 @@ export default function ContractorProjectsPage() {
                           setOpenMenuId(estId);
                         }
                       }}
-                      style={{ ...styles.actionDotsBtn, width: '36px', height: '36px', padding: 0 }}
+                      style={{ ...styles.actionDotsBtn, width: '32px', height: '32px', padding: 0 }}
                       title="More options"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1244,7 +1406,7 @@ export default function ContractorProjectsPage() {
                               {formatCurrency(est.discountBreakdown.originalTotal)}
                             </span>
                             <span style={{ fontSize: '10px', color: '#15803d', fontWeight: '800', backgroundColor: '#dcfce7', padding: '1px 5px', borderRadius: '4px', border: '1px solid #86efac' }}>
-                              {est.discountBreakdown.discountPercentage || 10}% Off
+                              {est.discountBreakdown.discountPercentage || 5}% Off
                             </span>
                           </div>
                         ) : (
@@ -1448,18 +1610,39 @@ export default function ContractorProjectsPage() {
             padding: '6px',
           }}
         >
-          {/* Request Enquiry / Convert to Booking */}
-          <button
-            type="button"
-            onClick={() => handleRequestEnquiry(activeMenuEst)}
-            disabled={convertingId === (activeMenuEst._id || activeMenuEst.id)}
-            style={styles.menuItem}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
-            <span>{convertingId === (activeMenuEst._id || activeMenuEst.id) ? 'Submitting...' : 'Request Enquiry'}</span>
-          </button>
+          {/* Request Enquiry / Convert to Booking or Request Submitted */}
+          {['REQUESTED', 'IN_REVIEW', 'COMPLETED', 'APPROVED', 'CONVERTED'].includes(
+            String(activeMenuEst.estimateStatus || activeMenuEst.status || '').toUpperCase()
+          ) ? (
+            <div
+              style={{
+                ...styles.menuItem,
+                color: '#15803D',
+                cursor: 'default',
+                opacity: 0.9,
+                fontWeight: 700,
+                backgroundColor: '#F0FDF4',
+              }}
+              title="Request has already been submitted for this estimation"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Request Submitted</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleRequestEnquiry(activeMenuEst)}
+              disabled={convertingId === (activeMenuEst._id || activeMenuEst.id)}
+              style={styles.menuItem}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E08131" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>{convertingId === (activeMenuEst._id || activeMenuEst.id) ? 'Submitting...' : 'Inquiry / Convert to Booking'}</span>
+            </button>
+          )}
 
           {/* Edit in Estimator */}
           <button
