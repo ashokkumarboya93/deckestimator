@@ -24,15 +24,17 @@
 // - Export functionality exports currently filtered records with section-wise inputs and amounts
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import { BASE_URL } from '../../../api/client';
 import { ConfirmModal, EmptyState, LoadingSpinner, SkeletonTable, SkeletonShimmer } from '../../../components/common';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 const TABS = [
-  { id: 'hot', label: 'Hot Priority Requests' },
-  { id: 'customer', label: 'Customer Leads' },
-  { id: 'contractor', label: 'Contractor Leads' },
-  { id: 'all', label: 'All Leads & History' },
+  { id: 'hot', label: 'Hot Priority Requests', key: 'hotPriority' },
+  { id: 'customer', label: 'Customer Leads', key: 'customerLeads' },
+  { id: 'contractor', label: 'Contractor Leads', key: 'contractorLeads' },
+  { id: 'reachout', label: 'All Reach Outs', key: 'allReachOuts' },
 ];
 
 const DATE_RANGE_OPTIONS = [
@@ -45,9 +47,19 @@ const DATE_RANGE_OPTIONS = [
 ];
 
 export default function AdminLeadManagementPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('hot');
   const [leads, setLeads] = useState([]);
-  const [counts, setCounts] = useState({ hotPriority: 0, customerLeads: 0, contractorLeads: 0, allLeads: 0 });
+  const [counts, setCounts] = useState({ hotPriority: 0, customerLeads: 0, contractorLeads: 0, allReachOuts: 0 });
+  const [unopenedCounts, setUnopenedCounts] = useState({ hotPriority: 0, customerLeads: 0, contractorLeads: 0, allReachOuts: 0 });
+  const [openedLeadIds, setOpenedLeadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('deck_admin_opened_leads');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,7 +69,7 @@ export default function AdminLeadManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [lastDateFilter, setLastDateFilter] = useState(''); // Specific to All Leads tab
+  const [lastDateFilter, setLastDateFilter] = useState(''); // Specific cutoff filter
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
 
   // View Details Modal State
@@ -103,12 +115,15 @@ export default function AdminLeadManagementPage() {
       if (!targetId) {
         throw new Error('Could not resolve an Estimate, Project, or Lead ID for this request.');
       }
+      const noteMsg = lead.isReachOut
+        ? 'We will contact you soon! Our specialist team is reviewing your inquiry.'
+        : `Admin marked request in progress for ${lead.name || 'Client'}. Our specialist will contact you soon!`;
       await adminApi.updateProjectProgress(targetId, {
         stage: 'in_progress',
         status: 'in_progress',
-        note: `Admin accepted lead booking request for ${lead.name || 'Client'}. Project status transitioned to IN PROGRESS.`,
+        note: noteMsg,
       });
-      setAcceptSuccessNotice('✓ Lead booking request accepted! Project status transitioned to IN PROGRESS.');
+      setAcceptSuccessNotice('✓ Request In Progress! Notification sent: "We will contact you soon!"');
       setSelectedLead((prev) => prev ? { ...prev, estimateStatus: 'IN_PROGRESS', status: 'quote_in_progress' } : null);
       setLeadDossier((prev) =>
         prev
@@ -123,7 +138,7 @@ export default function AdminLeadManagementPage() {
       );
       await fetchLeads(pagination.page || 1);
     } catch (err) {
-      setAcceptErrorNotice(err?.response?.data?.message || err.message || 'Failed to accept request.');
+      setAcceptErrorNotice(err?.response?.data?.message || err.message || 'Failed to update request.');
     } finally {
       setAcceptingLead(false);
     }
@@ -162,13 +177,14 @@ export default function AdminLeadManagementPage() {
         search: searchTerm.trim() || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         dateRange: dateRangeFilter !== 'all' ? dateRangeFilter : undefined,
-        lastDate: activeTab === 'all' && lastDateFilter ? lastDateFilter : undefined,
+        lastDate: lastDateFilter ? lastDateFilter : undefined,
         page: safePage,
         limit: 15,
       });
 
       setLeads(res.data || []);
       if (res.counts) setCounts(res.counts);
+      if (res.unopenedCounts) setUnopenedCounts(res.unopenedCounts);
       if (res.pagination) setPagination(res.pagination);
     } catch (err) {
       setError(err?.message || 'Failed to load leads from database.');
@@ -193,14 +209,45 @@ export default function AdminLeadManagementPage() {
 
   // Open Detailed Dossier Modal
   const handleOpenLeadDetails = async (lead) => {
-    setSelectedLead(lead);
+    const leadKey = lead._id || lead.id || lead.leadNumber;
+
+    // Instantly mark as opened locally & persist
+    setOpenedLeadIds((prev) => {
+      const next = new Set(prev);
+      next.add(leadKey);
+      try {
+        localStorage.setItem('deck_admin_opened_leads', JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+
+    // Mark opened in table rows
+    setLeads((prev) =>
+      prev.map((item) =>
+        (item._id === leadKey || item.id === leadKey || item.leadNumber === leadKey)
+          ? { ...item, isOpened: true }
+          : item
+      )
+    );
+
+    // Decrement unread bubble alert count for current tab
+    setUnopenedCounts((prev) => {
+      const tabObj = TABS.find((t) => t.id === activeTab);
+      const key = tabObj?.key || 'allReachOuts';
+      return {
+        ...prev,
+        [key]: Math.max(0, (prev[key] || 0) - 1),
+      };
+    });
+
+    setSelectedLead({ ...lead, isOpened: true });
     setLoadingDossier(true);
     setDossierError(null);
     setAcceptSuccessNotice(null);
     setAcceptErrorNotice(null);
 
     try {
-      const dossierRes = await adminApi.getLeadDetails(lead.id || lead._id || lead.leadNumber);
+      const dossierRes = await adminApi.getLeadDetails(leadKey);
       setLeadDossier(dossierRes.data || dossierRes);
     } catch (err) {
       setDossierError(err?.message || 'Failed to fetch detailed dossier.');
@@ -236,25 +283,69 @@ export default function AdminLeadManagementPage() {
     promptDeleteLead(id, leadIdentifier);
   };
 
+  const isAllSelected = leads.length > 0 && selectedLeadIds.length === leads.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(leads.map((l) => l._id || l.id));
+    }
+  };
+
+  const toggleSelectRow = (id) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeadIds.length === 0) return;
+    promptDeleteLead(selectedLeadIds, `${selectedLeadIds.length} Selected Item(s)`);
+  };
+
+  const handleOpenUserProfile = (lead) => {
+    const targetUserId =
+      lead?.userId ||
+      lead?.customerId ||
+      lead?.contractorId ||
+      leadDossier?.user?._id ||
+      leadDossier?.lead?.userId ||
+      leadDossier?.lead?.customerId ||
+      leadDossier?.lead?.contractorId;
+
+    if (targetUserId) {
+      navigate(`/admin/users/${targetUserId}`);
+    } else if (lead?.email) {
+      navigate(`/admin/users?search=${encodeURIComponent(lead.email)}`);
+    } else {
+      navigate('/admin/users');
+    }
+  };
+
   const handleConfirmDeleteLead = async () => {
     const { id, identifier } = deleteModalState;
     if (!id) return;
+    const idsToDelete = Array.isArray(id) ? id : [id];
+
     // Instant optimistic UI update
-    setLeads((prev) => prev.filter((item) => (item._id || item.id) !== id));
-    if (selectedLead && (selectedLead._id === id || selectedLead.id === id)) {
+    setLeads((prev) => prev.filter((item) => !idsToDelete.includes(item._id || item.id)));
+    setSelectedLeadIds((prev) => prev.filter((item) => !idsToDelete.includes(item)));
+
+    if (selectedLead && idsToDelete.includes(selectedLead._id || selectedLead.id)) {
       setSelectedLead(null);
       setLeadDossier(null);
     }
-    // Instant dismiss so user is not stuck on "Processing..."
+    // Instant dismiss
     setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false });
-    setSuccessMsg(`Lead "${identifier}" deleted successfully.`);
+    setSuccessMsg(`Deleted "${identifier}" successfully.`);
     setTimeout(() => setSuccessMsg(null), 3000);
 
     try {
-      await adminApi.deleteLead(id);
+      await Promise.all(idsToDelete.map((leadId) => adminApi.deleteLead(leadId)));
     } catch (err) {
-      setError(`Failed to delete lead: ${err.message}`);
-      fetchLeads(activeTab, pagination.page);
+      setError(`Failed to delete: ${err.message}`);
+      fetchLeads(pagination.page);
     }
   };
 
@@ -262,7 +353,14 @@ export default function AdminLeadManagementPage() {
     if (tabId === 'hot') return counts.hotPriority || 0;
     if (tabId === 'customer') return counts.customerLeads || 0;
     if (tabId === 'contractor') return counts.contractorLeads || 0;
-    return counts.allLeads || 0;
+    return counts.allReachOuts ?? counts.reachOuts ?? counts.allLeads ?? 0;
+  };
+
+  const getTabUnopenedCount = (tabId) => {
+    if (tabId === 'hot') return unopenedCounts.hotPriority || 0;
+    if (tabId === 'customer') return unopenedCounts.customerLeads || 0;
+    if (tabId === 'contractor') return unopenedCounts.contractorLeads || 0;
+    return unopenedCounts.allReachOuts ?? unopenedCounts.reachOuts ?? unopenedCounts.allLeads ?? 0;
   };
 
 
@@ -365,6 +463,19 @@ export default function AdminLeadManagementPage() {
           
         </div>
         <div style={styles.headerActions}>
+          {selectedLeadIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              style={styles.shinyBulkDeleteBtn}
+              title={`Permanently delete ${selectedLeadIds.length} selected item(s)`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Delete Selected ({selectedLeadIds.length})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => handleDirectExportExcel('csv')}
@@ -400,11 +511,13 @@ export default function AdminLeadManagementPage() {
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = getTabCount(tab.id);
+          const unopened = getTabUnopenedCount(tab.id);
           return (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id); setSelectedLeadIds([]);
+                setActiveTab(tab.id);
+                setSelectedLeadIds([]);
               }}
               style={{
                 ...styles.tabBtn,
@@ -420,6 +533,14 @@ export default function AdminLeadManagementPage() {
               >
                 {count}
               </span>
+              {unopened > 0 && (
+                <span
+                  style={styles.unreadBubbleBadge}
+                  title={`${unopened} unopened in ${tab.label}`}
+                >
+                  {unopened} new
+                </span>
+              )}
             </button>
           );
         })}
@@ -435,7 +556,7 @@ export default function AdminLeadManagementPage() {
           </svg>
           <input
             type="text"
-            placeholder="Search leads by name, email, phone..."
+            placeholder={isMobile ? "Search leads..." : "Search leads by name, email, phone..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.shinySearchInput}
@@ -459,28 +580,26 @@ export default function AdminLeadManagementPage() {
           ))}
         </select>
 
-        {/* Optional Last Date Selector (Available for All Leads Archive) */}
-        {activeTab === 'all' && (
-          <div style={styles.lastDateWrapper}>
-            <span style={styles.filterGroupLabel}>Cutoff Date:</span>
-            <input
-              type="date"
-              value={lastDateFilter}
-              onChange={(e) => setLastDateFilter(e.target.value)}
-              style={styles.shinyDateInput}
-              title="Filter records up to this cutoff date"
-            />
-            {lastDateFilter && (
-              <button
-                onClick={() => setLastDateFilter('')}
-                style={styles.clearDateBtn}
-                title="Clear date cutoff"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        )}
+        {/* Optional Last Date Cutoff Selector */}
+        <div style={styles.lastDateWrapper}>
+          <span style={styles.filterGroupLabel}>Cutoff Date:</span>
+          <input
+            type="date"
+            value={lastDateFilter}
+            onChange={(e) => setLastDateFilter(e.target.value)}
+            style={styles.shinyDateInput}
+            title="Filter records up to this cutoff date"
+          />
+          {lastDateFilter && (
+            <button
+              onClick={() => setLastDateFilter('')}
+              style={styles.clearDateBtn}
+              title="Clear date cutoff"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         {/* Status Filter */}
         <select
@@ -552,9 +671,17 @@ export default function AdminLeadManagementPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.th, width: '44px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={toggleSelectAll}
+                      style={styles.checkboxInput}
+                      title={isAllSelected ? 'Deselect all rows' : 'Select all rows'}
+                    />
+                  </th>
                   <th style={styles.th}>Contact Person</th>
                   <th style={styles.th}>Type &amp; Source</th>
-                  <th style={styles.th}>Requested Message</th>
                   <th style={styles.th}>Priority</th>
                   <th style={styles.th}>Date &amp; Time</th>
                   <th style={styles.th}>Location</th>
@@ -569,21 +696,59 @@ export default function AdminLeadManagementPage() {
                   const isCust = (l.userType || '').toLowerCase() === 'customer';
                   const initials = (l.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+                  const leadKey = l._id || l.id || l.leadNumber;
+                  const isUnopened = !l.isOpened && !openedLeadIds.has(leadKey);
+
                   // Type & Source label
                   const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
-                  const typeSourceText = isEstimation ? 'Estimation Service' : (l.contactSource || (isCust ? 'Customer Reach Out' : 'Contractor Portal'));
+                  const isReachOut = l.isReachOut || !isEstimation;
                   const leadLocation = (l.location && l.location !== '—' && l.location !== '-' && l.location !== 'Shamong, NJ') ? l.location : (l.city ? `${l.city}${l.state ? `, ${l.state}` : ''}` : (l.address?.city ? `${l.address.city}, ${l.address.state || ''}` : 'Location Pending'));
 
                   return (
-                    <tr key={l._id || l.id} style={styles.tr}>
+                    <tr key={leadKey} style={{ ...styles.tr, backgroundColor: selectedLeadIds.includes(leadKey) ? '#f0fdf4' : 'transparent' }}>
+                      {/* Checkbox Column */}
+                      <td style={{ ...styles.td, width: '44px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.includes(leadKey)}
+                          onChange={() => toggleSelectRow(leadKey)}
+                          style={styles.checkboxInput}
+                        />
+                      </td>
+
                       {/* 1. Contact Person */}
                       <td style={styles.td}>
                         <div style={styles.personCell}>
-                          <div style={{ ...styles.avatarCircle, backgroundColor: isCust ? '#ecfdf5' : '#eff6ff', color: isCust ? '#059669' : '#2563eb' }}>
-                            {initials}
-                          </div>
+                          {l.avatar && resolveAvatarUrl(l.avatar) ? (
+                            <img
+                              src={resolveAvatarUrl(l.avatar)}
+                              alt={l.name || 'User'}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              style={styles.avatarImg}
+                            />
+                          ) : (
+                            <div style={{ ...styles.avatarCircle, backgroundColor: isCust ? '#ecfdf5' : '#eff6ff', color: isCust ? '#059669' : '#2563eb' }}>
+                              {initials}
+                            </div>
+                          )}
                           <div>
-                            <div style={styles.personName}>{l.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {isUnopened && (
+                                <span
+                                  style={{
+                                    width: '7px',
+                                    height: '7px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#ef4444',
+                                    boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.25)',
+                                    display: 'inline-block',
+                                    flexShrink: 0,
+                                  }}
+                                  title="Unopened inquiry"
+                                />
+                              )}
+                              <span style={styles.personName}>{l.name}</span>
+                            </div>
                             <div style={styles.personEmail}>{l.email}</div>
                             <div style={styles.personPhone}>{l.phone || '—'}</div>
                             {l.businessName && (
@@ -596,46 +761,28 @@ export default function AdminLeadManagementPage() {
                       {/* 2. Type & Source */}
                       <td style={styles.td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          <span style={isCust ? styles.badgeCustomer : styles.badgeContractor}>
-                            {(l.userType || 'Customer').toUpperCase()}
-                          </span>
-                          <span style={isEstimation ? styles.badgeEstimationService : styles.sourceLabel}>
-                            {typeSourceText}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                            <span style={isCust ? styles.badgeCustomer : styles.badgeContractor}>
+                              {(l.userType || 'Customer').toUpperCase()}
+                            </span>
+                            {isReachOut ? (
+                              <span style={styles.badgeReachOut}>
+                                ★ Reach Out
+                              </span>
+                            ) : (
+                              <span style={styles.badgeEstimationService}>
+                                Estimation Service
+                              </span>
+                            )}
+                          </div>
+                          <span style={styles.sourceLabel}>
+                            {l.contactSource || (isCust ? 'Customer Support' : 'Contractor Support')}
                           </span>
                           <span style={styles.leadIdSmall}>#{l.leadNumber || l.leadId}</span>
                         </div>
                       </td>
 
-                      {/* 3. Requested Message */}
-                      <td style={{ ...styles.td, maxWidth: '280px' }}>
-                        <div style={styles.requestedMessageText} title={l.requestedMessage || l.enquiry?.message || 'Reach-out inquiry'}>
-                          {l.requestedMessage || l.enquiry?.message || l.enquiry?.subject || 'Service reach-out inquiry'}
-                        </div>
-                        {l.estimatedValue > 0 && (
-                          <div style={styles.estimatedValueBadge}>
-                            Estimated: ${Number(l.estimatedValue).toLocaleString()}
-                          </div>
-                        )}
-                        {(l.minJobApplied || l.isMinJobApplied) && (
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            marginTop: '3px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            color: '#b45309',
-                            backgroundColor: '#fef3c7',
-                            border: '1px solid #fde68a',
-                            padding: '2px 7px',
-                            borderRadius: '9999px',
-                          }}>
-                            ⚡ Min Job Floor ($2,500 Applied)
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 4. Priority */}
+                      {/* 3. Priority */}
                       <td style={styles.td}>
                         {isHot ? (
                           <span style={styles.hotPill}>
@@ -648,24 +795,40 @@ export default function AdminLeadManagementPage() {
                         )}
                       </td>
 
-                      {/* 5. Date & Time */}
+                      {/* 4. Date & Time */}
                       <td style={styles.td}>
-                        <div style={styles.dateTimeText}>
-                          {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </div>
-                        <div style={styles.timeSub}>
-                          {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleTimeString(undefined, {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                        <div style={styles.dateTimeBadge}>
+                          <div style={styles.dateRow}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" style={{ marginRight: 4, flexShrink: 0 }}>
+                              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                              <line x1="16" y1="2" x2="16" y2="6" />
+                              <line x1="8" y1="2" x2="8" y2="6" />
+                              <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <span>
+                              {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </span>
+                          </div>
+                          <div style={styles.timeRow}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ marginRight: 4, flexShrink: 0 }}>
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            <span>
+                              {new Date(l.latestContactDate || l.createdAt || Date.now()).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
                         </div>
                       </td>
 
-                      {/* 6. Location */}
+                      {/* 5. Location */}
                       <td style={styles.td}>
                         <div style={styles.locationText}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ marginRight: 4 }}>
@@ -676,34 +839,33 @@ export default function AdminLeadManagementPage() {
                         </div>
                       </td>
 
-                      {/* 7. Actions */}
+                      {/* 6. Actions */}
                       <td style={{ ...styles.td, textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenUserProfile(l)}
+                            style={styles.btnActionProfile}
+                            title="Open User Profile Page"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                              <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Profile
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenLeadDetails(l)}
                             style={styles.btnViewDetails}
-                            title="View Full Lead & Estimation Dossier"
+                            title="View Full Lead & Inquiry Dossier"
                           >
                             View Details
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteLead(l._id || l.id, l.name || l.leadNumber)}
-                            style={{
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca',
-                              borderRadius: '6px',
-                              padding: '6px 10px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'all 0.15s ease',
-                            }}
+                            style={styles.btnDeleteLead}
                             title="Permanently delete lead"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -788,9 +950,18 @@ export default function AdminLeadManagementPage() {
               {/* Modal Header */}
               <div style={{ ...styles.modalHeader, flexWrap: 'wrap', gap: '10px', padding: isMobile ? '12px 14px' : '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 220px' }}>
-                  <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
-                    {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
-                  </div>
+                  {selectedLead.avatar && resolveAvatarUrl(selectedLead.avatar) ? (
+                    <img
+                      src={resolveAvatarUrl(selectedLead.avatar)}
+                      alt={selectedLead.name || 'User'}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      style={styles.modalAvatarImg}
+                    />
+                  ) : (
+                    <div style={{ ...styles.avatarLarge, backgroundColor: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#ecfdf5' : '#eff6ff', color: (selectedLead.userType || '').toLowerCase() === 'customer' ? '#059669' : '#2563eb' }}>
+                      {(selectedLead.name || 'U').slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h3 style={styles.modalTitle}>{selectedLead.name}</h3>
@@ -804,6 +975,18 @@ export default function AdminLeadManagementPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenUserProfile(selectedLead)}
+                    style={styles.modalBtnProfile}
+                    title="Open Dedicated User Profile"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span>User Profile</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleExportDossier('pdf', combinedLead, custMeta)}
@@ -860,24 +1043,33 @@ export default function AdminLeadManagementPage() {
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Type & Source</span>
                         <span style={styles.bannerVal}>
-                          {selectedLead.isEstimationService ? 'Estimation Service' : (selectedLead.contactSource || 'Direct Inquiry')}
+                          {selectedLead.isReachOut ? '★ Reach Out Inquiry' : (selectedLead.isEstimationService ? 'Estimation Service' : (selectedLead.contactSource || 'Direct Inquiry'))}
                         </span>
                       </div>
-                      <div style={styles.bannerItem}>
-                        <span style={styles.bannerLabel}>Estimated Value</span>
-                        <span style={styles.bannerValAmount}>
-                          ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
-                        </span>
-                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
-                          <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '700', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde68a', marginTop: '2px', display: 'inline-block' }}>
-                            ⚡ Min Job Floor ($2,500 Applied)
+                      {selectedLead.isReachOut ? (
+                        <div style={styles.bannerItem}>
+                          <span style={styles.bannerLabel}>Inquiry Type</span>
+                          <span style={{ ...styles.bannerVal, color: '#0369a1', fontWeight: '800' }}>
+                            Direct Support Inquiry
                           </span>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', border: '1px solid #a7f3d0', marginTop: '2px', display: 'inline-block' }}>
-                            ✓ Pure Calculated (No Min Job Floor)
+                        </div>
+                      ) : (
+                        <div style={styles.bannerItem}>
+                          <span style={styles.bannerLabel}>Estimated Value</span>
+                          <span style={styles.bannerValAmount}>
+                            ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
                           </span>
-                        )}
-                      </div>
+                          {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
+                            <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '700', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde68a', marginTop: '2px', display: 'inline-block' }}>
+                              ⚡ Min Job Floor ($2,500 Applied)
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', border: '1px solid #a7f3d0', marginTop: '2px', display: 'inline-block' }}>
+                              ✓ Pure Calculated (No Min Job Floor)
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div style={styles.bannerItem}>
                         <span style={styles.bannerLabel}>Contact Timestamp</span>
                         <span style={styles.bannerVal}>
@@ -891,7 +1083,7 @@ export default function AdminLeadManagementPage() {
                       <h4 style={styles.dossierSectionTitle}>📨 Requested Message & Inquiry Details</h4>
                       <div style={styles.inquiryMessageBox}>
                         <p style={styles.inquiryMessageText}>
-                          "{selectedLead.requestedMessage || selectedLead.enquiry?.message || leadDossier?.lead?.enquiry?.message || 'Inquiry initiated via online deck restoration estimator.'}"
+                          "{selectedLead.requestedMessage || selectedLead.enquiry?.message || leadDossier?.lead?.enquiry?.message || 'Inquiry initiated via online deck restoration portal.'}"
                         </p>
                         {selectedLead.enquiry?.subject && (
                           <div style={{ marginTop: 8, fontSize: '12px', color: '#64748b' }}>
@@ -908,20 +1100,47 @@ export default function AdminLeadManagementPage() {
 
                     {/* Two Column Grid: Contact Info & Estimation Specifications */}
                     <div style={styles.twoColGrid}>
-                      {/* Personal & Contact Profile */}
+                      {/* Personal & Dedicated Contact Profile */}
                       <div style={styles.dossierSectionCard}>
-                        <h4 style={styles.dossierSectionTitle}>👤 Contact & Account Profile</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '10px' }}>
+                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                            👤 Dedicated Account & Profile Dossier
+                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '10.5px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: '800' }}>
+                              Profile ID #{String(leadDossier?.user?._id || selectedLead.userId || selectedLead.id || selectedLead._id || '').slice(-6).toUpperCase()}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenUserProfile(selectedLead)}
+                              style={styles.btnOpenFullProfile}
+                              title="Navigate to User Profile page"
+                            >
+                              User Profile →
+                            </button>
+                          </div>
+                        </div>
                         <div style={styles.dossierItem}>
                           <span style={styles.dossierLabel}>Full Name:</span>
                           <span style={styles.dossierVal}>{selectedLead.name}</span>
                         </div>
                         <div style={styles.dossierItem}>
                           <span style={styles.dossierLabel}>Email Address:</span>
-                          <span style={styles.dossierVal}>{selectedLead.email}</span>
+                          <span style={styles.dossierVal}>
+                            {selectedLead.email}
+                            {leadDossier?.user?.emailVerifiedAt && (
+                              <span style={{ marginLeft: 6, fontSize: '10px', color: '#059669', fontWeight: '800' }}>✓ Verified</span>
+                            )}
+                          </span>
                         </div>
                         <div style={styles.dossierItem}>
                           <span style={styles.dossierLabel}>Phone Number:</span>
-                          <span style={styles.dossierVal}>{selectedLead.phone || '—'}</span>
+                          <span style={styles.dossierVal}>
+                            {selectedLead.phone || '—'}
+                            {leadDossier?.user?.phoneVerifiedAt && (
+                              <span style={{ marginLeft: 6, fontSize: '10px', color: '#059669', fontWeight: '800' }}>✓ Verified</span>
+                            )}
+                          </span>
                         </div>
                         <div style={styles.dossierItem}>
                           <span style={styles.dossierLabel}>User Role:</span>
@@ -931,6 +1150,24 @@ export default function AdminLeadManagementPage() {
                           <span style={styles.dossierLabel}>Account Status:</span>
                           <span style={styles.dossierVal}>
                             <span style={styles.activeStatusPill}>{leadDossier?.user?.accountStatus || 'Active'}</span>
+                          </span>
+                        </div>
+                        {selectedLead.businessName && (
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Company / Business:</span>
+                            <span style={styles.dossierVal}>{selectedLead.businessName}</span>
+                          </div>
+                        )}
+                        {leadDossier?.contractorProfile?.licenseNumber && (
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Contractor License:</span>
+                            <span style={styles.dossierVal}>{leadDossier.contractorProfile.licenseNumber} ({leadDossier.contractorProfile.licenseJurisdiction || 'NJ'})</span>
+                          </div>
+                        )}
+                        <div style={styles.dossierItem}>
+                          <span style={styles.dossierLabel}>Member Since:</span>
+                          <span style={styles.dossierVal}>
+                            {leadDossier?.user?.createdAt ? new Date(leadDossier.user.createdAt).toLocaleDateString() : 'Direct Inquiry Record'}
                           </span>
                         </div>
                         <div style={styles.dossierItem}>
@@ -945,149 +1182,187 @@ export default function AdminLeadManagementPage() {
                         </div>
                       </div>
 
-                      {/* Estimation Specifications & Section Inputs */}
+                      {/* Right Panel: If Reach Out, show Inquiry Channel Details; If Estimation, show Deck Specs */}
+                      {selectedLead.isReachOut ? (
+                        <div style={styles.dossierSectionCard}>
+                          <h4 style={styles.dossierSectionTitle}>📋 Direct Reach-Out Inquiry Specifications</h4>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Inquiry Subject:</span>
+                            <span style={styles.dossierVal}>{selectedLead.enquiry?.subject || 'Estimator & Scope Guidance'}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Submission Source:</span>
+                            <span style={styles.dossierVal}>{selectedLead.contactSource || (selectedLead.userType === 'Contractor' ? 'Contractor Partner Reach-Out' : 'Customer Support')}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Approximate Deck Area:</span>
+                            <span style={styles.dossierVal}>
+                              {selectedLead.enquiry?.approxSize || (selectedLead.deckArea > 0 ? `${selectedLead.deckArea} sq ft` : 'Direct Scope Consultation')}
+                            </span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Preferred Contact Method:</span>
+                            <span style={styles.dossierVal}>{selectedLead.enquiry?.preferredContactMethod || 'Email / Phone'}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Preferred Callback Time:</span>
+                            <span style={styles.dossierVal}>{selectedLead.enquiry?.preferredContactTime || 'Anytime during office hours'}</span>
+                          </div>
+                          <div style={{ ...styles.dossierItem, backgroundColor: '#f5f3ff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #ddd6fe', marginTop: '8px' }}>
+                            <span style={{ ...styles.dossierLabel, color: '#6d28d9', fontWeight: '800' }}>★ Inquiry Status:</span>
+                            <span style={{ ...styles.dossierVal, color: '#7c3aed', fontWeight: '800' }}>
+                              Individual Direct Reach Out (No Calculation Required)
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={styles.dossierSectionCard}>
+                          <h4 style={styles.dossierSectionTitle}>📐 Estimation Specifications & Blueprint</h4>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Deck Dimensions:</span>
+                            <span style={styles.dossierVal}>{selectedLead.deckDimensions || '20 x 20 ft'}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Wood Species:</span>
+                            <span style={styles.dossierVal}>{selectedLead.woodSpecies || 'Pressure Treated Pine'}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Surface Area:</span>
+                            <span style={styles.dossierVal}>{selectedLead.deckArea ? `${selectedLead.deckArea} sq ft` : '400 sq ft'}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Elevation:</span>
+                            <span style={styles.dossierVal}>{(combinedLead.structureDetails?.height || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase()}</span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Selected Services:</span>
+                            <span style={styles.dossierVal}>
+                              {combinedLead.services?.length ? combinedLead.services.join(', ') : 'Cleaning & Sealing'}
+                            </span>
+                          </div>
+                          <div style={styles.dossierItem}>
+                            <span style={styles.dossierLabel}>Inputs Summary:</span>
+                            <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Full Deck Restoration'}</span>
+                          </div>
+                          {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) && (
+                            <div style={{ ...styles.dossierItem, backgroundColor: '#fef3c7', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                              <span style={{ ...styles.dossierLabel, color: '#92400e' }}>⚡ Mobilization Pricing Floor:</span>
+                              <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '800' }}>
+                                $2,500 Applied (Pure Subtotal: ${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SECTION 8: UPLOADED INSPECTION PHOTOS GALLERY — ONLY FOR ESTIMATION LEADS */}
+                    {!selectedLead.isReachOut && (
                       <div style={styles.dossierSectionCard}>
-                        <h4 style={styles.dossierSectionTitle}>📐 Estimation Specifications & Blueprint</h4>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Deck Dimensions:</span>
-                          <span style={styles.dossierVal}>{selectedLead.deckDimensions || '20 x 20 ft'}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Wood Species:</span>
-                          <span style={styles.dossierVal}>{selectedLead.woodSpecies || 'Pressure Treated Pine'}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Surface Area:</span>
-                          <span style={styles.dossierVal}>{selectedLead.deckArea ? `${selectedLead.deckArea} sq ft` : '400 sq ft'}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Elevation:</span>
-                          <span style={styles.dossierVal}>{(combinedLead.structureDetails?.height || 'Ground Level (0–4 ft)').replace(/_/g, ' ').toUpperCase()}</span>
-                        </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Selected Services:</span>
-                          <span style={styles.dossierVal}>
-                            {combinedLead.services?.length ? combinedLead.services.join(', ') : 'Cleaning & Sealing'}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                              📸 Section 8 — Uploaded Deck Photos ({leadPhotos.length})
+                            </h4>
+                            {leadPhotos.length > 0 && (
+                              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#dcfce7', color: '#166534', fontWeight: '700' }}>
+                                User Uploaded
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                            Click any photo to enlarge
                           </span>
                         </div>
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Inputs Summary:</span>
-                          <span style={styles.dossierVal}>{selectedLead.selectedInputsSummary || 'Full Deck Restoration'}</span>
-                        </div>
-                        {(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) && (
-                          <div style={{ ...styles.dossierItem, backgroundColor: '#fef3c7', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
-                            <span style={{ ...styles.dossierLabel, color: '#92400e' }}>⚡ Mobilization Pricing Floor:</span>
-                            <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '800' }}>
-                              $2,500 Applied (Pure Subtotal: ${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()})
-                            </span>
+
+                        {leadPhotos.length > 0 ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
+                            {leadPhotos.map((photo, idx) => {
+                              const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.data || '');
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => setPreviewPhoto(photoUrl)}
+                                  style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '10px',
+                                    overflow: 'hidden',
+                                    backgroundColor: '#f8fafc',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'none';
+                                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                                  }}
+                                >
+                                  <div style={{ width: '100%', height: '125px', overflow: 'hidden', position: 'relative', backgroundColor: '#0f172a' }}>
+                                    <img
+                                      src={photoUrl}
+                                      alt={`Deck Inspection ${idx + 1}`}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    <div style={{ position: 'absolute', bottom: 4, right: 6, backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                      🔍 Click to zoom
+                                    </div>
+                                  </div>
+                                  <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Photo #{idx + 1}</span>
+                                    <span style={{ fontSize: '10px', color: '#94a3b8' }}>Inspection</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" style={{ margin: '0 auto 6px' }}>
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                              No inspection photos uploaded for this lead inquiry.
+                            </p>
                           </div>
                         )}
                       </div>
-                    </div>
+                    )}
 
-                    {/* SECTION 8: UPLOADED INSPECTION PHOTOS GALLERY */}
-                    <div style={styles.dossierSectionCard}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-                            📸 Section 8 — Uploaded Deck Photos ({leadPhotos.length})
-                          </h4>
-                          {leadPhotos.length > 0 && (
-                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#dcfce7', color: '#166534', fontWeight: '700' }}>
-                              User Uploaded
-                            </span>
-                          )}
-                        </div>
-                        <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                          Click any photo to enlarge
-                        </span>
-                      </div>
-
-                      {leadPhotos.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
-                          {leadPhotos.map((photo, idx) => {
-                            const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.data || '');
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => setPreviewPhoto(photoUrl)}
-                                style={{
-                                  border: '1px solid #e2e8f0',
-                                  borderRadius: '10px',
-                                  overflow: 'hidden',
-                                  backgroundColor: '#f8fafc',
-                                  cursor: 'pointer',
-                                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.transform = 'translateY(-2px)';
-                                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.transform = 'none';
-                                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
-                                }}
-                              >
-                                <div style={{ width: '100%', height: '125px', overflow: 'hidden', position: 'relative', backgroundColor: '#0f172a' }}>
-                                  <img
-                                    src={photoUrl}
-                                    alt={`Deck Inspection ${idx + 1}`}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  />
-                                  <div style={{ position: 'absolute', bottom: 4, right: 6, backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                                    🔍 Click to zoom
-                                  </div>
-                                </div>
-                                <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span>Photo #{idx + 1}</span>
-                                  <span style={{ fontSize: '10px', color: '#94a3b8' }}>Inspection</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" style={{ margin: '0 auto 6px' }}>
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                          <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                            No inspection photos uploaded for this lead inquiry.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Financial Breakdown & Pricing Snapshot */}
-                    <div style={styles.dossierSectionCard}>
-                      <h4 style={styles.dossierSectionTitle}>💰 Financial Breakdown & Pricing</h4>
-                      {Boolean(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
-                        <>
+                    {/* Financial Breakdown & Pricing Snapshot — ONLY FOR ESTIMATION LEADS */}
+                    {!selectedLead.isReachOut && (
+                      <div style={styles.dossierSectionCard}>
+                        <h4 style={styles.dossierSectionTitle}>💰 Financial Breakdown & Pricing</h4>
+                        {Boolean(selectedLead.minJobApplied || selectedLead.isMinJobApplied || leadDossier?.lead?.minJobApplied) ? (
+                          <>
+                            <div style={styles.dossierItem}>
+                              <span style={styles.dossierLabel}>Minimum Job Dispatch Price:</span>
+                              <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '700' }}>$2,500.00 (Enforced)</span>
+                            </div>
+                            <div style={styles.dossierItem}>
+                              <span style={styles.dossierLabel}>Pure Scope Subtotal:</span>
+                              <span style={styles.dossierVal}>${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()}</span>
+                            </div>
+                          </>
+                        ) : (
                           <div style={styles.dossierItem}>
-                            <span style={styles.dossierLabel}>Minimum Job Dispatch Price:</span>
-                            <span style={{ ...styles.dossierVal, color: '#b45309', fontWeight: '700' }}>$2,500.00 (Enforced)</span>
+                            <span style={styles.dossierLabel}>Standard Mobilization Floor:</span>
+                            <span style={{ ...styles.dossierVal, color: '#64748b' }}>$2,500.00 (Not Applied • Pure Rate Billed)</span>
                           </div>
-                          <div style={styles.dossierItem}>
-                            <span style={styles.dossierLabel}>Pure Scope Subtotal:</span>
-                            <span style={styles.dossierVal}>${Number(selectedLead.pureCalculated || leadDossier?.lead?.pureCalculated || 0).toLocaleString()}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div style={styles.dossierItem}>
-                          <span style={styles.dossierLabel}>Standard Mobilization Floor:</span>
-                          <span style={{ ...styles.dossierVal, color: '#64748b' }}>$2,500.00 (Not Applied • Pure Rate Billed)</span>
+                        )}
+                        <div style={{ ...styles.dossierItem, borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', marginTop: '6px' }}>
+                          <span style={{ ...styles.dossierLabel, fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>Calculated Estimate Total:</span>
+                          <span style={{ ...styles.dossierVal, fontSize: '18px', fontWeight: '900', color: '#047857' }}>
+                            ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
+                          </span>
                         </div>
-                      )}
-                      <div style={{ ...styles.dossierItem, borderTop: '1.5px solid #cbd5e1', paddingTop: '8px', marginTop: '6px' }}>
-                        <span style={{ ...styles.dossierLabel, fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>Calculated Estimate Total:</span>
-                        <span style={{ ...styles.dossierVal, fontSize: '18px', fontWeight: '900', color: '#047857' }}>
-                          ${Number(selectedLead.pureCalculated || selectedLead.estimatedValue || leadDossier?.estimateDetails?.subtotal || leadDossier?.estimateDetails?.totalAmount || 0).toLocaleString()}
-                        </span>
                       </div>
-                    </div>
+                    )}
 
                     {/* Activity & History */}
                     <div style={styles.dossierSectionCard}>
@@ -1154,6 +1429,20 @@ export default function AdminLeadManagementPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* View User Page Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenUserProfile(selectedLead)}
+                    style={styles.btnModalFooterProfile}
+                    title="Open User Profile Page"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span>View User Profile</span>
+                  </button>
+
                   {/* Accept Request Button */}
                   <button
                     type="button"
@@ -1180,10 +1469,10 @@ export default function AdminLeadManagementPage() {
                     </svg>
                     <span>
                       {acceptingLead
-                        ? 'Accepting...'
+                        ? 'Updating...'
                         : isAcceptedInProgress
-                        ? '✓ Request Accepted (IN PROGRESS)'
-                        : 'Accept Request (Start In Progress)'}
+                        ? '✓ Request In Progress'
+                        : 'Request In Progress'}
                     </span>
                   </button>
 
@@ -1362,6 +1651,21 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+  },
+  shinyBulkDeleteBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    borderRadius: '9999px',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    border: '1px solid #b91c1c',
+    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   shinyExportBtn: {
     display: 'inline-flex',
@@ -1594,10 +1898,24 @@ const styles = {
   },
 
   // Row Item Styles
+  checkboxInput: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#047857',
+  },
   personCell: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+  },
+  avatarImg: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '1.5px solid #cbd5e1',
+    flexShrink: 0,
   },
   avatarCircle: {
     width: '36px',
@@ -1659,7 +1977,34 @@ const styles = {
     padding: '2px 6px',
     borderRadius: '4px',
     width: 'fit-content',
-    marginTop: '2px',
+  },
+  badgeReachOut: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    fontSize: '10.5px',
+    fontWeight: '800',
+    color: '#6d28d9',
+    backgroundColor: '#ede9fe',
+    border: '1px solid #ddd6fe',
+    padding: '2px 7px',
+    borderRadius: '4px',
+    width: 'fit-content',
+    boxShadow: '0 1px 2px rgba(109, 40, 217, 0.08)',
+  },
+  unreadBubbleBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2px 7px',
+    borderRadius: '9999px',
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    fontSize: '10px',
+    fontWeight: '800',
+    lineHeight: 1.2,
+    boxShadow: '0 1px 3px rgba(239, 68, 68, 0.4)',
+    marginLeft: '4px',
   },
   sourceLabel: {
     fontSize: '11px',
@@ -1711,6 +2056,31 @@ const styles = {
     padding: '2px 8px',
     borderRadius: '9999px',
   },
+  dateTimeBadge: {
+    display: 'inline-flex',
+    flexDirection: 'column',
+    gap: '3px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    padding: '4px 8px',
+    borderRadius: '6px',
+  },
+  dateRow: {
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#0f172a',
+    whiteSpace: 'nowrap',
+  },
+  timeRow: {
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#64748b',
+    whiteSpace: 'nowrap',
+  },
   dateTimeText: {
     fontWeight: '600',
     color: '#0f172a',
@@ -1727,16 +2097,58 @@ const styles = {
     color: '#334155',
     fontWeight: '500',
   },
+  btnActionProfile: {
+    height: '32px',
+    padding: '0 10px',
+    borderRadius: '6px',
+    backgroundColor: '#eff6ff',
+    border: '1px solid #bfdbfe',
+    color: '#1d4ed8',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
+  },
   btnViewDetails: {
-    padding: '5px 12px',
+    height: '32px',
+    padding: '0 12px',
     borderRadius: '6px',
     backgroundColor: '#0f172a',
     border: 'none',
     color: '#ffffff',
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
+  },
+  btnDeleteLead: {
+    height: '32px',
+    padding: '0 12px',
+    borderRadius: '6px',
+    backgroundColor: '#fee2e2',
+    color: '#b91c1c',
+    border: '1px solid #fecaca',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
   },
 
   // Pagination
@@ -1852,6 +2264,14 @@ const styles = {
     justifyContent: 'space-between',
     backgroundColor: '#ffffff',
   },
+  modalAvatarImg: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '2px solid #cbd5e1',
+    flexShrink: 0,
+  },
   avatarLarge: {
     width: '42px',
     height: '42px',
@@ -1862,6 +2282,46 @@ const styles = {
     fontWeight: '800',
     fontSize: '15px',
     flexShrink: 0,
+  },
+  modalBtnProfile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    borderRadius: '7px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    fontSize: '11.5px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  btnOpenFullProfile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '3px 8px',
+    borderRadius: '6px',
+    backgroundColor: '#0f172a',
+    color: '#ffffff',
+    border: 'none',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  btnModalFooterProfile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '9px 16px',
+    borderRadius: '8px',
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
   modalTitle: {
     margin: 0,

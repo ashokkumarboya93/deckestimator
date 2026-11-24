@@ -444,9 +444,9 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
       </div>
     </div>
 
-    <!-- 7. QUALITY GUARANTEE & WORKMANSHIP WARRANTY -->
+    <!-- 7. QUALITY GUARANTEE -->
     <div style="background: #FFFBEB; border-left: 3.5px solid #D97706; border-radius: 0 6px 6px 0; padding: 8px 12px; margin-bottom: 16px; font-size: 10.5px; color: #92400E; line-height: 1.45;">
-      <strong>Deck Restoration Plus Certified Quality Guarantee:</strong> All restoration contracts are backed by our comprehensive 1-Year Workmanship Warranty. Performed strictly by certified, licensed, and insured exterior wood specialists using EPA-registered restoration detergents.
+      <strong>Deck Restoration Plus Certified Quality Guarantee:</strong> All restoration contracts are performed strictly by certified, licensed, and insured exterior wood specialists using EPA-registered restoration detergents.
     </div>
 
     <!-- 8. OFFICIAL FOOTER -->
@@ -550,7 +550,7 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
     ['FINANCIAL SUMMARY', ''],
     ['Guaranteed Estimate Total', `$${Number(totalAmount).toFixed(2)}`],
     ['Standard Mobilization Floor', '$2,500.00'],
-    ['Workmanship Warranty', '1-Year Comprehensive Warranty Included'],
+    ['Quality Guarantee', 'Certified Exterior Wood Restoration Specialists'],
     ['Company Contact', 'Deck Restoration Plus • (856) 678-3325 • estimates@deckrestorationplus.com'],
   ];
 

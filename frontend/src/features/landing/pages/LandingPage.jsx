@@ -11,6 +11,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import mainNavLogo from '../../../assets/images/Main_Logo_v2.png';
 import footerLogo from '../../../assets/images/MainLodo.png';
 import wizardHeroImg from '../../../assets/images/Wizard Hat Deck Finishing Portrait.jpg';
+import mobileHeroImg from '../../../assets/images/Mobile Landing Page Hero Section@3x.png';
 import calculatorDeckImg from '../../../assets/images/Round Wooden Deck with Wicker Seating.webp';
 import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
@@ -41,6 +42,9 @@ import proj4After from '../../../assets/images/Input_images/section6/Deck Staini
 
 // CTA & Promo Background (clean high-res wood deck photograph, no ghost text)
 import ctaDeckBgImg from '../../../assets/images/landing/drp_proj_4_after.jpg';
+
+// Mobile Landing Page Hero Asset (Everett Hinckley — The Deck Wizard holding stain can & pointing)
+const mobileHeroPortraitImg = mobileHeroImg;
 
 const DRP_SHOP_URL = 'https://www.deckandwoodstain.com/shop';
 
@@ -167,6 +171,16 @@ export default function LandingPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Fixed Glassmorphic Navbar dynamic scroll tracking (>15px activates elevated glass shadow)
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Active navigation tracking for smooth scroll
   const [activeNav, setActiveNav] = useState('Home');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -281,7 +295,7 @@ export default function LandingPage() {
   );
 
   return (
-    <div style={styles.pageContainer}>
+    <div style={styles.pageContainer} className="landing-page-container">
       {/* Responsive & Animation Styles */}
       <style>{`
         @keyframes floatWood {
@@ -310,6 +324,28 @@ export default function LandingPage() {
         }
         .drp-footer-link:hover {
           color: #FFFFFF !important;
+        }
+
+        /* Mobile Visual Elements Default (Hidden on Desktop / Laptops) */
+        .landing-mobile-hero-visual {
+          display: none !important;
+        }
+        .landing-mobile-trust-bar {
+          display: none !important;
+        }
+        .landing-mobile-hamburger {
+          display: none !important;
+        }
+        .landing-mobile-swipe-hint {
+          display: none !important;
+        }
+        .landing-cost-price {
+          transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .landing-calc-select:focus {
+          outline: none !important;
+          border-color: #E07A2B !important;
+          box-shadow: 0 0 0 3px rgba(224, 122, 43, 0.15) !important;
         }
 
         /* ================= LAPTOP & IPAD PRO (<= 1180px) ================= */
@@ -390,71 +426,218 @@ export default function LandingPage() {
 
         /* ================= MOBILE & SMALL TABLETS (<= 768px) ================= */
         @media (max-width: 768px) {
+          .landing-page-container {
+            padding-top: 54px !important;
+          }
+          .landing-header {
+            border-bottom: 2px solid #EAA937 !important;
+            background-color: #FFFFFF !important;
+          }
           .landing-header-inner {
-            padding: 8px 12px !important;
-            gap: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 8px 14px !important;
+            position: relative !important;
+          }
+          .landing-mobile-hamburger {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: transparent !important;
+            border: none !important;
+            color: #1E293B !important;
+            cursor: pointer !important;
+            padding: 4px !important;
+            flex: 0 0 36px !important;
+          }
+          .landing-logo-link {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 1 !important;
           }
           .landing-logo-img {
-            height: 32px !important;
+            height: 34px !important;
+            width: auto !important;
+            object-fit: contain !important;
+          }
+          .landing-header-right {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            flex: 0 0 auto !important;
           }
           .landing-header-cta {
-            padding: 7px 11px !important;
-            font-size: 11.5px !important;
+            padding: 7px 15px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            background-color: #E07A2B !important;
+            color: #FFFFFF !important;
+            border-radius: 9999px !important;
+            border: none !important;
             white-space: nowrap !important;
+            box-shadow: 0 2px 8px rgba(224, 122, 43, 0.28) !important;
           }
 
-          /* Hero Section Mobile */
+          /* Hero Section Mobile — Exact Phone Mockup Reproduction */
           .landing-hero-section {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
             min-height: auto !important;
-            padding: 28px 14px 34px 14px !important;
-            background-position: center top !important;
+            padding: 0 0 24px 0 !important;
+            background-image: none !important;
+            background: #FFFFFF !important;
+            width: 100% !important;
           }
           .landing-hero-overlay {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.90) 65%, rgba(255, 255, 255, 0.96) 100%) !important;
-          }
-          .landing-hero-container {
-            padding: 0 !important;
-          }
-          .landing-hero-left {
-            max-width: 100% !important;
-          }
-          .landing-tag-badge {
-            font-size: 10.5px !important;
-            padding: 4px 10px !important;
-            margin-bottom: 12px !important;
-          }
-          .landing-hero-heading {
-            font-size: clamp(26px, 7.5vw, 34px) !important;
-            line-height: 1.15 !important;
-            letter-spacing: -0.7px !important;
-            margin-bottom: 10px !important;
-          }
-          .landing-hero-subtitle {
-            font-size: 13.5px !important;
-            line-height: 1.5 !important;
-            margin-bottom: 18px !important;
-          }
-          .landing-hero-btn-row {
-            flex-direction: column !important;
-            width: 100% !important;
-            gap: 10px !important;
-            margin-bottom: 20px !important;
-          }
-          .landing-hero-btn-row button {
-            width: 100% !important;
-            justify-content: center !important;
-            padding: 11px 16px !important;
-            font-size: 13.5px !important;
+            display: none !important;
           }
           .landing-wood-sticker {
             display: none !important;
           }
-          .landing-trust-row {
-            gap: 10px 16px !important;
-            padding-top: 12px !important;
+          .landing-tag-badge {
+            display: none !important;
           }
-          .landing-trust-item {
-            font-size: 12px !important;
+
+          /* Mobile Edge-to-Edge Hero Photo (Using image's built-in feather) */
+          .landing-mobile-hero-visual {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: 480px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: relative !important;
+            overflow: hidden !important;
+            background-color: #FFFFFF !important;
+            border-top: none !important;
+            flex: 0 0 auto !important;
+          }
+          .landing-mobile-hero-photo {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 480px !important;
+            max-width: 100% !important;
+            object-fit: cover !important;
+            object-position: center top !important;
+            display: block !important;
+          }
+          .landing-mobile-hero-visual::after {
+            display: none !important;
+          }
+
+          .landing-hero-container {
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 2px 18px 0 18px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            flex: 1 1 auto !important;
+          }
+          .landing-hero-left {
+            display: flex !important;
+            flex-direction: column !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            align-items: flex-start !important;
+            text-align: left !important;
+          }
+          .landing-hero-heading {
+            font-size: clamp(23px, 6.2vw, 26px) !important;
+            line-height: 1.16 !important;
+            letter-spacing: -0.6px !important;
+            margin-bottom: 6px !important;
+            text-align: left !important;
+          }
+          .landing-hero-subtitle {
+            font-size: 13.5px !important;
+            line-height: 1.45 !important;
+            color: #4B5563 !important;
+            margin-bottom: 15px !important;
+            text-align: left !important;
+          }
+          .landing-hero-btn-row {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 10px !important;
+            margin-bottom: 16px !important;
+          }
+          .landing-hero-primary-btn {
+            width: 100% !important;
+            padding: 13px 20px !important;
+            border-radius: 9999px !important;
+            background-color: #DE7228 !important;
+            color: #FFFFFF !important;
+            font-size: 14.5px !important;
+            font-weight: 700 !important;
+            border: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 14px rgba(222, 114, 40, 0.32) !important;
+            box-sizing: border-box !important;
+            cursor: pointer !important;
+          }
+          .landing-hero-secondary-btn {
+            width: 100% !important;
+            padding: 12px 20px !important;
+            border-radius: 9999px !important;
+            background-color: #FFFFFF !important;
+            border: 1.5px solid #0F2C59 !important;
+            color: #0F2C59 !important;
+            font-size: 14.5px !important;
+            font-weight: 700 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-sizing: border-box !important;
+            cursor: pointer !important;
+          }
+          .landing-hero-play-icon {
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            background-color: #DCEBFA !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-left: 6px !important;
+          }
+          .landing-desktop-trust-row {
+            display: none !important;
+          }
+
+          /* Mobile Trust Badges Bar (Single Row matching mockup) */
+          .landing-mobile-trust-bar {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 4px !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+            padding: 0 0 16px 0 !important;
+            font-size: clamp(9.5px, 2.7vw, 11px) !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+            white-space: nowrap !important;
+            box-sizing: border-box !important;
+          }
+          .landing-mobile-trust-item {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            color: #334155 !important;
+          }
+          .landing-mobile-trust-divider {
+            color: #CBD5E1 !important;
+            font-weight: 300 !important;
           }
 
           /* Quick Calculator Mobile */
@@ -525,7 +708,7 @@ export default function LandingPage() {
             padding: 32px 14px !important;
           }
           .landing-section-header {
-            margin-bottom: 22px !important;
+            margin-bottom: 20px !important;
           }
           .landing-title-with-lines {
             gap: 10px !important;
@@ -539,15 +722,49 @@ export default function LandingPage() {
           }
           .landing-section-subtitle {
             font-size: 13px !important;
+            margin-bottom: 8px !important;
           }
 
-          /* Services Mobile */
+          /* Mobile Swipe Hint Pills */
+          .landing-mobile-swipe-hint {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            background: #EEF2F6 !important;
+            border: 1px solid #CBD5E1 !important;
+            padding: 4px 12px !important;
+            border-radius: 9999px !important;
+            margin: 6px auto 14px auto !important;
+            width: fit-content !important;
+            letter-spacing: 0.2px !important;
+          }
+
+          /* Services Mobile (Side-by-Side Smooth Horizontal Snap Scroll) */
           .landing-services-grid {
-            grid-template-columns: 1fr !important;
-            gap: 16px !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
+            gap: 14px !important;
+            padding: 4px 4px 18px 4px !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          .landing-services-grid::-webkit-scrollbar {
+            display: none !important;
+          }
+          .landing-services-grid > div {
+            flex: 0 0 84% !important;
+            max-width: 84% !important;
+            scroll-snap-align: center !important;
+            box-sizing: border-box !important;
           }
           .landing-service-img-wrap {
-            height: 175px !important;
+            height: 165px !important;
           }
           .landing-service-content {
             padding: 16px !important;
@@ -566,17 +783,30 @@ export default function LandingPage() {
             font-size: 13px !important;
           }
 
-          /* Products Mobile (Compact 2-column grid + Highlight Card) */
+          /* Products Mobile (Compact Side-by-Side Smooth Horizontal Scroll) */
           .landing-products-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 10px !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
+            gap: 12px !important;
+            padding: 4px 4px 16px 4px !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          .landing-products-grid::-webkit-scrollbar {
+            display: none !important;
           }
           .landing-product-card {
+            flex: 0 0 68% !important;
+            max-width: 68% !important;
+            scroll-snap-align: start !important;
             padding: 12px 10px !important;
             border-radius: 12px !important;
+            box-sizing: border-box !important;
           }
           .landing-product-card-last {
-            grid-column: 1 / -1 !important;
+            grid-column: auto !important;
           }
           .landing-product-img-frame {
             height: 78px !important;
@@ -607,16 +837,31 @@ export default function LandingPage() {
             font-size: 13px !important;
           }
 
-          /* Projects Mobile */
+          /* Projects Mobile (Side-by-Side Smooth Snap Gallery with Before/After Toggle) */
           .landing-projects-header-row {
             flex-direction: column !important;
             align-items: flex-start !important;
             gap: 12px !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 16px !important;
           }
           .landing-projects-grid {
-            grid-template-columns: 1fr !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
             gap: 14px !important;
+            padding: 4px 4px 18px 4px !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          .landing-projects-grid::-webkit-scrollbar {
+            display: none !important;
+          }
+          .landing-projects-grid > div {
+            flex: 0 0 85% !important;
+            max-width: 85% !important;
+            scroll-snap-align: center !important;
+            box-sizing: border-box !important;
           }
           .landing-project-img-box {
             height: 185px !important;
@@ -628,14 +873,27 @@ export default function LandingPage() {
             font-size: 14.5px !important;
           }
 
-          /* Steps Mobile */
+          /* Steps Mobile (Horizontal Process Rail) */
           .landing-steps-container {
-            grid-template-columns: 1fr !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
             gap: 12px !important;
+            padding: 4px 4px 16px 4px !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          .landing-steps-container::-webkit-scrollbar {
+            display: none !important;
           }
           .landing-step-card {
+            flex: 0 0 78% !important;
+            max-width: 78% !important;
+            scroll-snap-align: center !important;
             padding: 18px 16px !important;
             border-radius: 14px !important;
+            box-sizing: border-box !important;
           }
           .landing-step-header {
             margin-bottom: 10px !important;
@@ -647,17 +905,30 @@ export default function LandingPage() {
             font-size: 12.5px !important;
           }
 
-          /* Testimonials Mobile */
+          /* Testimonials Mobile (Smooth Review Slider) */
           .landing-testimonial-header-row {
-            margin-bottom: 20px !important;
+            margin-bottom: 16px !important;
           }
           .landing-testimonials-grid {
-            grid-template-columns: 1fr !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
             gap: 14px !important;
+            padding: 4px 4px 18px 4px !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          .landing-testimonials-grid::-webkit-scrollbar {
+            display: none !important;
           }
           .landing-testimonial-card {
+            flex: 0 0 85% !important;
+            max-width: 85% !important;
+            scroll-snap-align: center !important;
             padding: 18px 16px !important;
             border-radius: 16px !important;
+            box-sizing: border-box !important;
           }
           .landing-testimonial-text {
             font-size: 13px !important;
@@ -724,10 +995,40 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 1. TOP NAVBAR / HEADER */}
       {/* ======================================================== */}
-      <header style={styles.header}>
+      <header
+        style={{
+          ...styles.header,
+          ...(isScrolled ? styles.headerScrolled : {}),
+        }}
+        className={`landing-header ${isScrolled ? 'landing-header-scrolled' : ''}`}
+      >
         <div style={styles.headerInner} className="landing-header-inner">
-          {/* Logo */}
-          <Link to="/" style={styles.logoLink}>
+          {/* Mobile Hamburger Toggle (Left on mobile, hidden on desktop) */}
+          {isMobile && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={styles.hamburgerBtn}
+              className="landing-mobile-hamburger"
+              aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+              title={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+            >
+              {mobileMenuOpen ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          {/* Logo (Centered on mobile, left on desktop) */}
+          <Link to="/" style={styles.logoLink} className="landing-logo-link">
             <img src={mainNavLogo} alt="DECK Plus Restoration" style={styles.logoImg} className="landing-logo-img" />
           </Link>
 
@@ -774,7 +1075,7 @@ export default function LandingPage() {
           )}
 
           {/* Header Actions */}
-          <div style={{ ...styles.headerRight, gap: isPhone ? '6px' : '12px' }}>
+          <div style={{ ...styles.headerRight, gap: isPhone ? '6px' : '12px' }} className="landing-header-right">
             {!isMobile && (isAuthenticated ? (
               <button
                 onClick={() => {
@@ -797,31 +1098,8 @@ export default function LandingPage() {
               style={styles.getFreeEstimateBtn}
               className="btn-hover landing-header-cta"
             >
-              {isPhone ? 'Free Estimate →' : 'Get Free Estimate →'}
+              Free Estimate
             </button>
-
-            {/* Mobile & Tablet Hamburger Toggle */}
-            {isMobile && (
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                style={styles.hamburgerBtn}
-                aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
-                title={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
-              >
-                {mobileMenuOpen ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="3" y1="12" x2="21" y2="12" />
-                    <line x1="3" y1="6" x2="21" y2="6" />
-                    <line x1="3" y1="18" x2="21" y2="18" />
-                  </svg>
-                )}
-              </button>
-            )}
           </div>
         </div>
 
@@ -877,10 +1155,19 @@ export default function LandingPage() {
       {/* ======================================================== */}
       {/* 2. HERO SECTION */}
       {/* ======================================================== */}
-      <section id="hero" style={styles.heroSection} className="landing-hero-section">
+      <section id="hero" style={isPhone ? styles.heroSectionMobile : styles.heroSection} className="landing-hero-section">
+        {/* Mobile-Only Edge-to-Edge Hero Photo (utilizes Mobile Landing Page Hero Section@3x.png) */}
+        <div className="landing-mobile-hero-visual">
+          <img
+            src={mobileHeroPortraitImg}
+            alt="The Deck Wizard Everett Hinckley — Professional Deck Restoration"
+            className="landing-mobile-hero-photo"
+          />
+        </div>
+
         <div style={styles.heroOverlay} className="landing-hero-overlay" />
 
-        {/* Floating Wooden Sticker Badge */}
+        {/* Floating Wooden Sticker Badge (Desktop only) */}
         <div style={styles.floatingWoodSticker} className="landing-wood-sticker">
           <div style={styles.woodStickerSunburst}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#FDE047" style={{ display: 'block', margin: '0 auto 2px auto' }}>
@@ -899,8 +1186,8 @@ export default function LandingPage() {
           <div style={styles.woodStickerTextBottom}>Back to Life!</div>
         </div>
 
-        <div style={styles.heroContainer} className="landing-hero-container">
-          <div style={styles.heroLeft} className="landing-hero-left">
+        <div style={isPhone ? styles.heroContainerMobile : styles.heroContainer} className="landing-hero-container">
+          <div style={isPhone ? { display: 'flex', flexDirection: 'column', width: '100%' } : styles.heroLeft} className="landing-hero-left">
             <div style={styles.tagBadge} className="landing-tag-badge">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -918,24 +1205,25 @@ export default function LandingPage() {
             </p>
 
             <div style={styles.heroBtnRow} className="landing-hero-btn-row">
-              <button onClick={handleLaunchEstimator} style={styles.heroPrimaryBtn} className="btn-hover">
-                Try Deck Calculator →
+              <button onClick={handleLaunchEstimator} style={styles.heroPrimaryBtn} className="btn-hover landing-hero-primary-btn">
+                Try Deck Calculation →
               </button>
               <button
                 onClick={() => scrollToSection('projects', 'Projects')}
                 style={styles.heroSecondaryBtn}
-                className="btn-hover"
+                className="btn-hover landing-hero-secondary-btn"
               >
-                <div style={styles.playIconCircle}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#0F2C59">
-                    <polygon points="5 3 19 12 5 21 5 3" />
+                <span>View Our Work</span>
+                <span className="landing-hero-play-icon">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="#0F2C59">
+                    <polygon points="6 4 20 12 6 20 6 4" />
                   </svg>
-                </div>
-                View Our Work
+                </span>
               </button>
             </div>
 
-            <div style={styles.trustBadgesRow} className="landing-trust-row">
+            {/* Desktop Trust Row */}
+            <div style={styles.trustBadgesRow} className="landing-trust-row landing-desktop-trust-row">
               <div style={styles.trustItem} className="landing-trust-item">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0 }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -952,6 +1240,30 @@ export default function LandingPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F2C59" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0 }}>
                   <circle cx="12" cy="8" r="7" />
                   <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+                </svg>
+                <span>Quality Results</span>
+              </div>
+            </div>
+
+            {/* Mobile Trust Bar matching the exact phone mockup */}
+            <div className="landing-mobile-trust-bar">
+              <div className="landing-mobile-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>Trusted Professionals</span>
+              </div>
+              <span className="landing-mobile-trust-divider">|</span>
+              <div className="landing-mobile-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>Fast Service</span>
+              </div>
+              <span className="landing-mobile-trust-divider">|</span>
+              <div className="landing-mobile-trust-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E293B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 <span>Quality Results</span>
               </div>
@@ -1164,6 +1476,7 @@ export default function LandingPage() {
           <p style={styles.sectionSubtitle} className="landing-section-subtitle">
             Complete solutions to clean, restore, and protect your deck for years to come.
           </p>
+          <div className="landing-mobile-swipe-hint">↔ Swipe to explore services</div>
         </div>
 
         <div style={styles.servicesGrid} className="landing-services-grid">
@@ -1233,6 +1546,7 @@ export default function LandingPage() {
           <p style={styles.sectionSubtitle} className="landing-section-subtitle">
             Professional-grade products for durable, long-lasting, and beautiful results.
           </p>
+          <div className="landing-mobile-swipe-hint">↔ Swipe products catalog</div>
         </div>
 
         <div style={styles.productsContainer} className="landing-products-container">
@@ -1320,6 +1634,7 @@ export default function LandingPage() {
             <p style={styles.sectionSubtitle} className="landing-section-subtitle">
               See the transformation for yourself — tap any card to compare Before &amp; After.
             </p>
+            <div className="landing-mobile-swipe-hint">↔ Swipe projects • Tap to compare</div>
           </div>
           <a
             href="https://www.deckrestorationplus.com/portfolio"
@@ -1390,6 +1705,7 @@ export default function LandingPage() {
           <p style={styles.sectionSubtitle} className="landing-section-subtitle">
             A simple, hassle-free process to restore your deck.
           </p>
+          <div className="landing-mobile-swipe-hint">↔ Swipe through 4 steps</div>
         </div>
 
         <div style={styles.stepsContainer} className="landing-steps-container">
@@ -1477,6 +1793,7 @@ export default function LandingPage() {
             <p style={styles.sectionSubtitle} className="landing-section-subtitle">
               Real feedback from homeowners who restored their decks with us.
             </p>
+            <div className="landing-mobile-swipe-hint">↔ Swipe verified reviews</div>
           </div>
           <div style={styles.carouselBtnGroup}>
             <button onClick={handlePrevTestimonial} style={styles.carouselBtn} aria-label="Previous review" title="Previous review">
@@ -1743,7 +2060,7 @@ export default function LandingPage() {
               >
                 Guidepost Creative
               </a>{' '}
-              | © 2024 Deck Restoration Plus
+              | © {new Date().getFullYear()} Deck Restoration Plus
             </span>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <a href="https://www.deckrestorationplus.com/privacy-policy" target="_blank" rel="noopener noreferrer" style={styles.footerBottomLink} className="drp-footer-link">
@@ -1773,17 +2090,28 @@ const styles = {
     color: '#0F172A',
     minHeight: '100vh',
     overflowX: 'hidden',
+    paddingTop: '68px',
   },
 
-  // Header / Navbar
+  // Header / Navbar (Fixed Glassmorphic)
   header: {
-    position: 'sticky',
+    position: 'fixed',
     top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
     zIndex: 1000,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
     borderBottom: '1px solid rgba(226, 232, 240, 0.85)',
-    boxShadow: '0 2px 12px rgba(15, 44, 89, 0.04)',
+    boxShadow: '0 2px 8px rgba(15, 44, 89, 0.04)',
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  headerScrolled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderBottom: '1px solid rgba(203, 213, 225, 0.95)',
+    boxShadow: '0 4px 20px -2px rgba(15, 44, 89, 0.12), 0 2px 6px -1px rgba(15, 44, 89, 0.06)',
   },
   headerInner: {
     maxWidth: '1360px',
@@ -1958,6 +2286,17 @@ const styles = {
     padding: '60px 24px 72px 24px',
     scrollMarginTop: '72px',
   },
+  heroSectionMobile: {
+    minHeight: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    position: 'relative',
+    overflow: 'hidden',
+    padding: '0 0 24px 0',
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
   heroOverlay: {
     position: 'absolute',
     inset: 0,
@@ -1973,6 +2312,15 @@ const styles = {
     zIndex: 2,
     display: 'flex',
     justifyContent: 'flex-start',
+  },
+  heroContainerMobile: {
+    width: '100%',
+    padding: '2px 18px 0 18px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'relative',
+    zIndex: 2,
   },
   heroLeft: {
     display: 'flex',
@@ -2043,6 +2391,22 @@ const styles = {
     fontSize: '15px',
     fontWeight: '700',
     cursor: 'pointer',
+    transition: 'all 0.25s',
+  },
+  heroCallBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 22px',
+    borderRadius: '9999px',
+    border: '1.5px solid #0F2C59',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    boxShadow: '0 2px 6px rgba(15, 44, 89, 0.08)',
     transition: 'all 0.25s',
   },
   playIconCircle: {

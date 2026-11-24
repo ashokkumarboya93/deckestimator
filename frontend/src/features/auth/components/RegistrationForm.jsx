@@ -330,7 +330,7 @@ export function RegistrationForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.fullName ? '#ef4444' : touched.fullName && formData.fullName.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
+              borderColor: errors.fullName ? '#ef4444' : touched.fullName && formData.fullName.trim().length >= 2 ? '#22c55e' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -363,7 +363,7 @@ export function RegistrationForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#D0E1F9',
+              borderColor: errors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -398,7 +398,7 @@ export function RegistrationForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.phone ? '#ef4444' : '#D0E1F9',
+              borderColor: errors.phone ? '#ef4444' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -441,7 +441,7 @@ export function RegistrationForm() {
                 className="auth-input-wrap"
                 style={{
                   ...styles.inputWrap,
-                  borderColor: errors.businessName ? '#ef4444' : touched.businessName && formData.businessName.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
+                  borderColor: errors.businessName ? '#ef4444' : touched.businessName && formData.businessName.trim().length >= 2 ? '#22c55e' : '#CBD5E1',
                 }}
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -473,7 +473,7 @@ export function RegistrationForm() {
                   className="auth-input-wrap"
                   style={{
                     ...styles.inputWrap,
-                    borderColor: errors.licenseNumber ? '#ef4444' : touched.licenseNumber && formData.licenseNumber.trim().length >= 2 ? '#22c55e' : '#D0E1F9',
+                    borderColor: errors.licenseNumber ? '#ef4444' : touched.licenseNumber && formData.licenseNumber.trim().length >= 2 ? '#22c55e' : '#CBD5E1',
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -538,7 +538,7 @@ export function RegistrationForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.password ? '#ef4444' : isPasswordValid ? '#22c55e' : '#D0E1F9',
+              borderColor: errors.password ? '#ef4444' : isPasswordValid ? '#22c55e' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -613,7 +613,7 @@ export function RegistrationForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: errors.confirmPassword ? '#ef4444' : isPasswordsMatching ? '#22c55e' : '#D0E1F9',
+              borderColor: errors.confirmPassword ? '#ef4444' : isPasswordsMatching ? '#22c55e' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -687,10 +687,10 @@ export function RegistrationForm() {
         </button>
       </form>
 
-      {/* Bottom Switch Link */}
+      {/* Bottom Switch Link / Highlighted Text Only */}
       <div style={styles.footerLinkWrap} className="auth-footer-link-wrap">
-        <span style={styles.footerPrompt}>Already have an account? </span>
-        <Link to="/login" style={styles.footerLink}>
+        <span style={styles.footerPrompt}>Already have an account?</span>{' '}
+        <Link to="/login" style={styles.highlightedLink} className="auth-highlighted-link">
           Sign In
         </Link>
       </div>
@@ -702,13 +702,13 @@ const styles = {
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: '22px',
-    boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)',
+    boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 20px 32px -8px rgba(15, 23, 42, 0.06)',
     padding: '28px 30px 24px 30px',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
     boxSizing: 'border-box',
-    border: '1px solid rgba(226, 232, 240, 0.8)',
+    border: '1px solid #CBD5E1',
   },
   cardBottomWave: {
     position: 'absolute',
@@ -716,7 +716,7 @@ const styles = {
     left: 0,
     right: 0,
     height: '36px',
-    background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.55) 100%)',
+    background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.45) 100%)',
     pointerEvents: 'none',
     borderBottomLeftRadius: '22px',
     borderBottomRightRadius: '22px',
@@ -724,6 +724,20 @@ const styles = {
   header: {
     marginBottom: '16px',
     textAlign: 'center',
+  },
+  infoBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '11px 14px',
+    backgroundColor: '#F0F9FF',
+    border: '1px solid #7DD3FC',
+    borderRadius: '12px',
+    color: '#0369A1',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    marginBottom: '14px',
+    lineHeight: 1.45,
   },
   logoWrap: {
     display: 'flex',
@@ -759,10 +773,10 @@ const styles = {
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '8px',
     marginBottom: '16px',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
     padding: '5px',
     borderRadius: '14px',
-    border: '1px solid #E2E8F0',
+    border: '1px solid #CBD5E1',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -777,13 +791,13 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '7px',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: 0,
   },
   roleTabActive: {
     background: 'linear-gradient(180deg, #0A58CA 0%, #033B85 100%)',
     color: '#FFFFFF',
-    boxShadow: '0 4px 12px rgba(3, 59, 133, 0.25)',
+    boxShadow: '0 3px 10px rgba(3, 59, 133, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
   },
   roleTabInactive: {
     backgroundColor: 'transparent',
@@ -791,7 +805,7 @@ const styles = {
   },
   contractorSection: {
     backgroundColor: '#F8FAFC',
-    border: '1px solid #E2E8F0',
+    border: '1px solid #CBD5E1',
     borderRadius: '14px',
     padding: '13px 14px',
     display: 'flex',
@@ -872,15 +886,15 @@ const styles = {
   inputWrap: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#F0F6FF',
-    border: '1px solid #D0E1F9',
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #CBD5E1',
     borderRadius: '12px',
     padding: '0 12px',
     height: '46px',
     width: '100%',
     minWidth: 0,
     boxSizing: 'border-box',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   inputIcon: {
     flexShrink: 0,
@@ -921,7 +935,7 @@ const styles = {
     padding: '6px 10px',
     backgroundColor: '#F8FAFC',
     borderRadius: '8px',
-    border: '1px solid #E2E8F0',
+    border: '1px solid #CBD5E1',
   },
   fieldErrorText: {
     fontSize: '11.5px',
@@ -963,9 +977,29 @@ const styles = {
     color: '#64748B',
     position: 'relative',
     zIndex: 2,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
   },
   footerPrompt: {
     color: '#64748B',
+    fontWeight: '500',
+  },
+  highlightedLink: {
+    color: '#0A58CA',
+    fontWeight: '700',
+    fontSize: '14px',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    padding: '3px 9px',
+    borderRadius: '6px',
+    backgroundColor: '#EFF6FF',
+    border: '1px solid #DBEAFE',
+    transition: 'all 0.2s ease',
   },
   footerLink: {
     color: '#033B85',

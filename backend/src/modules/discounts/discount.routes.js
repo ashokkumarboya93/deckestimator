@@ -86,4 +86,41 @@ router.post(
   discountController.assignDiscount
 );
 
+// --- Contractor Discount Requests ---
+router.post(
+  '/requests',
+  authenticate,
+  authorize(ROLES.CONTRACTOR, ROLES.ADMIN),
+  discountController.submitDiscountRequest
+);
+
+router.get(
+  '/requests/me',
+  authenticate,
+  authorize(ROLES.CONTRACTOR, ROLES.ADMIN),
+  discountController.getMyDiscountRequests
+);
+
+// --- Admin Discount Requests Management (Verification Progress Tab 5) ---
+router.get(
+  '/admin/requests',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.getAdminDiscountRequests
+);
+
+router.post(
+  '/admin/requests/:id/approve',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.approveDiscountRequest
+);
+
+router.post(
+  '/admin/requests/:id/reject',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.rejectDiscountRequest
+);
+
 module.exports = router;

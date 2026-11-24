@@ -97,7 +97,7 @@ const styles = {
   pageContainer: {
     display: 'flex',
     minHeight: '100vh',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   formColumn: {
@@ -106,7 +106,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '28px 24px',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    backgroundImage: 'radial-gradient(circle at 50% 25%, rgba(219, 234, 254, 0.45) 0%, #F8FAFC 70%)',
     minHeight: '100vh',
     boxSizing: 'border-box',
     overflowY: 'auto',

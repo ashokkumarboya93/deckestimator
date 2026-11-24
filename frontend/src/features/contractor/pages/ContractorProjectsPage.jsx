@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, deleteEstimate, requestProjectEstimate } from '../../customer/api/estimatesApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
-import contractorBannerBg from '../../../assets/images/contractor_banner_bg.png';
+import contractorBannerBg from '../../../assets/images/Banner_BG_img.png';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
 import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
@@ -189,9 +189,18 @@ export default function ContractorProjectsPage() {
     };
   }
 
-  // Status Pill Resolver (Blue for CREATED, Amber for IN_REVIEW, Green for COMPLETED)
+  // Status Pill Resolver (Blue for CREATED, Amber for IN_REVIEW, Green for COMPLETED, Orange/Yellow for REQUESTED)
   function resolveStatusBadge(rawStatus) {
     const s = String(rawStatus || 'CREATED').toUpperCase();
+    if (s === 'REQUESTED') {
+      return {
+        label: 'Requested',
+        bg: '#FEF3C7',
+        text: '#92400E',
+        border: '#FDE68A',
+        dot: '#D97706',
+      };
+    }
     if (s === 'IN_REVIEW' || s === 'REVIEW' || s === 'NEEDS_CONTRACTOR_QUOTE' || s === 'PENDING') {
       return {
         label: 'In Review',
@@ -223,15 +232,18 @@ export default function ContractorProjectsPage() {
   const filteredEstimates = useMemo(() => {
     return estimates.filter((est) => {
       const q = searchTerm.toLowerCase().trim();
-      const name = (est.deckDetails?.projectName || est.estimateName || '').toLowerCase();
+      const name = (est.deckDetails?.projectName || est.estimateName || est.projectName || '').toLowerCase();
+      const client = (est.ownerId?.fullName || est.ownerName || '').toLowerCase();
       const ref = (est.estimateNumber || est._id || '').toLowerCase();
-      const wood = (est.deckDetails?.surfaceMaterial || est.pricingSnapshot?.wood || '').toLowerCase();
+      const wood = (est.deckDetails?.surfaceMaterial || est.pricingSnapshot?.wood || est.pricingSnapshot?.spec?.woodSpecies || '').toLowerCase();
 
-      const matchesSearch = !q || name.includes(q) || ref.includes(q) || wood.includes(q);
+      const matchesSearch = !q || name.includes(q) || client.includes(q) || ref.includes(q) || wood.includes(q);
 
       const statusObj = resolveStatusBadge(est.estimateStatus || est.status);
       const matchesStatus =
-        statusFilter === 'ALL' || statusObj.label.toUpperCase() === statusFilter.toUpperCase();
+        statusFilter === 'ALL' ||
+        statusObj.label.toUpperCase() === statusFilter.toUpperCase() ||
+        (statusFilter === 'IN_REVIEW' && (statusObj.label === 'In Review' || statusObj.label === 'Requested'));
 
       return matchesSearch && matchesStatus;
     });
@@ -251,14 +263,18 @@ export default function ContractorProjectsPage() {
   // Pale Colored Shiny Summary KPI Cards
   const stats = useMemo(() => {
     const total = estimates.length;
+    let createdCount = 0;
+    let requestedCount = 0;
     let inReviewCount = 0;
     let completedCount = 0;
     let totalPortfolioVal = 0;
 
     estimates.forEach((e) => {
       const s = resolveStatusBadge(e.estimateStatus || e.status).label;
-      if (s === 'In Review') inReviewCount++;
-      if (s === 'Completed') completedCount++;
+      if (s === 'Requested') requestedCount++;
+      else if (s === 'In Review') inReviewCount++;
+      else if (s === 'Completed') completedCount++;
+      else createdCount++;
 
       const amt = Number(e.pricingSnapshot?.calculatedTotal ?? e.pricingSnapshot?.finalTotal ?? e.totalAmount ?? 0);
       if (!isNaN(amt)) totalPortfolioVal += amt;
@@ -266,6 +282,8 @@ export default function ContractorProjectsPage() {
 
     return {
       total,
+      createdCount,
+      requestedCount,
       inReviewCount,
       completedCount,
       totalPortfolioVal,
@@ -597,14 +615,14 @@ export default function ContractorProjectsPage() {
         style={{
           ...styles.heroBanner,
           padding: isMobile ? '16px 14px' : '24px 28px',
-          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 55%, rgba(30, 58, 99, 0.45) 100%), url(${contractorBannerBg})`,
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 25%, transparent 55%), linear-gradient(90deg, rgba(16, 38, 72, 0.72) 0%, rgba(22, 48, 88, 0.58) 28%, rgba(30, 58, 99, 0.28) 42%, rgba(30, 58, 99, 0.04) 52%, rgba(0, 0, 0, 0) 100%), url(${contractorBannerBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
         }}
       >
         <div style={styles.heroContent}>
-          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '19px' : '24px' }}>My Projects</h1>
-          <p style={{ ...styles.heroSubtitle, fontSize: isMobile ? '11.5px' : '12.5px', marginBottom: isMobile ? '10px' : '14px' }}>
-            Manage all your deck projects, customer proposals, and technical pricing records in one synchronized workspace.
-          </p>
+          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '19px' : '24px', marginBottom: isMobile ? '10px' : '14px' }}>My Projects</h1>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
@@ -616,7 +634,6 @@ export default function ContractorProjectsPage() {
               }}
             >
               <span>+ New Estimation</span>
-              <span style={{ fontSize: isMobile ? '13px' : '15px', fontWeight: '800' }}>&rarr;</span>
             </button>
           </div>
         </div>
@@ -631,7 +648,17 @@ export default function ContractorProjectsPage() {
         }}
       >
         {/* Total Projects */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }}>
+        <div
+          onClick={() => setStatusFilter('ALL')}
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '10px 12px' : '18px 20px',
+            backgroundColor: '#EFF6FF',
+            borderColor: statusFilter === 'ALL' ? '#3B82F6' : '#BFDBFE',
+            cursor: 'pointer',
+          }}
+          title="Filter by all projects"
+        >
           <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#DBEAFE', color: '#1E3A63' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -648,8 +675,18 @@ export default function ContractorProjectsPage() {
           </div>
         </div>
 
-        {/* In Review / Active Quotes */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }}>
+        {/* In Review & Requested */}
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'IN_REVIEW' ? 'ALL' : 'IN_REVIEW')}
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '10px 12px' : '18px 20px',
+            backgroundColor: '#FFFBEB',
+            borderColor: statusFilter === 'IN_REVIEW' || statusFilter === 'REQUESTED' ? '#F59E0B' : '#FDE68A',
+            cursor: 'pointer',
+          }}
+          title="Filter by In Review & Requested projects"
+        >
           <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#FEF3C7', color: '#B45309' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -659,14 +696,24 @@ export default function ContractorProjectsPage() {
           <div>
             <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>In Review</span>
             <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '17px' : '22px', color: '#B45309' }}>
-              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : stats.inReviewCount}
+              {loading ? <SkeletonShimmer width="36px" height="22px" borderRadius="4px" /> : (stats.inReviewCount + stats.requestedCount)}
             </strong>
-            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Pending homeowner approval</span>
+            <span style={{ ...styles.kpiSub, fontSize: isMobile ? '9.5px' : '11px', display: isMobile ? 'none' : 'block' }}>Pending approval / requested</span>
           </div>
         </div>
 
         {/* Completed Projects */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '18px 20px', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }}>
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '10px 12px' : '18px 20px',
+            backgroundColor: '#ECFDF5',
+            borderColor: statusFilter === 'COMPLETED' ? '#10B981' : '#A7F3D0',
+            cursor: 'pointer',
+          }}
+          title="Filter by Completed projects"
+        >
           <div style={{ ...styles.kpiIconWrap, width: isMobile ? '32px' : '42px', height: isMobile ? '32px' : '42px', backgroundColor: '#D1FAE5', color: '#15803D' }}>
             <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -731,7 +778,7 @@ export default function ContractorProjectsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isMobile ? 'Search projects...' : 'Search projects by title, reference #, or wood species...'}
+            placeholder={isMobile ? 'Search projects...' : 'Search by project name, reference number, or wood species...'}
             style={{
               ...styles.searchInput,
               height: isMobile ? '38px' : '42px',
@@ -764,7 +811,7 @@ export default function ContractorProjectsPage() {
             marginLeft: isMobile ? '0' : 'auto',
           }}
         >
-          <div style={{ ...styles.selectWrap, flex: isMobile ? 1 : 'none', minWidth: 0, position: 'relative' }}>
+          <div style={{ ...styles.selectWrap, flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '170px', position: 'relative' }}>
             <svg
               width={isMobile ? '13' : '14'}
               height={isMobile ? '13' : '14'}
@@ -776,7 +823,7 @@ export default function ContractorProjectsPage() {
               strokeLinejoin="round"
               style={{
                 position: 'absolute',
-                left: isMobile ? '9px' : '12px',
+                left: isMobile ? '10px' : '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 pointerEvents: 'none',
@@ -791,20 +838,18 @@ export default function ContractorProjectsPage() {
               style={{
                 ...styles.filterSelect,
                 width: '100%',
-                height: isMobile ? '36px' : '42px',
+                height: isMobile ? '38px' : '42px',
                 paddingLeft: isMobile ? '28px' : '34px',
-                paddingRight: isMobile ? '20px' : '28px',
-                fontSize: isMobile ? '11px' : '13px',
+                paddingRight: isMobile ? '14px' : '20px',
+                fontSize: isMobile ? '12px' : '13px',
                 fontWeight: '600',
                 textAlign: 'left',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
               }}
             >
-              <option value="ALL">All ({estimates.length})</option>
-              <option value="CREATED">Created ({stats.total - stats.inReviewCount - stats.completedCount})</option>
-              <option value="IN REVIEW">In Review ({stats.inReviewCount})</option>
+              <option value="ALL">All Statuses ({estimates.length})</option>
+              <option value="CREATED">Created ({stats.createdCount})</option>
+              <option value="REQUESTED">Requested ({stats.requestedCount})</option>
+              <option value="IN_REVIEW">In Review ({stats.inReviewCount})</option>
               <option value="COMPLETED">Completed ({stats.completedCount})</option>
             </select>
           </div>
@@ -815,9 +860,9 @@ export default function ContractorProjectsPage() {
             disabled={refreshing || loading}
             style={{
               ...styles.refreshBtn,
-              height: isMobile ? '36px' : '42px',
-              padding: isMobile ? '0 10px' : '0 20px',
-              fontSize: isMobile ? '11px' : '13px',
+              height: isMobile ? '38px' : '42px',
+              padding: isMobile ? '0 12px' : '0 20px',
+              fontSize: isMobile ? '12px' : '13px',
               gap: isMobile ? '5px' : '8px',
               flexShrink: 0,
             }}
@@ -1008,27 +1053,50 @@ export default function ContractorProjectsPage() {
                   </div>
 
                   {/* Metrics Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', backgroundColor: '#F8FAFC', padding: '8px 10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      backgroundColor: '#F8FAFC',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #F1F5F9',
+                    }}
+                  >
                     <div>
-                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
-                      <strong style={{ fontSize: '12px', color: '#0F172A' }}>{area}</strong>
+                      <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Deck Size</span>
+                      <strong style={{ fontSize: '12.5px', color: '#0F172A', marginTop: '2px', display: 'block' }}>{area}</strong>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>{dims}</span>
                     </div>
                     <div>
-                      <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Estimator Price</span>
-                      <strong style={{ fontSize: '13.5px', color: '#1E3A63' }}>{exactPrice}</strong>
-                      <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', display: 'block' }}>Wholesale Applied</span>
+                      <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>Labour &amp; Materials</span>
+                      <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#0F172A', marginTop: '2px', lineHeight: 1.3 }}>
+                        <div>{lm.hours}</div>
+                        <div style={{ color: '#475569', fontWeight: '600', fontSize: '10.5px' }}>{lm.materials}</div>
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: 'span 2', borderTop: '1px solid #E2E8F0', paddingTop: '8px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase' }}>
+                        Estimator Price:
+                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '900', color: '#15803D' }}>
+                          {exactPrice}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#16A34A', fontWeight: '700', display: 'block' }}>✓ Wholesale Applied</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                     <button
                       type="button"
                       onClick={() => navigate(`/contractor/projects/${estId}`)}
-                      style={{ ...styles.actionViewBtn, flex: 1, justifyContent: 'center', padding: '6px 8px', height: '32px', fontSize: '11.5px' }}
+                      style={{ ...styles.actionViewBtn, flex: 1, justifyContent: 'center', padding: '8px 12px', height: '36px', fontSize: '12px' }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                         <circle cx="12" cy="12" r="3" />
                       </svg>
@@ -1037,9 +1105,9 @@ export default function ContractorProjectsPage() {
                     <button
                       type="button"
                       onClick={() => handlePrint(est)}
-                      style={{ ...styles.actionPrintBtn, flex: 1, justifyContent: 'center', padding: '6px 8px', height: '32px', fontSize: '11.5px' }}
+                      style={{ ...styles.actionPrintBtn, flex: 1, justifyContent: 'center', padding: '8px 12px', height: '36px', fontSize: '12px' }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="6 9 6 2 18 2 18 9" />
                         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                         <rect x="6" y="14" width="12" height="8" />
@@ -1063,7 +1131,7 @@ export default function ContractorProjectsPage() {
                           setOpenMenuId(estId);
                         }
                       }}
-                      style={{ ...styles.actionDotsBtn, width: '32px', height: '32px', padding: 0 }}
+                      style={{ ...styles.actionDotsBtn, width: '36px', height: '36px', padding: 0 }}
                       title="More options"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1559,8 +1627,9 @@ const styles = {
     borderRadius: '14px',
     padding: '24px 28px',
     backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    boxShadow: '0 4px 18px rgba(30, 58, 99, 0.15)',
+    backgroundPosition: 'center right',
+    border: '1px solid rgba(255, 255, 255, 0.35)',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
     marginBottom: '20px',
   },
   heroContent: {
@@ -1771,12 +1840,12 @@ const styles = {
   searchInput: {
     width: '100%',
     boxSizing: 'border-box',
-    padding: '10px 38px 10px 42px',
-    border: '1.5px solid #CBD5E1',
-    borderRadius: '9999px',
+    padding: '9px 34px 9px 38px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
     fontSize: '13px',
     color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     outline: 'none',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
     transition: 'all 0.15s ease',
@@ -1810,29 +1879,28 @@ const styles = {
     pointerEvents: 'none',
   },
   filterSelect: {
-    padding: '10px 36px 10px 36px',
-    border: '1.5px solid #CBD5E1',
-    borderRadius: '9999px',
+    padding: '9px 24px 9px 34px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
     fontSize: '13px',
     fontWeight: '600',
     color: '#1E3A63',
     backgroundColor: '#FFFFFF',
     outline: 'none',
     cursor: 'pointer',
-    appearance: 'none',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
   },
   refreshBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '10px 20px',
+    gap: '6px',
+    padding: '9px 18px',
     backgroundColor: '#FFFFFF',
     color: '#1E3A63',
-    border: '1.5px solid #1E3A63',
-    borderRadius: '9999px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
     fontSize: '13px',
-    fontWeight: '700',
+    fontWeight: '600',
     cursor: 'pointer',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
     transition: 'all 0.15s ease',

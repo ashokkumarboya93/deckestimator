@@ -14,6 +14,7 @@ import { adminApi } from '../api/adminApi';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../customer/api/notificationsApi';
 import RouteLoadingFallback from '../../../components/common/RouteLoadingFallback';
 import mainLogo from '../../../assets/images/MainLodo.png';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -477,9 +478,24 @@ export default function AdminLayout() {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 style={{ ...styles.profilePill, padding: isMobile ? '4px 6px' : '6px 12px' }}
               >
-                <div style={styles.avatar}>
-                  {user?.fullName ? user.fullName[0].toUpperCase() : 'A'}
-                </div>
+                {user?.avatar && resolveAvatarUrl(user.avatar) ? (
+                  <img
+                    src={resolveAvatarUrl(user.avatar)}
+                    alt={user.fullName || 'Admin'}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '1.5px solid #cbd5e1',
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div style={styles.avatar}>
+                    {user?.fullName ? user.fullName[0].toUpperCase() : 'A'}
+                  </div>
+                )}
                 {!isMobile && (
                   <div style={styles.profileInfo}>
                     <span style={styles.profileName}>{user?.fullName || 'Admin User'}</span>

@@ -78,6 +78,19 @@ export const adminApi = {
     return res.data;
   },
 
+  // Discount Requests (Tab 5 in Verification Progress)
+  getDiscountRequests: async (params = {}) => {
+    return client.get('/discounts/admin/requests', { params });
+  },
+  approveDiscountRequest: async (id, discountPercent = 10, adminNotes = '') => {
+    const res = await client.post(`/discounts/admin/requests/${id}/approve`, { discountPercent, adminNotes });
+    return res.data;
+  },
+  rejectDiscountRequest: async (id, adminNotes = '') => {
+    const res = await client.post(`/discounts/admin/requests/${id}/reject`, { adminNotes });
+    return res.data;
+  },
+
   // 4. Projects & Progress
   getProjects: async (params = {}) => {
     return client.get('/admin/projects', { params });

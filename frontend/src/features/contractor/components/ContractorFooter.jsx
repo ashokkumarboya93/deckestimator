@@ -363,8 +363,6 @@ export default function ContractorFooter() {
                 </svg>
                 <span>info@deckrestorationplus.com</span>
               </a>
-
-              <OperatingHoursBlock variant="dark" />
             </div>
           </div>
 

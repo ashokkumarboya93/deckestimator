@@ -34,6 +34,17 @@ export default function ContractorProjectDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== 'undefined') return window.innerWidth <= 768;
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchEstimate = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -44,7 +55,8 @@ export default function ContractorProjectDetailPage() {
       const data = await getEstimateById(idToLoad);
       if (!data) throw new Error('Estimate record could not be found.');
       setEstimate(data);
-      if (data.estimateStatus === 'IN_REVIEW' || data.status === 'in_review') {
+      const rawStatus = String(data.estimateStatus || data.status || '').toUpperCase();
+      if (['REQUESTED', 'IN_REVIEW', 'APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(rawStatus)) {
         setConverted(true);
       }
     } catch (err) {
@@ -124,6 +136,12 @@ export default function ContractorProjectDetailPage() {
     }
   };
 
+  // Trigger Browser Print Dialog
+  const handlePrint = () => {
+    if (!estimate) return;
+    window.print();
+  };
+
   // Delete Project from Database
   const handleDelete = async () => {
     if (!estimate || deleting) return;
@@ -182,11 +200,15 @@ export default function ContractorProjectDetailPage() {
   const servicesList = spec.services || deck.services || snap.services || ['cleaning', 'sealing'];
   const conditionsList = spec.conditions || deck.visibleConditions || [];
 
-  const rawTotal = estimate.discountBreakdown?.originalTotal || snap.originalTotal || estimate.totalAmount || 2500;
-  const isDiscountApplied = estimate.discountBreakdown?.applied;
-  const discountPercent = estimate.discountBreakdown?.discountPercentage || 10;
-  const discountAmount = estimate.discountBreakdown?.discountAmount || Math.round((rawTotal * discountPercent) / 100);
-  const finalPrice = isDiscountApplied ? (estimate.totalAmount || (rawTotal - discountAmount)) : rawTotal;
+  const rawTotal = Number(estimate.discountBreakdown?.originalTotal || snap.originalTotal || snap.calculatedTotal || snap.rawTotal || estimate.totalAmount || 2500);
+  const finalPrice = Number(estimate.totalAmount || snap.finalTotal || rawTotal);
+  const discountAmount = Number(estimate.discountBreakdown?.discountAmount || (rawTotal > finalPrice ? (rawTotal - finalPrice) : 0));
+  const isDiscountApplied = Boolean(estimate.discountBreakdown?.applied ?? (discountAmount > 0));
+  const calculatedPct = rawTotal > 0 && discountAmount > 0 ? Math.round((discountAmount / rawTotal) * 100) : null;
+  const discountPercent = estimate.discountBreakdown?.discountPercentage || calculatedPct || 5;
+
+  const rawStatus = String(estimate.estimateStatus || estimate.status || '').toUpperCase();
+  const isAlreadyRequested = converted || ['REQUESTED', 'IN_REVIEW', 'APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(rawStatus);
 
   const deckId = estimate.deckId?._id || estimate.deckId || deck.deckId;
   const uploadedPhotos = getEstimatePhotos(estimate);
@@ -194,8 +216,8 @@ export default function ContractorProjectDetailPage() {
   return (
     <div style={styles.page}>
       {/* 1. TOP BREADCRUMB & BACK ACTION BAR */}
-      <div style={styles.topNavRow}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ ...styles.topNavRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '10px' : '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => navigate('/contractor/projects')}
@@ -214,7 +236,7 @@ export default function ContractorProjectDetailPage() {
         </div>
 
         {/* Support & Reachout Direct Dial Box */}
-        <div style={styles.topContactBox}>
+        <div style={{ ...styles.topContactBox, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>Contractor Hotline:</span>
             <a href="tel:8664403325" style={styles.topPhoneLink}>
@@ -246,60 +268,85 @@ export default function ContractorProjectDetailPage() {
       )}
 
       {/* 2. PROJECT HERO HEADER & ACTIONS */}
-      <div style={styles.heroCard}>
+      <div style={{ ...styles.heroCard, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : '24px' }}>
         <div style={styles.heroLeft}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
             <span style={styles.refPill}>Ref: {estimate.estimateNumber || `DP-${estimate._id?.substring(0, 8)}`}</span>
             <span
               style={{
                 ...styles.statusPill,
-                backgroundColor: converted ? '#DCFCE7' : '#EFF6FF',
-                color: converted ? '#15803D' : '#1E3A63',
-                borderColor: converted ? '#86EFAC' : '#BFDBFE',
+                backgroundColor: isAlreadyRequested ? '#DCFCE7' : '#EFF6FF',
+                color: isAlreadyRequested ? '#15803D' : '#1E3A63',
+                borderColor: isAlreadyRequested ? '#86EFAC' : '#BFDBFE',
               }}
             >
-              <span style={{ ...styles.statusDot, backgroundColor: converted ? '#15803D' : '#1E3A63' }} />
-              {converted ? 'IN REVIEW / BOOKING CONVERTED' : (estimate.estimateStatus || 'CREATED')}
+              <span style={{ ...styles.statusDot, backgroundColor: isAlreadyRequested ? '#15803D' : '#1E3A63' }} />
+              {estimate.estimateStatus || (isAlreadyRequested ? 'REQUESTED' : 'CREATED')}
             </span>
             <span style={styles.datePill}>Created: {formatDate(estimate.createdAt)}</span>
           </div>
 
-          <h1 style={styles.projectTitle}>
+          <h1 style={{ ...styles.projectTitle, fontSize: isMobile ? '20px' : '24px' }}>
             {deck.projectName || estimate.estimateName || 'Custom Deck Restoration Project'}
           </h1>
 
-          <p style={styles.projectDesc}>
+          <p style={{ ...styles.projectDesc, fontSize: isMobile ? '12.5px' : '13.5px' }}>
             {deck.projectDescription || `Full-scope restoration specification for ${spec.woodSpecies || deck.surfaceMaterial || 'deck'} (${deck.areaSqFt || snap.A || 400} sq ft).`}
           </p>
         </div>
 
-        {/* Primary Action Buttons: Inquiry | Edit | Export PDF | Export Excel | Print | Delete */}
-        <div style={styles.heroRightActions}>
-          {/* Conversion / Inquiry Button (Green) */}
-          <button
-            type="button"
-            onClick={handleConvertToBooking}
-            disabled={converting || converted}
-            style={{
-              ...styles.convertBtn,
-              backgroundColor: converted ? '#166534' : '#15803D',
-              borderColor: '#15803D',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
-            <span>{converting ? 'Submitting...' : converted ? '✓ In Review / Converted' : 'Inquiry / Convert to Booking'}</span>
-          </button>
+        {/* Primary Action Buttons: Inquiry / Convert | Edit | Export PDF | Export Excel | Print | Delete */}
+        <div style={{ ...styles.heroRightActions, alignItems: isMobile ? 'stretch' : 'flex-end', width: isMobile ? '100%' : 'auto' }}>
+          {/* Conversion / Inquiry Button */}
+          {isAlreadyRequested ? (
+            <button
+              type="button"
+              disabled={true}
+              style={{
+                ...styles.convertBtn,
+                width: isMobile ? '100%' : 'auto',
+                backgroundColor: '#F1F5F9',
+                borderColor: '#CBD5E1',
+                color: '#64748B',
+                cursor: 'default',
+                boxShadow: 'none',
+              }}
+              title="Project request has already been submitted to administration"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span style={{ fontWeight: '700', color: '#166534' }}>Request Submitted</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConvertToBooking}
+              disabled={converting}
+              style={{
+                ...styles.convertBtn,
+                width: isMobile ? '100%' : 'auto',
+                backgroundColor: '#15803D',
+                borderColor: '#15803D',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>{converting ? 'Submitting...' : 'Inquiry / Convert to Booking'}</span>
+            </button>
+          )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
             {/* 1. Edit in Estimator Button */}
             <button
               type="button"
               onClick={() => {
-                navigate(`/contractor/decks/new?estimateId=${estimate._id || estimate.id}${deckId ? `&deckId=${deckId}` : ''}`);
+                navigate(`/contractor/decks/new?estimateId=${estimate._id || estimate.id}${deckId ? `&deckId=${deckId}` : ''}`, {
+                  state: { editEstimate: estimate }
+                });
               }}
-              style={styles.actionBtnNavy}
+              style={{ ...styles.actionBtnNavy, flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', justifyContent: 'center' }}
               title="Open estimator with all chosen parameters"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -313,7 +360,7 @@ export default function ContractorProjectDetailPage() {
             <button
               type="button"
               onClick={handleExportPdf}
-              style={styles.actionBtnNavy}
+              style={{ ...styles.actionBtnNavy, flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', justifyContent: 'center' }}
               title="Download official branded PDF report"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -328,7 +375,7 @@ export default function ContractorProjectDetailPage() {
             <button
               type="button"
               onClick={handleExportExcel}
-              style={styles.actionBtnTeal}
+              style={{ ...styles.actionBtnTeal, flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', justifyContent: 'center' }}
               title="Download Excel spreadsheet dossier"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -342,8 +389,8 @@ export default function ContractorProjectDetailPage() {
             {/* 4. Print Button */}
             <button
               type="button"
-              onClick={handleExportPdf}
-              style={styles.actionBtnWhite}
+              onClick={handlePrint}
+              style={{ ...styles.actionBtnWhite, flex: isMobile ? '1 1 calc(50% - 4px)' : 'none', justifyContent: 'center' }}
               title="Download print-ready official estimate"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -358,7 +405,7 @@ export default function ContractorProjectDetailPage() {
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
-              style={styles.actionBtnRed}
+              style={{ ...styles.actionBtnRed, flex: isMobile ? '1 1 100%' : 'none', justifyContent: 'center' }}
               title="Delete project estimate permanently"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -372,8 +419,8 @@ export default function ContractorProjectDetailPage() {
       </div>
 
       {/* 3. FINANCIAL QUOTED PRICE & OPERATIONAL METRICS */}
-      <div style={styles.pricingCard}>
-        <div style={styles.priceLeftSection}>
+      <div style={{ ...styles.pricingCard, gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', padding: isMobile ? '16px 18px' : '24px 28px', gap: isMobile ? '16px' : '24px' }}>
+        <div style={{ ...styles.priceLeftSection, borderRight: isMobile ? 'none' : '1px solid #E2E8F0', borderBottom: isMobile ? '1px solid #E2E8F0' : 'none', paddingRight: isMobile ? '0' : '24px', paddingBottom: isMobile ? '16px' : '0' }}>
           <span style={styles.priceHeaderLabel}>Contractor Guaranteed Estimator Price</span>
 
           {isDiscountApplied ? (
@@ -399,7 +446,7 @@ export default function ContractorProjectDetailPage() {
           </p>
         </div>
 
-        <div style={styles.priceMetricsGrid}>
+        <div style={{ ...styles.priceMetricsGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '10px' : '12px' }}>
           <div style={styles.metricItem}>
             <span style={styles.metricLabel}>Billable Area ($A$)</span>
             <strong style={styles.metricVal}>{deck.areaSqFt || snap.A || 400} sq ft</strong>
@@ -422,7 +469,7 @@ export default function ContractorProjectDetailPage() {
       </div>
 
       {/* 4. SELECTED INPUT SPECIFICATIONS (SECTIONS 1 TO 8) */}
-      <div style={styles.specificationsGrid}>
+      <div style={{ ...styles.specificationsGrid, gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? '14px' : '20px' }}>
         {/* SECTION 1: Footprint & Dimensions */}
         <div style={styles.specCard}>
           <div style={styles.specCardHeader}>

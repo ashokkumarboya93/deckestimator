@@ -362,8 +362,6 @@ export default function CustomerFooter() {
                 </svg>
                 <span>info@deckrestorationplus.com</span>
               </a>
-
-              <OperatingHoursBlock variant="dark" />
             </div>
           </div>
 

@@ -16,10 +16,14 @@ async function getUserNotifications(user, query = {}) {
     clearedBy: { $ne: userId },
     $or: [
       { userId },
-      { recipientType: 'all' },
-      { targetRole: 'all' },
-      { recipientType: role },
-      { targetRole: role },
+      {
+        recipientType: { $in: ['all', role] },
+        targetRole: { $in: ['all', role] },
+        $and: [
+          { $or: [{ userId: null }, { userId: { $exists: false } }] },
+          { recipientType: { $ne: 'specific' } },
+        ],
+      },
     ],
   };
 
@@ -88,12 +92,10 @@ async function markAllAsRead(user) {
   // Broadcast notifications
   await Notification.updateMany(
     {
-      $or: [
-        { recipientType: 'all' },
-        { targetRole: 'all' },
-        { recipientType: role },
-        { targetRole: role },
-      ],
+      recipientType: { $in: ['all', role] },
+      targetRole: { $in: ['all', role] },
+      recipientType: { $ne: 'specific' },
+      $or: [{ userId: null }, { userId: { $exists: false } }],
       readBy: { $ne: userId },
     },
     { $addToSet: { readBy: userId } }
@@ -114,12 +116,10 @@ async function clearAllNotifications(user) {
     Notification.deleteMany({ userId }),
     Notification.updateMany(
       {
-        $or: [
-          { recipientType: 'all' },
-          { targetRole: 'all' },
-          { recipientType: role },
-          { targetRole: role },
-        ],
+        recipientType: { $in: ['all', role] },
+        targetRole: { $in: ['all', role] },
+        recipientType: { $ne: 'specific' },
+        $or: [{ userId: null }, { userId: { $exists: false } }],
         clearedBy: { $ne: userId },
       },
       { $addToSet: { clearedBy: userId, readBy: userId } }

@@ -179,7 +179,7 @@ const COMPONENTS = [
     label: 'Stair Steps',
     img: ESTIMATOR_IMAGES.components.stairs.main,
     field: 'stairSteps',
-    prompt: 'Number of Steps (Count)',
+    prompt: 'Total Steps',
     unit: 'steps',
     defaultVal: 4,
     multiplier: 12,
@@ -235,56 +235,56 @@ const WOOD_SPECIES = [
   {
     id: 'pt_pine',
     name: 'Pressure-Treated Pine',
-    img: ESTIMATOR_IMAGES.woodSpecies.pt_pine.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.pt_pine?.main || '',
     laborPct: '0% labor adj.',
     desc: 'Standard commercial softwood, treated for exterior ground contact.',
   },
   {
     id: 'cedar',
     name: 'Western Red Cedar',
-    img: ESTIMATOR_IMAGES.woodSpecies.cedar.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.cedar?.main || '',
     laborPct: '+10% labor adj.',
     desc: 'Naturally rot-resistant aromatic softwood with rich natural grain.',
   },
   {
     id: 'redwood',
     name: 'California Redwood',
-    img: ESTIMATOR_IMAGES.woodSpecies.redwood.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.redwood?.main || '',
     laborPct: '+15% labor adj.',
     desc: 'Dense, durable heartwood with natural tannin resistance.',
   },
   {
     id: 'mahogany',
     name: 'Honduran Mahogany',
-    img: ESTIMATOR_IMAGES.woodSpecies.mahogany.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.mahogany?.main || '',
     laborPct: '+20% labor adj.',
     desc: 'High-density architectural hardwood with tight ribbon grain.',
   },
   {
     id: 'meranti',
     name: 'Meranti Hardwood',
-    img: ESTIMATOR_IMAGES.woodSpecies.meranti.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.meranti?.main || '',
     laborPct: '+20% labor adj.',
     desc: 'Durable exotic dark red hardwood, requires thin penetrating oils.',
   },
   {
     id: 'tigerwood',
     name: 'Tigerwood',
-    img: ESTIMATOR_IMAGES.woodSpecies.tigerwood.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.tigerwood?.main || '',
     laborPct: '+30% labor adj.',
     desc: 'Striking exotic Brazilian hardwood with dark striped grain.',
   },
   {
     id: 'teak',
     name: 'Burmese Teak',
-    img: ESTIMATOR_IMAGES.woodSpecies.teak.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.teak?.main || '',
     laborPct: '+35% labor adj.',
     desc: 'Extremely durable golden hardwood packed with natural silica.',
   },
   {
     id: 'trex',
     name: 'Composite Trex',
-    img: ESTIMATOR_IMAGES.woodSpecies.trex.main,
+    img: ESTIMATOR_IMAGES?.woodSpecies?.trex?.main || '',
     laborPct: '−55% credit (clean only)',
     desc: 'Engineered synthetic polymer core. No chemical strippers or stains.',
   },
@@ -498,49 +498,49 @@ const REFERENCE_SPECS = {
     title: 'Pressure-Treated Southern Pine',
     category: 'Wood Substrate',
     desc: 'Dense commercial softwood treated with preservative chemistry. Benefits from deep-penetrating oil sealers to stabilize moisture and minimize checking.',
-    images: ESTIMATOR_IMAGES.woodSpecies.pt_pine.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.pt_pine?.references || [],
   },
   wood_cedar: {
     title: 'Western Red Cedar',
     category: 'Wood Substrate',
     desc: 'Naturally decay-resistant aromatic softwood with rich natural grain. Demands non-film-forming penetrating stains to preserve fiber porosity and breathability.',
-    images: ESTIMATOR_IMAGES.woodSpecies.cedar.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.cedar?.references || [],
   },
   wood_redwood: {
     title: 'California Redwood',
     category: 'Wood Substrate',
     desc: 'Dense, durable heartwood with natural tannin resistance and fine texture. Treated with delicate conditioning agents to prevent surface fiber darkening.',
-    images: ESTIMATOR_IMAGES.woodSpecies.redwood.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.redwood?.references || [],
   },
   wood_mahogany: {
     title: 'Honduran Mahogany',
     category: 'Wood Substrate',
     desc: 'High-density architectural hardwood with tight ribbon grain. Requires deep penetrating oils and fine detail sanding to prevent grain fuzzing.',
-    images: ESTIMATOR_IMAGES.woodSpecies.mahogany.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.mahogany?.references || [],
   },
   wood_meranti: {
     title: 'Meranti Exotic Hardwood',
     category: 'Wood Substrate',
     desc: 'Durable exotic dark red hardwood with fine pores. Requires specialized low-viscosity penetrating oils for proper saturation.',
-    images: ESTIMATOR_IMAGES.woodSpecies.meranti.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.meranti?.references || [],
   },
   wood_tigerwood: {
     title: 'Tigerwood (Goncalo Alves)',
     category: 'Wood Substrate',
     desc: 'Striking exotic Brazilian hardwood with dark striped grain and high silica content. Demands solvent-reduced exterior oils.',
-    images: ESTIMATOR_IMAGES.woodSpecies.tigerwood.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.tigerwood?.references || [],
   },
   wood_teak: {
     title: 'Burmese Natural Teak',
     category: 'Wood Substrate',
     desc: 'Extremely durable golden hardwood packed with natural oils and silica. Immune to rot, requiring breathable conditioning without synthetic topcoats.',
-    images: ESTIMATOR_IMAGES.woodSpecies.teak.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.teak?.references || [],
   },
   wood_trex: {
     title: 'Composite & Capped Trex',
     category: 'Synthetic Substrate',
     desc: 'Engineered synthetic polymer core. Chemically washed with bio-safe detergents without heavy mechanical sanding or film-forming stains.',
-    images: ESTIMATOR_IMAGES.woodSpecies.trex.references,
+    images: ESTIMATOR_IMAGES?.woodSpecies?.trex?.references || [],
   },
 
   // --- SECTION 2: COMPONENTS ---
@@ -884,6 +884,7 @@ export default function ContinuousEstimatorForm({
 
   // Post-Estimate Box State
   const [officialEstimate, setOfficialEstimate] = useState(null);
+  const [priceBoxHighlighted, setPriceBoxHighlighted] = useState(false);
   const [leadCreated, setLeadCreated] = useState(false);
   const [leadLoading, setLeadLoading] = useState(false);
   const skipNextAutoSaveRef = useRef(false);
@@ -1463,12 +1464,15 @@ export default function ContinuousEstimatorForm({
       low: applyMinJobPrice ? (localCalc.low || minJobFloor) : (localCalc.lowCalculated || localCalc.low || pureCalculatedTotal),
       high: applyMinJobPrice ? (localCalc.high || minJobFloor) : (localCalc.highCalculated || localCalc.high || pureCalculatedTotal),
       billableArea: localCalc.A || activeFloorArea,
+      enteredArea: activeFloorArea,
       rate: localCalc.rate || 3.00,
       prep: localCalc.prep || 'clean',
       finish: localCalc.finish || 'sealer',
       baseHours: localCalc.baseHours || 0,
       woodHours: localCalc.woodHours || 0,
       accessHours: localCalc.accessHours || 0,
+      addHours: localCalc.addHours || 0,
+      manHours: Math.round(((localCalc.baseHours || 0) + (localCalc.woodHours || 0) + (localCalc.accessHours || 0) + (localCalc.addHours || 0)) * 10) / 10 || Math.max(4, Math.round(((localCalc.A || activeFloorArea) / 25) * 10) / 10),
       labourAdj: localCalc.labourAdj || 0,
       travelFee: localCalc.travelFee || 0,
       repairEstimate: localCalc.repairEstimate || null,
@@ -1481,20 +1485,20 @@ export default function ContinuousEstimatorForm({
 
     // Immediately display the calculated estimate so the user ALWAYS sees the final price
     setOfficialEstimate(immediateEstimate);
+    setPriceBoxHighlighted(true);
     if (isContractor) setContractorPricing(localCalc);
 
-    // Smooth scroll to the Official Estimate box on mobile/tablet, or sidebar/estimate on desktop
+    // Smooth scroll directly to the Official Estimate result box so the price box is highlighted in view
     if (shouldScroll) {
       setTimeout(() => {
-        const isSmallViewport = typeof window !== 'undefined' && window.innerWidth <= 1024;
         const resultEl = document.getElementById('official-estimate-result-box');
-        const sidebarCard = document.getElementById('sidebar-guidance-card');
-        if (isSmallViewport && resultEl) {
+        if (resultEl) {
           resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (sidebarCard) {
-          sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else if (resultEl) {
-          resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          const sidebarCard = document.getElementById('sidebar-guidance-card');
+          if (sidebarCard) {
+            sidebarCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
       }, 100);
     }
@@ -1896,6 +1900,28 @@ export default function ContinuousEstimatorForm({
   return (
     <div style={styles.estimatorPageContainer} className="estimator-page-root">
       <style>{`
+        @keyframes priceBoxPulseGlow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.8), 0 8px 30px rgba(22, 163, 74, 0.25);
+            transform: scale(1);
+          }
+          30% {
+            box-shadow: 0 0 0 14px rgba(22, 163, 74, 0.26), 0 18px 50px rgba(22, 163, 74, 0.38);
+            transform: scale(1.018);
+          }
+          65% {
+            box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.38), 0 12px 36px rgba(22, 163, 74, 0.25);
+            transform: scale(1.006);
+          }
+          100% {
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.28), 0 10px 32px rgba(22, 163, 74, 0.22);
+            transform: scale(1);
+          }
+        }
+        .estimator-price-highlighted {
+          animation: priceBoxPulseGlow 1.8s ease-out;
+          border-color: #16A34A !important;
+        }
         @media (max-width: 1024px) {
           .estimator-page-root {
             padding: 12px !important;
@@ -2384,7 +2410,7 @@ export default function ContinuousEstimatorForm({
                     {isSelected && (
                       <div style={styles.componentSqftInputBox} className="estimator-comp-input-box">
                         <label style={styles.sqftInputLabel}>
-                          {comp.id === 'stairs' ? 'Number of Steps (Count):' : `${comp.prompt}:`}
+                          {comp.id === 'stairs' ? 'Total Steps:' : `${comp.prompt}:`}
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input
@@ -3122,7 +3148,17 @@ export default function ContinuousEstimatorForm({
           {/* POST-ESTIMATE OFFICIAL ESTIMATE RESULT BOX (HIGHLIGHTED) */}
           {/* ======================================================== */}
           {officialEstimate && (
-            <div style={styles.officialResultCard} className="estimator-official-card" id="official-estimate-result-box">
+            <div
+              style={{
+                ...styles.officialResultCard,
+                ...(priceBoxHighlighted ? {
+                  borderColor: '#16A34A',
+                  boxShadow: '0 0 0 4px rgba(22, 163, 74, 0.35), 0 16px 40px rgba(22, 163, 74, 0.22)',
+                } : {}),
+              }}
+              className={`estimator-official-card ${priceBoxHighlighted ? 'estimator-price-highlighted' : ''}`}
+              id="official-estimate-result-box"
+            >
               <div style={styles.resultHeader} className="estimator-official-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={styles.verifiedCheck}>✓</span>
@@ -3133,8 +3169,19 @@ export default function ContinuousEstimatorForm({
 
               {/* CLIENT Q12 STRICT COMPLIANCE: Customer sees ONE TOTAL NUMBER ONLY with ZERO breakdown */}
               {!isContractor ? (
-                <div style={{ ...styles.customerTotalBox, border: '2px solid #22C55E', backgroundColor: '#F0FDF4', boxShadow: '0 8px 28px rgba(34, 197, 94, 0.15)' }} className="estimator-official-total-box">
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '3px 12px', borderRadius: '9999px', fontSize: '11.5px', fontWeight: '800', marginBottom: '6px' }}>
+                <div
+                  style={{
+                    ...styles.customerTotalBox,
+                    border: '2.5px solid #16A34A',
+                    backgroundColor: '#F0FDF4',
+                    boxShadow: priceBoxHighlighted
+                      ? '0 0 0 6px rgba(34, 197, 94, 0.32), 0 16px 44px rgba(22, 163, 74, 0.32)'
+                      : '0 10px 32px rgba(22, 163, 74, 0.22), 0 0 0 3px rgba(34, 197, 94, 0.16)',
+                    transition: 'all 0.3s ease',
+                  }}
+                  className={`estimator-official-total-box ${priceBoxHighlighted ? 'estimator-price-highlighted' : ''}`}
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '4px 14px', borderRadius: '9999px', fontSize: '11.5px', fontWeight: '800', marginBottom: '8px', letterSpacing: '0.3px' }}>
                     ★ SUBMITTED ESTIMATE • PURE CALCULATED PRICE
                   </div>
                   <span style={{ ...styles.customerTotalSub, color: '#15803D' }}>Official Guaranteed Estimate Total</span>
@@ -3147,6 +3194,37 @@ export default function ContinuousEstimatorForm({
                       : (officialEstimate.calculatedTotal ?? officialEstimate.rawTotal ?? officialEstimate.total)
                     )).toLocaleString()}
                   </strong>
+
+                  {/* Highlights: Total Area Entered & Estimated Man Hours */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', margin: '10px 0 12px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 14px', backgroundColor: '#FFFFFF', border: '1.5px solid #86EFAC', borderRadius: '8px', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.08)' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                      </svg>
+                      <span style={{ fontSize: '12px', color: '#166534', fontWeight: '600' }}>Total Area:</span>
+                      <strong style={{ fontSize: '13px', color: '#0F172A', fontWeight: '800' }}>
+                        {(officialEstimate.enteredArea || floorArea || (Number(length) * Number(width)) || officialEstimate.billableArea || 0).toLocaleString()} sq ft
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 14px', backgroundColor: '#FFFFFF', border: '1.5px solid #86EFAC', borderRadius: '8px', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.08)' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span style={{ fontSize: '12px', color: '#166534', fontWeight: '600' }}>Estimated Man Hours:</span>
+                      <strong style={{ fontSize: '13px', color: '#0F172A', fontWeight: '800' }}>
+                        {(
+                          officialEstimate.manHours ||
+                          Math.round(((officialEstimate.baseHours || 0) + (officialEstimate.woodHours || 0) + (officialEstimate.accessHours || 0) + (officialEstimate.addHours || 0)) * 10) / 10 ||
+                          Math.max(4, Math.round(((officialEstimate.billableArea || floorArea || 300) / 25) * 10) / 10)
+                        )} hrs
+                      </strong>
+                    </div>
+                  </div>
+
                   <span style={styles.customerTotalSubNotice}>
                     {officialEstimate.status === 'needs_contractor_quote'
                       ? 'Provisional estimate • Repairs require on-site contractor confirmation'
@@ -3191,7 +3269,18 @@ export default function ContinuousEstimatorForm({
                 </div>
               ) : (
                 /* CONTRACTOR VIEW: Full Operational Estimation Summary (Matches customer box styling & full width) */
-                <div style={{ ...styles.customerTotalBox, border: '2px solid #16A34A', backgroundColor: '#F0FDF4', boxShadow: '0 8px 28px rgba(22, 163, 74, 0.15)' }}>
+                <div
+                  style={{
+                    ...styles.customerTotalBox,
+                    border: '2px solid #16A34A',
+                    backgroundColor: '#F0FDF4',
+                    boxShadow: priceBoxHighlighted
+                      ? '0 0 0 6px rgba(34, 197, 94, 0.32), 0 16px 44px rgba(22, 163, 74, 0.32)'
+                      : '0 8px 28px rgba(22, 163, 74, 0.15)',
+                    transition: 'all 0.3s ease',
+                  }}
+                  className={`estimator-official-total-box ${priceBoxHighlighted ? 'estimator-price-highlighted' : ''}`}
+                >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '3px 12px', borderRadius: '9999px', fontSize: '11.5px', fontWeight: '800', marginBottom: '6px' }}>
                     ★ OFFICIAL CONTRACTOR QUOTE • PURE CALCULATED
                   </div>
@@ -3233,6 +3322,27 @@ export default function ContinuousEstimatorForm({
                             </span>
                           </div>
                         )}
+
+                        {/* Scope Highlights: Total Area Entered & Estimated Man Hours */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', margin: '8px 0 12px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 12px', backgroundColor: '#FFFFFF', border: '1.5px solid #86EFAC', borderRadius: '8px', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.08)' }}>
+                            <span style={{ fontSize: '12px', color: '#166534', fontWeight: '600' }}>Total Area:</span>
+                            <strong style={{ fontSize: '12.5px', color: '#0F172A', fontWeight: '800' }}>
+                              {(officialEstimate.enteredArea || floorArea || (Number(length) * Number(width)) || officialEstimate.billableArea || 0).toLocaleString()} sq ft
+                            </strong>
+                          </div>
+
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 12px', backgroundColor: '#FFFFFF', border: '1.5px solid #86EFAC', borderRadius: '8px', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.08)' }}>
+                            <span style={{ fontSize: '12px', color: '#166534', fontWeight: '600' }}>Estimated Man Hours:</span>
+                            <strong style={{ fontSize: '12.5px', color: '#0F172A', fontWeight: '800' }}>
+                              {(
+                                officialEstimate.manHours ||
+                                Math.round(((officialEstimate.baseHours || 0) + (officialEstimate.woodHours || 0) + (officialEstimate.accessHours || 0) + (officialEstimate.addHours || 0)) * 10) / 10 ||
+                                Math.max(4, Math.round(((officialEstimate.billableArea || floorArea || 300) / 25) * 10) / 10)
+                              )} hrs
+                            </strong>
+                          </div>
+                        </div>
 
                         {/* Interactive Contractor Wholesale Discount Checkbox */}
                         <label style={{ ...styles.contractorDiscountCheckboxLabel, margin: '8px 0 12px 0' }}>
@@ -3732,15 +3842,6 @@ export default function ContinuousEstimatorForm({
                 </span>
                 <p style={{ margin: 0, fontSize: '11px', color: '#334155', lineHeight: 1.4 }}>
                   Multi-story ladder rigging, harness anchors, and comprehensive safety protocols included.
-                </p>
-              </div>
-
-              <div style={{ padding: '10px 12px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px' }}>
-                <span className="estimator-mini-badge" style={{ display: 'inline-block', backgroundColor: '#15803D', color: '#FFFFFF', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginBottom: '4px' }}>
-                  1-Year Warranty
-                </span>
-                <p style={{ margin: 0, fontSize: '11px', color: '#166534', lineHeight: 1.4 }}>
-                  Comprehensive workmanship warranty on all multi-coat restoration and premium penetrations.
                 </p>
               </div>
             </div>
