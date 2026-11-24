@@ -194,7 +194,7 @@ export default function AdminLayout() {
     if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: '' };
     if (currentPath.includes('/admin/projects')) return { title: 'Projects', category: '' };
     if (currentPath.includes('/admin/pricing') || currentPath.includes('/admin/discounts')) return { title: 'Pricing & Discounts', category: '' };
-    if (currentPath.includes('/admin/reports')) return { title: 'Reports & Analytics', category: 'Business Insights' };
+    if (currentPath.includes('/admin/reports')) return { title: 'Reports & Analytics', category: '' };
     if (currentPath.includes('/admin/settings')) return { title: 'System Settings', category: 'Configuration & Communications' };
     if (currentPath.includes('/admin/guidelines')) return { title: 'Admin Guidelines', category: 'Operational Manual & SOP' };
     if (currentPath.includes('/admin/profile')) return { title: 'My Profile', category: 'Account Management' };
