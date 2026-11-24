@@ -1041,28 +1041,29 @@ export default function ContractorProjectsPage() {
           <div style={{ padding: '8px' }}>
             <SkeletonTable rows={5} columns={7} />
           </div>
-        ) : filteredEstimates.length === 0 ? (
-          <div style={styles.emptyWrap}>
-            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-            <h3 style={styles.emptyTitle}>No Projects Found</h3>
-            <p style={styles.emptyDesc}>
-              {searchTerm || statusFilter !== 'ALL'
-                ? 'No projects matched your search criteria. Try clearing filters.'
-                : 'You have not created any deck restoration estimates yet.'}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate('/contractor/decks/new')}
-              style={styles.emptyBtn}
-            >
-              + Create New Estimation
-            </button>
-          </div>
         ) : isMobile ? (
+          filteredEstimates.length === 0 ? (
+            <div style={styles.emptyWrap}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+              <h3 style={styles.emptyTitle}>No Projects Found</h3>
+              <p style={styles.emptyDesc}>
+                {searchTerm || statusFilter !== 'ALL'
+                  ? 'No projects matched your search criteria. Try clearing filters.'
+                  : 'You have not created any deck restoration estimates yet.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/contractor/decks/new')}
+                style={styles.emptyBtn}
+              >
+                + Create New Estimation
+              </button>
+            </div>
+          ) : (
           /* Mobile Card View — Customer Portal Standard Compact Layout */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px' }}>
             {paginatedEstimates.map((est) => {
@@ -1307,8 +1308,9 @@ export default function ContractorProjectsPage() {
               );
             })}
           </div>
-        ) : (
-          /* Desktop Table View */
+        )
+      ) : (
+        /* Desktop Table View */
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
               <thead>
@@ -1323,6 +1325,7 @@ export default function ContractorProjectsPage() {
                       onChange={handleSelectAll}
                       style={styles.checkboxInput}
                       aria-label="Select all projects"
+                      disabled={filteredEstimates.length === 0}
                     />
                   </th>
                   <th style={styles.th}>Project Name</th>
@@ -1335,7 +1338,33 @@ export default function ContractorProjectsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedEstimates.map((est) => {
+                {filteredEstimates.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '48px 24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}>
+                          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                          <polyline points="2 17 12 22 22 17" />
+                          <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                        <h3 style={styles.emptyTitle}>No Projects Found</h3>
+                        <p style={styles.emptyDesc}>
+                          {searchTerm || statusFilter !== 'ALL'
+                            ? 'No projects matched your search criteria. Try clearing filters.'
+                            : 'You have not created any deck restoration estimates yet.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/contractor/decks/new')}
+                          style={styles.emptyBtn}
+                        >
+                          + Create New Estimation
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedEstimates.map((est) => {
                   const estId = est._id || est.id;
                   const isRowSelected = selectedIds.includes(estId);
                   const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Restoration';
@@ -1497,100 +1526,97 @@ export default function ContractorProjectsPage() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
         )}
 
         {/* Dedicated Pagination Bar */}
-        {filteredEstimates.length > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              padding: '14px 18px',
-              borderTop: '1px solid #E2E8F0',
-              backgroundColor: '#FAFAFA',
-            }}
-          >
-            <div style={{ fontSize: '13px', color: '#64748B' }}>
-              Showing <strong>{Math.min(filteredEstimates.length, (currentPage - 1) * pageSize + 1)}</strong> to{' '}
-              <strong>{Math.min(filteredEstimates.length, currentPage * pageSize)}</strong> of{' '}
-              <strong>{filteredEstimates.length}</strong> projects
-            </div>
-
-            {totalPages > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    color: '#1E3A63',
-                    background: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === 1 ? 0.45 : 1,
-                  }}
-                >
-                  &larr; Prev
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-                  <button
-                    key={pg}
-                    type="button"
-                    onClick={() => setCurrentPage(pg)}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      border: pg === currentPage ? '1.5px solid #1E3A63' : '1px solid #CBD5E1',
-                      backgroundColor: pg === currentPage ? '#1E3A63' : '#FFFFFF',
-                      color: pg === currentPage ? '#FFFFFF' : '#334155',
-                      boxShadow: pg === currentPage ? '0 1px 3px rgba(30, 58, 99, 0.2)' : 'none',
-                    }}
-                  >
-                    {pg}
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    color: '#1E3A63',
-                    background: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    opacity: currentPage === totalPages ? 0.45 : 1,
-                  }}
-                >
-                  Next &rarr;
-                </button>
-              </div>
-            )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '12px 18px',
+            borderTop: '1px solid #E2E8F0',
+            backgroundColor: '#FAFAFA',
+          }}
+        >
+          <div style={{ fontSize: '13px', color: '#64748B' }}>
+            Showing <strong>{filteredEstimates.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</strong> to{' '}
+            <strong>{Math.min(filteredEstimates.length, currentPage * pageSize)}</strong> of{' '}
+            <strong>{filteredEstimates.length}</strong> projects
           </div>
-        )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1 || filteredEstimates.length === 0}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                color: '#1E3A63',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '6px',
+                cursor: currentPage <= 1 || filteredEstimates.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentPage <= 1 || filteredEstimates.length === 0 ? 0.45 : 1,
+              }}
+            >
+              &larr; Prev
+            </button>
+
+            {totalPages > 1 &&
+              Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+                <button
+                  key={pg}
+                  type="button"
+                  onClick={() => setCurrentPage(pg)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    border: pg === currentPage ? '1.5px solid #1E3A63' : '1px solid #CBD5E1',
+                    backgroundColor: pg === currentPage ? '#1E3A63' : '#FFFFFF',
+                    color: pg === currentPage ? '#FFFFFF' : '#334155',
+                    boxShadow: pg === currentPage ? '0 1px 3px rgba(30, 58, 99, 0.2)' : 'none',
+                  }}
+                >
+                  {pg}
+                </button>
+              ))}
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages || filteredEstimates.length === 0}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                color: '#1E3A63',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '6px',
+                cursor: currentPage >= totalPages || filteredEstimates.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentPage >= totalPages || filteredEstimates.length === 0 ? 0.45 : 1,
+              }}
+            >
+              Next &rarr;
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Floating Non-Clipping 3-Dots Dropdown Menu (Fixed in Viewport) */}
@@ -2107,7 +2133,6 @@ const styles = {
     borderRadius: '12px',
     overflow: 'visible',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-    minHeight: '360px',
   },
   table: {
     width: '100%',
@@ -2310,7 +2335,7 @@ const styles = {
     animation: 'spin 0.8s linear infinite',
   },
   emptyWrap: {
-    padding: '60px 24px',
+    padding: '36px 20px',
     textAlign: 'center',
   },
   emptyTitle: {

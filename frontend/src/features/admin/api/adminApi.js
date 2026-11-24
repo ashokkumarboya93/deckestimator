@@ -73,6 +73,14 @@ export const adminApi = {
     const res = await client.post('/admin/contractor-documents/bulk-delete', { ids: docIds });
     return res.data;
   },
+  bulkDeleteVerifications: async (profileIds = []) => {
+    const res = await client.post('/admin/verifications/bulk-delete', { ids: profileIds });
+    return res.data;
+  },
+  bulkDeleteUserRecordsOnly: async (userIds = [], role = 'customer') => {
+    const res = await client.post('/admin/verification-records/bulk-delete', { ids: userIds, role });
+    return res.data;
+  },
   approveVerification: async (id) => {
     const res = await client.post(`/admin/verifications/${id}/approve`);
     return res.data;

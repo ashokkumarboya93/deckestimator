@@ -888,6 +888,69 @@ async function bulkDeleteContractorDocuments(adminUser, docIds = []) {
   return { success: true, count: res.deletedCount, message: `Successfully deleted ${res.deletedCount} document(s).` };
 }
 
+async function bulkDeleteVerifications(adminUser, profileIds = []) {
+  if (!Array.isArray(profileIds) || profileIds.length === 0) {
+    return { success: true, count: 0, message: 'No verification records selected.' };
+  }
+  // Delete verification documents and reset/delete ContractorProfile records WITHOUT deleting any User
+  const profiles = await ContractorProfile.find({ _id: { $in: profileIds } });
+  const userIds = profiles.map((p) => p.userId).filter(Boolean);
+
+  // Delete contractor documents
+  await VerificationDocument.deleteMany({
+    $or: [
+      { contractorId: { $in: profileIds } },
+      { userId: { $in: userIds } },
+    ],
+  });
+
+  // Delete contractor profile verification records
+  const res = await ContractorProfile.deleteMany({ _id: { $in: profileIds } });
+
+  await logAdminAction(adminUser, 'VERIFICATION_RECORDS_BULK_DELETED', 'ContractorProfile', null, null, {
+    count: res.deletedCount,
+    profileIds,
+    preservedUsersCount: userIds.length,
+  });
+
+  return {
+    success: true,
+    count: res.deletedCount,
+    message: `Successfully deleted ${res.deletedCount} verification record(s). User accounts were preserved.`,
+  };
+}
+
+async function bulkDeleteUserRecordsOnly(adminUser, userIds = [], role = 'customer') {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return { success: true, count: 0, message: 'No records selected.' };
+  }
+  let deletedCount = 0;
+  if (role === 'contractor') {
+    // Delete ContractorProfiles and VerificationDocuments
+    const docRes = await VerificationDocument.deleteMany({
+      $or: [{ userId: { $in: userIds } }, { contractorId: { $in: userIds } }],
+    });
+    const profRes = await ContractorProfile.deleteMany({ userId: { $in: userIds } });
+    deletedCount = profRes.deletedCount + docRes.deletedCount;
+  } else {
+    // Delete customer estimates and verification requests
+    const estRes = await Estimate.deleteMany({ customerId: { $in: userIds } });
+    deletedCount = estRes.deletedCount;
+  }
+
+  await logAdminAction(adminUser, 'USER_RECORDS_PURGED_PRESERVED_USER', 'UserRecords', null, null, {
+    userIds,
+    deletedCount,
+    role,
+  });
+
+  return {
+    success: true,
+    count: deletedCount,
+    message: `Successfully deleted ${deletedCount} associated record(s). User login accounts remain untouched.`,
+  };
+}
+
 // --------------------------------------------------------------------
 // User Appeals & Requests Management
 // --------------------------------------------------------------------
@@ -3954,6 +4017,8 @@ module.exports = {
   approveContractorVerification,
   rejectContractorVerification,
   getVerificationHistoryList,
+  bulkDeleteVerifications,
+  bulkDeleteUserRecordsOnly,
 
   // 4. Projects & Progress
   listProjects,

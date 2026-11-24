@@ -49,6 +49,8 @@ router.patch('/user-requests/:id/action', adminController.handleUserRequest);
 
 // 3. Contractor Verifications & Documents
 router.get('/verifications', adminController.listVerifications);
+router.post('/verifications/bulk-delete', adminController.bulkDeleteVerifications);
+router.post('/verification-records/bulk-delete', adminController.bulkDeleteUserRecordsOnly);
 router.post('/verifications/:id/approve', adminController.approveContractorVerification);
 router.post('/verifications/:id/reject', adminController.rejectContractorVerification);
 router.get('/verifications/:contractorId/history', adminController.getVerificationHistory);

@@ -175,6 +175,27 @@ async function bulkDeleteContractorDocuments(req, res, next) {
   }
 }
 
+async function bulkDeleteVerifications(req, res, next) {
+  try {
+    const ids = req.body.ids || [];
+    const result = await adminService.bulkDeleteVerifications(req.user, ids);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteUserRecordsOnly(req, res, next) {
+  try {
+    const ids = req.body.ids || [];
+    const role = req.body.role || 'customer';
+    const result = await adminService.bulkDeleteUserRecordsOnly(req.user, ids, role);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 3. Verifications
 async function listVerifications(req, res, next) {
   try {
@@ -725,6 +746,8 @@ module.exports = {
   approveContractorVerification,
   rejectContractorVerification,
   getVerificationHistory,
+  bulkDeleteVerifications,
+  bulkDeleteUserRecordsOnly,
   listProjects,
   getProjectDetails,
   updateProjectProgress,

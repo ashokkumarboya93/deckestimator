@@ -249,6 +249,15 @@ export default function AdminVerificationProgressPage() {
   const [inspectDiscountModal, setInspectDiscountModal] = useState(null);
   const [replyModal, setReplyModal] = useState({ open: false, request: null, message: '', submitting: false });
 
+  // Custom Delete Confirmation Popup Modal (Guarantees user accounts are never deleted)
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+    open: false,
+    isBulk: true,
+    id: null,
+    count: 0,
+    title: '',
+  });
+
   // Outside click listener to dismiss 3-dots menus
   useEffect(() => {
     const handleOutsideClick = () => setActiveMenuId(null);
@@ -496,39 +505,62 @@ export default function AdminVerificationProgressPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleOpenBulkDeleteModal = () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected record(s)?`)) return;
-    setLoading(true);
-    try {
-      if (activeTab === 'documents') {
-        await adminApi.bulkDeleteContractorDocuments(selectedIds);
-      } else if (activeTab === 'customers' || activeTab === 'contractors') {
-        await adminApi.bulkDeleteUsers(selectedIds);
-      } else if (activeTab === 'discount_requests') {
-        await adminApi.bulkDeleteDiscountRequests(selectedIds);
-      } else if (activeTab === 'verifications') {
-        for (const id of selectedIds) {
-          try { await adminApi.rejectVerification(id, 'Bulk verification rejection'); } catch {}
-        }
-      }
-      setSuccessMsg(`Successfully deleted ${selectedIds.length} record(s).`);
-      setSelectedIds([]);
-      loadTabData();
-    } catch (err) {
-      setError(err?.message || 'Failed to complete bulk delete.');
-      setLoading(false);
-    }
+    setDeleteConfirmModal({
+      open: true,
+      isBulk: true,
+      id: null,
+      count: selectedIds.length,
+      title: `${selectedIds.length} selected record(s)`,
+    });
   };
 
-  const handleDeleteSingleDiscountRequest = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this discount request?')) return;
+  const handleOpenSingleDeleteModal = (id, title = 'discount request') => {
+    setDeleteConfirmModal({
+      open: true,
+      isBulk: false,
+      id,
+      count: 1,
+      title,
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    const { isBulk, id } = deleteConfirmModal;
+    setLoading(true);
+    setDeleteConfirmModal({ open: false, isBulk: true, id: null, count: 0, title: '' });
     try {
-      await adminApi.deleteDiscountRequest(id);
-      setSuccessMsg('Discount request deleted successfully.');
+      if (isBulk) {
+        if (activeTab === 'verifications') {
+          await adminApi.bulkDeleteVerifications(selectedIds);
+        } else if (activeTab === 'documents') {
+          await adminApi.bulkDeleteContractorDocuments(selectedIds);
+        } else if (activeTab === 'customers') {
+          await adminApi.bulkDeleteUserRecordsOnly(selectedIds, 'customer');
+        } else if (activeTab === 'contractors') {
+          await adminApi.bulkDeleteUserRecordsOnly(selectedIds, 'contractor');
+        } else if (activeTab === 'discount_requests') {
+          await adminApi.bulkDeleteDiscountRequests(selectedIds);
+        }
+        setSuccessMsg(`✓ Successfully deleted ${selectedIds.length} record(s). User login accounts remain untouched.`);
+        setSelectedIds([]);
+      } else if (id) {
+        if (activeTab === 'discount_requests') {
+          await adminApi.deleteDiscountRequest(id);
+          setSuccessMsg('✓ Discount request deleted successfully.');
+        } else if (activeTab === 'documents') {
+          await adminApi.bulkDeleteContractorDocuments([id]);
+          setSuccessMsg('✓ Document record deleted successfully.');
+        } else if (activeTab === 'verifications') {
+          await adminApi.bulkDeleteVerifications([id]);
+          setSuccessMsg('✓ Verification record deleted successfully.');
+        }
+      }
       loadTabData();
     } catch (err) {
-      setError(err?.message || 'Failed to delete discount request.');
+      setError(err?.message || 'Failed to complete record deletion.');
+      setLoading(false);
     }
   };
 
@@ -881,7 +913,7 @@ export default function AdminVerificationProgressPage() {
             onDeselectAll={() => setSelectedIds([])}
             onExportCSV={() => handleExportTab('csv')}
             onExportJSON={() => handleExportTab('json')}
-            onDeleteSelected={handleBulkDelete}
+            onDeleteSelected={handleOpenBulkDeleteModal}
             styles={styles}
           />
 
@@ -1141,7 +1173,7 @@ export default function AdminVerificationProgressPage() {
             onDeselectAll={() => setSelectedIds([])}
             onExportCSV={() => handleExportTab('csv')}
             onExportJSON={() => handleExportTab('json')}
-            onDeleteSelected={handleBulkDelete}
+            onDeleteSelected={handleOpenBulkDeleteModal}
             styles={styles}
           />
 
@@ -1376,7 +1408,7 @@ export default function AdminVerificationProgressPage() {
             onDeselectAll={() => setSelectedIds([])}
             onExportCSV={() => handleExportTab('csv')}
             onExportJSON={() => handleExportTab('json')}
-            onDeleteSelected={handleBulkDelete}
+            onDeleteSelected={handleOpenBulkDeleteModal}
             styles={styles}
           />
 
@@ -1569,7 +1601,7 @@ export default function AdminVerificationProgressPage() {
             onDeselectAll={() => setSelectedIds([])}
             onExportCSV={() => handleExportTab('csv')}
             onExportJSON={() => handleExportTab('json')}
-            onDeleteSelected={handleBulkDelete}
+            onDeleteSelected={handleOpenBulkDeleteModal}
             styles={styles}
           />
 
@@ -1580,7 +1612,7 @@ export default function AdminVerificationProgressPage() {
                   <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
-                      checked={currentContractorDocs.length > 0 && currentContractors.every((i) => selectedIds.includes(i._id || i.id))}
+                      checked={currentContractors.length > 0 && currentContractors.every((i) => selectedIds.includes(i._id || i.id))}
                       onChange={() => toggleSelectAll(currentContractors)}
                       style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                       title="Select all on this page"
@@ -1769,7 +1801,7 @@ export default function AdminVerificationProgressPage() {
             onDeselectAll={() => setSelectedIds([])}
             onExportCSV={() => handleExportTab('csv')}
             onExportJSON={() => handleExportTab('json')}
-            onDeleteSelected={handleBulkDelete}
+            onDeleteSelected={handleOpenBulkDeleteModal}
             styles={styles}
           />
 
@@ -2064,7 +2096,7 @@ export default function AdminVerificationProgressPage() {
                                     type="button"
                                     onClick={() => {
                                       setActiveMenuId(null);
-                                      handleDeleteSingleDiscountRequest(reqId);
+                                      handleOpenSingleDeleteModal(reqId, 'discount request');
                                     }}
                                     style={{
                                       padding: '8px 12px',
@@ -2916,6 +2948,118 @@ export default function AdminVerificationProgressPage() {
                 disabled={replyModal.submitting || !replyModal.message.trim()}
               >
                 {replyModal.submitting ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION POPUP MODAL (Record-Only Guarantee) */}
+      {deleteConfirmModal.open && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => setDeleteConfirmModal({ open: false, isBulk: true, id: null, count: 0, title: '' })}
+        >
+          <div
+            style={{
+              ...styles.modalContentSmall,
+              maxWidth: '460px',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#dc2626',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>
+                  Confirm Deletion
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>
+                  Permanently remove {deleteConfirmModal.title}
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                marginBottom: '20px',
+                fontSize: '12.5px',
+                color: '#1e40af',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🛡️ User Accounts Protected</span>
+              </div>
+              <div>
+                This action only deletes the selected operational record(s) from this platform view. <strong>User login accounts and credentials will NOT be deleted</strong>.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ open: false, isBulk: true, id: null, count: 0, title: '' })}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Yes, Delete Records
               </button>
             </div>
           </div>
