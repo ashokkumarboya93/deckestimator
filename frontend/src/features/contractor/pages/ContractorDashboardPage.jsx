@@ -24,10 +24,12 @@ import bannerBg from '../../../assets/images/Banner_BG_img.png';
 import productImg from '../../../assets/images/deck_restoration_products.jpg';
 import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 import { SkeletonTable, SkeletonCard, SkeletonShimmer } from '../../../components/common';
+import { useContactChannels } from '../../../utils/contactChannels';
 
 export default function ContractorDashboardPage() {
   const navigate = useNavigate();
   const { user, contractorProfile } = useAuth();
+  const contactChannels = useContactChannels();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -999,13 +1001,13 @@ export default function ContractorDashboardPage() {
                   Toll-Free
                 </span>
               </div>
-              <a href="tel:8664403325" className="contractor-contact-val">
-                (866) 440-DECK
+              <a href={`tel:${(contactChannels.supportPhone || '').replace(/[^0-9]/g, '') || '8664403325'}`} className="contractor-contact-val">
+                {contactChannels.supportPhone || '(866) 440-DECK'}
               </a>
-              <span className="contractor-contact-sub">Shamong: (609) 268-3436</span>
+              <span className="contractor-contact-sub">Direct Line: {contactChannels.supportPhone || '(856) 666-8888'}</span>
 
               <div style={{ marginTop: '8px' }}>
-                <a href="tel:8664403325" className="contractor-contact-btn" style={styles.callNowBtn} title="Call (866) 440-DECK">
+                <a href={`tel:${(contactChannels.supportPhone || '').replace(/[^0-9]/g, '') || '8664403325'}`} className="contractor-contact-btn" style={styles.callNowBtn} title={`Call ${contactChannels.supportPhone || '(866) 440-DECK'}`}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                   </svg>
@@ -1033,18 +1035,18 @@ export default function ContractorDashboardPage() {
 
               <div style={styles.emailHighlightedBox}>
                 <a
-                  href="mailto:info@deckrestorationplus.com"
+                  href={`mailto:${contactChannels.supportEmail || 'support@deckestimator.com'}`}
                   style={styles.emailLink}
-                  title="Send email to info@deckrestorationplus.com"
+                  title={`Send email to ${contactChannels.supportEmail || 'support@deckestimator.com'}`}
                 >
-                  info@deckrestorationplus.com
+                  {contactChannels.supportEmail || 'support@deckestimator.com'}
                 </a>
               </div>
               <span className="contractor-contact-sub">Senior estimator inbox</span>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                 <a
-                  href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                  href={`mailto:${contactChannels.supportEmail || 'support@deckestimator.com'}?subject=Contractor%20Partner%20Inquiry`}
                   className="contractor-contact-btn"
                   style={styles.emailUsBtn}
                   title="Open email composer"
@@ -1058,7 +1060,11 @@ export default function ContractorDashboardPage() {
 
                 <button
                   type="button"
-                  onClick={handleCopyEmail}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(contactChannels.supportEmail || 'support@deckestimator.com');
+                    setCopiedEmail(true);
+                    setTimeout(() => setCopiedEmail(false), 2000);
+                  }}
                   className="contractor-contact-btn"
                   style={styles.copyBtn}
                   title="Copy email to clipboard"
@@ -1094,13 +1100,13 @@ export default function ContractorDashboardPage() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <span className="contractor-contact-label" style={{ color: '#1E3A63' }}>Headquarters</span>
-              <strong className="contractor-contact-val" style={{ color: '#0F172A' }}>
-                152 Indian Mills Rd #B
+              <strong className="contractor-contact-val" style={{ color: '#0F172A', fontSize: '12px' }}>
+                {contactChannels.businessAddress || '1452 Boardwalk Ave, Cherry Hill, NJ 08002'}
               </strong>
-              <span className="contractor-contact-sub">Shamong, NJ 08088</span>
+              <span className="contractor-contact-sub">{contactChannels.operatingHours || 'Mon - Fri: 8:00 AM - 6:00 PM EST'}</span>
               <div style={{ marginTop: '8px' }}>
                 <span style={{ fontSize: '10px', color: '#15803D', fontWeight: '700', backgroundColor: '#DCFCE7', padding: '2px 6px', borderRadius: '4px', border: '1px solid #BBF7D0' }}>
-                  Distribution &amp; Training
+                  Central Office
                 </span>
               </div>
             </div>

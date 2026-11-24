@@ -16,6 +16,7 @@ import { leadApi } from '../api/leadApi';
 import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_SCHEDULES } from '../../../constants/operatingHours';
+import { useContactChannels } from '../../../utils/contactChannels';
 
 const CALCULATOR_STEPS = [
   {
@@ -164,6 +165,8 @@ const TEN_FAQS = [
 
 export default function CustomerSupportPage() {
   const { user } = useAuth();
+  const contact = useContactChannels();
+  const phoneClean = (contact.supportPhone || '').replace(/[^0-9]/g, '');
 
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [activeFaq, setActiveFaq] = useState(null);
@@ -1277,9 +1280,13 @@ export default function CustomerSupportPage() {
                   <span className="drp-sup-contact-title">Phone Lines</span>
                 </div>
                 <div className="drp-sup-contact-body">
-                  <a href="tel:18664403325" className="drp-sup-contact-bold-link">Main: (866) 440-DECK</a>
-                  <a href="tel:16092683436" className="drp-sup-contact-bold-link" style={{ fontSize: '12px' }}>Shamong: (609) 268-3436</a>
-                  <span className="drp-sup-contact-sub-text">Mon – Fri: 8:00 AM – 5:00 PM EST</span>
+                  <a href={`tel:${phoneClean || '18566668888'}`} className="drp-sup-contact-bold-link">Direct: {contact.supportPhone || '(856) 666-8888'}</a>
+                  {contact.whatsappNumber && (
+                    <a href={`https://wa.me/${(contact.whatsappNumber || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="drp-sup-contact-bold-link" style={{ fontSize: '12px', color: '#16A34A' }}>
+                      WhatsApp: {contact.whatsappNumber}
+                    </a>
+                  )}
+                  <span className="drp-sup-contact-sub-text">{contact.operatingHours || 'Mon – Fri: 8:00 AM – 6:00 PM EST'}</span>
                 </div>
               </div>
             </div>
@@ -1297,12 +1304,12 @@ export default function CustomerSupportPage() {
                   <span className="drp-sup-contact-title">Official Email</span>
                 </div>
                 <div className="drp-sup-contact-body">
-                  <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>info@deckrestorationplus.com</span>
+                  <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>{contact.supportEmail || 'support@deckestimator.com'}</span>
                 </div>
               </div>
               <div className="drp-sup-contact-actions">
                 <a
-                  href="mailto:info@deckrestorationplus.com?subject=Deck%20Restoration%20Inquiry"
+                  href={`mailto:${contact.supportEmail || 'support@deckestimator.com'}?subject=Deck%20Restoration%20Inquiry`}
                   className="drp-sup-action-pill drp-sup-action-dark"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

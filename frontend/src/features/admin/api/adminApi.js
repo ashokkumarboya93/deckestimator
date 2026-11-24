@@ -295,8 +295,11 @@ export const adminApi = {
     const res = await client.get('/admin/notifications/history', { params: { limit } });
     return res.data;
   },
-  searchRecipients: async (q = '') => {
-    const res = await client.get('/admin/users/search-recipients', { params: { q } });
+  searchRecipients: async (q = '', role = '') => {
+    const params = {};
+    if (q) params.q = q;
+    if (role && role !== 'all') params.role = role;
+    const res = await client.get('/admin/users/search-recipients', { params });
     return res.data;
   },
 

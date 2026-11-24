@@ -591,7 +591,7 @@ async function getNotificationHistory(req, res, next) {
 
 async function searchRecipients(req, res, next) {
   try {
-    const data = await adminService.searchNotificationRecipients(req.query.q);
+    const data = await adminService.searchNotificationRecipients(req.query.q, req.query.role);
     res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);

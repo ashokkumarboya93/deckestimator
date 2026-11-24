@@ -19,9 +19,12 @@ import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 import { OPERATING_HOURS_SCHEDULES } from '../../../constants/operatingHours';
+import { useContactChannels } from '../../../utils/contactChannels';
 
 export default function ContractorSupportPage() {
   const { user } = useAuth();
+  const contact = useContactChannels();
+  const phoneClean = (contact.supportPhone || '').replace(/[^0-9]/g, '');
 
   // Responsive state
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
@@ -317,9 +320,13 @@ export default function ContractorSupportPage() {
                 <span style={styles.panelTitle}>Phone Lines</span>
               </div>
               <div style={styles.panelBody}>
-                <a href="tel:18664403325" style={styles.contactBoldLink}>Main: (866) 440-DECK</a>
-                <a href="tel:16092683436" style={{ ...styles.contactBoldLink, fontSize: '12px' }}>Shamong: (609) 268-3436</a>
-                <span style={styles.contactSubText}>Mon – Fri: 8:00 AM – 5:00 PM EST</span>
+                <a href={`tel:${phoneClean || '18566668888'}`} style={styles.contactBoldLink}>Direct: {contact.supportPhone || '(856) 666-8888'}</a>
+                {contact.whatsappNumber && (
+                  <a href={`https://wa.me/${(contact.whatsappNumber || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ ...styles.contactBoldLink, fontSize: '12px', color: '#16A34A' }}>
+                    WhatsApp: {contact.whatsappNumber}
+                  </a>
+                )}
+                <span style={styles.contactSubText}>{contact.operatingHours || 'Mon – Fri: 8:00 AM – 6:00 PM EST'}</span>
               </div>
             </div>
           </div>
@@ -337,12 +344,12 @@ export default function ContractorSupportPage() {
                 <span style={styles.panelTitle}>Official Email</span>
               </div>
               <div style={styles.panelBody}>
-                <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>info@deckrestorationplus.com</span>
+                <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>{contact.supportEmail || 'support@deckestimator.com'}</span>
               </div>
             </div>
             <div style={styles.panelActionsRow}>
               <a
-                href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                href={`mailto:${contact.supportEmail || 'support@deckestimator.com'}?subject=Contractor%20Partner%20Inquiry`}
                 style={{ ...styles.actionPill, ...styles.actionPillDark }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -353,7 +360,11 @@ export default function ContractorSupportPage() {
               </a>
               <button
                 type="button"
-                onClick={handleCopyEmail}
+                onClick={() => {
+                  navigator.clipboard?.writeText(contact.supportEmail || 'support@deckestimator.com');
+                  setCopiedEmail(true);
+                  setTimeout(() => setCopiedEmail(false), 2000);
+                }}
                 style={{ ...styles.actionPill, ...styles.actionPillOutline }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
