@@ -1150,6 +1150,24 @@ export default function LandingPage() {
             )}
           </div>
         )}
+
+        {/* Dual Navbar Accent Lines: Navy Blue (#0F2C59) on top of Wood (#C96D22) */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '4.5px',
+            display: 'flex',
+            flexDirection: 'column',
+            pointerEvents: 'none',
+            zIndex: 20,
+          }}
+        >
+          <div style={{ height: '2px', backgroundColor: '#0F2C59', width: '100%' }} />
+          <div style={{ height: '2.5px', backgroundColor: '#C96D22', width: '100%' }} />
+        </div>
       </header>
 
       {/* ======================================================== */}
@@ -2104,13 +2122,13 @@ const styles = {
     backgroundColor: 'rgba(255, 255, 255, 0.94)',
     backdropFilter: 'blur(16px)',
     WebkitBackdropFilter: 'blur(16px)',
-    borderBottom: '1px solid rgba(226, 232, 240, 0.85)',
+    borderBottom: 'none',
     boxShadow: '0 2px 8px rgba(15, 44, 89, 0.04)',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   headerScrolled: {
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderBottom: '1px solid rgba(203, 213, 225, 0.95)',
+    borderBottom: 'none',
     boxShadow: '0 4px 20px -2px rgba(15, 44, 89, 0.12), 0 2px 6px -1px rgba(15, 44, 89, 0.06)',
   },
   headerInner: {

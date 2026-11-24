@@ -808,6 +808,24 @@ export default function ContractorLayout() {
               </button>
             )}
           </div>
+
+          {/* Dual Navbar Accent Lines: Navy Blue (#0F2C59) on top of Wood (#C96D22) */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '4.5px',
+              display: 'flex',
+              flexDirection: 'column',
+              pointerEvents: 'none',
+              zIndex: 20,
+            }}
+          >
+            <div style={{ height: '2px', backgroundColor: '#0F2C59', width: '100%' }} />
+            <div style={{ height: '2.5px', backgroundColor: '#C96D22', width: '100%' }} />
+          </div>
         </header>
 
         {/* Dynamic Page Content */}
@@ -1010,8 +1028,8 @@ const styles = {
   topHeader: {
     height: '65px',
     backgroundColor: '#ffffff',
-    borderBottom: '2.5px solid #C96D22',
-    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
+    borderBottom: 'none',
+    boxShadow: '0 2px 6px rgba(15, 44, 89, 0.06)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1019,7 +1037,6 @@ const styles = {
     position: 'sticky',
     top: 0,
     zIndex: 40,
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
   },
   headerLeft: {
     display: 'flex',

@@ -37,12 +37,12 @@ function App() {
       <header
         style={{
           padding: '0.75rem 2rem',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: 'none',
           backgroundColor: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          boxShadow: '0 2px 6px rgba(15, 44, 89, 0.06)',
           position: 'sticky',
           top: 0,
           zIndex: 40,
@@ -304,6 +304,24 @@ function App() {
               </Link>
             </div>
           )}
+        </div>
+
+        {/* Dual Navbar Accent Lines: Navy Blue (#0F2C59) on top of Wood (#C96D22) */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '4.5px',
+            display: 'flex',
+            flexDirection: 'column',
+            pointerEvents: 'none',
+            zIndex: 20,
+          }}
+        >
+          <div style={{ height: '2px', backgroundColor: '#0F2C59', width: '100%' }} />
+          <div style={{ height: '2.5px', backgroundColor: '#C96D22', width: '100%' }} />
         </div>
       </header>
 
