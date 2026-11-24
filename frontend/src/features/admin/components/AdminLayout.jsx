@@ -522,8 +522,10 @@ export default function AdminLayout() {
               >
                 {user?.avatar && resolveAvatarUrl(user.avatar) ? (
                   <img
+                    key={String(user.avatar).substring(0, 32)}
                     src={resolveAvatarUrl(user.avatar)}
                     alt={user.fullName || 'Admin'}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     style={{
                       width: '32px',
                       height: '32px',

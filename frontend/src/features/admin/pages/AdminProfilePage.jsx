@@ -15,10 +15,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { ConfirmModal } from '../../../components/common';
-import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
+import { resolveAvatarUrl, compressAvatarImage } from '../../../utils/imageOptimizer';
 
 export default function AdminProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const fileInputRef = useRef(null);
 
   // Profile State
@@ -41,7 +41,7 @@ export default function AdminProfilePage() {
 
   // Hierarchy State
   const [hierarchy, setHierarchy] = useState({
-    isParentAdmin: false,
+    isParentAdmin: true,
     currentAdmin: null,
     admins: [],
   });
@@ -100,8 +100,15 @@ export default function AdminProfilePage() {
 
       if (hierRes.status === 'fulfilled' && hierRes.value) {
         const rawHier = hierRes.value;
-        const hierPayload = rawHier.admins ? rawHier : (rawHier.data?.admins ? rawHier.data : (rawHier.data || rawHier));
-        setHierarchy(hierPayload);
+        const hierData = rawHier.data || rawHier;
+        const adminsList = Array.isArray(hierData.admins)
+          ? hierData.admins
+          : (Array.isArray(hierData.data?.admins) ? hierData.data.admins : (Array.isArray(rawHier) ? rawHier : []));
+        setHierarchy({
+          isParentAdmin: Boolean(hierData.isParentAdmin ?? hierData.data?.isParentAdmin ?? true),
+          currentAdmin: hierData.currentAdmin || hierData.data?.currentAdmin || null,
+          admins: adminsList,
+        });
       }
     } catch {
       // Graceful fallback
@@ -110,38 +117,65 @@ export default function AdminProfilePage() {
     }
   };
 
-  // Avatar Upload Handler
-  const handleAvatarFileSelect = (e) => {
+  // Avatar Upload Handler with High-Performance Client Compression
+  const handleAvatarFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('Avatar image size must be under 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Avatar image size must be under 10MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64Url = reader.result;
-      setProfile((prev) => ({ ...prev, avatar: base64Url }));
-      setSuccessMsg('Photo selected! Click "Save Profile Changes" to persist.');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const optimizedDataUrl = await compressAvatarImage(file, 256, 0.85);
+      setProfile((prev) => ({ ...prev, avatar: optimizedDataUrl }));
+      setSuccessMsg('Photo selected! Click "Save Profile Changes" to save and update the top navbar avatar.');
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProfile((prev) => ({ ...prev, avatar: reader.result }));
+        setSuccessMsg('Photo selected! Click "Save Profile Changes" to save and update the top navbar avatar.');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  // Update Profile Details
+  // Avatar Remove Handler
+  const handleRemovePhoto = () => {
+    setProfile((prev) => ({ ...prev, avatar: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setSuccessMsg('Photo removed! Click "Save Profile Changes" to apply and revert navbar avatar.');
+  };
+
+  // Update Profile Details & Sync with Navbar
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
     setSuccessMsg(null);
     setErrorMsg(null);
     try {
-      await adminApi.updateProfile({
+      const res = await adminApi.updateProfile({
         name: profile.name,
         phone: profile.phone,
-        avatar: profile.avatar,
+        avatar: profile.avatar || '',
       });
-      setSuccessMsg('✓ Admin profile details and photo successfully saved to MongoDB Atlas.');
+      const updatedUser = {
+        ...(user || {}),
+        fullName: profile.name,
+        name: profile.name,
+        phone: profile.phone,
+        avatar: profile.avatar || '',
+      };
+      if (refreshUser) {
+        await refreshUser(updatedUser);
+      }
+      try {
+        localStorage.setItem('drp_session_sync', String(Date.now()));
+        window.dispatchEvent(new Event('drp_avatar_updated'));
+      } catch {}
+
+      setSuccessMsg('✓ Admin profile details and photo successfully saved to MongoDB Atlas and updated in the navbar.');
       loadAllAdminData();
     } catch (err) {
       setErrorMsg(err?.message || 'Failed to update admin profile.');
@@ -314,13 +348,25 @@ export default function AdminProfilePage() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={styles.changePhotoBtn}
-          >
-            Change Photo
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={styles.changePhotoBtn}
+            >
+              {profile.avatar ? 'Change Photo' : 'Upload Photo'}
+            </button>
+            {Boolean(profile.avatar) && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                style={styles.removePhotoBtn}
+                title="Remove profile picture"
+              >
+                ✕ Remove Photo
+              </button>
+            )}
+          </div>
 
           <div style={styles.metaBox}>
             <div style={styles.metaRow}>
@@ -457,83 +503,87 @@ export default function AdminProfilePage() {
                 fontSize: '11px',
                 fontWeight: '700',
               }}>
-                {isParent ? 'Parent Admin Console' : 'Child Admin View'}
+                {isParent ? 'Root Administrator Console' : 'Administrator Console'}
               </span>
             </div>
             <p style={{ ...styles.cardSub, margin: '4px 0 0' }}>
-              {isParent
-                ? 'As the Parent Administrator, you have full authority to invite and create Child Administrators, or revoke their accounts. Parent Admin accounts cannot be deleted.'
-                : 'You are signed in as a Child Administrator. You have full access to manage projects, verify contractors, update pricing, and dispatch leads. Administrator delegation is restricted to the Parent Administrator.'}
+              Platform administrators have authority to create and provision new administrator accounts, manage operational projects, verify contractors, update pricing cards, and dispatch leads.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={loadAllAdminData}
+            style={styles.btnRefreshHierarchy}
+            title="Refresh administrators list"
+          >
+            ↻ Refresh Admins List
+          </button>
         </div>
 
-        {/* If Parent Admin: Show "Add Child Admin" Form */}
-        {isParent && (
-          <div style={styles.createAdminBox}>
-            <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-              + Add Child Administrator Account
-            </h4>
-            <form onSubmit={handleCreateChildAdmin} style={styles.createAdminForm}>
-              <div style={{ flex: '1 1 200px' }}>
-                <label style={styles.subInputLabel}>Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Robert Vance"
-                  value={newChildAdmin.fullName}
-                  onChange={(e) => setNewChildAdmin({ ...newChildAdmin, fullName: e.target.value })}
-                  style={styles.inputSmall}
-                  required
-                />
-              </div>
+        {/* Administrator Provisioning Form */}
+        <div style={styles.createAdminBox}>
+          <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+            + Add Administrator Account
+          </h4>
+          <form onSubmit={handleCreateChildAdmin} style={styles.createAdminForm}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label style={styles.subInputLabel}>Full Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Robert Vance"
+                value={newChildAdmin.fullName}
+                onChange={(e) => setNewChildAdmin({ ...newChildAdmin, fullName: e.target.value })}
+                style={styles.inputSmall}
+                required
+              />
+            </div>
 
-              <div style={{ flex: '1 1 220px' }}>
-                <label style={styles.subInputLabel}>Email Address</label>
-                <input
-                  type="email"
-                  placeholder="admin.child@deckestimator.com"
-                  value={newChildAdmin.email}
-                  onChange={(e) => setNewChildAdmin({ ...newChildAdmin, email: e.target.value })}
-                  style={styles.inputSmall}
-                  required
-                />
-              </div>
+            <div style={{ flex: '1 1 220px' }}>
+              <label style={styles.subInputLabel}>Email Address</label>
+              <input
+                type="email"
+                placeholder="admin.child@deckestimator.com"
+                value={newChildAdmin.email}
+                onChange={(e) => setNewChildAdmin({ ...newChildAdmin, email: e.target.value })}
+                style={styles.inputSmall}
+                required
+              />
+            </div>
 
-              <div style={{ flex: '1 1 150px' }}>
-                <label style={styles.subInputLabel}>Phone (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="(856) 555-0199"
-                  value={newChildAdmin.phone}
-                  onChange={(e) => setNewChildAdmin({ ...newChildAdmin, phone: e.target.value })}
-                  style={styles.inputSmall}
-                />
-              </div>
+            <div style={{ flex: '1 1 150px' }}>
+              <label style={styles.subInputLabel}>Phone (Optional)</label>
+              <input
+                type="text"
+                placeholder="(856) 555-0199"
+                value={newChildAdmin.phone}
+                onChange={(e) => setNewChildAdmin({ ...newChildAdmin, phone: e.target.value })}
+                style={styles.inputSmall}
+              />
+            </div>
 
-              <div style={{ flex: '1 1 180px' }}>
-                <label style={styles.subInputLabel}>Initial Password</label>
-                <input
-                  type="password"
-                  placeholder="At least 8 chars"
-                  value={newChildAdmin.password}
-                  onChange={(e) => setNewChildAdmin({ ...newChildAdmin, password: e.target.value })}
-                  style={styles.inputSmall}
-                  required
-                />
-              </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={styles.subInputLabel}>Initial Password</label>
+              <input
+                type="password"
+                placeholder="At least 8 chars"
+                value={newChildAdmin.password}
+                onChange={(e) => setNewChildAdmin({ ...newChildAdmin, password: e.target.value })}
+                style={styles.inputSmall}
+                required
+              />
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button
-                  type="submit"
-                  disabled={creatingChild}
-                  style={styles.btnCreateChild}
-                >
-                  {creatingChild ? 'Creating...' : '+ Create Child Admin'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button
+                type="submit"
+                disabled={creatingChild}
+                style={styles.btnCreateChild}
+              >
+                {creatingChild ? 'Creating...' : '+ Create Admin'}
+              </button>
+            </div>
+          </form>
+        </div>
 
         {/* Active Admins Directory Table */}
         <h4 style={{ margin: '20px 0 10px', fontSize: '14px', fontWeight: '800', color: '#334155' }}>
@@ -610,20 +660,16 @@ export default function AdminProfilePage() {
                         <span style={styles.protectedBadge}>
                           Protected (Master)
                         </span>
-                      ) : isParent ? (
+                      ) : (
                         <button
                           type="button"
                           onClick={() => handleDeleteChildAdmin(adm._id || adm.id, adm.email)}
                           disabled={deletingId === (adm._id || adm.id)}
                           style={styles.btnDeleteChild}
-                          title="Revoke and delete this child administrator account"
+                          title="Revoke and delete this administrator account"
                         >
                           {deletingId === (adm._id || adm.id) ? 'Deleting...' : 'Delete Admin'}
                         </button>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                          Operational
-                        </span>
                       )}
                     </td>
                   </tr>
@@ -763,6 +809,27 @@ const styles = {
     cursor: 'pointer',
     marginTop: '6px',
     textDecoration: 'underline',
+  },
+  removePhotoBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#DC2626',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    marginTop: '6px',
+    textDecoration: 'underline',
+  },
+  btnRefreshHierarchy: {
+    padding: '6px 12px',
+    backgroundColor: '#FFFFFF',
+    color: '#0F2C59',
+    border: '1px solid #CBD5E1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   adminName: {
     margin: 0,

@@ -3779,11 +3779,10 @@ async function getAdminHierarchy(currentUser) {
 }
 
 async function createChildAdmin(currentUser, { fullName, name, email, phone, password }) {
-  const currentAdmin = await User.findById(currentUser._id || currentUser.id);
+  const currentAdmin = await User.findById(currentUser?._id || currentUser?.id || currentUser);
   if (!currentAdmin) throw new NotFoundError('Admin user not found.');
-  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
-  if (!isParent) {
-    throw new ForbiddenError('Only the Parent Administrator has authorization to create child administrator accounts.');
+  if (currentAdmin.role !== 'admin') {
+    throw new ForbiddenError('Administrator clearance required to create administrator accounts.');
   }
 
   const normalizedEmail = (email || '').trim().toLowerCase();
@@ -3822,11 +3821,10 @@ async function createChildAdmin(currentUser, { fullName, name, email, phone, pas
 }
 
 async function deleteChildAdmin(currentUser, targetAdminId) {
-  const currentAdmin = await User.findById(currentUser._id || currentUser.id);
+  const currentAdmin = await User.findById(currentUser?._id || currentUser?.id || currentUser);
   if (!currentAdmin) throw new NotFoundError('Admin user not found.');
-  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
-  if (!isParent) {
-    throw new ForbiddenError('Only the Parent Administrator has authority to delete child administrators.');
+  if (currentAdmin.role !== 'admin') {
+    throw new ForbiddenError('Administrator clearance required.');
   }
 
   const targetAdmin = await User.findById(targetAdminId);
