@@ -184,11 +184,11 @@ export default function CustomerLayout() {
 
   const initials = user?.fullName
     ? user.fullName
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase()
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
     : 'CU';
 
   // Compute page title and breadcrumbs
@@ -441,8 +441,11 @@ export default function CustomerLayout() {
         {/* TOP NAVIGATION BAR */}
         <header style={{
           ...styles.topHeader,
-          height: isSmallMobile ? '58px' : '65px',
-          padding: isMobile ? '0 12px' : '0 24px',
+          height: isSmallMobile ? '56px' : (isMobile ? '60px' : '65px'),
+          padding: isMobile ? '0 14px' : '0 24px',
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E2E8F0',
+          boxShadow: isMobile ? '0 1px 3px rgba(15, 23, 42, 0.04)' : '0 1px 3px rgba(0, 0, 0, 0.02)',
         }}>
           {/* Left: Hamburger (mobile) + Dynamic Back Button / Project Name / Brand Logo */}
           <div style={{ ...styles.headerLeft, gap: isSmallMobile ? '6px' : '12px', minWidth: 0 }}>
@@ -532,12 +535,6 @@ export default function CustomerLayout() {
                   </svg>
                 </div>
                 <div style={{ textAlign: 'left', minWidth: 0 }}>
-                  {!isMobile && !currentPath.includes('/customer/profile') && (
-                    <div style={styles.breadcrumbText}>
-                      <span style={{ color: '#1E3A63', fontWeight: '700' }}>← </span>
-                      {pageInfo.breadcrumb}
-                    </div>
-                  )}
                   <h1 style={{ ...styles.headerTitle, fontSize: isSmallMobile ? '14px' : (isMobile ? '15.5px' : '1.15rem'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pageInfo.title}</h1>
                 </div>
               </button>
@@ -546,16 +543,11 @@ export default function CustomerLayout() {
 
           {/* Right: Notifications, Profile, Logout */}
           <div style={{ ...styles.headerRight, gap: isSmallMobile ? '6px' : (isMobile ? '8px' : '14px'), flexShrink: 0 }}>
-            {/* Quick Action Button — hidden inside mobile estimator for clean single-row layout */}
-            {!(isMobile && isEstimatorPage) && (
+            {/* Quick Action Button — Desktop only to keep mobile navbar clean and uncluttered */}
+            {!isMobile && (
               <Link
                 to="/customer/decks/new"
-                style={{
-                  ...styles.primaryActionBtn,
-                  padding: isSmallMobile ? '6px 9px' : (isMobile ? '7px 12px' : '8px 18px'),
-                  fontSize: isSmallMobile ? '11.5px' : (isMobile ? '12.5px' : '13.5px'),
-                  whiteSpace: 'nowrap',
-                }}
+                style={styles.primaryActionBtn}
                 title="Start New Estimation"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#274A7C';
@@ -564,7 +556,7 @@ export default function CustomerLayout() {
                   e.currentTarget.style.backgroundColor = '#1E3A63';
                 }}
               >
-                <span>{isSmallMobile ? '+ Estimate' : '+ New Estimation'}</span>
+                <span>+ New Estimation</span>
               </Link>
             )}
 
@@ -890,7 +882,7 @@ const styles = {
   container: {
     display: 'flex',
     minHeight: '100vh',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#F0F4F8',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   },
   sidebar: {

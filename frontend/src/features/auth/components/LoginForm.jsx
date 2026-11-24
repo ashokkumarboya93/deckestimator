@@ -234,7 +234,7 @@ export function LoginForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: fieldErrors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#D0E1F9',
+              borderColor: fieldErrors.email ? '#ef4444' : touched.email && isValidEmail ? '#22c55e' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -284,7 +284,7 @@ export function LoginForm() {
             className="auth-input-wrap"
             style={{
               ...styles.inputWrap,
-              borderColor: fieldErrors.password ? '#ef4444' : '#D0E1F9',
+              borderColor: fieldErrors.password ? '#ef4444' : '#CBD5E1',
             }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.inputIcon} className="auth-input-icon">
@@ -360,10 +360,10 @@ export function LoginForm() {
         </button>
       </form>
 
-      {/* Bottom Switch Link */}
+      {/* Bottom Switch Link / Highlighted Text Only */}
       <div style={styles.footerLinkWrap} className="auth-footer-link-wrap">
-        <span style={styles.footerPrompt}>Don't have an account? </span>
-        <Link to="/register" style={styles.footerLink}>
+        <span style={styles.footerPrompt}>Don't have an account?</span>{' '}
+        <Link to="/register" style={styles.highlightedLink} className="auth-highlighted-link">
           Create Account
         </Link>
       </div>
@@ -522,14 +522,14 @@ export function LoginForm() {
 const styles = {
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '20px',
-    boxShadow: '0 20px 45px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04)',
+    borderRadius: '22px',
+    boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 20px 32px -8px rgba(15, 23, 42, 0.06)',
     padding: '30px 32px 26px 32px',
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
     boxSizing: 'border-box',
-    border: '1px solid rgba(226, 232, 240, 0.8)',
+    border: '1px solid #CBD5E1',
   },
   cardBottomWave: {
     position: 'absolute',
@@ -537,14 +537,28 @@ const styles = {
     left: 0,
     right: 0,
     height: '36px',
-    background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.55) 100%)',
+    background: 'linear-gradient(180deg, transparent 0%, rgba(220, 238, 255, 0.45) 100%)',
     pointerEvents: 'none',
-    borderBottomLeftRadius: '20px',
-    borderBottomRightRadius: '20px',
+    borderBottomLeftRadius: '22px',
+    borderBottomRightRadius: '22px',
   },
   header: {
-    marginBottom: '18px',
+    marginBottom: '16px',
     textAlign: 'center',
+  },
+  infoBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '11px 14px',
+    backgroundColor: '#F0F9FF',
+    border: '1px solid #7DD3FC',
+    borderRadius: '12px',
+    color: '#0369A1',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    marginBottom: '16px',
+    lineHeight: 1.45,
   },
   logoWrap: {
     display: 'flex',
@@ -629,15 +643,15 @@ const styles = {
   inputWrap: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#F0F6FF',
-    border: '1px solid #D0E1F9',
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #CBD5E1',
     borderRadius: '12px',
     padding: '0 14px',
     height: '48px',
     width: '100%',
     minWidth: 0,
     boxSizing: 'border-box',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   inputIcon: {
     flexShrink: 0,
@@ -703,14 +717,34 @@ const styles = {
   },
   footerLinkWrap: {
     textAlign: 'center',
-    marginTop: '24px',
+    marginTop: '20px',
     fontSize: '13.5px',
     color: '#64748B',
     position: 'relative',
     zIndex: 2,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
   },
   footerPrompt: {
     color: '#64748B',
+    fontWeight: '500',
+  },
+  highlightedLink: {
+    color: '#0A58CA',
+    fontWeight: '700',
+    fontSize: '14px',
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    padding: '3px 9px',
+    borderRadius: '6px',
+    backgroundColor: '#EFF6FF',
+    border: '1px solid #DBEAFE',
+    transition: 'all 0.2s ease',
   },
   footerLink: {
     color: '#033B85',

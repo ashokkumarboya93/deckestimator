@@ -551,8 +551,8 @@ function calculateRestorationEstimate(inp = {}, customCfg = null) {
 
   // F9 Wood Labour Adjustment (additive on base hours) - Includes Mahogany & Teak (Q2)
   const woodKey = normKey(inp.wood || inp.woodSpecies || 'pt_pine');
-  const woodMap = cfg.wood || DEFAULT_PRICING_CONFIG.wood;
-  const woodData = woodMap[woodKey] || woodMap.pt_pine || { pct: 0, label: 'Pressure-treated pine' };
+  const woodMap = (cfg && cfg.wood) ? cfg.wood : (DEFAULT_PRICING_CONFIG?.wood || {});
+  const woodData = (woodMap && (woodMap[woodKey] || woodMap.pt_pine)) || { pct: 0, label: 'Pressure-treated pine' };
   const woodPct = Number(woodData.pct || 0);
   const woodHours = baseHours * woodPct;
 

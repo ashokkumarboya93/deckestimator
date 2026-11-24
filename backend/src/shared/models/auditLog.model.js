@@ -71,6 +71,46 @@ const auditLogSchema = new mongoose.Schema(
 
 auditLogSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 
+/**
+ * Sanitizes oldValue and newValue to ensure base64 photos or large blobs
+ * never bloat MongoDB audit log storage.
+ */
+function sanitizeAuditPayload(data) {
+  if (!data) return data;
+  if (typeof data === 'string') {
+    if (data.startsWith('data:image') || (data.length > 2000 && !data.includes(' '))) {
+      return `[image/blob omitted - ${data.length} chars]`;
+    }
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeAuditPayload(item));
+  }
+  if (typeof data === 'object' && data !== null) {
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'photos' || key === 'avatar' || key === 'profileImage') {
+        if (Array.isArray(value)) {
+          sanitized[key] = `[${value.length} photos omitted from audit]`;
+        } else if (typeof value === 'string' && (value.startsWith('data:image') || value.length > 200)) {
+          sanitized[key] = `[photo omitted from audit - ${value.length} chars]`;
+        } else {
+          sanitized[key] = value;
+        }
+      } else {
+        sanitized[key] = sanitizeAuditPayload(value);
+      }
+    }
+    return sanitized;
+  }
+  return data;
+}
+
+auditLogSchema.pre('save', function () {
+  if (this.oldValue) this.oldValue = sanitizeAuditPayload(this.oldValue);
+  if (this.newValue) this.newValue = sanitizeAuditPayload(this.newValue);
+});
+
 const AuditLog = mongoose.model('AuditLog', auditLogSchema, 'auditLogs');
 
 module.exports = AuditLog;

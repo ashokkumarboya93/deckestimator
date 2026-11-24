@@ -231,9 +231,10 @@ export default function CustomerProfilePage() {
     <div className="drp-prof-wrap">
       <style>{`
         .drp-prof-wrap {
-          max-width: 980px;
+          max-width: 960px;
           margin: 0 auto;
-          padding: 14px 18px 24px;
+          padding: 10px 18px 24px;
+          box-sizing: border-box;
           font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
         .drp-prof-header {
@@ -241,40 +242,45 @@ export default function CustomerProfilePage() {
           justify-content: space-between;
           align-items: center;
           gap: 12px;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
           flex-wrap: wrap;
         }
         .drp-prof-card {
           background-color: #FFFFFF;
-          border-radius: 10px;
+          border-radius: 9px;
           border: 1px solid #E2E8F0;
-          padding: 14px 18px;
+          padding: 12px 18px;
           box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          box-sizing: border-box;
         }
         .drp-prof-grid-2 {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px 12px;
+          gap: 10px 18px;
         }
         .drp-prof-grid-3 {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px 12px;
+          gap: 10px 14px;
         }
         .drp-prof-col-full {
           grid-column: 1 / -1;
         }
         .drp-prof-input {
           width: 100%;
+          max-width: 360px;
           box-sizing: border-box;
-          padding: 8px 11px;
-          border-radius: 7px;
+          padding: 7px 11px;
+          border-radius: 6px;
           border: 1px solid #CBD5E1;
           font-size: 13px !important;
           color: #0F172A;
           background-color: #FFFFFF;
           outline: none;
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .drp-prof-input-wide {
+          max-width: 520px;
         }
         .drp-prof-input:focus {
           border-color: #034EA2;
@@ -284,6 +290,14 @@ export default function CustomerProfilePage() {
           position: relative;
           display: flex;
           align-items: center;
+          width: 100%;
+          max-width: 360px;
+        }
+        .drp-prof-method-group {
+          display: flex;
+          gap: 6px;
+          width: 100%;
+          max-width: 360px;
         }
         .drp-prof-pw-input {
           padding-right: 36px !important;
@@ -311,89 +325,102 @@ export default function CustomerProfilePage() {
           color: #034EA2;
           background-color: #F1F5F9;
         }
+
         @media (max-width: 900px) {
           .drp-prof-wrap {
-            padding: 12px 14px 22px;
-          }
-          .drp-prof-title {
-            font-size: 18px !important;
-          }
-          .drp-prof-card {
-            padding: 13px 15px;
-          }
-          .drp-prof-card-heading {
-            font-size: 14px !important;
+            padding: 10px 14px 20px;
           }
           .drp-prof-grid-3 {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
+
         @media (max-width: 640px) {
           .drp-prof-wrap {
-            padding: 10px 10px 20px;
+            padding: 8px 8px 20px;
+          }
+          .drp-prof-header {
+            margin-bottom: 6px;
+            gap: 8px;
           }
           .drp-prof-title {
-            font-size: 16.5px !important;
+            font-size: 16px !important;
           }
           .drp-prof-sub {
             font-size: 11px !important;
             line-height: 1.35;
           }
           .drp-prof-top-save {
-            padding: 7px 12px !important;
-            font-size: 11.5px !important;
-            min-height: 32px !important;
+            padding: 6px 11px !important;
+            font-size: 11px !important;
+            min-height: 30px !important;
+            border-radius: 6px !important;
           }
           .drp-prof-card {
-            padding: 11px 12px;
-            border-radius: 9px;
+            padding: 9px 11px !important;
+            border-radius: 8px !important;
           }
           .drp-prof-card-header {
-            padding-bottom: 6px !important;
-            margin-bottom: 8px !important;
+            padding-bottom: 4px !important;
+            margin-bottom: 6px !important;
           }
           .drp-prof-card-heading {
-            font-size: 13.5px !important;
+            font-size: 13px !important;
           }
           .drp-prof-card-sub {
-            font-size: 10.5px !important;
+            display: none !important;
           }
           .drp-prof-grid-2,
           .drp-prof-grid-3 {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 8px;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 7px !important;
           }
           .drp-prof-avatar-row {
             gap: 10px !important;
           }
           .drp-prof-avatar-circle {
-            width: 56px !important;
-            height: 56px !important;
+            width: 48px !important;
+            height: 48px !important;
           }
           .drp-prof-avatar-fallback {
-            font-size: 19px !important;
+            font-size: 17px !important;
           }
           .drp-prof-upload-btn {
-            padding: 6px 11px !important;
-            font-size: 11.5px !important;
-            min-height: 32px !important;
+            padding: 5px 10px !important;
+            font-size: 11px !important;
+            min-height: 28px !important;
+          }
+          .drp-prof-remove-btn {
+            padding: 4px 8px !important;
+            font-size: 10.5px !important;
+          }
+          .drp-prof-avatar-hint {
+            display: none !important;
           }
           .drp-prof-label {
             font-size: 11px !important;
           }
           .drp-prof-input {
-            padding: 7px 9px !important;
+            padding: 6.5px 9px !important;
             font-size: 12.5px !important;
+            min-height: 34px !important;
+          }
+          .drp-prof-input,
+          .drp-prof-input-wide,
+          .drp-prof-pw-wrap,
+          .drp-prof-method-group {
+            max-width: 100% !important;
           }
           .drp-prof-method-btn {
-            padding: 6px 8px !important;
-            font-size: 11px !important;
-            min-height: 32px !important;
+            padding: 5px 6px !important;
+            font-size: 10.5px !important;
+            min-height: 29px !important;
           }
           .drp-prof-bottom-save {
-            width: 100%;
+            width: 100% !important;
             padding: 9px 14px !important;
             font-size: 12.5px !important;
+            border-radius: 7px !important;
           }
         }
       `}</style>
@@ -492,12 +519,13 @@ export default function CustomerProfilePage() {
                       type="button"
                       onClick={handleRemovePhoto}
                       style={styles.removePhotoBtn}
+                      className="drp-prof-remove-btn"
                     >
                       Remove
                     </button>
                   )}
                 </div>
-                <span style={styles.avatarHint}>
+                <span style={styles.avatarHint} className="drp-prof-avatar-hint">
                   Auto-optimized JPG, PNG, or WebP (max 10 MB upload).
                 </span>
               </div>
@@ -550,7 +578,7 @@ export default function CustomerProfilePage() {
 
               <div style={styles.inputGroup}>
                 <label className="drp-prof-label" style={styles.label}>Preferred Contact Method</label>
-                <div style={styles.contactMethodGroup}>
+                <div style={styles.contactMethodGroup} className="drp-prof-method-group">
                   {['email', 'phone', 'sms'].map((method) => (
                     <button
                       key={method}
@@ -592,7 +620,7 @@ export default function CustomerProfilePage() {
                   value={street}
                   onChange={markDirty(setStreet)}
                   placeholder="123 Oakwood Drive"
-                  className="drp-prof-input"
+                  className="drp-prof-input drp-prof-input-wide"
                 />
               </div>
 
@@ -774,7 +802,7 @@ const styles = {
     flexShrink: 0,
   },
   headingTitle: {
-    fontSize: '20px',
+    fontSize: '19px',
     fontWeight: '800',
     color: '#0F172A',
     margin: '0 0 2px 0',
@@ -786,24 +814,24 @@ const styles = {
     margin: 0,
   },
   alertSuccess: {
-    padding: '9px 14px',
+    padding: '8px 14px',
     backgroundColor: '#DCFCE7',
     border: '1px solid #86EFAC',
     borderRadius: '8px',
     color: '#15803D',
-    fontSize: '12.5px',
+    fontSize: '12px',
     fontWeight: '600',
-    marginBottom: '10px',
+    marginBottom: '8px',
   },
   alertError: {
-    padding: '9px 14px',
+    padding: '8px 14px',
     backgroundColor: '#FEE2E2',
     border: '1px solid #FCA5A5',
     borderRadius: '8px',
     color: '#B91C1C',
-    fontSize: '12.5px',
+    fontSize: '12px',
     fontWeight: '600',
-    marginBottom: '10px',
+    marginBottom: '8px',
   },
   loadingBox: {
     padding: '24px',
@@ -817,35 +845,35 @@ const styles = {
   formLayout: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '10px',
+    borderRadius: '9px',
     border: '1px solid #E2E8F0',
-    padding: '14px 18px',
+    padding: '12px 18px',
     boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
   },
   cardHeader: {
     borderBottom: '1px solid #F1F5F9',
-    paddingBottom: '8px',
-    marginBottom: '10px',
+    paddingBottom: '5px',
+    marginBottom: '8px',
   },
   cardHeading: {
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: '700',
     color: '#0F172A',
-    margin: '0 0 2px 0',
+    margin: '0 0 1px 0',
   },
   cardSub: {
-    fontSize: '11.5px',
+    fontSize: '11px',
     color: '#64748B',
     display: 'block',
   },
   avatarSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '18px',
+    gap: '14px',
     flexWrap: 'wrap',
   },
   avatarWrap: {
@@ -921,6 +949,7 @@ const styles = {
   contactMethodGroup: {
     display: 'flex',
     gap: '6px',
+    maxWidth: '360px',
   },
   contactMethodBtn: {
     flex: 1,

@@ -18,17 +18,17 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { getEstimates, getEstimateById, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
-import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
+import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
 import { SkeletonTable, SkeletonShimmer } from '../../../components/common';
 
 const DEFAULT_THUMBS = [
-  ESTIMATOR_IMAGES.shapes.rectangle.references[1] || ESTIMATOR_IMAGES.shapes.rectangle.main,
-  ESTIMATOR_IMAGES.woodSpecies.cedar.main,
-  ESTIMATOR_IMAGES.woodSpecies.redwood.main,
-  ESTIMATOR_IMAGES.services.staining.main,
-  ESTIMATOR_IMAGES.services.cleaning.main,
+  ESTIMATOR_IMAGES?.shapes?.rectangle?.references?.[1] || ESTIMATOR_IMAGES?.shapes?.rectangle?.main || '',
+  ESTIMATOR_IMAGES?.woodSpecies?.cedar?.main || '',
+  ESTIMATOR_IMAGES?.woodSpecies?.redwood?.main || '',
+  ESTIMATOR_IMAGES?.services?.staining?.main || '',
+  ESTIMATOR_IMAGES?.services?.cleaning?.main || '',
 ];
 
 function extractEstimatePhotos(est) {
@@ -51,12 +51,12 @@ export default function CustomerEstimatesPage() {
   const [error, setError] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
   const [errorToast, setErrorToast] = useState(null);
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
 
   // Responsive listener for mobile and tablets
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 1024);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -509,32 +509,102 @@ export default function CustomerEstimatesPage() {
       ...styles.pageContainer,
       padding: isMobile ? '12px 10px 44px 10px' : '16px 24px 60px 24px',
     }}>
+      <style>{`
+        .cust-est-kpi-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+          margin-bottom: 16px !important;
+        }
+        @media (min-width: 1025px) {
+          .cust-est-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 14px !important;
+          }
+        }
+        .cust-est-kpi-card {
+          border-radius: 12px !important;
+          padding: 10px 12px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          min-width: 0 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+          border-width: 1px !important;
+          border-style: solid !important;
+          transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        @media (max-width: 380px) {
+          .cust-est-kpi-card {
+            padding: 8px 10px !important;
+            gap: 8px !important;
+          }
+        }
+        .cust-est-hero-banner {
+          border-radius: 14px !important;
+          margin-bottom: 14px !important;
+          border: 1px solid rgba(255, 255, 255, 0.35) !important;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+          overflow: hidden !important;
+          position: relative !important;
+        }
+        .cust-est-hero-btn {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          width: auto !important;
+          max-width: max-content !important;
+          height: 34px !important;
+          padding: 0 14px !important;
+          font-size: 12.5px !important;
+          font-weight: 700 !important;
+          border-radius: 8px !important;
+          box-shadow: 0 2px 6px rgba(224, 129, 49, 0.35) !important;
+          cursor: pointer !important;
+          border: none !important;
+        }
+      `}</style>
+
       {/* 1. HERO HEADER BANNER (Consistent with Dashboard Navy Overlay) */}
       <section
+        className="cust-est-hero-banner"
         style={{
           ...styles.heroBanner,
-          padding: isMobile ? '20px 16px' : '36px 40px',
-          minHeight: isMobile ? 'auto' : '220px',
-          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.94) 46%, rgba(30, 58, 99, 0.35) 100%), url(${deckBannerWood})`,
+          padding: isMobile ? '16px 16px' : '26px 36px',
+          minHeight: 'auto',
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 25%, transparent 55%), linear-gradient(90deg, rgba(16, 38, 72, 0.72) 0%, rgba(22, 48, 88, 0.58) 28%, rgba(30, 58, 99, 0.28) 42%, rgba(30, 58, 99, 0.04) 52%, rgba(0, 0, 0, 0) 100%), url(${bannerBgImg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        <div style={styles.heroContent}>
-          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '21px' : '30px', margin: '0 0 6px 0' }}>
+        <div style={{ ...styles.heroContent, padding: 0 }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            backgroundColor: 'rgba(255, 255, 255, 0.14)',
+            border: '1px solid rgba(255, 255, 255, 0.22)',
+            borderRadius: '100px',
+            padding: '3px 10px',
+            fontSize: '11px',
+            fontWeight: '700',
+            color: 'rgba(255, 255, 255, 0.95)',
+            width: 'fit-content',
+            marginBottom: '4px',
+            letterSpacing: '0.2px',
+          }}>
+            <span>Wood Restoration</span>
+          </div>
+          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '20px' : '26px', margin: '0 0 12px 0' }}>
             My Projects &amp; Estimations
           </h1>
-          <p style={{ ...styles.heroSubtitle, fontSize: isMobile ? '12.5px' : '14px', margin: '0 0 14px 0' }}>
-            Review specifications, track review status, export official estimate documents, and manage your deck restoration portfolio.
-          </p>
           <div style={styles.heroBtnRow}>
             <button
               type="button"
               onClick={() => navigate('/customer/decks/new')}
-              style={{
-                ...styles.heroPrimaryBtn,
-                width: isMobile ? '100%' : 'auto',
-                justifyContent: 'center',
-                padding: isMobile ? '10px 16px' : '11px 22px',
-              }}
+              className="cust-est-hero-btn"
+              style={styles.heroPrimaryBtn}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#C96D22';
                 e.currentTarget.style.transform = 'translateY(-1px)';
@@ -544,23 +614,30 @@ export default function CustomerEstimatesPage() {
                 e.currentTarget.style.transform = 'none';
               }}
             >
-              <span>+ Create New Estimate</span>
-              <span style={{ fontSize: '15px', fontWeight: '800' }}>&rarr;</span>
+              <span>+ New Estimate</span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* 2. SUMMARY KPI CARDS */}
-      <div style={{
-        ...styles.kpiGrid,
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-        gap: isMobile ? '8px' : '14px',
-      }}>
+      {/* 2. SUMMARY KPI CARDS (2x2 Grid Ratio on Mobile) */}
+      <div className="cust-est-kpi-grid">
         {/* Total Estimates */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#dbeafe', color: '#1E3A63' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div
+          className="cust-est-kpi-card"
+          style={{
+            background: 'linear-gradient(135deg, #F0F7FF 0%, #E0EEFF 100%)',
+            borderColor: '#BFDBFE',
+          }}
+        >
+          <div style={{
+            ...styles.kpiIconWrap,
+            width: isMobile ? '34px' : '38px',
+            height: isMobile ? '34px' : '38px',
+            backgroundColor: '#DBEAFE',
+            color: '#1E3A63',
+          }}>
+            <svg width={isMobile ? '16' : '18'} height={isMobile ? '16' : '18'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
@@ -568,58 +645,95 @@ export default function CustomerEstimatesPage() {
             </svg>
           </div>
           <div style={{ minWidth: 0 }}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Total Estimates</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
-              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.total}
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px', color: '#64748B' }}>Total</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '22px', color: '#0F172A' }}>
+              {loading ? <SkeletonShimmer width="28px" height="20px" borderRadius="4px" /> : kpis.total}
             </strong>
           </div>
         </div>
 
         {/* Created Estimates */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }}>
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#ccfbf1', color: '#0f766e' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div
+          className="cust-est-kpi-card"
+          style={{
+            background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+            borderColor: '#FDE68A',
+          }}
+        >
+          <div style={{
+            ...styles.kpiIconWrap,
+            width: isMobile ? '34px' : '38px',
+            height: isMobile ? '34px' : '38px',
+            backgroundColor: '#FEF3C7',
+            color: '#D97706',
+          }}>
+            <svg width={isMobile ? '16' : '18'} height={isMobile ? '16' : '18'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
           <div style={{ minWidth: 0 }}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Created</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
-              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.created}
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px', color: '#64748B' }}>Created</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '22px', color: '#B45309' }}>
+              {loading ? <SkeletonShimmer width="28px" height="20px" borderRadius="4px" /> : kpis.created}
             </strong>
           </div>
         </div>
 
         {/* Requested / In Progress */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#fef9c3', color: '#b45309' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div
+          className="cust-est-kpi-card"
+          style={{
+            background: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)',
+            borderColor: '#E9D5FF',
+          }}
+        >
+          <div style={{
+            ...styles.kpiIconWrap,
+            width: isMobile ? '34px' : '38px',
+            height: isMobile ? '34px' : '38px',
+            backgroundColor: '#F3E8FF',
+            color: '#9333EA',
+          }}>
+            <svg width={isMobile ? '16' : '18'} height={isMobile ? '16' : '18'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
           <div style={{ minWidth: 0 }}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Requested / Active</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
-              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.inReview}
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px', color: '#64748B' }}>In Progress</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '22px', color: '#7E22CE' }}>
+              {loading ? <SkeletonShimmer width="28px" height="20px" borderRadius="4px" /> : kpis.inReview}
             </strong>
           </div>
         </div>
 
         {/* Completed Quotes */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '14px 18px', gap: isMobile ? '10px' : '14px', backgroundColor: '#ecfdf5', borderColor: '#bbf7d0' }}>
-          <div style={{ ...styles.kpiIconWrap, width: isMobile ? '34px' : '42px', height: isMobile ? '34px' : '42px', backgroundColor: '#dcfce7', color: '#15803d' }}>
-            <svg width={isMobile ? '16' : '19'} height={isMobile ? '16' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <div
+          className="cust-est-kpi-card"
+          style={{
+            background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
+            borderColor: '#BBF7D0',
+          }}
+        >
+          <div style={{
+            ...styles.kpiIconWrap,
+            width: isMobile ? '34px' : '38px',
+            height: isMobile ? '34px' : '38px',
+            backgroundColor: '#DCFCE7',
+            color: '#16A34A',
+          }}>
+            <svg width={isMobile ? '16' : '18'} height={isMobile ? '16' : '18'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           </div>
           <div style={{ minWidth: 0 }}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px' }}>Completed</span>
-            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '24px' }}>
-              {loading ? <SkeletonShimmer width="36px" height="24px" borderRadius="4px" /> : kpis.completed}
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '11px' : '12px', color: '#64748B' }}>Completed</span>
+            <strong style={{ ...styles.kpiValue, fontSize: isMobile ? '20px' : '22px', color: '#15803D' }}>
+              {loading ? <SkeletonShimmer width="28px" height="20px" borderRadius="4px" /> : kpis.completed}
             </strong>
           </div>
         </div>

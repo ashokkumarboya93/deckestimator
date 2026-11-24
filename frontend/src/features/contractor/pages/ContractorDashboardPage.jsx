@@ -20,7 +20,7 @@ import { contractorCommissionApi } from '../api/contractorCommissionApi';
 import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import ContractorVerificationRequestPage from './ContractorVerificationRequestPage';
-import bannerBg from '../../../assets/images/contractor_banner_bg.png';
+import bannerBg from '../../../assets/images/Banner_BG_img.png';
 import productImg from '../../../assets/images/deck_restoration_products.jpg';
 import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 import { SkeletonTable, SkeletonCard, SkeletonShimmer } from '../../../components/common';
@@ -171,6 +171,13 @@ export default function ContractorDashboardPage() {
   return (
     <div style={{ ...styles.dashboardContainer, padding: isMobile ? '12px 10px 40px 10px' : '26px 36px' }}>
       <style>{`
+        .contractor-desktop-table-wrap {
+          display: block;
+          overflow-x: auto;
+        }
+        .contractor-dash-mobile-cards {
+          display: none;
+        }
         @media (max-width: 1024px) {
           .contractor-hero-banner {
             flex-direction: column !important;
@@ -180,16 +187,22 @@ export default function ContractorDashboardPage() {
           .contractor-sticker-wrap {
             display: none !important;
           }
-          .contractor-content-row {
+          .contractor-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .contractor-desktop-table-wrap {
+            display: none !important;
+          }
+          .contractor-dash-mobile-cards {
             display: flex !important;
             flex-direction: column !important;
-            width: 100% !important;
-            gap: 16px !important;
+            gap: 10px !important;
+            padding: 10px 12px !important;
           }
-          .contractor-content-row > div {
-            width: 100% !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
+          .contractor-dash-side-col {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+            gap: 14px !important;
           }
           .contractor-contact-grid {
             display: flex !important;
@@ -217,6 +230,10 @@ export default function ContractorDashboardPage() {
           .contractor-banner-btns button {
             flex: 1 1 auto !important;
             justify-content: center !important;
+            height: 38px !important;
+            padding: 0 14px !important;
+            font-size: 12.5px !important;
+            border-radius: 8px !important;
           }
         }
       `}</style>
@@ -229,7 +246,10 @@ export default function ContractorDashboardPage() {
           padding: isMobile ? '16px 14px' : '26px 30px',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'flex-start' : 'center',
-          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.92) 58%, rgba(30, 58, 99, 0.50) 100%), url(${bannerBg})`,
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 25%, transparent 55%), linear-gradient(90deg, rgba(16, 38, 72, 0.72) 0%, rgba(22, 48, 88, 0.58) 28%, rgba(30, 58, 99, 0.28) 42%, rgba(30, 58, 99, 0.04) 52%, rgba(0, 0, 0, 0) 100%), url(${bannerBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
         }}
       >
         <div style={{ ...styles.heroContent, padding: isMobile ? '0' : '26px 30px' }}>
@@ -442,145 +462,399 @@ export default function ContractorDashboardPage() {
         </div>
       </div>
 
-      {/* 3. ROW 1: RECENT DECK PROJECTS TABLE (LEFT) + ONLY PRODUCT CARD 1 (RIGHT) */}
+      {/* 3. MAIN CONTENT GRID (LEFT: RECENT PROJECTS + CONTRACTOR SUPPORT HUB + OPERATING HOURS; RIGHT: WHOLESALE PRODUCT + TRADE DESK) */}
       <div
-        className="contractor-content-row"
+        className="contractor-main-grid"
         style={{
-          ...styles.contentRowGrid,
-          display: isMobile ? 'flex' : 'grid',
-          flexDirection: isMobile ? 'column' : 'initial',
-          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 2fr) minmax(320px, 1fr)',
-          gap: isMobile ? '16px' : '24px',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 340px',
+          gap: isMobile ? '16px' : '22px',
+          alignItems: 'start',
           width: '100%',
         }}
       >
-        {/* Left Side: Recent Deck Projects Table */}
-        <div style={styles.projectsCard}>
-          <div style={styles.cardHeaderRow}>
-            <div style={styles.cardHeadingGroup}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
+        {/* LEFT COLUMN: Projects + Support Hub + Operating Hours Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0, width: '100%' }}>
+
+          {/* Recent Deck Projects Card */}
+          <div style={styles.projectsCard}>
+            <div style={styles.cardHeaderRow}>
+              <div style={styles.cardHeadingGroup}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                    <polyline points="2 17 12 22 22 17" />
+                    <polyline points="2 12 12 17 22 12" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 style={styles.cardTitle}>Recent Deck Projects</h2>
+                  <span style={styles.cardSubtitle}>
+                    Latest project records and contractor calculations from database
+                  </span>
+                </div>
               </div>
-              <div>
-                <h2 style={styles.cardTitle}>Recent Deck Projects</h2>
-                <span style={styles.cardSubtitle}>
-                  Latest project records and contractor calculations from database
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/contractor/projects')}
+                style={styles.viewAllBtn}
+              >
+                <span>View All Projects</span>
+                <span>&rarr;</span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/contractor/projects')}
-              style={styles.viewAllBtn}
-            >
-              <span>View All Projects</span>
-              <span>&rarr;</span>
-            </button>
-          </div>
 
-          <div style={styles.tableResponsive}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Project / Client</th>
-                  <th style={styles.th}>Deck Size</th>
-                  <th style={styles.th}>Estimator Price</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Created Date</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.length > 0 ? (
-                  projects.slice(0, 5).map((p) => {
-                    const projectEst = estimates.find((e) => {
-                      const dId = e.deckId?._id || e.deckId?.id || e.deckId;
-                      return dId === (p._id || p.id);
-                    });
-                    const estValStr = projectEst
-                      ? `$${Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                      : '$2,450 – $3,680';
+            {/* Desktop Table View */}
+            <div className="contractor-desktop-table-wrap" style={styles.tableResponsive}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Project / Client</th>
+                    <th style={styles.th}>Deck Size</th>
+                    <th style={styles.th}>Estimator Price</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Created Date</th>
+                    <th style={{ ...styles.th, textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.length > 0 ? (
+                    projects.slice(0, 5).map((p) => {
+                      const projectEst = estimates.find((e) => {
+                        const dId = e.deckId?._id || e.deckId?.id || e.deckId;
+                        return dId === (p._id || p.id);
+                      });
+                      const estValStr = projectEst
+                        ? `$${Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                        : '$2,450 – $3,680';
 
-                    const rawStatus = String(p.status || projectEst?.status || 'CREATED').toUpperCase();
-                    const statusClass =
-                      rawStatus === 'COMPLETED' || rawStatus === 'APPROVED'
-                        ? styles.statusCompleted
-                        : rawStatus === 'IN_REVIEW' || rawStatus === 'IN_PROGRESS'
+                      const rawStatus = String(p.status || projectEst?.status || 'CREATED').toUpperCase();
+                      const statusClass =
+                        rawStatus === 'COMPLETED' || rawStatus === 'APPROVED'
+                          ? styles.statusCompleted
+                          : rawStatus === 'IN_REVIEW' || rawStatus === 'IN_PROGRESS'
+                            ? styles.statusInProgress
+                            : styles.statusCreated;
+
+                      const formattedDate = new Date(p.createdAt || p.updatedAt || Date.now()).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      });
+
+                      return (
+                        <tr key={p._id || p.id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <div style={styles.projectCell}>
+                              <div style={styles.projectThumbCircle}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                  <polyline points="2 17 12 22 22 17" />
+                                  <polyline points="2 12 12 17 22 12" />
+                                </svg>
+                              </div>
+                              <div>
+                                <div style={styles.projectTitle}>{p.projectName || 'Residential Deck'}</div>
+                                <div style={styles.clientSub}>{p.ownerId?.fullName || p.ownerName || 'Verified Client'}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={styles.deckAreaPill}>
+                              {p.dimensions?.area ? `${p.dimensions.area} sq ft` : (p.area ? `${p.area} sq ft` : '420 sq ft')}
+                            </span>
+                          </td>
+                          <td style={styles.tdBold}>{estValStr}</td>
+                          <td style={styles.td}>
+                            <span style={statusClass}>
+                              {rawStatus.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td style={styles.tdDate}>{formattedDate}</td>
+                          <td style={{ ...styles.td, textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/contractor/projects')}
+                              style={styles.actionViewBtn}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '40px 16px', color: '#64748B' }}>
+                        <p style={{ margin: 0, fontWeight: 600 }}>No deck projects found in database.</p>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/contractor/decks/new')}
+                          style={{ marginTop: '12px', padding: '8px 18px', background: '#E08131', color: '#FFFFFF', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
+                        >
+                          + Start First Estimation
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Project Cards View (<= 1024px) */}
+            <div className="contractor-dash-mobile-cards">
+              {projects.length > 0 ? (
+                projects.slice(0, 5).map((p) => {
+                  const projectEst = estimates.find((e) => {
+                    const dId = e.deckId?._id || e.deckId?.id || e.deckId;
+                    return dId === (p._id || p.id);
+                  });
+                  const estValStr = projectEst
+                    ? `$${Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                    : '$2,450 – $3,680';
+                  const rawStatus = String(p.status || projectEst?.status || 'CREATED').toUpperCase();
+                  const statusClass =
+                    rawStatus === 'COMPLETED' || rawStatus === 'APPROVED'
+                      ? styles.statusCompleted
+                      : rawStatus === 'IN_REVIEW' || rawStatus === 'IN_PROGRESS'
                         ? styles.statusInProgress
                         : styles.statusCreated;
+                  const formattedDate = new Date(p.createdAt || p.updatedAt || Date.now()).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  });
+                  const area = p.dimensions?.area || p.area || 420;
 
-                    const formattedDate = new Date(p.createdAt || p.updatedAt || Date.now()).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    });
-
-                    return (
-                      <tr key={p._id || p.id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <div style={styles.projectCell}>
-                            <div style={styles.projectThumbCircle}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                                <polyline points="2 17 12 22 22 17" />
-                                <polyline points="2 12 12 17 22 12" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div style={styles.projectTitle}>{p.projectName || 'Residential Deck'}</div>
-                              <div style={styles.clientSub}>{p.ownerId?.fullName || p.ownerName || 'Verified Client'}</div>
-                            </div>
+                  return (
+                    <div key={p._id || p.id} style={styles.mobileCard}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', wordBreak: 'break-word' }}>
+                            {p.projectName || 'Residential Deck'}
                           </div>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={styles.deckAreaPill}>
-                            {p.dimensions?.area ? `${p.dimensions.area} sq ft` : (p.area ? `${p.area} sq ft` : '420 sq ft')}
-                          </span>
-                        </td>
-                        <td style={styles.tdBold}>{estValStr}</td>
-                        <td style={styles.td}>
-                          <span style={statusClass}>
-                            {rawStatus.replace(/_/g, ' ')}
-                          </span>
-                        </td>
-                        <td style={styles.tdDate}>{formattedDate}</td>
-                        <td style={{ ...styles.td, textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => navigate('/contractor/projects')}
-                            style={styles.actionViewBtn}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px 16px', color: '#64748B' }}>
-                      <p style={{ margin: 0, fontWeight: 600 }}>No deck projects found in database.</p>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/contractor/decks/new')}
-                        style={{ marginTop: '12px', padding: '8px 18px', background: '#E08131', color: '#FFFFFF', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
-                      >
-                        + Start First Estimation
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                            {p.ownerId?.fullName || p.ownerName || 'Verified Client'} • {formattedDate}
+                          </div>
+                        </div>
+                        <span style={{ ...statusClass, fontSize: '10.5px', padding: '2px 8px', flexShrink: 0 }}>
+                          {rawStatus.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={styles.deckAreaPill}>{area} sq ft</span>
+                          <strong style={{ fontSize: '14.5px', color: '#15803D', fontWeight: '800' }}>
+                            {estValStr}
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/contractor/projects')}
+                          style={styles.actionViewBtn}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748B' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#1E3A63', marginBottom: '4px' }}>
+                    No deck projects yet
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/contractor/decks/new')}
+                    style={{ marginTop: '8px', padding: '6px 14px', background: '#E08131', color: '#FFFFFF', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}
+                  >
+                    + Start First Estimation
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Contractor Reachout & Support Hub */}
+          <div style={{ ...styles.contactHubCard, padding: isMobile ? '16px 14px' : '22px 24px', width: '100%', boxSizing: 'border-box' }}>
+            <div style={styles.contactHubHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={styles.contactHubTitle}>Contractor Reachout &amp; Support Hub</h3>
+                  <span style={styles.contactHubSubtitle}>
+                    Direct consultation for calculation formulas, chemical specs &amp; rapid dispatch
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/contractor/support')}
+                style={styles.hubLinkBtn}
+              >
+                <span>Support Hub</span>
+                <span>&rarr;</span>
+              </button>
+            </div>
+
+            <div
+              className="contractor-contact-grid"
+              style={{
+                ...styles.contactGrid,
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                gap: isMobile ? '12px' : '16px',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Item 1: Direct Office (Theme Navy Outlined Card) */}
+              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
+                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#1E3A63' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
+                    <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Direct Office</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
+                      Toll-Free
+                    </span>
+                  </div>
+                  <a href="tel:8664403325" style={{ ...styles.contactBoxValue, fontSize: '15px' }}>
+                    (866) 440-DECK
+                  </a>
+                  <span style={styles.contactBoxSub}>Shamong: (609) 268-3436</span>
+
+                  <div style={{ marginTop: '10px' }}>
+                    <a href="tel:8664403325" style={styles.callNowBtn} title="Call (866) 440-DECK">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <span>Call Now</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Item 2: Estimates & Inquiries (Theme Orange Outlined Card) */}
+              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #E08131' }}>
+                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#E08131' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '3px' }}>
+                    <span style={{ ...styles.contactBoxLabel, color: '#C2671A' }}>Estimates &amp; Inquiries</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
+                      Official
+                    </span>
+                  </div>
+
+                  <div style={styles.emailHighlightedBox}>
+                    <a
+                      href="mailto:info@deckrestorationplus.com"
+                      style={styles.emailLink}
+                      title="Send email to info@deckrestorationplus.com"
+                    >
+                      info@deckrestorationplus.com
+                    </a>
+                  </div>
+                  <span style={styles.contactBoxSub}>Senior estimator inbox</span>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
+                    <a
+                      href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                      style={styles.emailUsBtn}
+                      title="Open email composer"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
+                      <span>Email Us</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyEmail}
+                      style={styles.copyBtn}
+                      title="Copy email to clipboard"
+                    >
+                      {copiedEmail ? (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span style={{ color: '#15803D', fontWeight: '700' }}>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Item 3: Headquarters (Theme Navy Outlined Card) */}
+              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
+                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F0FDF4', color: '#15803D', borderColor: '#1E3A63' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Headquarters</span>
+                  <strong style={styles.contactBoxValueStatic}>152 Indian Mills Road Unit #B</strong>
+                  <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block' }}>Shamong, NJ 08088</span>
+                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
+                    Distribution &amp; training facility
+                  </div>
+                </div>
+              </div>
+
+              {/* Item 4: Operating Hours Summary (Theme Navy Outlined Card) */}
+              <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
+                <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F8FAFC', color: '#1E3A63', borderColor: '#1E3A63' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Operating Hours</span>
+                  <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
+                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
+                    Live senior estimator dispatch
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Operating Hours Cards (Matching Customer Portal Design) */}
+          <OperatingHoursBlock variant="cards" />
         </div>
 
-        {/* Right Side: Product Card 1 ONLY (Improved Design with Theme-Based Outlined Shiny Button) */}
-        <div style={styles.singleProductColumn}>
+        {/* RIGHT COLUMN: Single Product Card (Wholesale Materials) + Trade Desk Help Card */}
+        <div className="contractor-dash-side-col" style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
+          {/* Wholesale Materials Product Card (No empty spaces, height: auto) */}
           <div style={styles.productCard}>
             <div style={styles.productCardHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -633,249 +907,30 @@ export default function ContractorDashboardPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* 4. ROW 2: THEME-BASED CONTACT SECTION (LEFT) + PRODUCT CARD 2 (RIGHT) */}
-      <div
-        className="contractor-content-row"
-        style={{
-          ...styles.contentRowGrid,
-          display: isMobile ? 'flex' : 'grid',
-          flexDirection: isMobile ? 'column' : 'initial',
-          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 2fr) minmax(320px, 1fr)',
-          gap: isMobile ? '16px' : '24px',
-          width: '100%',
-        }}
-      >
-        {/* Left Side: Theme-Based Support & Reachout Contact Section (Reduced width to match row grid) */}
-        <div style={{ ...styles.contactHubCard, padding: isMobile ? '14px 14px' : '20px 22px', width: '100%', boxSizing: 'border-box' }}>
-          <div style={styles.contactHubHeader}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Trade Desk / Contractor Support Card */}
+          <div style={styles.contractorHelpCard}>
+            <div style={styles.helpHeader}>
+              <div style={styles.helpIconBox}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
               </div>
               <div>
-                <h3 style={styles.contactHubTitle}>Contractor Reachout &amp; Support Hub</h3>
-                <span style={styles.contactHubSubtitle}>
-                  Direct consultation for calculation formulas, chemical specs &amp; rapid dispatch
-                </span>
+                <h4 style={styles.helpTitle}>Wholesale Partner Support</h4>
+                <p style={styles.helpSub}>Trade desk specialists available</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/contractor/support')}
-              style={styles.hubLinkBtn}
-            >
-              <span>Support Hub</span>
-              <span>&rarr;</span>
-            </button>
-          </div>
-
-          <div
-            className="contractor-contact-grid"
-            style={{
-              ...styles.contactGrid,
-              display: isMobile ? 'flex' : 'grid',
-              flexDirection: isMobile ? 'column' : 'initial',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-              gap: isMobile ? '12px' : '16px',
-              width: '100%',
-              boxSizing: 'border-box',
-            }}
-          >
-            {/* Item 1: Direct Office (Theme Navy Outlined Card) */}
-            <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-              <div style={{ ...styles.contactCircleIcon, backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#1E3A63' }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <p style={styles.helpText}>
+              Need bulk pallet shipment rates, technical stain yield assistance, or commercial formulation guidance? Call our contractor desk directly.
+            </p>
+            <div style={{ marginTop: '14px' }}>
+              <a href="tel:18664403325" style={styles.helpPhoneBtn}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '2px' }}>
-                  <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Direct Office</span>
-                  <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
-                    Toll-Free
-                  </span>
-                </div>
-                <a href="tel:8664403325" style={{ ...styles.contactBoxValue, fontSize: '15px' }}>
-                  (866) 440-DECK
-                </a>
-                <span style={styles.contactBoxSub}>Shamong: (609) 268-3436</span>
-
-                <div style={{ marginTop: '10px' }}>
-                  <a href="tel:8664403325" style={styles.callNowBtn} title="Call (866) 440-DECK">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                    </svg>
-                    <span>Call Now</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Item 2: Estimates & Inquiries (Theme Orange Outlined Card) */}
-            <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #E08131' }}>
-              <div style={{ ...styles.contactCircleIcon, backgroundColor: '#FFFBEB', color: '#D97706', borderColor: '#E08131' }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginBottom: '3px' }}>
-                  <span style={{ ...styles.contactBoxLabel, color: '#C2671A' }}>Estimates &amp; Inquiries</span>
-                  <span style={{ fontSize: '9.5px', fontWeight: '800', padding: '1px 7px', borderRadius: '4px', backgroundColor: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
-                    Official
-                  </span>
-                </div>
-
-                <div style={styles.emailHighlightedBox}>
-                  <a
-                    href="mailto:info@deckrestorationplus.com"
-                    style={styles.emailLink}
-                    title="Send email to info@deckrestorationplus.com"
-                  >
-                    info@deckrestorationplus.com
-                  </a>
-                </div>
-                <span style={styles.contactBoxSub}>Senior estimator inbox</span>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
-                  <a
-                    href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
-                    style={styles.emailUsBtn}
-                    title="Open email composer"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                    <span>Email Us</span>
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyEmail}
-                    style={styles.copyBtn}
-                    title="Copy email to clipboard"
-                  >
-                    {copiedEmail ? (
-                      <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span style={{ color: '#15803D', fontWeight: '700' }}>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Item 3: Headquarters (Theme Navy Outlined Card) */}
-            <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-              <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F0FDF4', color: '#15803D', borderColor: '#1E3A63' }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Headquarters</span>
-                <strong style={styles.contactBoxValueStatic}>152 Indian Mills Road Unit #B</strong>
-                <span style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block' }}>Shamong, NJ 08088</span>
-                <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
-                  Distribution &amp; training facility
-                </div>
-              </div>
-            </div>
-
-            {/* Item 4: Operating Hours (Theme Navy Outlined Card) */}
-            <div style={{ ...styles.contactItemBox, padding: isMobile ? '12px 14px' : '16px 16px', border: '1.5px solid #1E3A63' }}>
-              <div style={{ ...styles.contactCircleIcon, backgroundColor: '#F8FAFC', color: '#1E3A63', borderColor: '#1E3A63' }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ ...styles.contactBoxLabel, color: '#1E3A63' }}>Operating Hours</span>
-                <OperatingHoursBlock variant="compact" style={{ marginTop: '6px' }} />
-                <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B' }}>
-                  Live senior estimator dispatch
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <OperatingHoursBlock variant="cards" style={{ marginTop: '16px' }} />
-        </div>
-
-        {/* Right Side: Product Card 2 (Improved Design with Theme-Based Outlined Shiny Button) */}
-        <div style={styles.singleProductColumn}>
-          <div style={styles.productCard}>
-            <div style={styles.productCardHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ ...styles.verifiedDot, backgroundColor: '#0284C7' }} />
-                <span style={styles.cardHeaderCategory}>Restoration Chemical Kit</span>
-              </div>
-              <span style={styles.wholesaleBadge}>20% Off Tier</span>
-            </div>
-
-            <div style={styles.productImgBox}>
-              <img
-                src={productImg}
-                alt="DRP Heavy Duty Substrate Cleaner Kit"
-                style={styles.productImg}
-              />
-              <span style={{ ...styles.productTag, backgroundColor: '#EFF6FF', color: '#1E3A63', borderColor: '#BFDBFE' }}>
-                Substrate Chem Kit
-              </span>
-            </div>
-
-            <div style={styles.productBody}>
-              <h4 style={styles.productName}>DRP Chemical Wash &amp; Brightener Kit</h4>
-              <p style={styles.productSpec}>
-                Two-step professional deck cleaner and oxalic acid neutralizer. Opens wood pores, strips mill glaze, and restores natural substrate color.
-              </p>
-              <div style={styles.specPillRow}>
-                <span style={styles.specMiniPill}>Step 1 Wash + Step 2 pH</span>
-                <span style={styles.specMiniPill}>Biodegradable</span>
-              </div>
-
-              <div style={styles.pricingRow}>
-                <div>
-                  <span style={styles.retailStrikethrough}>Retail: $124.00</span>
-                  <div style={styles.contractorPrice}>
-                    $99.20 <span style={styles.saveTag}>Save $24.80</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => navigate('/contractor/support')}
-                  style={styles.themeOutlinedShinyBtn}
-                  title="Order chemical kit through wholesale partner program"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                    <line x1="3" y1="6" x2="21" y2="6" />
-                    <path d="M16 10a4 4 0 0 1-8 0" />
-                  </svg>
-                  <span>Order Supplies</span>
-                </button>
-              </div>
+                <span>(866) 440-DECK</span>
+              </a>
             </div>
           </div>
         </div>
@@ -899,11 +954,11 @@ const styles = {
   heroBanner: {
     position: 'relative',
     borderRadius: '16px',
-    border: '1px solid #CBD5E1',
+    border: '1px solid rgba(255, 255, 255, 0.35)',
     backgroundSize: 'cover',
-    backgroundPosition: 'center',
+    backgroundPosition: 'center right',
     overflow: 'hidden',
-    boxShadow: '0 4px 16px rgba(30, 58, 99, 0.12)',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1254,7 +1309,7 @@ const styles = {
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
+    height: 'auto',
   },
   productCardHeader: {
     padding: '12px 16px',
@@ -1351,7 +1406,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 'auto',
+    marginTop: '12px',
     paddingTop: '12px',
     borderTop: '1px solid #F1F5F9',
   },
@@ -1371,6 +1426,71 @@ const styles = {
     fontWeight: '700',
     color: '#D97706',
     marginLeft: '3px',
+  },
+
+  // Mobile Project Card
+  mobileCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '12px',
+    padding: '12px 14px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+  },
+
+  // Trade Desk / Contractor Help Card
+  contractorHelpCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '16px',
+    padding: '18px 20px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+  },
+  helpHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '8px',
+  },
+  helpIconBox: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    backgroundColor: '#EFF6FF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#1E3A63',
+  },
+  helpTitle: {
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: '800',
+    color: '#1E3A63',
+  },
+  helpSub: {
+    margin: 0,
+    fontSize: '11px',
+    color: '#64748B',
+  },
+  helpText: {
+    margin: '0 0 10px 0',
+    fontSize: '12px',
+    color: '#475569',
+    lineHeight: 1.5,
+  },
+  helpPhoneBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 14px',
+    borderRadius: '8px',
+    backgroundColor: '#EFF6FF',
+    border: '1.5px solid #1E3A63',
+    color: '#1E3A63',
+    fontSize: '12.5px',
+    fontWeight: '800',
+    textDecoration: 'none',
+    boxShadow: '0 1px 3px rgba(30, 58, 99, 0.08)',
   },
 
   // Theme-Based Outlined Shiny Button

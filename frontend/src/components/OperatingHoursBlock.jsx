@@ -109,76 +109,96 @@ export default function OperatingHoursBlock({ variant = 'cards', style = {} }) {
             backgroundColor: '#FFFFFF',
             border: '1px solid #E2E8F0',
             borderTop: `3px solid ${schedule.accentColor}`,
-            borderRadius: '10px',
-            padding: isStacked ? '11px 12px' : '15px 18px',
-            boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)',
+            borderRadius: isStacked ? '9px' : '10px',
+            padding: isStacked ? '10px 12px' : '15px 18px',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+            overflow: 'hidden',
           }}
         >
+          {/* Header Row */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '8px',
-              paddingBottom: isStacked ? '7px' : '9px',
+              paddingBottom: isStacked ? '6px' : '9px',
               marginBottom: isStacked ? '6px' : '8px',
               borderBottom: '1px solid #F1F5F9',
-              flexWrap: 'wrap',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
-              <ClockIcon color={schedule.accentColor} size={isStacked ? 14 : 16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0, flex: 1 }}>
+              <ClockIcon color={schedule.accentColor} size={isStacked ? 13 : 16} />
               <span
                 style={{
                   fontSize: isStacked ? '11.5px' : '13px',
                   fontWeight: '800',
                   color: '#0F172A',
-                  lineHeight: 1.3,
+                  lineHeight: 1.25,
+                  letterSpacing: '-0.2px',
                 }}
               >
-                {schedule.title}
+                {schedule.shortTitle}
               </span>
             </div>
             <span
               style={{
-                fontSize: '10px',
+                fontSize: isStacked ? '9.5px' : '10.5px',
                 fontWeight: '700',
-                padding: '2px 7px',
+                padding: isStacked ? '1px 6px' : '2px 8px',
                 borderRadius: '999px',
                 backgroundColor: schedule.tintBg,
                 color: schedule.accentColor,
                 border: `1px solid ${schedule.tintBorder}`,
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {schedule.badge}
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: isStacked ? '3px' : '5px' }}>
-            {schedule.days.map((entry) => (
-              <div
-                key={entry.day}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  fontSize: isStacked ? '11.5px' : '12.5px',
-                  lineHeight: 1.45,
-                  padding: isStacked ? '2px 4px' : '3px 6px',
-                  borderRadius: '5px',
-                  backgroundColor: entry.closed ? '#F8FAFC' : 'transparent',
-                }}
-              >
-                <span style={{ fontWeight: '600', color: entry.closed ? '#64748B' : '#334155' }}>
-                  {entry.day}
-                </span>
-                <span
-                  style={
-                    entry.closed
-                      ? {
-                          fontSize: isStacked ? '10px' : '10.5px',
+          {/* Table Container */}
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: isStacked ? '11px' : '12px',
+              lineHeight: 1.3,
+            }}
+          >
+            <tbody>
+              {(schedule?.days || []).map((entry, idx) => (
+                <tr
+                  key={entry.day || idx}
+                  style={{
+                    backgroundColor: idx % 2 === 1 ? '#F8FAFC' : 'transparent',
+                    borderBottom: idx === (schedule?.days?.length || 0) - 1 ? 'none' : '1px solid #F1F5F9',
+                  }}
+                >
+                  <td
+                    style={{
+                      padding: isStacked ? '3.5px 6px' : '4px 8px',
+                      fontWeight: '600',
+                      color: entry.closed ? '#64748B' : '#334155',
+                      whiteSpace: 'nowrap',
+                      width: '40%',
+                    }}
+                  >
+                    {isStacked ? entry.day.slice(0, 3) : entry.day}
+                  </td>
+                  <td
+                    style={{
+                      padding: isStacked ? '3.5px 6px' : '4px 8px',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {entry.closed ? (
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          fontSize: isStacked ? '9px' : '10px',
                           fontWeight: '800',
                           color: '#B91C1C',
                           backgroundColor: '#FEF2F2',
@@ -186,19 +206,27 @@ export default function OperatingHoursBlock({ variant = 'cards', style = {} }) {
                           borderRadius: '4px',
                           padding: '1px 6px',
                           letterSpacing: '0.3px',
-                        }
-                      : {
+                        }}
+                      >
+                        CLOSED
+                      </span>
+                    ) : (
+                      <span
+                        style={{
                           fontWeight: '700',
-                          color: '#1E3A63',
+                          color: '#0F172A',
                           fontVariantNumeric: 'tabular-nums',
-                        }
-                  }
-                >
-                  {entry.hours}
-                </span>
-              </div>
-            ))}
-          </div>
+                          fontSize: isStacked ? '10.5px' : '12px',
+                        }}
+                      >
+                        {entry.hours}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ))}
     </div>

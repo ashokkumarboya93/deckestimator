@@ -29,4 +29,14 @@ export const contractorDiscountApi = {
     const res = await client.get(ENDPOINTS.DISCOUNTS.ESTIMATE_HISTORY(estimateId));
     return res.data;
   },
+
+  submitDiscountRequest: async (data) => {
+    const res = await client.post(ENDPOINTS.DISCOUNTS.REQUESTS, data);
+    return res.data;
+  },
+
+  getMyDiscountRequests: async () => {
+    const res = await client.get(ENDPOINTS.DISCOUNTS.MY_REQUESTS);
+    return res.data;
+  },
 };

@@ -93,6 +93,12 @@ const contractorProfileSchema = new mongoose.Schema(
       enum: Object.values(VERIFICATION_STATUS),
       default: VERIFICATION_STATUS.PENDING,
     },
+    wholesaleDiscountTier: {
+      type: Number,
+      default: 5,
+      min: 0,
+      max: 50,
+    },
     submittedAt: {
       type: Date,
       default: Date.now,

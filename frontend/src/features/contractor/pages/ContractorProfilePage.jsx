@@ -191,7 +191,7 @@ export default function ContractorProfilePage() {
   };
 
   // Profile Picture Upload Handler
-  const handlePhotoSelect = (e) => {
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -199,17 +199,20 @@ export default function ContractorProfilePage() {
       setErrorMsg('Please select a valid image file (JPG, PNG, or WebP).');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('Profile picture must be under 5 MB.');
-      return;
-    }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setAvatar(uploadEvent.target.result);
+    try {
+      const { compressAvatarImage } = await import('../../../utils/imageOptimizer');
+      const optimized = await compressAvatarImage(file, 256, 0.82);
+      setAvatar(optimized);
       setErrorMsg(null);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setAvatar(uploadEvent.target.result);
+        setErrorMsg(null);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRemovePhoto = () => {

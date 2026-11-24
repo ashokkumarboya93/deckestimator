@@ -137,6 +137,11 @@ export const ENDPOINTS = {
     ESTIMATE_HISTORY: (estimateId) => `/discounts/estimates/${estimateId}/history`,
     ADMIN_POLICIES: '/discounts/admin/policies',
     ADMIN_POLICY_BY_ID: (id) => `/discounts/admin/policies/${id}`,
+    REQUESTS: '/discounts/requests',
+    MY_REQUESTS: '/discounts/requests/me',
+    ADMIN_REQUESTS: '/discounts/admin/requests',
+    ADMIN_APPROVE_REQUEST: (id) => `/discounts/admin/requests/${id}/approve`,
+    ADMIN_REJECT_REQUEST: (id) => `/discounts/admin/requests/${id}/reject`,
   },
 
   // Contractor Discounts alias for backwards compatibility

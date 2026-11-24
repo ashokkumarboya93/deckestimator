@@ -18,7 +18,7 @@ import { downloadEstimatePdf } from '../../../utils/reportExport';
 import OperatingHoursBlock from '../../../components/OperatingHoursBlock';
 
 import deckProductsImg from '../../../assets/images/deck_products_highlight.webp';
-import deckBannerWood from '../../../assets/images/deck_banner_wood.webp';
+import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 
 export default function CustomerDashboardPage() {
   const navigate = useNavigate();
@@ -184,12 +184,13 @@ export default function CustomerDashboardPage() {
         .cust-dash-hero {
           border-radius: 14px;
           background-size: cover;
-          background-position: center;
+          background-position: center right;
           padding: 28px 34px;
           color: #ffffff;
           position: relative;
           overflow: hidden;
-          box-shadow: 0 8px 24px rgba(30, 58, 99, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
           margin-bottom: 18px;
           display: flex;
           justify-content: space-between;
@@ -268,10 +269,10 @@ export default function CustomerDashboardPage() {
           display: block;
         }
 
-        /* iPad / Tablet (<= 1100px) */
-        @media (max-width: 1100px) {
+        /* Tablet & Mobile Layout (<= 1024px) */
+        @media (max-width: 1024px) {
           .cust-dash-root {
-            padding: 16px 16px 28px;
+            padding: 14px 14px 28px;
           }
           .cust-dash-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -281,102 +282,172 @@ export default function CustomerDashboardPage() {
           }
           .cust-dash-side-col {
             display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 16px !important;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+            gap: 14px !important;
             align-items: start !important;
           }
           .cust-dash-side-col > div {
             height: auto !important;
             align-self: start !important;
           }
-          .cust-dash-root table {
-            display: table !important;
-            width: 100% !important;
-            min-width: 100% !important;
-          }
-          .cust-dash-root th,
-          .cust-dash-root td {
-            padding: 10px 7px !important;
-            white-space: normal !important;
-          }
-          .cust-dash-root th:last-child,
-          .cust-dash-root td:last-child {
-            white-space: nowrap !important;
-            width: 118px !important;
-          }
-          .cust-dash-root .drp-action-row {
-            flex-wrap: nowrap !important;
-            gap: 6px !important;
-          }
-        }
-
-        /* Mobile / Small Tablet (<= 720px) */
-        @media (max-width: 720px) {
-          .cust-dash-root {
-            padding: 12px 12px 24px !important;
-          }
-          .cust-dash-hero {
-            padding: 18px 16px !important;
-            border-radius: 12px;
-            margin-bottom: 14px;
-          }
-          .cust-dash-hero-title {
-            font-size: 19px !important;
-          }
-          .cust-dash-hero-sub {
-            font-size: 12.5px !important;
-            margin-bottom: 14px !important;
-          }
-          .cust-dash-actions-grid {
-            grid-template-columns: 1fr !important;
-            gap: 10px !important;
-            margin-bottom: 16px;
-          }
-          .cust-dash-side-col {
-            grid-template-columns: 1fr !important;
-          }
           .cust-dash-desktop-table-wrap {
             display: none !important;
           }
           .cust-dash-mobile-cards {
             display: flex !important;
-            flex-direction: column;
-            gap: 10px;
-            padding: 12px;
+            flex-direction: column !important;
+            gap: 10px !important;
+            padding: 10px 12px !important;
+          }
+        }
+
+        /* Mobile / Small Tablet (<= 768px) */
+        @media (max-width: 768px) {
+          .cust-dash-root {
+            padding: 12px 10px 28px !important;
+          }
+          .cust-dash-hero {
+            padding: 14px 14px !important;
+            border-radius: 12px !important;
+            margin-bottom: 12px !important;
+          }
+          .cust-dash-hero-title {
+            font-size: 18px !important;
+            line-height: 1.25 !important;
+            margin-bottom: 5px !important;
+          }
+          .cust-dash-hero-sub {
+            font-size: 12px !important;
+            line-height: 1.4 !important;
+            margin-bottom: 11px !important;
+          }
+          .cust-dash-hero-btn-row {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            gap: 8px !important;
+            width: auto !important;
+          }
+          .cust-dash-hero-btn-row .cust-dash-hero-btn {
+            width: auto !important;
+            max-width: max-content !important;
+            height: 34px !important;
+            min-height: 34px !important;
+            padding: 0 12px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            border-radius: 7px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            white-space: nowrap !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+          }
+          .cust-dash-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            margin-bottom: 12px !important;
+          }
+          .cust-dash-kpi-card {
+            padding: 10px 12px !important;
+            border-radius: 12px !important;
+            gap: 8px !important;
+          }
+          .cust-dash-kpi-icon {
+            width: 32px !important;
+            height: 32px !important;
+          }
+          .cust-dash-kpi-val {
+            font-size: 19px !important;
+            font-weight: 800 !important;
+            line-height: 1.1 !important;
+          }
+          .cust-dash-kpi-label {
+            font-size: 11px !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+          }
+          .cust-dash-actions-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+            margin-bottom: 14px !important;
+          }
+          .cust-dash-action-card {
+            padding: 10px 14px !important;
+            border-radius: 10px !important;
+            min-height: 44px !important;
+            gap: 10px !important;
+          }
+          .cust-dash-action-icon-box {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+          }
+          .cust-dash-action-card-title {
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+          }
+          .cust-dash-side-col {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
           }
           .cust-dash-product-img {
-            height: 106px !important;
+            height: 100px !important;
+          }
+          .cust-dash-product-cta {
+            height: 34px !important;
+            font-size: 11.5px !important;
+            padding: 0 12px !important;
+            border-radius: 7px !important;
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .cust-dash-help-phone-btn {
+            height: 36px !important;
+            font-size: 12.5px !important;
+            padding: 0 14px !important;
+            border-radius: 8px !important;
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .cust-dash-empty-btn {
+            height: 34px !important;
+            font-size: 12px !important;
+            padding: 0 14px !important;
+            border-radius: 7px !important;
+          }
+          .drp-refresh-btn {
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 10px !important;
+            font-size: 11.5px !important;
+            border-radius: 6px !important;
           }
         }
 
         /* Narrow Mobile (<= 480px) */
         @media (max-width: 480px) {
-          .cust-dash-kpi-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 10px !important;
-            margin-bottom: 14px;
+          .cust-dash-hero-btn-row {
+            gap: 6px !important;
+          }
+          .cust-dash-hero-btn-row .cust-dash-hero-btn {
+            width: auto !important;
+            max-width: max-content !important;
+            height: 32px !important;
+            min-height: 32px !important;
+            padding: 0 10px !important;
+            font-size: 11.5px !important;
+            gap: 4px !important;
           }
           .cust-dash-kpi-card {
-            padding: 11px 12px !important;
-            gap: 8px !important;
-          }
-          .cust-dash-kpi-icon {
-            width: 34px !important;
-            height: 34px !important;
+            padding: 9px 10px !important;
           }
           .cust-dash-kpi-val {
-            font-size: 19px !important;
+            font-size: 18px !important;
           }
           .cust-dash-kpi-label {
-            font-size: 11px !important;
-            white-space: normal !important;
-            line-height: 1.25;
-          }
-          .cust-dash-hero-btn-row button {
-            width: 100%;
-            justify-content: center;
-            padding: 9px 14px !important;
-            font-size: 12.5px !important;
+            font-size: 10.5px !important;
           }
         }
         /* Beat global.css mobile [style*="padding:"] blanket rule */
@@ -448,7 +519,10 @@ export default function CustomerDashboardPage() {
       <section
         className="cust-dash-hero"
         style={{
-          backgroundImage: `linear-gradient(90deg, #1E3A63 0%, rgba(30, 58, 99, 0.92) 58%, rgba(30, 58, 99, 0.45) 100%), url(${deckBannerWood})`,
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 25%, transparent 55%), linear-gradient(90deg, rgba(16, 38, 72, 0.72) 0%, rgba(22, 48, 88, 0.58) 28%, rgba(30, 58, 99, 0.28) 42%, rgba(30, 58, 99, 0.04) 52%, rgba(0, 0, 0, 0) 100%), url(${bannerBgImg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
         }}
       >
         <div style={styles.heroContent}>
@@ -460,14 +534,11 @@ export default function CustomerDashboardPage() {
             Professional Deck Restoration Estimates
           </h1>
 
-          <p className="cust-dash-hero-sub" style={styles.heroSubtitle}>
-            Calculate guaranteed quotes, schedule licensed contractors, and track your deck restoration from creation to completion.
-          </p>
-
           <div className="cust-dash-hero-btn-row" style={styles.heroBtnRow}>
             <button
               type="button"
               onClick={() => navigate('/customer/decks/new')}
+              className="cust-dash-hero-btn cust-dash-hero-btn--primary"
               style={styles.heroPrimaryBtn}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#C96D22';
@@ -478,13 +549,13 @@ export default function CustomerDashboardPage() {
                 e.currentTarget.style.transform = 'none';
               }}
             >
-              <span>+ Create New Estimation</span>
-              <span style={{ fontSize: '15px', fontWeight: '800' }}>&rarr;</span>
+              <span>+ New Estimate</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/customer/support')}
+              className="cust-dash-hero-btn cust-dash-hero-btn--secondary"
               style={styles.heroSecondaryBtn}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.16)';
@@ -493,7 +564,19 @@ export default function CustomerDashboardPage() {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
               }}
             >
-              <span>Restoration Calculator Guide</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <rect x="4" y="2" width="16" height="20" rx="2" />
+                <line x1="8" y1="6" x2="16" y2="6" />
+                <line x1="16" y1="14" x2="16" y2="18" />
+                <path d="M16 10h.01" />
+                <path d="M12 10h.01" />
+                <path d="M8 10h.01" />
+                <path d="M12 14h.01" />
+                <path d="M8 14h.01" />
+                <path d="M12 18h.01" />
+                <path d="M8 18h.01" />
+              </svg>
+              <span>Cost Calculator</span>
             </button>
           </div>
         </div>
@@ -509,10 +592,10 @@ export default function CustomerDashboardPage() {
             </div>
             <div>
               <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E3A63', textTransform: 'uppercase' }}>
-                1-Year Guaranteed
+                Licensed &amp; Certified
               </div>
               <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600' }}>
-                Licensed &amp; Certified
+                Exterior Wood Specialists
               </div>
             </div>
           </div>
@@ -650,6 +733,7 @@ export default function CustomerDashboardPage() {
         ].map((item) => (
           <div
             key={item.title}
+            className="cust-dash-action-card"
             style={styles.actionCard}
             onClick={() => navigate(item.to)}
             onMouseEnter={(e) => {
@@ -663,9 +747,9 @@ export default function CustomerDashboardPage() {
               e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)';
             }}
           >
-            <div style={styles.actionIconBox}>{item.icon}</div>
+            <div className="cust-dash-action-icon-box" style={styles.actionIconBox}>{item.icon}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={styles.actionCardTitle}>{item.title}</h4>
+              <h4 className="cust-dash-action-card-title" style={styles.actionCardTitle}>{item.title}</h4>
             </div>
             <span style={styles.actionArrow}>&rarr;</span>
           </div>
@@ -674,8 +758,10 @@ export default function CustomerDashboardPage() {
 
       {/* 4. TWO-COLUMN LAYOUT: RECENT ESTIMATES + SIDE PANEL */}
       <section className="cust-dash-bottom-grid">
-        {/* Left: Recent Estimates Panel */}
-        <div style={styles.tablePanel}>
+        {/* Left Column: Recent Estimates Panel + Operating Hours */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+          {/* Recent Estimates Panel */}
+          <div style={styles.tablePanel}>
           <div style={styles.tablePanelHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
               <div style={styles.tableHeaderIconBox}>
@@ -860,6 +946,7 @@ export default function CustomerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => navigate('/customer/decks/new')}
+                        className="cust-dash-empty-btn"
                         style={styles.emptyCreateBtn}
                       >
                         + Create New Estimation
@@ -987,27 +1074,53 @@ export default function CustomerDashboardPage() {
                 );
               })
             ) : (
-              <div style={{ padding: '24px 12px', textAlign: 'center', color: '#64748b' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E3A63', marginBottom: '4px' }}>
-                  No estimations created yet
+              <div style={{ padding: '20px 14px', textAlign: 'center', color: '#64748b' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #DBEAFE',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 8px',
+                  color: '#1E3A63',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
                 </div>
-                <div style={{ fontSize: '12px', marginBottom: '12px' }}>
-                  Tap below to calculate your guaranteed quote.
+                <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#1E3A63', marginBottom: '2px' }}>
+                  No estimates yet
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '12px' }}>
+                  Create your first estimate.
                 </div>
                 <button
                   type="button"
                   onClick={() => navigate('/customer/decks/new')}
+                  className="cust-dash-empty-btn"
                   style={styles.emptyCreateBtn}
                 >
-                  + Create New Estimation
+                  + New Estimate
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Product Highlight & Need Help */}
-        <div className="cust-dash-side-col">
+        {/* Standard Hours of Operation directly below Recent Estimates */}
+        <div>
+          <OperatingHoursBlock variant="cards" />
+        </div>
+      </div>
+
+      {/* Right Column: Product Highlight & Need Help */}
+      <div className="cust-dash-side-col">
           {/* 1. PRODUCT HIGHLIGHT CARD */}
           <div style={styles.productCard}>
             <div style={styles.productHeader}>
@@ -1051,6 +1164,7 @@ export default function CustomerDashboardPage() {
                   href="https://www.deckrestorationplus.com/shop"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="cust-dash-product-cta"
                   style={styles.productCtaBtn}
                 >
                   <span>Explore Product Catalog</span>
@@ -1079,16 +1193,12 @@ export default function CustomerDashboardPage() {
             </p>
 
             <div style={styles.helpPhoneRow}>
-              <a href="tel:18664403325" style={styles.helpPhoneBtn}>
+              <a href="tel:18664403325" className="cust-dash-help-phone-btn" style={styles.helpPhoneBtn}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
                 <span>(866) 440-DECK</span>
               </a>
-            </div>
-
-            <div style={{ marginTop: '4px' }}>
-              <OperatingHoursBlock variant="stacked" />
             </div>
           </div>
         </div>
@@ -1170,25 +1280,28 @@ const styles = {
   heroPrimaryBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '10px 20px',
+    gap: '6px',
+    padding: '8px 16px',
     backgroundColor: '#E08131',
     color: '#ffffff',
     border: 'none',
     borderRadius: '8px',
-    fontSize: '13.5px',
+    fontSize: '13px',
     fontWeight: '800',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     boxShadow: '0 4px 14px rgba(224, 129, 49, 0.35)',
   },
   heroSecondaryBtn: {
-    padding: '10px 16px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     color: '#ffffff',
     border: '1px solid rgba(255, 255, 255, 0.35)',
     borderRadius: '8px',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
@@ -1420,14 +1533,15 @@ const styles = {
     padding: 0,
   },
   emptyCreateBtn: {
-    padding: '8px 16px',
+    padding: '7px 14px',
     backgroundColor: '#1E3A63',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '12.5px',
+    borderRadius: '8px',
+    fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
   productCard: {
     backgroundColor: '#ffffff',

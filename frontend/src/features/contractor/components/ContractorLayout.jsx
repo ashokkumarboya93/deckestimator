@@ -305,16 +305,12 @@ export default function ContractorLayout() {
             </Link>
           ) : (
             <Link to="/contractor/dashboard" style={styles.brandLink} title="Deck Restoration Plus">
-              <img
-                src={mainLogo}
-                alt="Deck Restoration Plus"
-                style={{
-                  height: '46px',
-                  maxWidth: '54px',
-                  maxHeight: '46px',
-                  objectFit: 'contain',
-                }}
-              />
+              <div style={styles.brandLogoIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </div>
             </Link>
           )}
         </div>

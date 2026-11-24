@@ -5,8 +5,11 @@
 const DiscountPolicy = require('./discountPolicy.model');
 const DiscountAssignment = require('./discountAssignment.model');
 const DiscountApplication = require('./discountApplication.model');
+const DiscountRequest = require('./discountRequest.model');
 const Estimate = require('../estimates/estimate.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
+const VerificationDocument = require('../contractors/verificationDocument.model');
+const Notification = require('../notifications/notification.model');
 const User = require('../users/users.model');
 const PricingConfiguration = require('../pricing/pricingConfiguration.model');
 const { applyDiscountToCalculation } = require('../pricing/pricingEngine');
@@ -286,11 +289,20 @@ async function getContractorApplicableDiscounts(contractorUserId) {
  * Gets effective discount rate for contractor (assigned or default 10%).
  */
 async function getContractorEffectiveDiscount(contractorUserId) {
-  let rate = 10;
-  let policyName = 'Default Contractor Discount (10%)';
-  let policyCode = 'CONTRACTOR_DEFAULT_10';
+  let rate = 5;
+  let policyName = 'Contractor Wholesale Discount';
+  let policyCode = 'CONTRACTOR_WHOLESALE';
 
   try {
+    // 1. Check contractor profile specific discount tier tuned by admin
+    const profile = await ContractorProfile.findOne({ userId: contractorUserId }).select('wholesaleDiscountTier').lean();
+    if (profile && typeof profile.wholesaleDiscountTier === 'number' && profile.wholesaleDiscountTier > 0) {
+      rate = profile.wholesaleDiscountTier;
+      policyName = `Contractor Wholesale Discount (${rate}%)`;
+      policyCode = `CONTRACTOR_TIER_${rate}`;
+      return { rate, policyName, policyCode };
+    }
+
     const assignment = await DiscountAssignment.findOne({
       contractorId: contractorUserId,
       status: 'active',
@@ -505,6 +517,185 @@ async function getEstimateDiscountHistory(estimateId, requestingUser) {
   return applications;
 }
 
+/**
+ * Submit or update a contractor wholesale discount request.
+ */
+async function submitDiscountRequest(data, user) {
+  const userId = user.id || user._id;
+
+  // Retrieve contractor details
+  const [profile, u] = await Promise.all([
+    ContractorProfile.findOne({ userId }),
+    User.findById(userId).lean(),
+  ]);
+
+  const businessName = data.businessName || profile?.businessName || u?.fullName || 'Contractor Trade Partner';
+  const contactName = u?.fullName || 'Contractor Partner';
+  const contactEmail = u?.email || '';
+  const contactPhone = u?.phone || profile?.businessPhone || '';
+
+  // If there is already a PENDING request from this contractor, update it
+  let req = await DiscountRequest.findOne({ contractorId: userId, status: 'PENDING' });
+  if (req) {
+    req.businessName = businessName;
+    req.contactName = contactName;
+    req.contactEmail = contactEmail;
+    req.contactPhone = contactPhone;
+    req.requestType = data.requestType || req.requestType;
+    req.description = data.description || req.description;
+    await req.save();
+    return req;
+  }
+
+  req = await DiscountRequest.create({
+    contractorId: userId,
+    businessName,
+    contactName,
+    contactEmail,
+    contactPhone,
+    requestType: data.requestType || 'Request Higher Wholesale Discount (Tier Upgrade)',
+    description: data.description,
+    status: 'PENDING',
+  });
+
+  return req;
+}
+
+/**
+ * Get discount requests for the logged-in contractor.
+ */
+async function getContractorDiscountRequests(contractorUserId) {
+  const requests = await DiscountRequest.find({ contractorId: contractorUserId })
+    .sort({ createdAt: -1 })
+    .lean();
+  return requests;
+}
+
+/**
+ * Get all discount requests for Admin (Verification Progress Page Tab 5).
+ */
+async function getAllDiscountRequests(query = {}) {
+  const { status, search } = query;
+  const filter = {};
+
+  if (status && status !== 'all' && status !== 'ALL') {
+    filter.status = status.toUpperCase();
+  }
+
+  if (search) {
+    filter.$or = [
+      { businessName: { $regex: search, $options: 'i' } },
+      { contactName: { $regex: search, $options: 'i' } },
+      { contactEmail: { $regex: search, $options: 'i' } },
+      { requestType: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const requests = await DiscountRequest.find(filter)
+    .populate('contractorId', 'fullName email phone avatar')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Attach contractor profile and uploaded documents for inline preview in Admin modal
+  const enriched = await Promise.all(
+    requests.map(async (r) => {
+      const cId = r.contractorId?._id || r.contractorId;
+      const [prof, docs] = await Promise.all([
+        ContractorProfile.findOne({ userId: cId }).lean(),
+        VerificationDocument.find({ contractorId: cId, status: { $ne: 'deleted' } }).lean(),
+      ]);
+
+      return {
+        ...r,
+        contractorProfile: prof || null,
+        documents: docs || [],
+        currentTier: prof?.wholesaleDiscountTier || 5,
+      };
+    })
+  );
+
+  return enriched;
+}
+
+/**
+ * Approve a discount request and tune the contractor's wholesale discount percentage.
+ */
+async function approveDiscountRequest(requestId, { discountPercent = 10, adminNotes = '' }, adminUser) {
+  const reqDoc = await DiscountRequest.findById(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+
+  const tunedPct = Math.min(50, Math.max(1, Number(discountPercent) || 10));
+
+  reqDoc.status = 'APPROVED';
+  reqDoc.approvedDiscountPct = tunedPct;
+  reqDoc.adminNotes = adminNotes;
+  reqDoc.reviewedBy = adminUser.id || adminUser._id;
+  reqDoc.reviewedAt = new Date();
+  await reqDoc.save();
+
+  // Update contractor's profile wholesale discount
+  await ContractorProfile.findOneAndUpdate(
+    { userId: reqDoc.contractorId },
+    { $set: { wholesaleDiscountTier: tunedPct } },
+    { new: true }
+  );
+
+  // Send Notification to Contractor
+  try {
+    await Notification.create({
+      recipientType: 'specific',
+      userId: reqDoc.contractorId,
+      targetRole: 'contractor',
+      title: 'Wholesale Discount Approved! 🎉',
+      message: `Congratulations! Your request for a higher wholesale discount has been approved and upgraded to ${tunedPct}%. Enjoy enhanced trade pricing on all upcoming deck restoration estimates.`,
+      category: 'PROMOTION',
+      notificationType: 'DISCOUNT_APPROVAL',
+      isRead: false,
+    });
+  } catch (notifErr) {
+    console.warn('[Notification Error]:', notifErr.message);
+  }
+
+  return reqDoc;
+}
+
+/**
+ * Reject a discount request with notification.
+ */
+async function rejectDiscountRequest(requestId, { adminNotes = '' }, adminUser) {
+  const reqDoc = await DiscountRequest.findById(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+
+  reqDoc.status = 'REJECTED';
+  reqDoc.adminNotes = adminNotes;
+  reqDoc.reviewedBy = adminUser.id || adminUser._id;
+  reqDoc.reviewedAt = new Date();
+  await reqDoc.save();
+
+  // Send exact required notification to Contractor
+  try {
+    await Notification.create({
+      recipientType: 'specific',
+      userId: reqDoc.contractorId,
+      targetRole: 'contractor',
+      title: 'Wholesale Discount Request Update',
+      message: 'After careful verification, you are not eligible for a higher discount at this time. Keep up the good work and continue submitting completed projects to qualify for future tier upgrades.',
+      category: 'SYSTEM',
+      notificationType: 'DISCOUNT_REJECTION',
+      isRead: false,
+    });
+  } catch (notifErr) {
+    console.warn('[Notification Error]:', notifErr.message);
+  }
+
+  return reqDoc;
+}
+
 module.exports = {
   createDiscountPolicy,
   getDiscountPolicies,
@@ -516,4 +707,9 @@ module.exports = {
   getContractorEffectiveDiscount,
   applyDiscountToEstimate,
   getEstimateDiscountHistory,
+  submitDiscountRequest,
+  getContractorDiscountRequests,
+  getAllDiscountRequests,
+  approveDiscountRequest,
+  rejectDiscountRequest,
 };

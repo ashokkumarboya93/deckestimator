@@ -133,6 +133,77 @@ async function getDiscountHistory(req, res, next) {
   }
 }
 
+async function submitDiscountRequest(req, res, next) {
+  try {
+    const request = await discountService.submitDiscountRequest(req.body, req.user);
+    res.status(201).json({
+      success: true,
+      data: { request },
+      message: 'Discount request submitted successfully. A senior estimator will review your credentials.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getMyDiscountRequests(req, res, next) {
+  try {
+    const requests = await discountService.getContractorDiscountRequests(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: { requests },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getAdminDiscountRequests(req, res, next) {
+  try {
+    const requests = await discountService.getAllDiscountRequests(req.query);
+    res.status(200).json({
+      success: true,
+      data: { requests },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function approveDiscountRequest(req, res, next) {
+  try {
+    const request = await discountService.approveDiscountRequest(
+      req.params.id,
+      req.body,
+      req.user
+    );
+    res.status(200).json({
+      success: true,
+      data: { request },
+      message: `Discount request approved with ${req.body.discountPercent || 10}% wholesale rate.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function rejectDiscountRequest(req, res, next) {
+  try {
+    const request = await discountService.rejectDiscountRequest(
+      req.params.id,
+      req.body,
+      req.user
+    );
+    res.status(200).json({
+      success: true,
+      data: { request },
+      message: 'Discount request has been rejected and contractor notified.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createPolicy,
   getPolicies,
@@ -143,4 +214,9 @@ module.exports = {
   getContractorDiscounts,
   applyDiscount,
   getDiscountHistory,
+  submitDiscountRequest,
+  getMyDiscountRequests,
+  getAdminDiscountRequests,
+  approveDiscountRequest,
+  rejectDiscountRequest,
 };

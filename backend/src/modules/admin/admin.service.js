@@ -1476,13 +1476,19 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
       matchedLead?.contractorId;
     if (targetRecipientId) {
       const stageLabel = targetStage.replace(/_/g, ' ').toUpperCase();
-      const projTitle = estimate?.deckDetails?.projectName || project?.projectName || matchedLead?.deckSnapshot?.projectName || 'Your Deck Project';
+      const projTitle = estimate?.deckDetails?.projectName || project?.projectName || matchedLead?.deckSnapshot?.projectName || (matchedLead?.enquiry?.subject || 'Your Deck Inquiry / Project');
+      const isReachOutNotice = !estimate && (!matchedProject || !matchedProject.estimateId);
+      const notifTitle = isReachOutNotice ? `Inquiry Update: ${stageLabel}` : `Project Update: ${stageLabel}`;
+      const defaultContactMsg = 'We will contact you soon! Our specialist team is reviewing your inquiry.';
+      const notifMsg = isReachOutNotice
+        ? (actualNote ? `We will contact you soon! Note: ${actualNote}` : defaultContactMsg)
+        : `"${projTitle}" status is now ${stageLabel}.${actualNote ? ` Note: ${actualNote}` : ''}`;
       await Notification.create({
         recipientType: 'specific',
         userId: targetRecipientId,
-        targetRole: estimate?.estimateType === 'CONTRACTOR' ? 'contractor' : 'customer',
-        title: `Project Update: ${stageLabel}`,
-        message: `"${projTitle}" status is now ${stageLabel}.${actualNote ? ` Note: ${actualNote}` : ''}`,
+        targetRole: (matchedLead?.userType || '').toLowerCase() === 'contractor' ? 'contractor' : 'customer',
+        title: notifTitle,
+        message: notifMsg,
         category: 'GENERAL',
         notificationType: 'PROJECT_STATUS',
         sentBy: adminUserId,
@@ -1603,6 +1609,16 @@ async function listLeads({
     query.userType = { $in: ['Customer', 'customer'] };
   } else if (normalizedTab === 'contractor' || normalizedTab === 'contractor_leads') {
     query.userType = { $in: ['Contractor', 'contractor'] };
+  } else if (normalizedTab === 'reachout' || normalizedTab === 'reachouts' || normalizedTab === 'all_reach_outs' || normalizedTab === 'reach_outs') {
+    andClauses.push({
+      $or: [
+        { estimateId: null },
+        { estimateId: { $exists: false } },
+        { 'estimateSnapshot.estimateId': null },
+        { 'estimateSnapshot.estimateId': { $exists: false } },
+        { contactSource: { $in: [/reach out/i, /support/i, /contact/i, /inquiry/i] } },
+      ],
+    });
   }
 
   // Status Filter
@@ -1727,12 +1743,30 @@ async function listLeads({
 
   const skip = (Number(page) - 1) * Number(limit);
 
+  const reachOutClause = {
+    $or: [
+      { estimateId: null },
+      { estimateId: { $exists: false } },
+      { 'estimateSnapshot.estimateId': null },
+      { 'estimateSnapshot.estimateId': { $exists: false } },
+      { contactSource: { $in: [/reach out/i, /support/i, /contact/i, /inquiry/i] } },
+    ],
+  };
+
+  const hotClause = {
+    $or: [
+      { latestContactDate: { $gte: sevenDaysAgo } },
+      { createdAt: { $gte: sevenDaysAgo } },
+      { priority: 'HOT' },
+    ],
+  };
+
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
       .select('-deckSnapshot.photos -__v')
-      .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
-      .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
-      .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt')
+      .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
+      .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
+      .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt avatar')
       .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
       .populate(
         'estimateId',
@@ -1746,16 +1780,15 @@ async function listLeads({
       .lean(),
     Lead.countDocuments(query),
     Promise.all([
-      Lead.countDocuments({
-        $or: [
-          { latestContactDate: { $gte: sevenDaysAgo } },
-          { createdAt: { $gte: sevenDaysAgo } },
-          { priority: 'HOT' },
-        ],
-      }),
+      Lead.countDocuments(hotClause),
       Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] } }),
       Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] } }),
-      Lead.countDocuments(),
+      Lead.countDocuments(reachOutClause),
+      // Unopened / unread counts for bubble alert
+      Lead.countDocuments({ ...hotClause, isOpened: { $ne: true } }),
+      Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] }, isOpened: { $ne: true } }),
+      Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] }, isOpened: { $ne: true } }),
+      Lead.countDocuments({ ...reachOutClause, isOpened: { $ne: true } }),
     ]),
   ]);
 
@@ -1851,7 +1884,11 @@ async function listLeads({
       licenseJurisdiction: cpObj?.licenseJurisdiction || '',
       enquiry: l.enquiry || {},
       requestedMessage,
+      avatar: userObj?.avatar || cpObj?.avatar || l.customerSnapshot?.avatar || l.contractorSnapshot?.avatar || '',
       isEstimationService,
+      isReachOut: !isEstimationService,
+      isOpened: Boolean(l.isOpened),
+      openedAt: l.openedAt || null,
       estimatedValue,
       minJobApplied,
       isMinJobApplied: minJobApplied,
@@ -1891,7 +1928,17 @@ async function listLeads({
       hotPriority: counts[0],
       customerLeads: counts[1],
       contractorLeads: counts[2],
+      allReachOuts: counts[3],
+      reachOuts: counts[3],
       allLeads: counts[3],
+    },
+    unopenedCounts: {
+      hotPriority: counts[4] ?? 0,
+      customerLeads: counts[5] ?? 0,
+      contractorLeads: counts[6] ?? 0,
+      allReachOuts: counts[7] ?? 0,
+      reachOuts: counts[7] ?? 0,
+      allLeads: counts[7] ?? 0,
     },
   };
 }
@@ -1901,10 +1948,13 @@ async function getLeadDetails(leadId) {
     ? { _id: leadId }
     : { leadNumber: leadId };
 
+  // Mark inquiry as opened in live DB when viewed
+  await Lead.updateOne(query, { $set: { isOpened: true, openedAt: new Date() } }).catch(() => {});
+
   const lead = await Lead.findOne(query)
-    .populate('customerId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
-    .populate('contractorId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt')
-    .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt businessAddress')
+    .populate('customerId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
+    .populate('contractorId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
+    .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt businessAddress avatar')
     .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
     .populate('estimateId', 'estimateNumber estimateReference subtotal minimumAdjustment minimumJobPrice totalCost totalAmount estimateStatus deckDetails pricingSnapshot')
     .lean();
@@ -1962,6 +2012,9 @@ async function getLeadDetails(leadId) {
       email: userObj?.email || (isCust ? lead.customerSnapshot?.email : lead.contractorSnapshot?.email) || 'N/A',
       phone: userObj?.phone || (isCust ? lead.customerSnapshot?.phone : lead.contractorSnapshot?.phone) || '—',
       userType: isCust ? 'Customer' : 'Contractor',
+      avatar: userObj?.avatar || lead.contractorProfileId?.avatar || '',
+      isOpened: true,
+      isReachOut: !(lead.estimateId || lead.estimateSnapshot?.estimateId),
       minJobApplied: Boolean(
         lead.estimateId?.pricingSnapshot?.minJobApplied ??
         lead.estimateSnapshot?.minJobApplied ??
@@ -1977,6 +2030,7 @@ async function getLeadDetails(leadId) {
       email: userObj.email,
       phone: userObj.phone,
       role: userObj.role,
+      avatar: userObj.avatar || '',
       accountStatus: userObj.accountStatus || 'active',
       createdAt: userObj.createdAt,
       emailVerifiedAt: userObj.emailVerifiedAt,

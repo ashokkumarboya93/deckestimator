@@ -21,6 +21,7 @@ const TABS = [
   { id: 'documents', label: 'Contractor Documents' },
   { id: 'customers', label: 'Customers' },
   { id: 'contractors', label: 'Contractors' },
+  { id: 'discount_requests', label: 'Discount Requests' },
 ];
 
 export default function AdminVerificationProgressPage() {
@@ -75,6 +76,13 @@ export default function AdminVerificationProgressPage() {
   // Users Directory State (Customers & Contractors)
   const [customers, setCustomers] = useState([]);
   const [contractors, setContractors] = useState([]);
+
+  // Discount Requests State (Tab 5)
+  const [discountRequests, setDiscountRequests] = useState([]);
+  const [discountReqFilter, setDiscountReqFilter] = useState('all');
+  const [tuneModal, setTuneModal] = useState({ open: false, request: null, discountPercent: 10, adminNotes: '' });
+  const [rejectReqModal, setRejectReqModal] = useState({ open: false, request: null, adminNotes: '' });
+  const [contractorDocsModal, setContractorDocsModal] = useState({ open: false, request: null });
 
   // Reset page and search when switching tabs
   const handleTabChange = (newTab) => {
@@ -150,7 +158,7 @@ export default function AdminVerificationProgressPage() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [activeTab, verifFilter, docsFilter]);
+  }, [activeTab, verifFilter, docsFilter, discountReqFilter]);
 
   const loadTabData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -171,6 +179,12 @@ export default function AdminVerificationProgressPage() {
       } else if (activeTab === 'contractors') {
         const res = await adminApi.getUsers({ role: 'contractor', limit: 100 });
         setContractors(res.data || []);
+      } else if (activeTab === 'discount_requests') {
+        const res = await adminApi.getDiscountRequests({
+          status: discountReqFilter !== 'all' ? discountReqFilter : undefined,
+        });
+        const list = res.data?.requests || res.data || [];
+        setDiscountRequests(list);
       }
     } catch (err) {
       setError(err?.message || 'Failed to load module data');
@@ -335,6 +349,83 @@ export default function AdminVerificationProgressPage() {
     const start = (page - 1) * PAGE_SIZE;
     return filteredContractors.slice(start, start + PAGE_SIZE);
   }, [filteredContractors, page]);
+
+  // Tab 5: Discount Requests Derivation
+  const filteredDiscountRequests = useMemo(() => {
+    return discountRequests.filter((item) => {
+      const st = (item.status || 'PENDING').toUpperCase();
+      if (discountReqFilter !== 'all' && st !== discountReqFilter.toUpperCase()) return false;
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase();
+      const cont = item.contractorId || {};
+      return (
+        (item.businessName || '').toLowerCase().includes(q) ||
+        (item.contactName || cont.fullName || '').toLowerCase().includes(q) ||
+        (item.contactEmail || cont.email || '').toLowerCase().includes(q) ||
+        (item.requestType || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q)
+      );
+    });
+  }, [discountRequests, discountReqFilter, searchTerm]);
+
+  const totalDiscountPages = Math.max(1, Math.ceil(filteredDiscountRequests.length / PAGE_SIZE));
+  const currentDiscountRequests = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredDiscountRequests.slice(start, start + PAGE_SIZE);
+  }, [filteredDiscountRequests, page]);
+
+  // Tab 5 Actions
+  const handleOpenTuneModal = (item) => {
+    setTuneModal({
+      open: true,
+      request: item,
+      discountPercent: item.approvedDiscountPct || (item.currentTier ? item.currentTier + 5 : 10),
+      adminNotes: '',
+    });
+  };
+
+  const handleConfirmTuneApproval = async () => {
+    if (!tuneModal.request) return;
+    setLoading(true);
+    try {
+      await adminApi.approveDiscountRequest(
+        tuneModal.request._id || tuneModal.request.id,
+        tuneModal.discountPercent,
+        tuneModal.adminNotes
+      );
+      setSuccessMsg(`✓ Discount approved! ${tuneModal.request.businessName || 'Contractor'} wholesale discount set to ${tuneModal.discountPercent}%.`);
+      setTuneModal({ open: false, request: null, discountPercent: 10, adminNotes: '' });
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to approve discount request.');
+      setLoading(false);
+    }
+  };
+
+  const handleOpenRejectDiscountModal = (item) => {
+    setRejectReqModal({
+      open: true,
+      request: item,
+      adminNotes: '',
+    });
+  };
+
+  const handleConfirmRejectDiscount = async () => {
+    if (!rejectReqModal.request) return;
+    setLoading(true);
+    try {
+      await adminApi.rejectDiscountRequest(
+        rejectReqModal.request._id || rejectReqModal.request.id,
+        rejectReqModal.adminNotes
+      );
+      setSuccessMsg(`Discount request rejected. Contractor has been notified.`);
+      setRejectReqModal({ open: false, request: null, adminNotes: '' });
+      loadTabData();
+    } catch (err) {
+      setError(err?.message || 'Failed to reject discount request.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.container}>
@@ -1169,6 +1260,326 @@ export default function AdminVerificationProgressPage() {
       )}
 
       {/* ========================================================================= */}
+      {/* TAB 5: DISCOUNT REQUESTS */}
+      {/* ========================================================================= */}
+      {activeTab === 'discount_requests' && (
+        <div style={styles.card}>
+          <div style={styles.cardHeaderFlex}>
+            <div>
+              <h3 style={styles.cardTitle}>Contractor Wholesale Discount Requests</h3>
+              <p style={styles.cardSub}>Review, inspect proof credentials, and tune wholesale pricing tiers for partner contractors.</p>
+            </div>
+            <span style={styles.countBadge}>{filteredDiscountRequests.length} Requests</span>
+          </div>
+
+          {/* Universal Search & Filter Bar */}
+          <div style={styles.filterBar}>
+            <div style={styles.searchBox}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder={isMobile ? 'Search requests...' : 'Search contractor, business name, request details...'}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.searchInput}
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} style={styles.searchClearBtn}>✕</button>
+              )}
+            </div>
+
+            <div style={styles.filterGroup}>
+              <span style={styles.filterLabel}>Status:</span>
+              <select
+                value={discountReqFilter}
+                onChange={(e) => {
+                  setDiscountReqFilter(e.target.value);
+                  setPage(1);
+                }}
+                style={styles.filterSelect}
+              >
+                <option value="all">All Requests</option>
+                <option value="PENDING">Pending Review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => loadTabData()}
+                style={styles.refreshBtn}
+                title="Refresh requests from database"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Requests Table */}
+          <div style={styles.tableResponsive}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Contractor &amp; Business</th>
+                  <th style={styles.th}>Submitted Date</th>
+                  <th style={styles.th}>Request Type &amp; Details</th>
+                  <th style={styles.th}>Current / Approved Tier</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentDiscountRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={styles.emptyState}>
+                      <div style={styles.emptyIcon}>🏷️</div>
+                      <div style={styles.emptyTitle}>No discount requests found</div>
+                      <div style={styles.emptySub}>
+                        {searchTerm ? 'Try adjusting your search criteria' : 'Pending discount requests from contractors will appear here.'}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  currentDiscountRequests.map((item) => {
+                    const cUser = item.contractorId || {};
+                    const cProfile = item.contractorProfile || {};
+                    const docs = item.uploadedDocs || [];
+                    const status = (item.status || 'PENDING').toUpperCase();
+
+                    return (
+                      <tr key={item._id || item.id} style={styles.tr}>
+                        <td style={styles.td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: '8px',
+                              backgroundColor: '#EFF6FF',
+                              color: '#1E3A63',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '800',
+                              fontSize: '13px',
+                              border: '1px solid #BFDBFE',
+                              flexShrink: 0,
+                            }}>
+                              {(item.businessName || cProfile.businessName || cUser.fullName || 'C').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '800', color: '#1E3A63', fontSize: '13.5px' }}>
+                                {item.businessName || cProfile.businessName || cUser.fullName || 'Contractor'}
+                              </div>
+                              <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                                {item.contactName || cUser.fullName} &bull; {item.contactEmail || cUser.email}
+                              </div>
+                              {cProfile.licenseNumber && (
+                                <div style={{ fontSize: '11px', color: '#0369A1', fontWeight: '600', marginTop: '2px' }}>
+                                  Lic: {cProfile.licenseNumber}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td style={styles.td}>
+                          <span style={{ fontSize: '12.5px', color: '#334155', fontWeight: '600' }}>
+                            {new Date(item.createdAt || Date.now()).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                          <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8' }}>
+                            {new Date(item.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </td>
+
+                        <td style={{ ...styles.td, maxWidth: '280px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            backgroundColor: '#EFF6FF',
+                            color: '#1E3A63',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            marginBottom: '4px',
+                          }}>
+                            {item.requestType || 'Tier Upgrade'}
+                          </span>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>
+                            {item.description}
+                          </p>
+                        </td>
+
+                        <td style={styles.td}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: '#15803D' }}>
+                            {item.approvedDiscountPct ? `${item.approvedDiscountPct}% Active` : `${item.currentTier || 5}% Baseline`}
+                          </span>
+                        </td>
+
+                        <td style={styles.td}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 10px',
+                              borderRadius: '9999px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              backgroundColor:
+                                status === 'APPROVED' ? '#DCFCE7' : status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                              color:
+                                status === 'APPROVED' ? '#15803D' : status === 'REJECTED' ? '#DC2626' : '#B45309',
+                              border: `1px solid ${
+                                status === 'APPROVED' ? '#86EFAC' : status === 'REJECTED' ? '#FCA5A5' : '#FDE68A'
+                              }`,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor:
+                                  status === 'APPROVED' ? '#15803D' : status === 'REJECTED' ? '#DC2626' : '#D97706',
+                              }}
+                            />
+                            {status}
+                          </span>
+                        </td>
+
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
+                            {/* 1. Profile Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetId = cUser._id || cUser.id || item.contractorId;
+                                navigate(`/admin/users/${targetId}`, {
+                                  state: {
+                                    from: '/admin/verification-progress',
+                                    fromTab: 'discount_requests',
+                                    fromTitle: '← Back to Verification & Progress',
+                                  },
+                                });
+                              }}
+                              style={styles.actionBtnOutline}
+                              title="View contractor complete user dossier"
+                            >
+                              Profile
+                            </button>
+
+                            {/* 2. Check Documents Button */}
+                            <button
+                              type="button"
+                              onClick={() => setContractorDocsModal({ open: true, request: item })}
+                              style={{
+                                ...styles.actionBtnOutline,
+                                color: '#0F766E',
+                                borderColor: '#99F6E4',
+                                backgroundColor: '#F0FDFA',
+                              }}
+                              title="Inspect uploaded credentials & insurance certificates"
+                            >
+                              Check Docs ({docs.length})
+                            </button>
+
+                            {/* 3. Accept & Tune Button */}
+                            {status === 'PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenTuneModal(item)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#15803D',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                }}
+                                title="Approve and tune wholesale discount percentage"
+                              >
+                                Accept
+                              </button>
+                            )}
+
+                            {/* 4. Reject Button */}
+                            {status === 'PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRejectDiscountModal(item)}
+                                style={{
+                                  padding: '6px 10px',
+                                  backgroundColor: '#FFFFFF',
+                                  color: '#DC2626',
+                                  border: '1px solid #FCA5A5',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                }}
+                                title="Reject discount request with contractor notification"
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div style={styles.paginationBar}>
+            <div style={styles.paginationInfo}>
+              Showing {Math.min((page - 1) * PAGE_SIZE + 1, filteredDiscountRequests.length)} to{' '}
+              {Math.min(page * PAGE_SIZE, filteredDiscountRequests.length)} of {filteredDiscountRequests.length} requests
+            </div>
+            <div style={styles.paginationBtns}>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                &larr; Previous
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a63', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                Page {page} of {totalDiscountPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalDiscountPages}
+                onClick={() => setPage((p) => Math.min(totalDiscountPages, p + 1))}
+                style={page >= totalDiscountPages ? styles.pageBtnDisabled : styles.pageBtn}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODALS */}
       {/* ========================================================================= */}
 
@@ -1524,6 +1935,285 @@ export default function AdminVerificationProgressPage() {
             <div style={styles.modalFooter}>
               <button onClick={() => setVerifHistoryModal({ open: false, logs: [], contractorName: '' })} style={styles.modalBtnSecondary}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 5 MODAL 1: CHECK CONTRACTOR DOCUMENTS MODAL          */}
+      {/* ======================================================== */}
+      {contractorDocsModal.open && contractorDocsModal.request && (
+        <div style={styles.modalOverlay} onClick={() => setContractorDocsModal({ open: false, request: null })}>
+          <div style={{ ...styles.modalContent, maxWidth: '750px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Contractor Compliance &amp; Credentials</h3>
+                <p style={styles.modalSub}>
+                  {contractorDocsModal.request.businessName || 'Contractor'} &bull; Uploaded verification files
+                </p>
+              </div>
+              <button onClick={() => setContractorDocsModal({ open: false, request: null })} style={styles.modalCloseBtn}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              {(!contractorDocsModal.request.uploadedDocs || contractorDocsModal.request.uploadedDocs.length === 0) ? (
+                <div style={{ textAlign: 'center', padding: '36px 16px', color: '#64748B' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>📂</div>
+                  <strong style={{ display: 'block', fontSize: '14px', color: '#1E3A63' }}>No Credentials Uploaded Yet</strong>
+                  <span style={{ fontSize: '12px' }}>This contractor has not uploaded business licenses or insurance certificates yet.</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {contractorDocsModal.request.uploadedDocs.map((doc, idx) => {
+                    const st = (doc.documentStatus || 'pending').toLowerCase();
+                    return (
+                      <div
+                        key={doc._id || doc.id || idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '14px 18px',
+                          backgroundColor: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '8px',
+                          gap: '12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            backgroundColor: '#E0F2FE',
+                            color: '#0284C7',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '800',
+                          }}>
+                            📄
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: '700', fontSize: '13.5px', color: '#1E3A63' }}>
+                              {doc.documentType ? doc.documentType.replace(/_/g, ' ').toUpperCase() : 'Compliance Certificate'}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                              {doc.originalFileName || 'Credential_Document.pdf'} &bull; {Math.round((doc.fileSize || 1024) / 1024)} KB
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            backgroundColor: st === 'verified' ? '#DCFCE7' : st === 'rejected' ? '#FEE2E2' : '#FEF3C7',
+                            color: st === 'verified' ? '#15803D' : st === 'rejected' ? '#DC2626' : '#B45309',
+                          }}>
+                            {st.toUpperCase()}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setContractorDocsModal({ open: false, request: null });
+                              setViewingDocModal(doc);
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#1E3A63',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Live Inspect &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setContractorDocsModal({ open: false, request: null })}
+                style={styles.modalBtnSecondary}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 5 MODAL 2: TUNE & APPROVE DISCOUNT MODAL             */}
+      {/* ======================================================== */}
+      {tuneModal.open && tuneModal.request && (
+        <div style={styles.modalOverlay} onClick={() => setTuneModal({ open: false, request: null, discountPercent: 10, adminNotes: '' })}>
+          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Tune &amp; Approve Wholesale Discount</h3>
+                <p style={styles.modalSub}>{tuneModal.request.businessName || 'Contractor'}</p>
+              </div>
+              <button onClick={() => setTuneModal({ open: false, request: null, discountPercent: 10, adminNotes: '' })} style={styles.modalCloseBtn}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={{ marginBottom: '16px', padding: '12px 14px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px' }}>
+                <span style={{ fontSize: '12.5px', color: '#166534', fontWeight: '600' }}>
+                  Setting a wholesale discount tier applies automatically to all future estimation builds and material lines for this contractor account.
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#1E3A63', marginBottom: '6px' }}>
+                  Select Tuned Wholesale Discount Percentage (%):
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  {[5, 10, 15, 20, 25].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setTuneModal((prev) => ({ ...prev, discountPercent: pct }))}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '6px',
+                        fontSize: '12.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        border: '1.5px solid',
+                        borderColor: tuneModal.discountPercent === pct ? '#15803D' : '#CBD5E1',
+                        backgroundColor: tuneModal.discountPercent === pct ? '#DCFCE7' : '#FFFFFF',
+                        color: tuneModal.discountPercent === pct ? '#15803D' : '#475569',
+                      }}
+                    >
+                      {pct}% OFF
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Custom Rate:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={tuneModal.discountPercent}
+                    onChange={(e) => setTuneModal((prev) => ({ ...prev, discountPercent: Number(e.target.value) }))}
+                    style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', fontWeight: '700', color: '#1E3A63' }}
+                  />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E3A63' }}>%</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#1E3A63', marginBottom: '6px' }}>
+                  Admin Notes / Remarks (Optional):
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Verified General Liability insurance and volume history. Approved for 15% tier."
+                  value={tuneModal.adminNotes}
+                  onChange={(e) => setTuneModal((prev) => ({ ...prev, adminNotes: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setTuneModal({ open: false, request: null, discountPercent: 10, adminNotes: '' })}
+                style={styles.modalBtnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTuneApproval}
+                style={{
+                  padding: '8px 18px',
+                  backgroundColor: '#15803D',
+                  color: '#FFFFFF',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ✓ Approve {tuneModal.discountPercent}% Discount
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TAB 5 MODAL 3: REJECT DISCOUNT REQUEST MODAL             */}
+      {/* ======================================================== */}
+      {rejectReqModal.open && rejectReqModal.request && (
+        <div style={styles.modalOverlay} onClick={() => setRejectReqModal({ open: false, request: null, adminNotes: '' })}>
+          <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={styles.modalTitle}>Reject Wholesale Discount Request</h3>
+                <p style={styles.modalSub}>{rejectReqModal.request.businessName || 'Contractor'}</p>
+              </div>
+              <button onClick={() => setRejectReqModal({ open: false, request: null, adminNotes: '' })} style={styles.modalCloseBtn}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={{ marginBottom: '14px', padding: '12px 14px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#B45309', display: 'block', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Automated Contractor Notification:
+                </span>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#78350F', lineHeight: 1.45, fontStyle: 'italic' }}>
+                  "After careful verification, you are not eligible for a higher discount at this time. Keep up the good work and continue submitting completed projects to qualify for future tier upgrades."
+                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#1E3A63', marginBottom: '6px' }}>
+                  Internal Admin Reason (Optional):
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Minimum completed volume threshold not met yet."
+                  value={rejectReqModal.adminNotes}
+                  onChange={(e) => setRejectReqModal((prev) => ({ ...prev, adminNotes: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setRejectReqModal({ open: false, request: null, adminNotes: '' })}
+                style={styles.modalBtnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectDiscount}
+                style={styles.actionBtnDangerLg}
+              >
+                Confirm Rejection &amp; Notify
               </button>
             </div>
           </div>

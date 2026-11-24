@@ -192,6 +192,15 @@ const leadSchema = new mongoose.Schema(
       enum: ['HOT', 'WARM', 'COLD', 'NORMAL'],
       default: 'NORMAL',
     },
+    isOpened: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    openedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

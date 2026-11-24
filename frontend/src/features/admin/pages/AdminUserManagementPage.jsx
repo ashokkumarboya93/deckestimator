@@ -366,7 +366,16 @@ export default function AdminUserManagementPage() {
                       <td style={styles.td}>
                         <div style={styles.userCell}>
                           <div style={styles.avatarPill}>
-                            {(req.fullName || 'U').charAt(0).toUpperCase()}
+                            {req.avatar && resolveAvatarUrl(req.avatar) ? (
+                              <img
+                                src={resolveAvatarUrl(req.avatar)}
+                                alt={req.fullName || 'User'}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              (req.fullName || 'U').charAt(0).toUpperCase()
+                            )}
                           </div>
                           <div>
                             <div style={styles.userName}>{req.fullName}</div>

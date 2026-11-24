@@ -364,9 +364,9 @@ const styles = {
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: '22px',
-    border: '1px solid #E2E8F0',
+    border: '1px solid #CBD5E1',
     borderTop: '4px solid #E08131',
-    boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(224, 129, 49, 0.06)',
+    boxShadow: '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 20px 32px -8px rgba(15, 23, 42, 0.06)',
     padding: '32px 32px 28px 32px',
     position: 'relative',
     overflow: 'hidden',

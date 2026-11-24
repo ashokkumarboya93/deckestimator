@@ -24,6 +24,49 @@ import { contractorCommissionApi } from '../api/contractorCommissionApi';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { getEstimates } from '../../customer/api/estimatesApi';
 import { useAuth } from '../../auth/hooks/useAuth';
+import contractorBannerBg from '../../../assets/images/Banner_BG_img.png';
+
+function getDeckArea(est) {
+  if (est?.deckDetails?.dimensions?.squareFootage) return `${est.deckDetails.dimensions.squareFootage} sq ft`;
+  if (est?.pricingSnapshot?.totalArea) return `${est.pricingSnapshot.totalArea} sq ft`;
+  if (est?.deckDetails?.dimensions?.length && est?.deckDetails?.dimensions?.width) {
+    return `${Number(est.deckDetails.dimensions.length) * Number(est.deckDetails.dimensions.width)} sq ft`;
+  }
+  return '—';
+}
+
+function getDeckDimensions(est) {
+  if (est?.deckDetails?.dimensions?.length && est?.deckDetails?.dimensions?.width) {
+    return `(${est.deckDetails.dimensions.length} ft × ${est.deckDetails.dimensions.width} ft)`;
+  }
+  return '';
+}
+
+function getEstimateStatusBadge(status) {
+  const s = (status || 'CREATED').toUpperCase();
+  if (s === 'COMPLETED') {
+    return {
+      bg: '#DCFCE7',
+      color: '#15803D',
+      border: '1px solid #86EFAC',
+      label: 'Completed',
+    };
+  }
+  if (s === 'APPROVED' || s === 'IN_REVIEW' || s === 'REQUESTED') {
+    return {
+      bg: '#FEF3C7',
+      color: '#B45309',
+      border: '1px solid #FDE68A',
+      label: s === 'REQUESTED' ? 'In Review' : 'Approved',
+    };
+  }
+  return {
+    bg: '#F1F5F9',
+    color: '#475569',
+    border: '1px solid #CBD5E1',
+    label: 'Created',
+  };
+}
 
 // High-fidelity Money Bag SVG illustration for the right side of the banner
 function MoneyBagGraphic({ size = 105 }) {
@@ -130,12 +173,12 @@ export default function ContractorDiscountsEarningsPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [activeTab, setActiveTab] = useState('discounts'); // 'discounts' | 'commissions'
   const [loading, setLoading] = useState(true);
 
   // Real Database state
   const [discounts, setDiscounts] = useState([]);
-  const [effectiveDiscountRate, setEffectiveDiscountRate] = useState(10);
+  const [estimates, setEstimates] = useState([]);
+  const [effectiveDiscountRate, setEffectiveDiscountRate] = useState(5);
   const [totalWholesaleSavings, setTotalWholesaleSavings] = useState(0);
   const [commissions, setCommissions] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -144,11 +187,6 @@ export default function ContractorDiscountsEarningsPage() {
   // Discounts tab search & filter
   const [discountSearch, setDiscountSearch] = useState('');
   const [discountSort, setDiscountSort] = useState('ALL');
-
-  // Commissions tab search & filter
-  const [commSearch, setCommSearch] = useState('');
-  const [commStatusFilter, setCommStatusFilter] = useState('ALL');
-  const [selectedTxn, setSelectedTxn] = useState(null);
 
   // Request higher discount form state
   const [reqBusinessName, setReqBusinessName] = useState('');
@@ -173,17 +211,26 @@ export default function ContractorDiscountsEarningsPage() {
         getEstimates({ limit: 100 }),
       ]);
 
-      // 1. Discount policies & rate
-      if (discRes.status === 'fulfilled' && discRes.value?.data) {
-        const dData = discRes.value.data;
+      // 1. Discount policies & rate (always dynamically read the live tuned discount from admin)
+      if (discRes.status === 'fulfilled' && discRes.value) {
+        const dData = discRes.value?.data || discRes.value;
         if (Array.isArray(dData)) {
           setDiscounts(dData);
           if (dData[0]?.discountValue) {
             setEffectiveDiscountRate(Number(dData[0].discountValue));
           }
-        } else if (dData?.policies && Array.isArray(dData.policies)) {
-          setDiscounts(dData.policies);
-          setEffectiveDiscountRate(Number(dData.effectiveRate || dData.effectiveDiscount?.rate || 10));
+        } else if (dData) {
+          if (Array.isArray(dData.policies)) {
+            setDiscounts(dData.policies);
+          }
+          const eff =
+            dData.effectiveRate ??
+            dData.effectiveDiscount?.rate ??
+            dData.defaultDiscount ??
+            (Array.isArray(dData.policies) && dData.policies[0]?.discountValue);
+          if (typeof eff === 'number') {
+            setEffectiveDiscountRate(eff);
+          }
         }
       }
 
@@ -211,10 +258,12 @@ export default function ContractorDiscountsEarningsPage() {
         }
       }
 
-      // 5. Estimated Wholesale Savings
-      if (estRes.status === 'fulfilled' && estRes.value?.estimates) {
+      // 5. Contractor Estimates & Wholesale Savings
+      if (estRes.status === 'fulfilled') {
+        const estList = estRes.value?.estimates || estRes.value?.data?.estimates || (Array.isArray(estRes.value) ? estRes.value : []);
+        setEstimates(estList);
         let savings = 0;
-        estRes.value.estimates.forEach((e) => {
+        estList.forEach((e) => {
           if (e.discountBreakdown?.applied && e.discountBreakdown?.discountAmount) {
             savings += Number(e.discountBreakdown.discountAmount);
           } else if (e.discountBreakdown?.originalTotal && e.totalAmount && e.discountBreakdown.originalTotal > e.totalAmount) {
@@ -246,8 +295,8 @@ export default function ContractorDiscountsEarningsPage() {
           name: 'DRP Master Contractor Material Wholesale',
           code: 'CONTRACTOR_DEFAULT_10',
           type: 'Percentage',
-          value: `${effectiveDiscountRate || 10}%`,
-          numericValue: effectiveDiscountRate || 10,
+          value: `${effectiveDiscountRate || 5}%`,
+          numericValue: effectiveDiscountRate || 5,
           applicableFor: 'Premium Wood, Stains & Sealers',
           validity: 'Active Throughout 2026',
           status: 'Active',
@@ -302,70 +351,55 @@ export default function ContractorDiscountsEarningsPage() {
     return result;
   }, [displayDiscounts, discountSearch, discountSort]);
 
-  // Map real commission records
-  const displayComms = useMemo(() => {
-    if (!commissions || commissions.length === 0) {
-      return [];
-    }
+  const activeWholesaleTier =
+    (typeof effectiveDiscountRate === 'number' && effectiveDiscountRate > 0)
+      ? effectiveDiscountRate
+      : (profile?.wholesaleDiscountTier || 5);
 
-    return commissions.map((c) => ({
-      id: c._id || c.id,
-      txnId: c.commissionReference || `COM-${String(c._id || c.id).slice(-4).toUpperCase()}`,
-      project: c.leadId?.deckSnapshot?.projectName || c.policySnapshot?.name || 'Deck Restoration Project',
-      customer: c.leadId?.customerSnapshot?.name || (c.leadId?.customerSnapshot?.firstName ? `${c.leadId.customerSnapshot.firstName} ${c.leadId.customerSnapshot.lastName || ''}`.trim() : 'Homeowner Client'),
-      estimateNumber: c.estimateId?.estimateNumber || c.conversionReference || `EST-${String(c._id || c.id).slice(-6).toUpperCase()}`,
-      amount: `$${Number(c.approvedAmount || c.calculatedAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      numericAmount: Number(c.approvedAmount || c.calculatedAmount || 0),
-      status: (c.status || 'pending').toLowerCase() === 'paid'
-        ? 'Paid'
-        : (c.status || '').toLowerCase() === 'payable'
-        ? 'Payable'
-        : 'Pending',
-      date: new Date(c.paidAt || c.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      rate: c.policySnapshot?.commissionValue ? `${c.policySnapshot.commissionValue}% Base Partner Rate` : 'Wholesale Referral Margin',
-      raw: c,
-    }));
-  }, [commissions]);
+  const totalEstimationCost = useMemo(() => {
+    return estimates.reduce((sum, e) => {
+      const val = Number(e.totalAmount || e.pricingSnapshot?.calculatedTotal || 0);
+      return sum + val;
+    }, 0);
+  }, [estimates]);
 
-  // Filter commissions live
-  const filteredComms = useMemo(() => {
-    return displayComms.filter((item) => {
-      const q = commSearch.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        item.txnId.toLowerCase().includes(q) ||
-        item.project.toLowerCase().includes(q) ||
-        item.customer.toLowerCase().includes(q) ||
-        item.estimateNumber.toLowerCase().includes(q);
+  const earnedCommissions = useMemo(() => {
+    return estimates.reduce((sum, e) => {
+      const isCompleted = (e.estimateStatus || e.status || '').toUpperCase() === 'COMPLETED';
+      if (!isCompleted) return sum;
+      const discountAmt = Number(
+        e.discountBreakdown?.discountAmount ||
+        (e.discountBreakdown?.originalTotal > e.totalAmount ? e.discountBreakdown.originalTotal - e.totalAmount : 0) ||
+        ((Number(e.totalAmount || 0) * activeWholesaleTier) / 100)
+      );
+      return sum + discountAmt;
+    }, 0);
+  }, [estimates, activeWholesaleTier]);
 
-      const matchesStatus =
-        commStatusFilter === 'ALL' ||
-        item.status.toUpperCase() === commStatusFilter.toUpperCase();
+  // Filter contractor estimates live for Discounts tab
+  const filteredEstimates = useMemo(() => {
+    return estimates.filter((est) => {
+      const q = discountSearch.toLowerCase().trim();
+      const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck';
+      const refNum = est.estimateNumber || est._id || '';
+      const wood = est.deckDetails?.surfaceMaterial || est.pricingSnapshot?.wood || '';
+      const matchesSearch = !q || projName.toLowerCase().includes(q) || refNum.toLowerCase().includes(q) || wood.toLowerCase().includes(q);
 
-      return matchesSearch && matchesStatus;
+      const st = (est.estimateStatus || est.status || 'CREATED').toUpperCase();
+      let matchesFilter = true;
+      if (discountSort === 'COMPLETED') {
+        matchesFilter = st === 'COMPLETED';
+      } else if (discountSort === 'IN_REVIEW') {
+        matchesFilter = st === 'IN_REVIEW' || st === 'REQUESTED';
+      } else if (discountSort === 'CREATED') {
+        matchesFilter = st === 'CREATED';
+      }
+
+      return matchesSearch && matchesFilter;
     });
-  }, [displayComms, commSearch, commStatusFilter]);
+  }, [estimates, discountSearch, discountSort]);
 
-  // Compute real financial summary totals strictly from real data
-  const realTotalEarned = useMemo(() => {
-    if (summary?.byStatus?.paid?.amount !== undefined) {
-      return Number(summary.byStatus.paid.amount);
-    }
-    return commissions
-      .filter((c) => (c.status || '').toLowerCase() === 'paid')
-      .reduce((sum, c) => sum + Number(c.approvedAmount || c.calculatedAmount || 0), 0);
-  }, [summary, commissions]);
-
-  const realPayableBalance = useMemo(() => {
-    if (summary?.byStatus?.payable?.amount !== undefined) {
-      return Number(summary.byStatus.payable.amount);
-    }
-    return commissions
-      .filter((c) => (c.status || '').toLowerCase() === 'payable')
-      .reduce((sum, c) => sum + Number(c.approvedAmount || c.calculatedAmount || 0), 0);
-  }, [summary, commissions]);
-
-  // Handle submit discount request
+  // Handle submit discount request to Backend & Admin
   async function handleSubmitDiscountRequest(e) {
     e.preventDefault();
     if (!reqDescription.trim()) {
@@ -378,10 +412,13 @@ export default function ContractorDiscountsEarningsPage() {
     setReqSuccessMessage('');
 
     try {
-      // Simulate submission / persist to audit log or future notification endpoint
-      await new Promise((resolve) => setTimeout(resolve, 650));
+      await contractorDiscountApi.submitDiscountRequest({
+        businessName: reqBusinessName,
+        requestType: reqType,
+        description: reqDescription,
+      });
       setReqSuccessMessage(
-        '✓ Your wholesale discount request has been submitted successfully to the DRP Partner Management team. A senior estimator will review your account credentials within 24-48 business hours.'
+        '✓ Your wholesale discount request has been submitted successfully to the Admin team. You can track review status under Verification & Progress.'
       );
       setReqDescription('');
     } catch (err) {
@@ -412,33 +449,36 @@ export default function ContractorDiscountsEarningsPage() {
           }
         }
       `}</style>
-      {/* 1. Header Banner — Very pale navy blue with shiny style, thin border & money bag graphic */}
-      <div style={{ ...styles.headerCard, padding: isMobile ? '16px 14px' : '24px 30px' }}>
-        <div style={{ ...styles.bannerInner, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '14px' : '20px' }}>
-          <div style={{ flex: 1, minWidth: isMobile ? '100%' : '280px' }}>
-            <div style={styles.portalBadge}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="1" x2="12" y2="23" />
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-              <span style={styles.portalBadgeText}>Contractor Financial Portal</span>
-            </div>
-            <h1 style={{ ...styles.pageTitle, fontSize: isMobile ? '20px' : '25px' }}>Discounts &amp; Earnings</h1>
-            <p style={{ ...styles.pageSub, fontSize: isMobile ? '11.5px' : '13px' }}>
-              Manage your wholesale material discounts, volume pricing benefits, and track accrued commission earnings in one unified dashboard.
-            </p>
+      {/* 1. Header Hero Banner with Wood Deck Background matching other contractor pages */}
+      <section
+        style={{
+          ...styles.heroBanner,
+          padding: isMobile ? '18px 16px' : '26px 32px',
+          backgroundImage: `linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 25%, transparent 55%), linear-gradient(90deg, rgba(16, 38, 72, 0.72) 0%, rgba(22, 48, 88, 0.58) 28%, rgba(30, 58, 99, 0.28) 42%, rgba(30, 58, 99, 0.04) 52%, rgba(0, 0, 0, 0) 100%), url(${contractorBannerBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
+          borderRadius: '16px',
+          marginBottom: '20px',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 4px 18px rgba(15, 23, 42, 0.08)',
+        }}
+      >
+        <div style={styles.heroContent}>
+          <div style={styles.portalBadge}>
+            <span style={styles.portalBadgeText}>Wood Restoration</span>
           </div>
-
-          {/* Right side: High-fidelity Money Bag PNG/SVG Graphic (replacing the 2 removed buttons) */}
-          {!isSmallMobile && (
-            <div style={styles.moneyBagWrap} title="Contractor Wholesale Benefits & Revenue Hub">
-              <MoneyBagGraphic size={isMobile ? 75 : 105} />
-            </div>
-          )}
+          <h1 style={{ ...styles.heroTitle, fontSize: isMobile ? '20px' : '26px', margin: '4px 0 6px 0', color: '#ffffff', fontWeight: '900' }}>
+            Discounts &amp; Earnings
+          </h1>
+          <p style={{ ...styles.heroSub, fontSize: isMobile ? '12px' : '13.5px', color: '#E2E8F0', margin: 0, maxWidth: '640px' }}>
+            Manage your wholesale material discounts, volume pricing benefits, and track accrued completed project earnings in one unified dashboard.
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* 2. Summary KPI Cards — Real Data Only with Improved Crisp Thin Borders */}
+      {/* 2. Summary KPI Cards — Glass Effect & Pale Colors with Real MongoDB Data */}
       <div
         style={{
           ...styles.kpiGrid,
@@ -447,10 +487,19 @@ export default function ContractorDiscountsEarningsPage() {
         }}
       >
         {/* Card 1: Wholesale Tier Discount */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #1E3A63', background: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)' }}>
+        <div
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '12px 14px' : '18px 20px',
+            background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            border: '1.5px solid #BFDBFE',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 14px rgba(30, 58, 99, 0.04)',
+          }}
+        >
           <div style={styles.kpiTopRow}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Wholesale Tier Discount</span>
-            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#EFF6FF', color: '#1E3A63', border: '1px solid #BFDBFE' }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px', color: '#1E3A63' }}>Wholesale Tier Discount</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#DBEAFE', color: '#1E3A63', border: '1px solid #93C5FD' }}>
               <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="19" y1="5" x2="5" y2="19" />
                 <circle cx="6.5" cy="6.5" r="2.5" />
@@ -458,69 +507,109 @@ export default function ContractorDiscountsEarningsPage() {
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px' }}>{effectiveDiscountRate}% OFF</div>
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '19px' : '23px', color: '#1E3A63' }}>
+            {activeWholesaleTier}% OFF
+          </div>
+          <span style={{ fontSize: isMobile ? '9.5px' : '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+            Active tuned partner tier
+          </span>
         </div>
 
-        {/* Card 2: Estimated Wholesale Savings (Replaces Active Policies) */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #0284C7', background: 'linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%)' }}>
+        {/* Card 2: Total Estimation Cost (Replaces Wholesale Savings) */}
+        <div
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '12px 14px' : '18px 20px',
+            background: 'linear-gradient(135deg, rgba(240, 249, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            border: '1.5px solid #BAE6FD',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.04)',
+          }}
+        >
           <div style={styles.kpiTopRow}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Wholesale Savings</span>
-            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#E0F2FE', color: '#0284C7', border: '1px solid #BAE6FD' }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px', color: '#0369A1' }}>Total Estimation Cost</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#E0F2FE', color: '#0284C7', border: '1px solid #7DD3FC' }}>
               <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#0284C7' }}>
-            ${totalWholesaleSavings.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '19px' : '23px', color: '#0284C7' }}>
+            ${totalEstimationCost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
+          <span style={{ fontSize: isMobile ? '9.5px' : '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+            Total scope across all builds
+          </span>
         </div>
 
-        {/* Card 3: Total Earned Commissions (Real MongoDB Data) */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #15803D', background: 'linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%)' }}>
+        {/* Card 3: Earned Commissions (Real applied discounts from completed conversions) */}
+        <div
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '12px 14px' : '18px 20px',
+            background: 'linear-gradient(135deg, rgba(240, 253, 244, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            border: '1.5px solid #BBF7D0',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 14px rgba(21, 128, 61, 0.04)',
+          }}
+        >
           <div style={styles.kpiTopRow}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Earned Commissions</span>
-            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0' }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px', color: '#15803D' }}>Earned Commissions</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC' }}>
               <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23" />
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#15803D' }}>
-            ${realTotalEarned.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '19px' : '23px', color: '#15803D' }}>
+            ${earnedCommissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
+          <span style={{ fontSize: isMobile ? '9.5px' : '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+            From completed conversions
+          </span>
         </div>
 
-        {/* Card 4: Payable Balance (Real MongoDB Data) */}
-        <div style={{ ...styles.kpiCard, padding: isMobile ? '10px 12px' : '16px 18px', borderTop: '4px solid #E08131', background: 'linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%)' }}>
+        {/* Card 4: Total Estimations (Replaces Payable Balance) */}
+        <div
+          style={{
+            ...styles.kpiCard,
+            padding: isMobile ? '12px 14px' : '18px 20px',
+            background: 'linear-gradient(135deg, rgba(255, 251, 235, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            border: '1.5px solid #FDE68A',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 14px rgba(224, 129, 49, 0.04)',
+          }}
+        >
           <div style={styles.kpiTopRow}>
-            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px' }}>Payable Balance</span>
-            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+            <span style={{ ...styles.kpiLabel, fontSize: isMobile ? '10px' : '11.5px', color: '#B45309' }}>Total Estimations</span>
+            <div style={{ ...styles.kpiIconBox, width: isMobile ? '30px' : '38px', height: isMobile ? '30px' : '38px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>
               <svg width={isMobile ? '15' : '19'} height={isMobile ? '15' : '19'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2" />
-                <line x1="2" y1="10" x2="22" y2="10" />
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
               </svg>
             </div>
           </div>
-          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '18px' : '22px', color: '#C2671A' }}>
-            ${realPayableBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <div style={{ ...styles.kpiValue, fontSize: isMobile ? '19px' : '23px', color: '#C2671A' }}>
+            {estimates.length}
           </div>
+          <span style={{ fontSize: isMobile ? '9.5px' : '11px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+            Saved calculation builds
+          </span>
         </div>
       </div>
 
-      {/* 3. Improved Two Tabs Switcher with Bold Typography & Real Visible Badges */}
+      {/* 3. Wholesale Partner Discounts Header & Real Live Count Badge */}
       <div style={{ ...styles.tabContainer, flexWrap: 'wrap', gap: isMobile ? '8px' : '10px' }}>
-        <button
-          onClick={() => setActiveTab('discounts')}
+        <div
           style={{
             ...styles.tabBtn,
-            padding: isMobile ? '8px 12px' : '10px 20px',
+            ...styles.tabBtnActive,
+            padding: isMobile ? '8px 14px' : '10px 20px',
             fontSize: isMobile ? '12px' : '13.5px',
-            flex: isMobile ? '1 1 auto' : 'none',
-            justifyContent: 'center',
-            ...(activeTab === 'discounts' ? styles.tabBtnActive : {}),
+            cursor: 'default',
           }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -529,37 +618,15 @@ export default function ContractorDiscountsEarningsPage() {
             <circle cx="17.5" cy="17.5" r="2.5" />
           </svg>
           <span>Wholesale Partner Discounts</span>
-          <span style={activeTab === 'discounts' ? styles.tabPillActive : styles.tabPillInactive}>
-            {displayDiscounts.length}
+          <span style={styles.tabPillActive}>
+            {estimates.length}
           </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('commissions')}
-          style={{
-            ...styles.tabBtn,
-            padding: isMobile ? '8px 12px' : '10px 20px',
-            fontSize: isMobile ? '12px' : '13.5px',
-            flex: isMobile ? '1 1 auto' : 'none',
-            justifyContent: 'center',
-            ...(activeTab === 'commissions' ? styles.tabBtnActive : {}),
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="1" x2="12" y2="23" />
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          </svg>
-          <span>Commissions &amp; Earnings</span>
-          <span style={activeTab === 'commissions' ? styles.tabPillActive : styles.tabPillInactive}>
-            {displayComms.length}
-          </span>
-        </button>
+        </div>
       </div>
 
-      {/* TAB 1: WHOLESALE PARTNER DISCOUNTS */}
-      {activeTab === 'discounts' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          {/* Banner: Contractor Tier Discount Program (Pale shiny color, thin border, & upload docs highlight) */}
+      {/* WHOLESALE PARTNER DISCOUNTS & SAVINGS */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* Banner: Contractor Tier Discount Program */}
           <div style={styles.tierBanner}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1, minWidth: '300px' }}>
@@ -571,18 +638,23 @@ export default function ContractorDiscountsEarningsPage() {
                 <div>
                   <h3 style={styles.tierTitle}>Contractor Tier Discount Program</h3>
                   <p style={styles.tierSub}>
-                    Discounts are automatically calculated and subtracted from wholesale materials and stain packages during your estimation builds. Verified contractors enjoy higher tiers up to 20% and priority project dispatch.
+                    Discounts are automatically calculated and subtracted from wholesale materials and stain packages during your estimation builds.
                   </p>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ ...styles.tierPill, ...(effectiveDiscountRate === 10 ? styles.tierPillCurrent : {}) }}>
-                      <span style={{ fontWeight: '800' }}>Standard Tier:</span> 10% Off
-                    </div>
-                    <div style={{ ...styles.tierPill, ...(effectiveDiscountRate === 15 ? styles.tierPillCurrent : styles.tierPillPro) }}>
-                      <span style={{ fontWeight: '800' }}>Verified Pro:</span> 15% Off
-                    </div>
-                    <div style={{ ...styles.tierPill, ...(effectiveDiscountRate >= 20 ? styles.tierPillCurrent : styles.tierPillElite) }}>
-                      <span style={{ fontWeight: '800' }}>DRP Elite Partner:</span> 20% Off + $350 Project Vouchers
-                    </div>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    backgroundColor: '#EFF6FF',
+                    border: '1px solid #BFDBFE',
+                    borderRadius: '8px',
+                    fontSize: isMobile ? '12px' : '13px',
+                    color: '#1E3A63',
+                    fontWeight: '600',
+                  }}>
+                    <span>✨</span>
+                    <span>Get more Discounts by uploading your documents and based on your Estimations History and conversions</span>
                   </div>
                 </div>
               </div>
@@ -596,7 +668,7 @@ export default function ContractorDiscountsEarningsPage() {
                   </span>
                 </div>
                 <p style={{ margin: '4px 0 10px 0', fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
-                  Upload your business license and insurance documents in Profile Settings to unlock 15% – 20% wholesale pricing.
+                  Upload your business license and insurance documents in Profile Settings to unlock enhanced wholesale partner pricing.
                 </p>
                 <button
                   type="button"
@@ -609,13 +681,13 @@ export default function ContractorDiscountsEarningsPage() {
             </div>
           </div>
 
-          {/* Active Partner Discount Policies Table Card with Pill Search & Filter */}
+          {/* Active Partner Estimations & Wholesale Discounts Table Card */}
           <div style={styles.tableCard}>
             <div style={{ ...styles.policiesTopBar, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '10px' : '16px' }}>
               <div>
-                <h3 style={styles.tableTitle}>Active Partner Discount Policies</h3>
+                <h3 style={styles.tableTitle}>Partner Estimations &amp; Savings</h3>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Reflected automatically on all estimate material and sealer lines
+                  Real-time status of your estimation calculations and realized wholesale savings upon completion.
                 </span>
               </div>
 
@@ -629,7 +701,7 @@ export default function ContractorDiscountsEarningsPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder={isMobile ? "Search policies..." : "Search policies by name, code, category..."}
+                    placeholder={isMobile ? "Search estimations..." : "Search project, ref #, or wood..."}
                     value={discountSearch}
                     onChange={(e) => setDiscountSearch(e.target.value)}
                     style={{ ...styles.pillSearchInput, fontSize: isMobile ? '11.5px' : '13px' }}
@@ -648,13 +720,37 @@ export default function ContractorDiscountsEarningsPage() {
                     onChange={(e) => setDiscountSort(e.target.value)}
                     style={{ ...styles.pillSelect, width: isMobile ? '100%' : 'auto', height: isMobile ? '36px' : '38px', fontSize: isMobile ? '11.5px' : '12.5px', padding: isMobile ? '4px 10px' : '7px 14px' }}
                   >
-                    <option value="ALL">All Policies</option>
-                    <option value="HIGH_TO_LOW">Highest Discount First</option>
-                    <option value="LOW_TO_HIGH">Lowest Discount First</option>
-                    <option value="NEWEST">Newest First</option>
-                    <option value="OLDEST">Oldest First</option>
+                    <option value="ALL">All Statuses</option>
+                    <option value="COMPLETED">Completed Only</option>
+                    <option value="IN_REVIEW">In Review</option>
+                    <option value="CREATED">Created</option>
                   </select>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadAllData()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: isMobile ? '6px 12px' : '8px 14px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '999px',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    color: '#1E3A63',
+                    cursor: 'pointer',
+                  }}
+                  title="Refresh estimations from database"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M23 4v6h-6" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
@@ -663,67 +759,132 @@ export default function ContractorDiscountsEarningsPage() {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.tableHeadRow}>
-                    <th style={styles.th}>Policy Name</th>
-                    <th style={styles.th}>Type</th>
-                    <th style={styles.th}>Discount Value</th>
-                    <th style={styles.th}>Applicable Category</th>
-                    <th style={styles.th}>Validity Period</th>
+                    <th style={styles.th}>Project Name</th>
+                    <th style={styles.th}>Deck Size</th>
+                    <th style={styles.th}>Total Estimation Cost</th>
+                    <th style={styles.th}>Wholesale Discount %</th>
                     <th style={styles.th}>Status</th>
+                    <th style={{ ...styles.th, textAlign: 'right' }}>Earned Discount Savings</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDiscounts.length === 0 ? (
+                  {filteredEstimates.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
-                        No discount policies matched your search or filter.
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '42px 16px', color: '#94A3B8' }}>
+                        <div style={{ fontSize: '30px', marginBottom: '8px' }}>📋</div>
+                        <strong style={{ display: 'block', fontSize: '14px', color: '#1E3A63', marginBottom: '4px' }}>
+                          No Estimations Found
+                        </strong>
+                        <span style={{ fontSize: '12px' }}>
+                          Completed project conversions will reflect here with your calculated wholesale savings.
+                        </span>
                       </td>
                     </tr>
                   ) : (
-                    filteredDiscounts.map((item) => (
-                      <tr key={item.id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <div style={{ fontWeight: '700', color: '#1E3A63', fontSize: '13.5px' }}>
-                            {item.name}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                            {item.code && (
-                              <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748B' }}>
-                                {item.code}
+                    filteredEstimates.map((est) => {
+                      const projName = est.deckDetails?.projectName || est.estimateName || 'Custom Deck Project';
+                      const refNum = est.estimateNumber || (est._id ? `EST-${String(est._id).slice(-8).toUpperCase()}` : 'EST-PENDING');
+                      const area = getDeckArea(est);
+                      const dims = getDeckDimensions(est);
+                      const totalCost = Number(est.totalAmount || est.pricingSnapshot?.calculatedTotal || 0);
+                      const discountRate = est.discountBreakdown?.rate || activeWholesaleTier;
+                      const isCompleted = (est.estimateStatus || est.status || '').toUpperCase() === 'COMPLETED';
+                      const stBadge = getEstimateStatusBadge(est.estimateStatus || est.status);
+
+                      const discountSavings = Number(
+                        est.discountBreakdown?.discountAmount ||
+                        (est.discountBreakdown?.originalTotal > est.totalAmount ? est.discountBreakdown.originalTotal - est.totalAmount : 0) ||
+                        ((totalCost * discountRate) / 100)
+                      );
+
+                      return (
+                        <tr key={est._id || est.id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <div style={{ fontWeight: '700', color: '#1E3A63', fontSize: '13.5px' }}>
+                              {projName}
+                            </div>
+                            <div style={{ fontSize: '11.5px', fontFamily: 'monospace', color: '#64748B', marginTop: '2px' }}>
+                              {refNum}
+                            </div>
+                          </td>
+
+                          <td style={styles.td}>
+                            <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>
+                              {area}
+                            </div>
+                            {dims && (
+                              <div style={{ fontSize: '11px', color: '#64748B' }}>
+                                {dims}
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={styles.td}>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: '#1E3A63' }}>
+                              ${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </td>
+
+                          <td style={styles.td}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              backgroundColor: '#EFF6FF',
+                              color: '#1E3A63',
+                              border: '1px solid #BFDBFE',
+                            }}>
+                              {discountRate}% Tier
+                            </span>
+                          </td>
+
+                          <td style={styles.td}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 10px',
+                              borderRadius: '999px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              backgroundColor: stBadge.bg,
+                              color: stBadge.color,
+                              border: stBadge.border,
+                            }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: stBadge.color }} />
+                              {stBadge.label}
+                            </span>
+                          </td>
+
+                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                            {isCompleted ? (
+                              <div>
+                                <span style={{ fontSize: '15px', fontWeight: '900', color: '#15803D' }}>
+                                  +${discountSavings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span style={{ display: 'block', fontSize: '10.5px', fontWeight: '700', color: '#166534' }}>
+                                  ✓ Savings Realized
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11.5px',
+                                color: '#94A3B8',
+                                backgroundColor: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                              }}>
+                                Pending Completion
                               </span>
                             )}
-                            {item.tier && (
-                              <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: '700' }}>
-                                &bull; {item.tier}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={styles.badgeNeutral}>{item.type}</span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ fontSize: '15px', fontWeight: '800', color: '#E08131' }}>
-                            {item.value}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ fontSize: '13px', color: '#334155' }}>
-                            {item.applicableFor}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ fontSize: '12.5px', color: '#64748B' }}>
-                            {item.validity}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={styles.badgeSuccess}>
-                            <span style={styles.statusDotSuccess} />
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -787,7 +948,7 @@ export default function ContractorDiscountsEarningsPage() {
                   />
                 </div>
 
-                {/* Field 2: Type of Request (4 Professional Options) */}
+                {/* Field 2: Type of Request */}
                 <div style={styles.formGroup}>
                   <label style={styles.formLabel}>
                     Type of Request <span style={{ color: '#E11D48' }}>*</span>
@@ -879,9 +1040,9 @@ export default function ContractorDiscountsEarningsPage() {
                 <div style={styles.guidelineItem}>
                   <div style={styles.guidelineDot} />
                   <div>
-                    <div style={styles.guidelineHeading}>Default Standard Wholesale Discount is 10%</div>
+                    <div style={styles.guidelineHeading}>Active Wholesale Material Discount</div>
                     <div style={styles.guidelineText}>
-                      Every verified active contractor starts with an automatic <strong>10% wholesale discount</strong> applied to all professional stains, sealers, cleaners, and restoration products.
+                      Your current active tier of <strong>{activeWholesaleTier}%</strong> is automatically applied to all materials, stains, and restoration packages.
                     </div>
                   </div>
                 </div>
@@ -891,23 +1052,23 @@ export default function ContractorDiscountsEarningsPage() {
                   <div style={{ ...styles.guidelineDot, backgroundColor: '#0284C7' }} />
                   <div>
                     <div style={{ ...styles.guidelineHeading, color: '#0369A1' }}>
-                      Upload Verification Docs for 15% Verified Pro Tier
+                      Upload Verification Documents in Profile Settings
                     </div>
                     <div style={styles.guidelineText}>
-                      For more trust and credential proof, upload your <strong>Active Contractor License</strong> and <strong>General Liability COI</strong> under Profile Settings. Once verified, your rate automatically steps up to 15%.
+                      Upload your business license and insurance certificate under Profile Settings to unlock higher wholesale discount tiers.
                     </div>
                   </div>
                 </div>
 
                 {/* Guideline 3 */}
                 <div style={styles.guidelineItem}>
-                  <div style={{ ...styles.guidelineDot, backgroundColor: '#E08131' }} />
+                  <div style={{ ...styles.guidelineDot, backgroundColor: '#15803D' }} />
                   <div>
-                    <div style={{ ...styles.guidelineHeading, color: '#B45309' }}>
-                      Request Up to 20% Elite Tier via the Form Beside
+                    <div style={{ ...styles.guidelineHeading, color: '#15803D' }}>
+                      Request Tier Upgrades via the Form Beside
                     </div>
                     <div style={styles.guidelineText}>
-                      Contractors managing high project volume (≥ 10 decks/year or multi-family commercial contracts) can submit the beside form to unlock our maximum <strong>20% DRP Elite Partner Tier</strong> + $350 project vouchers.
+                      Get more Discounts by uploading your documents and based on your Estimations History and conversions. Submit your tier adjustment request beside for Admin review.
                     </div>
                   </div>
                 </div>
@@ -926,207 +1087,7 @@ export default function ContractorDiscountsEarningsPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* TAB 2: COMMISSIONS & EARNINGS */}
-      {activeTab === 'commissions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Filter Bar with Reduced Width Pill Search & Pill Dropdown */}
-          <div style={{ ...styles.filterBarCard, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '10px' : '14px' }}>
-            {/* Pill Search with reduced width */}
-            <div style={{ ...styles.commSearchPill, minWidth: isMobile ? '100%' : '320px', maxWidth: isMobile ? '100%' : '560px', width: '100%' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search transaction, project, customer, or estimate #..."
-                value={commSearch}
-                onChange={(e) => setCommSearch(e.target.value)}
-                style={styles.pillSearchInput}
-              />
-              {commSearch && (
-                <button onClick={() => setCommSearch('')} style={styles.clearSearchBtn}>
-                  &times;
-                </button>
-              )}
-            </div>
-
-            {/* Pill Status Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>Status:</span>
-              <select
-                value={commStatusFilter}
-                onChange={(e) => setCommStatusFilter(e.target.value)}
-                style={styles.pillSelect}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="PAID">Paid</option>
-                <option value="PAYABLE">Payable</option>
-                <option value="PENDING">Pending</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Commissions Table Card */}
-          <div style={styles.tableCard}>
-            <div style={styles.tableHeaderBar}>
-              <div>
-                <h3 style={styles.tableTitle}>Commission Payout Ledger</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                  Weekly direct ACH disbursements processed every Friday for settled jobs.
-                </p>
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1E3A63' }}>
-                Showing {filteredComms.length} records
-              </span>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeadRow}>
-                    <th style={styles.th}>Txn Reference</th>
-                    <th style={styles.th}>Project &amp; Client</th>
-                    <th style={styles.th}>Estimate #</th>
-                    <th style={styles.th}>Commission Amount</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Date</th>
-                    <th style={styles.th}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredComms.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '38px', color: '#94A3B8' }}>
-                        No commission records matched your search criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredComms.map((item) => (
-                      <tr key={item.id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <span style={styles.txnCode}>{item.txnId}</span>
-                        </td>
-                        <td style={styles.td}>
-                          <div style={{ fontWeight: '700', color: '#1E3A63', fontSize: '13.5px' }}>
-                            {item.project}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748B' }}>
-                            Client: {item.customer}
-                          </div>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ fontSize: '12.5px', fontFamily: 'monospace', color: '#334155' }}>
-                            {item.estimateNumber}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#15803D' }}>
-                            {item.amount}
-                          </div>
-                          {item.rate && (
-                            <span style={{ fontSize: '10.5px', color: '#64748B' }}>{item.rate}</span>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          {item.status === 'Paid' && (
-                            <span style={styles.badgeSuccess}>
-                              <span style={styles.statusDotSuccess} />
-                              Paid
-                            </span>
-                          )}
-                          {item.status === 'Payable' && (
-                            <span style={styles.badgeWarning}>
-                              <span style={styles.statusDotWarning} />
-                              Payable
-                            </span>
-                          )}
-                          {item.status === 'Pending' && (
-                            <span style={styles.badgeNeutral}>Pending</span>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ fontSize: '12.5px', color: '#64748B' }}>{item.date}</span>
-                        </td>
-                        <td style={styles.td}>
-                          <button
-                            onClick={() => setSelectedTxn(item)}
-                            style={styles.detailBtn}
-                            title="View transaction breakdown"
-                          >
-                            <span>Details</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Transaction Details Modal */}
-      {selectedTxn && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedTxn(null)}>
-          <div style={styles.modalBox} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1E3A63' }}>
-                  Commission Settlement Details
-                </h3>
-                <span style={{ fontSize: '12px', color: '#64748B' }}>
-                  Ref: {selectedTxn.txnId} &bull; Estimate {selectedTxn.estimateNumber}
-                </span>
-              </div>
-              <button onClick={() => setSelectedTxn(null)} style={styles.modalCloseBtn}>
-                &times;
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Project Name</span>
-                <span style={styles.modalValue}>{selectedTxn.project}</span>
-              </div>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Client Name</span>
-                <span style={styles.modalValue}>{selectedTxn.customer}</span>
-              </div>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Commission Payout</span>
-                <span style={{ ...styles.modalValue, color: '#15803D', fontWeight: '800', fontSize: '16px' }}>
-                  {selectedTxn.amount}
-                </span>
-              </div>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Current Status</span>
-                <span style={selectedTxn.status === 'Paid' ? styles.badgeSuccess : styles.badgeWarning}>
-                  {selectedTxn.status}
-                </span>
-              </div>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Processed Date</span>
-                <span style={styles.modalValue}>{selectedTxn.date}</span>
-              </div>
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>Disbursement Method</span>
-                <span style={styles.modalValue}>Direct ACH to Registered Business Account</span>
-              </div>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button onClick={() => setSelectedTxn(null)} style={styles.modalConfirmBtn}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 }
 
