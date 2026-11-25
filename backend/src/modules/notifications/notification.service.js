@@ -4,13 +4,32 @@
 
 const Notification = require('./notification.model');
 
+const notifCache = new Map();
+const NOTIF_CACHE_TTL = 10000; // 10s fast response cache
+
+function invalidateNotifCache(userId = null) {
+  if (userId) {
+    notifCache.delete(String(userId));
+  } else {
+    notifCache.clear();
+  }
+}
+
 /**
  * Get notifications for a user based on user ID and role.
  */
 async function getUserNotifications(user, query = {}) {
   const { limit = 25, unreadOnly = false } = query;
   const userId = user.id || user._id;
+  const userIdStr = String(userId);
   const role = user.role;
+
+  if (!unreadOnly && Number(limit) <= 25) {
+    const cached = notifCache.get(userIdStr);
+    if (cached && Date.now() - cached.cachedAt < NOTIF_CACHE_TTL) {
+      return cached.data;
+    }
+  }
 
   // Broadcast notifications should only appear if created on or after the user's account creation
   // (ensures newly registered accounts start with 0 notifications).
@@ -41,12 +60,19 @@ async function getUserNotifications(user, query = {}) {
     filter.isRead = false;
   }
 
-  const rawNotifications = await Notification.find(filter)
-    .sort({ createdAt: -1 })
-    .limit(Number(limit))
-    .lean();
+  let rawNotifications = [];
+  try {
+    rawNotifications = await Notification.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .maxTimeMS(4000)
+      .lean();
+  } catch (err) {
+    const stale = notifCache.get(userIdStr);
+    if (stale?.data) return stale.data;
+    return { notifications: [], unreadCount: 0 };
+  }
 
-  const userIdStr = String(userId);
   const notifications = rawNotifications.map((n) => {
     const isUserRead = n.isRead || (Array.isArray(n.readBy) && n.readBy.some((id) => String(id) === userIdStr));
     return {
@@ -59,10 +85,14 @@ async function getUserNotifications(user, query = {}) {
   const finalNotifications = unreadOnly ? notifications.filter((n) => !n.isRead) : notifications;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  return {
+  const result = {
     notifications: finalNotifications,
     unreadCount,
   };
+  if (!unreadOnly && Number(limit) <= 25) {
+    notifCache.set(userIdStr, { data: result, cachedAt: Date.now() });
+  }
+  return result;
 }
 
 /**
@@ -83,6 +113,7 @@ async function markAsRead(notificationId, user) {
   }
 
   await notif.save();
+  invalidateNotifCache(userId);
   return notif;
 }
 
@@ -111,6 +142,7 @@ async function markAllAsRead(user) {
     { $addToSet: { readBy: userId } }
   );
 
+  invalidateNotifCache(userId);
   return { success: true };
 }
 
@@ -136,6 +168,7 @@ async function clearAllNotifications(user) {
     ),
   ]);
 
+  invalidateNotifCache(userId);
   return { success: true };
 }
 
