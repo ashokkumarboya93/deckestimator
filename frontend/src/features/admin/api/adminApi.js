@@ -40,7 +40,7 @@ export const adminApi = {
     return res.data;
   },
   softDeleteUser: async (id, reason = '', permanent = false) => {
-    const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, body: JSON.stringify({ reason, permanent }) });
+    const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, data: { reason, permanent } });
     return res.data;
   },
   bulkDeleteUsers: async (userIds = [], reason = '') => {

@@ -518,7 +518,16 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
 
   const effectiveStatus = status || accountStatus;
   if (effectiveStatus && effectiveStatus !== 'all') {
-    query.accountStatus = effectiveStatus.toLowerCase();
+    const s = effectiveStatus.toLowerCase().trim();
+    if (s === 'blocked') {
+      query.accountStatus = { $in: ['blocked', 'suspended', 'banned'] };
+    } else if (s === 'active') {
+      query.accountStatus = { $in: ['active', 'approved', 'verified'] };
+    } else if (s === 'inactive') {
+      query.accountStatus = { $in: ['inactive', 'pending', 'unverified', 'pending_verification'] };
+    } else {
+      query.accountStatus = s;
+    }
   }
   if (search) {
     const regex = new RegExp(search.trim(), 'i');
