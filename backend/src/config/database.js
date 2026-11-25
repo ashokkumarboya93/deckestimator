@@ -29,7 +29,7 @@ async function connectDatabase() {
       maxPoolSize: 30,
       minPoolSize: 5,
       serverSelectionTimeoutMS: 20000,
-      socketTimeoutMS: 20000,
+      socketTimeoutMS: 45000,
       connectTimeoutMS: 10000,
     });
     console.log(`[Database] Connected to MongoDB (${env.isDev ? 'development' : env.NODE_ENV})`);

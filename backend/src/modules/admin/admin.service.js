@@ -1561,10 +1561,10 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
   // Both Customer and Contractor Estimations are monitored as Projects (using ultra-lean projection)
   const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
     Estimate.find(query)
-      .select('estimateReference estimateNumber estimateName estimateStatus estimateType totalAmount subtotal deckDetails deckId ownerId createdBy customerSnapshot assignedContractorName createdAt updatedAt photos services notes conditionFlags')
+      .select('estimateReference estimateNumber estimateName estimateStatus estimateType totalAmount subtotal deckDetails.projectName deckDetails.areaSqFt deckDetails.area deckDetails.woodSpecies deckDetails.surfaceMaterial deckDetails.dimensions deckDetails.location deckDetails.city deckDetails.state deckDetails.deckLength deckDetails.deckWidth deckDetails.deckCondition deckDetails.components deckDetails.services deckId ownerId createdBy customerSnapshot assignedContractorName createdAt updatedAt services notes conditionFlags')
       .populate('ownerId', 'fullName email phone role address')
       .populate('createdBy', 'fullName email phone role address')
-      .populate('deckId', 'projectName dimensions surfaceDetails structureDetails propertyAddress visibleConditions photos')
+      .populate('deckId', 'projectName dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
       .sort({ updatedAt: -1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -2223,14 +2223,15 @@ async function listLeads({
 
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
+      .select('-photos -deckSnapshot.photos')
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt avatar')
-      .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions photos')
+      .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
       .populate(
         'estimateId',
-        'estimateNumber estimateReference totalCost totalAmount estimateStatus photos ' +
-        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.surfaceMaterial deckDetails.components deckDetails.services deckDetails.photos ' +
+        'estimateNumber estimateReference totalCost totalAmount estimateStatus ' +
+        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.surfaceMaterial deckDetails.components deckDetails.services ' +
         'pricingSnapshot.spec pricingSnapshot.calculatedTotal pricingSnapshot.total'
       )
       .sort(sortOption)
@@ -3916,7 +3917,15 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
         conversionRate: convRate,
         totalRevenue: cRevenue,
         verificationStatus: prof?.verificationStatus || c.verificationStatus || 'APPROVED',
-        avatar: c.avatar || prof?.avatar || '',
+        avatar: (() => {
+          const av = c.avatar || prof?.avatar || '';
+          if (av && av.startsWith('data:image')) {
+            const url = persistAvatarIfBase64(c._id, av);
+            User.updateOne({ _id: c._id }, { $set: { avatar: url } }).catch(() => {});
+            return url;
+          }
+          return av;
+        })(),
       };
     })
     .sort(
