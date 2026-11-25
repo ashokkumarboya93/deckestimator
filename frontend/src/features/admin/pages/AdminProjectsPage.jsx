@@ -715,7 +715,7 @@ export default function AdminProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.th, width: '44px', textAlign: 'center' }}>
+                  <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={allCurrentPageSelected}
@@ -724,11 +724,11 @@ export default function AdminProjectsPage() {
                       title="Select all projects on this page"
                     />
                   </th>
-                  <th style={{ ...styles.th, width: '32%' }}>Project / Estimation</th>
-                  <th style={{ ...styles.th, width: '25%' }}>Customer / Initiator</th>
-                  <th style={{ ...styles.th, width: '18%' }}>Estimated Value</th>
-                  <th style={{ ...styles.th, width: '13%' }}>Life Cycle Stage</th>
-                  <th style={{ ...styles.th, width: '12%', textAlign: 'right' }}>Actions</th>
+                  <th style={{ ...styles.th, width: '22%' }}>Project / Estimation</th>
+                  <th style={{ ...styles.th, width: '21%' }}>Customer / Initiator</th>
+                  <th style={{ ...styles.th, width: '14%' }}>Estimated Value</th>
+                  <th style={{ ...styles.th, width: '15%' }}>Life Cycle Stage</th>
+                  <th style={{ ...styles.th, width: '28%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1899,15 +1899,15 @@ const styles = {
     boxSizing: 'border-box',
   },
   tableResponsive: {
-    overflowX: 'hidden',
+    overflowX: 'auto',
     width: '100%',
   },
   table: {
     width: '100%',
+    minWidth: '940px',
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '12.5px',
-    tableLayout: 'fixed',
   },
   th: {
     padding: '10px 12px',
@@ -2089,7 +2089,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: '8px',
+    gap: '6px',
+    flexWrap: 'nowrap',
   },
   btnUpdateStage: {
     display: 'inline-flex',
@@ -2102,6 +2103,7 @@ const styles = {
     fontSize: '11px',
     fontWeight: '700',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
     transition: 'all 0.15s ease',
   },
   btnViewDetails: {
@@ -2113,6 +2115,7 @@ const styles = {
     fontSize: '11px',
     fontWeight: '700',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
     transition: 'all 0.15s ease',
   },
 
