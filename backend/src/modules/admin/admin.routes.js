@@ -34,6 +34,7 @@ router.use(authenticate, authorize(ROLES.ADMIN));
 // 1. Dashboard
 router.get('/dashboard/summary', adminController.getDashboardSummary);
 router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
+router.get('/alerts/summary', adminController.getAlertsSummary);
 
 // 2. User Management & Moderation
 router.get('/users/search-recipients', adminController.searchRecipients);

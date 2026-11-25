@@ -30,6 +30,15 @@ async function getBusinessActivityTrend(req, res, next) {
   }
 }
 
+async function getAlertsSummary(req, res, next) {
+  try {
+    const summary = await adminService.getAlertsSummary();
+    res.status(200).json({ success: true, data: summary });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 2. Users Management & Moderation
 async function listUsers(req, res, next) {
   try {
@@ -714,6 +723,7 @@ async function deleteChildAdmin(req, res, next) {
 module.exports = {
   getDashboardSummary,
   getBusinessActivityTrend,
+  getAlertsSummary,
   listUsers,
   getUserProfile,
   exportSingleUserDossier,

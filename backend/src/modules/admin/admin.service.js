@@ -454,6 +454,36 @@ async function getDashboardSummary(dateRange = '30d') {
   return result;
 }
 
+let alertsSummaryCache = null;
+const ALERTS_SUMMARY_TTL = 20000;
+
+async function getAlertsSummary() {
+  if (alertsSummaryCache && Date.now() - alertsSummaryCache.cachedAt < ALERTS_SUMMARY_TTL) {
+    return alertsSummaryCache.data;
+  }
+
+  const [leads, verifications, documents, discountRequests, userRequests, projects] = await Promise.all([
+    Lead.find({ status: { $ne: 'closed' } }).select('_id isOpened leadNumber').limit(100).lean(),
+    ContractorProfile.find({ verificationStatus: 'pending' }).select('_id userId').lean(),
+    VerificationDocument.find({ documentStatus: { $in: ['pending', 'pending_review'] } }).select('_id documentStatus').lean(),
+    DiscountRequest.find({ status: { $regex: /^pending$/i } }).select('_id status').lean(),
+    UserRequest.find({ status: { $regex: /^pending$/i } }).select('_id status').lean(),
+    Project.find({ status: { $in: ['requested', 'in_review', 'created'] } }).select('_id status projectId estimateId').limit(60).lean(),
+  ]);
+
+  const data = {
+    leads: leads.map((l) => ({ id: String(l._id), isOpened: Boolean(l.isOpened), leadNumber: l.leadNumber })),
+    verifications: verifications.map((v) => ({ id: String(v._id) })),
+    documents: documents.map((d) => ({ id: String(d._id), documentStatus: d.documentStatus })),
+    discountRequests: discountRequests.map((r) => ({ id: String(r._id), status: r.status })),
+    userRequests: userRequests.map((r) => ({ id: String(r._id), status: r.status })),
+    projects: projects.map((p) => ({ id: String(p._id), status: p.status, projectId: p.projectId })),
+  };
+
+  alertsSummaryCache = { data, cachedAt: Date.now() };
+  return data;
+}
+
 /**
  * Ultra-fast countDocuments fallback so Dashboard never displays all-0s on transient latency.
  */
@@ -4361,6 +4391,7 @@ module.exports = {
   // 1. Dashboard
   getDashboardSummary,
   getDashboardFastFallback,
+  getAlertsSummary,
   getBusinessActivityTrend,
   getActivityTrend: getBusinessActivityTrend,
 

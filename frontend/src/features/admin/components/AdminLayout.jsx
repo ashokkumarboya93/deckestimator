@@ -153,92 +153,45 @@ export default function AdminLayout() {
         }
       })();
 
-      // 1. Leads Management (Red Alert Bubble)
+      // Single consolidated, server-cached alerts request (replaces 6 parallel polling requests)
       adminApi
-        .getLeads({ tab: 'all', limit: 100 })
+        .getAlertsSummary()
         .then((res) => {
-          const list = Array.isArray(res?.data?.data)
-            ? res.data.data
-            : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.leads) ? res.data.leads : []));
-          if (mounted && Array.isArray(list)) {
-            const unreadLeads = list.filter(
-              (l) => !l.isOpened && !storedReadLeads.includes(l._id || l.id || l.leadNumber)
+          const d = res?.data || res || {};
+          if (!mounted) return;
+
+          if (Array.isArray(d.leads)) {
+            const unreadLeads = d.leads.filter(
+              (l) => !l.isOpened && !storedReadLeads.includes(l.id || l.leadNumber)
             ).length;
             setHotLeadsCount(unreadLeads);
           }
-        })
-        .catch(() => {});
 
-      // 2. Verifications & Contractor Documents (Amber Gold Bubble)
-      Promise.allSettled([
-        adminApi.getVerifications({ status: 'pending' }),
-        adminApi.getContractorDocuments({ status: 'pending' }),
-      ])
-        .then(([vRes, dRes]) => {
-          let unread = 0;
-          if (vRes.status === 'fulfilled') {
-            const list = Array.isArray(vRes.value?.data) ? vRes.value.data : (Array.isArray(vRes.value?.data?.data) ? vRes.value.data.data : []);
-            unread += list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
+          let unreadVerif = 0;
+          if (Array.isArray(d.verifications)) {
+            unreadVerif += d.verifications.filter((v) => !storedReadVerif.includes(v.id)).length;
           }
-          if (dRes.status === 'fulfilled') {
-            const docs = Array.isArray(dRes.value?.data?.data) ? dRes.value.data.data : (Array.isArray(dRes.value?.data) ? dRes.value.data : []);
-            unread += docs.filter((d) => {
-              const st = (d.documentStatus || 'pending').toLowerCase();
-              return (st === 'pending' || st === 'pending_review') && !storedReadVerif.includes(d._id || d.id);
-            }).length;
+          if (Array.isArray(d.documents)) {
+            unreadVerif += d.documents.filter((doc) => !storedReadVerif.includes(doc.id)).length;
           }
-          if (mounted) {
-            setPendingVerifications(unread);
-          }
-        })
-        .catch(() => {});
+          setPendingVerifications(unreadVerif);
 
-      // 3. Discount Requests (Amber Gold Bubble)
-      adminApi
-        .getDiscountRequests({ status: 'PENDING' })
-        .then((res) => {
-          const list = Array.isArray(res?.data?.requests)
-            ? res.data.requests
-            : (Array.isArray(res?.data) ? res.data : []);
-          if (mounted && Array.isArray(list)) {
-            const unread = list.filter(
-              (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedReadVerif.includes(r._id || r.id)
-            ).length;
-            setPendingDiscountRequests(unread);
+          if (Array.isArray(d.discountRequests)) {
+            setPendingDiscountRequests(
+              d.discountRequests.filter((r) => !storedReadVerif.includes(r.id)).length
+            );
           }
-        })
-        .catch(() => {});
 
-      // 4. User Requests & Appeals (Amber Orange Bubble)
-      adminApi
-        .getUserRequests({ status: 'pending' })
-        .then((res) => {
-          const list = Array.isArray(res?.data?.data)
-            ? res.data.data
-            : (Array.isArray(res?.data) ? res.data : []);
-          if (mounted && Array.isArray(list)) {
-            const unreadUsers = list.filter(
-              (r) => (r.status || '').toLowerCase() === 'pending' && !storedReadUsers.includes(r._id || r.id)
-            ).length;
-            setPendingUserRequests(unreadUsers);
+          if (Array.isArray(d.userRequests)) {
+            setPendingUserRequests(
+              d.userRequests.filter((r) => !storedReadUsers.includes(r.id)).length
+            );
           }
-        })
-        .catch(() => {});
 
-      // 5. Projects (Distinct Purple Bubble)
-      adminApi
-        .getProjects({ limit: 50 })
-        .then((res) => {
-          const list = Array.isArray(res?.data?.projects)
-            ? res.data.projects
-            : (Array.isArray(res?.projects) ? res.projects : (Array.isArray(res?.data) ? res.data : []));
-          if (mounted && Array.isArray(list)) {
-            const unreadProjects = list.filter((p) => {
-              const st = (p.status || p.projectStatus || p.stage || '').toLowerCase();
-              const isActionable = st === 'requested' || st === 'in_review' || st === 'created';
-              return isActionable && !storedReadProjects.includes(p._id || p.id || p.projectId || p.estimateReference);
-            }).length;
-            setPendingProjectsCount(unreadProjects);
+          if (Array.isArray(d.projects)) {
+            setPendingProjectsCount(
+              d.projects.filter((p) => !storedReadProjects.includes(p.id || p.projectId)).length
+            );
           }
         })
         .catch(() => {});
@@ -246,7 +199,11 @@ export default function AdminLayout() {
 
     loadBadgeCounts();
 
-    const interval = setInterval(loadBadgeCounts, 15000);
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        loadBadgeCounts();
+      }
+    }, 30000);
     const handleEvents = () => loadBadgeCounts();
 
     window.addEventListener('drp_admin_alerts_updated', handleEvents);

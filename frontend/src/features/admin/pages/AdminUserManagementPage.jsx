@@ -104,7 +104,29 @@ export default function AdminUserManagementPage() {
   };
 
   const fetchUsers = async () => {
-    setLoading(true);
+    // Instant stale-while-revalidate hydration from cache so tab switching never flashes a blocking spinner
+    let hasCached = false;
+    if (activeTab !== 'requests' && !searchTerm.trim() && statusFilter === 'all' && daysFilter === 'all' && page === 1) {
+      try {
+        const rawCache = localStorage.getItem('drp_admin_users_cache');
+        if (rawCache) {
+          const parsed = JSON.parse(rawCache);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const roleFiltered = activeTab === 'customer'
+              ? parsed.filter((u) => (u.role || '').toLowerCase() === 'customer')
+              : activeTab === 'contractor'
+              ? parsed.filter((u) => (u.role || '').toLowerCase() === 'contractor')
+              : parsed;
+            setUsers(roleFiltered);
+            setPagination({ page: 1, totalPages: Math.ceil(roleFiltered.length / pageSize) || 1, total: roleFiltered.length });
+            hasCached = true;
+          }
+        }
+      } catch {
+        // Ignore cache parse error
+      }
+    }
+    if (!hasCached) setLoading(true);
     setError(null);
     try {
       if (activeTab === 'requests') {
