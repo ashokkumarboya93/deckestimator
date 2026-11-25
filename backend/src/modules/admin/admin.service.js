@@ -2930,7 +2930,10 @@ async function getDiscountsOverview() {
   }
   const defaultDiscount = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
 
-  const contractors = await User.find({ role: ROLES.CONTRACTOR, accountStatus: { $ne: 'disabled' } }).lean();
+  const contractors = await User.find({
+    role: { $regex: /^contractor$/i },
+    accountStatus: { $ne: 'disabled' },
+  }).sort({ createdAt: -1 }).lean();
   const contractorIds = contractors.map((c) => c._id);
 
   const [completedProjects, assignments, profiles, auditLogs] = await Promise.all([

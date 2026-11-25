@@ -232,10 +232,18 @@ export default function AdminPricingDiscountsPage() {
         }
       }
 
-      if (discountRes?.data) {
-        setDiscountData(discountRes.data);
-        if (discountRes.data.defaultDiscount !== undefined) {
-          setDefaultDiscountVal(discountRes.data.defaultDiscount);
+      // Safe unwrap of discount data (whether returned as res.data or direct object)
+      const unwrappedDiscount =
+        discountRes?.data?.contractors !== undefined
+          ? discountRes.data
+          : discountRes?.contractors !== undefined
+          ? discountRes
+          : discountRes?.data || discountRes;
+
+      if (unwrappedDiscount && typeof unwrappedDiscount === 'object') {
+        setDiscountData(unwrappedDiscount);
+        if (unwrappedDiscount.defaultDiscount !== undefined) {
+          setDefaultDiscountVal(unwrappedDiscount.defaultDiscount);
         }
       }
     } catch (err) {
@@ -592,15 +600,19 @@ export default function AdminPricingDiscountsPage() {
     });
   };
 
-  // Filtered Search Results for Dropdown
+  // Filtered Search Results for Dropdown with fast instant matching
   const searchDropdownResults = useMemo(() => {
-    if (!contractorSearchQuery.trim() || !discountData?.contractors) return [];
-    const q = contractorSearchQuery.toLowerCase();
-    return discountData.contractors.filter((c) => {
+    const list = discountData?.contractors || [];
+    if (!contractorSearchQuery.trim()) {
+      return list.slice(0, 8);
+    }
+    const q = contractorSearchQuery.toLowerCase().trim();
+    return list.filter((c) => {
       const name = (c.fullName || c.name || '').toLowerCase();
       const email = (c.email || '').toLowerCase();
       const biz = (c.businessName || '').toLowerCase();
-      return name.includes(q) || email.includes(q) || biz.includes(q);
+      const phone = (c.phone || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || biz.includes(q) || phone.includes(q);
     });
   }, [discountData?.contractors, contractorSearchQuery]);
 
@@ -1528,11 +1540,11 @@ export default function AdminPricingDiscountsPage() {
 
             {/* Contractor Search Dropdown / Autocomplete */}
             <div style={{ position: 'relative', marginTop: '16px' }} ref={searchBoxRef}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ position: 'relative', flex: 1, maxWidth: '520px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '280px', maxWidth: '520px' }}>
                   <input
                     type="text"
-                    placeholder="🔍 Search contractor by name, company, or email to tune discount..."
+                    placeholder="🔍 Search contractor by name, email, or company to tune discount..."
                     value={contractorSearchQuery}
                     onFocus={() => setIsSearchDropdownOpen(true)}
                     onChange={(e) => {
@@ -1542,12 +1554,14 @@ export default function AdminPricingDiscountsPage() {
                     style={{
                       width: '100%',
                       boxSizing: 'border-box',
-                      padding: '10px 14px',
+                      padding: '10px 36px 10px 14px',
                       borderRadius: '8px',
-                      border: '1.5px solid #CBD5E1',
+                      border: isSearchDropdownOpen ? '1.5px solid #034EA2' : '1.5px solid #CBD5E1',
                       fontSize: '13px',
                       color: '#0F2C59',
                       outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                     }}
                   />
                   {contractorSearchQuery && (
@@ -1559,12 +1573,20 @@ export default function AdminPricingDiscountsPage() {
                         right: '10px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        background: 'none',
+                        background: '#E2E8F0',
                         border: 'none',
-                        fontSize: '14px',
-                        color: '#94A3B8',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        color: '#475569',
                         cursor: 'pointer',
                       }}
+                      title="Clear search text"
                     >
                       ✕
                     </button>
@@ -1576,41 +1598,101 @@ export default function AdminPricingDiscountsPage() {
               </div>
 
               {/* Autocomplete Dropdown */}
-              {isSearchDropdownOpen && searchDropdownResults.length > 0 && (
+              {isSearchDropdownOpen && (
                 <div style={styles.searchDropdownList}>
-                  {searchDropdownResults.map((c) => (
-                    <div
-                      key={c.id || c._id}
-                      onClick={() => handleSelectContractorForTuning(c)}
-                      style={styles.searchDropdownItem}
-                    >
-                      <div style={styles.contractorAvatarBadge}>
-                        {(c.fullName || c.name || 'C')[0].toUpperCase()}
+                  {searchDropdownResults.length > 0 ? (
+                    searchDropdownResults.map((c) => (
+                      <div
+                        key={c.id || c._id}
+                        onClick={() => handleSelectContractorForTuning(c)}
+                        style={styles.searchDropdownItem}
+                      >
+                        <div style={styles.contractorAvatarBadge}>
+                          {(c.fullName || c.name || 'C')[0].toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: '13px', color: '#0F2C59', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {c.fullName || c.name}
+                          </strong>
+                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {c.businessName || 'Independent Pro'} • {c.email}
+                          </span>
+                        </div>
+                        <div>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '3px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: c.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
+                              color: c.hasCustomDiscount ? '#B45309' : '#15803D',
+                              border: c.hasCustomDiscount ? '1px solid #FCD34D' : '1px solid #86EFAC',
+                            }}
+                          >
+                            {c.hasCustomDiscount ? `Custom: ${c.customDiscount}%` : `Default: ${defaultDiscountVal}%`}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <strong style={{ fontSize: '13px', color: '#0F2C59', display: 'block' }}>
-                          {c.fullName || c.name}
-                        </strong>
-                        <span style={{ fontSize: '11px', color: '#64748B' }}>
-                          {c.businessName || 'Independent Pro'} • {c.email}
-                        </span>
-                      </div>
-                      <div>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            backgroundColor: c.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
-                            color: c.hasCustomDiscount ? '#B45309' : '#15803D',
-                          }}
-                        >
-                          {c.hasCustomDiscount ? `Custom: ${c.customDiscount}%` : `Default: ${defaultDiscountVal}%`}
-                        </span>
-                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '14px', textAlign: 'center', fontSize: '12.5px', color: '#64748B' }}>
+                      No registered contractors found matching "<strong>{contractorSearchQuery}</strong>"
                     </div>
-                  ))}
+                  )}
+                </div>
+              )}
+
+              {/* Selected Contractor Active Pill with Cross Mark */}
+              {selectedContractorForTuning && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '7px 14px',
+                      backgroundColor: '#EFF6FF',
+                      border: '1.5px solid #3B82F6',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 6px rgba(59, 130, 246, 0.12)',
+                    }}
+                  >
+                    <div style={{ ...styles.contractorAvatarBadge, width: '24px', height: '24px', fontSize: '11px', backgroundColor: '#1D4ED8' }}>
+                      {(selectedContractorForTuning.fullName || selectedContractorForTuning.name || 'C')[0].toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#1E3A8A' }}>
+                      Selected: {selectedContractorForTuning.fullName || selectedContractorForTuning.name}
+                    </span>
+                    <span style={{ fontSize: '11.5px', color: '#64748B' }}>
+                      ({selectedContractorForTuning.email})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedContractorForTuning(null);
+                        setContractorSearchQuery('');
+                      }}
+                      style={{
+                        background: '#DBEAFE',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: '900',
+                        color: '#1D4ED8',
+                        cursor: 'pointer',
+                        marginLeft: '4px',
+                      }}
+                      title="Deselect Contractor"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1620,7 +1702,7 @@ export default function AdminPricingDiscountsPage() {
               <div style={styles.activeTuningBox}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ ...styles.contractorAvatarBadge, width: '42px', height: '42px', fontSize: '18px' }}>
+                    <div style={{ ...styles.contractorAvatarBadge, width: '42px', height: '42px', fontSize: '18px', backgroundColor: '#0F2C59' }}>
                       {(selectedContractorForTuning.fullName || selectedContractorForTuning.name || 'C')[0].toUpperCase()}
                     </div>
                     <div>
@@ -1638,8 +1720,8 @@ export default function AdminPricingDiscountsPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', color: '#64748B' }}>Current Status:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748B' }}>Current Standing:</span>
                     <span
                       style={{
                         padding: '4px 10px',
@@ -1655,6 +1737,26 @@ export default function AdminPricingDiscountsPage() {
                         ? `★ Custom Override (${selectedContractorForTuning.customDiscount}%)`
                         : `✓ Global Default (${defaultDiscountVal}%)`}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedContractorForTuning(null);
+                        setContractorSearchQuery('');
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#F1F5F9',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        color: '#64748B',
+                        cursor: 'pointer',
+                      }}
+                      title="Clear Selection"
+                    >
+                      ✕ Deselect
+                    </button>
                   </div>
                 </div>
 
@@ -1695,9 +1797,18 @@ export default function AdminPricingDiscountsPage() {
                       type="button"
                       onClick={handleApplyIndividualDiscount}
                       disabled={savingIndividualDiscount}
-                      style={styles.modalSaveBtn}
+                      style={{
+                        ...styles.modalSaveBtn,
+                        padding: '10px 22px',
+                        backgroundColor: '#0F2C59',
+                        color: '#FFFFFF',
+                        border: '1.5px solid #0F2C59',
+                        boxShadow: '0 2px 6px rgba(15, 44, 89, 0.25)',
+                      }}
                     >
-                      {savingIndividualDiscount ? 'Saving...' : 'Apply Custom %'}
+                      {savingIndividualDiscount
+                        ? 'Saving Custom Rate...'
+                        : `✓ Save & Apply Custom Discount (${tuneDiscountVal}%) for ${selectedContractorForTuning.fullName || selectedContractorForTuning.name}`}
                     </button>
 
                     {selectedContractorForTuning.hasCustomDiscount && (
@@ -1707,37 +1818,41 @@ export default function AdminPricingDiscountsPage() {
                         style={styles.deleteActionBtn}
                         title="Revert back to Global Default"
                       >
-                        Reset to Default ({defaultDiscountVal}%)
+                        ↺ Reset to Default ({defaultDiscountVal}%)
                       </button>
                     )}
 
                     <button
                       type="button"
-                      onClick={() => setSelectedContractorForTuning(null)}
+                      onClick={() => {
+                        setSelectedContractorForTuning(null);
+                        setContractorSearchQuery('');
+                      }}
                       style={styles.cancelBtn}
                     >
-                      Clear Selection
+                      ✕ Clear Selection
                     </button>
                   </div>
                 </div>
 
                 {/* Preset Chips for tuning */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>Quick Presets:</span>
-                  {[8, 10, 12, 15, 18, 20, 25].map((rate) => (
+                  {[5, 8, 10, 12, 15, 18, 20, 25].map((rate) => (
                     <button
                       key={rate}
                       type="button"
                       onClick={() => setTuneDiscountVal(rate)}
                       style={{
-                        padding: '3px 8px',
+                        padding: '4px 10px',
                         borderRadius: '6px',
-                        border: Number(tuneDiscountVal) === rate ? '1.5px solid #0F2C59' : '1px solid #E2E8F0',
-                        backgroundColor: Number(tuneDiscountVal) === rate ? '#0F2C59' : '#F8FAFC',
+                        border: Number(tuneDiscountVal) === rate ? '1.5px solid #0F2C59' : '1px solid #CBD5E1',
+                        backgroundColor: Number(tuneDiscountVal) === rate ? '#0F2C59' : '#FFFFFF',
                         color: Number(tuneDiscountVal) === rate ? '#FFFFFF' : '#334155',
                         fontSize: '11px',
                         fontWeight: '700',
                         cursor: 'pointer',
+                        transition: 'all 0.12s ease',
                       }}
                     >
                       {rate}%
@@ -2287,14 +2402,16 @@ const styles = {
   sectionSaveBtn: {
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '9px 18px',
-    backgroundColor: '#0F2C59',
+    gap: '6px',
+    padding: '9px 20px',
+    backgroundColor: '#15803D',
     color: '#FFFFFF',
-    border: 'none',
+    border: '1.5px solid #16A34A',
     borderRadius: '8px',
     fontWeight: '800',
-    fontSize: '12.5px',
+    fontSize: '13px',
     cursor: 'pointer',
+    boxShadow: '0 2px 6px rgba(21, 128, 61, 0.22)',
     transition: 'all 0.15s ease',
   },
   successAlert: {
@@ -2610,15 +2727,19 @@ const styles = {
     marginBottom: '24px',
   },
   secondarySaveBtn: {
-    padding: '9px 18px',
+    padding: '10px 20px',
     backgroundColor: '#15803D',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
     fontWeight: '800',
-    fontSize: '12.5px',
+    fontSize: '13px',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
     transition: 'all 0.15s ease',
   },
   kpiRow: {
@@ -2747,38 +2868,51 @@ const styles = {
     outline: 'none',
   },
   addItemBtn: {
-    padding: '8px 16px',
+    padding: '9px 18px',
     backgroundColor: '#0F2C59',
     color: '#FFFFFF',
-    border: 'none',
+    border: '1.5px solid #0F2C59',
     borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '12.5px',
+    fontWeight: '800',
+    fontSize: '13px',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
-  },
-  editActionBtn: {
-    padding: '6px 12px',
-    backgroundColor: '#F1F5F9',
-    border: '1px solid #CBD5E1',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#0F2C59',
-    cursor: 'pointer',
-    marginRight: '6px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: '0 2px 6px rgba(15, 44, 89, 0.2)',
     transition: 'all 0.15s ease',
   },
+  editActionBtn: {
+    padding: '7px 15px',
+    backgroundColor: '#EFF6FF',
+    border: '1.5px solid #93C5FD',
+    borderRadius: '7px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    color: '#1D4ED8',
+    cursor: 'pointer',
+    marginRight: '8px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 3px rgba(29, 78, 216, 0.08)',
+  },
   deleteActionBtn: {
-    padding: '6px 12px',
+    padding: '7px 15px',
     backgroundColor: '#FEF2F2',
-    border: '1px solid #FECACA',
-    borderRadius: '6px',
-    fontSize: '12px',
+    border: '1.5px solid #FECACA',
+    borderRadius: '7px',
+    fontSize: '12.5px',
     fontWeight: '700',
     color: '#DC2626',
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
     transition: 'all 0.15s ease',
+    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.08)',
   },
   modalOverlay: {
     position: 'fixed',
@@ -2834,23 +2968,32 @@ const styles = {
     marginTop: '20px',
   },
   cancelBtn: {
-    padding: '9px 16px',
-    backgroundColor: '#F1F5F9',
+    padding: '9px 18px',
+    backgroundColor: '#F8FAFC',
     color: '#475569',
-    border: 'none',
+    border: '1.5px solid #CBD5E1',
     borderRadius: '8px',
     fontWeight: '700',
     fontSize: '13px',
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'all 0.15s ease',
   },
   modalSaveBtn: {
-    padding: '9px 18px',
+    padding: '10px 20px',
     backgroundColor: '#15803D',
     color: '#FFFFFF',
-    border: 'none',
+    border: '1.5px solid #16A34A',
     borderRadius: '8px',
     fontWeight: '800',
     fontSize: '13px',
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
+    transition: 'all 0.15s ease',
   },
 };
