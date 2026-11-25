@@ -611,10 +611,10 @@ export default function AdminProjectsPage() {
 
         {/* Refresh Button */}
         <button
+          type="button"
           onClick={() => fetchProjects(page, statusFilter, searchTerm, dateRangeFilter, lastDateFilter, pageSize)}
-          style={styles.shinyRefreshBtn}
+          style={{ ...styles.shinyRefreshBtn, cursor: 'pointer', position: 'relative', zIndex: 2 }}
           title="Refresh Projects Database"
-          disabled={loading}
         >
           <svg
             width="15"

@@ -910,33 +910,23 @@ async function updateUserStatus(adminUser, targetUserId, status, reason = '') {
   return user.toJSON();
 }
 
-async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative account deletion', permanent = false) {
-  const user = await User.findById(targetUserId).select('+passwordHash');
+async function softDeleteUser(adminUser, targetUserId, reason = 'Administrative account deletion', permanent = true) {
+  const user = await User.findById(targetUserId).select('email fullName role');
   if (!user) throw new NotFoundError('User not found.');
 
-  if (permanent) {
-    await User.findByIdAndDelete(targetUserId);
-    invalidateAuthCache(targetUserId);
-    await ContractorProfile.deleteOne({ userId: targetUserId });
-    await logAdminAction(adminUser, 'USER_DELETED_PERMANENT', 'User', targetUserId, null, { reason });
-    return { success: true, message: 'Account permanently deleted from system.' };
-  }
+  await Promise.all([
+    User.findByIdAndDelete(targetUserId),
+    ContractorProfile.deleteOne({ userId: targetUserId }),
+    VerificationDocument.deleteMany({ userId: targetUserId }),
+    DiscountAssignment.deleteMany({ contractorId: targetUserId }),
+    UserRequest.deleteMany({ userId: targetUserId }),
+    Notification.deleteMany({ userId: targetUserId }),
+  ]);
 
-  user.accountStatus = 'disabled';
-  user.deletedAt = new Date();
-
-  if (!user.moderationHistory) user.moderationHistory = [];
-  user.moderationHistory.push({
-    status: 'disabled',
-    reason,
-    updatedBy: adminUser.id || adminUser._id,
-    updatedAt: new Date(),
-  });
-
-  await user.save();
-  invalidateAuthCache(user._id);
-  await logAdminAction(adminUser, 'USER_DELETED_SOFT', 'User', user._id, null, { deletedAt: user.deletedAt, reason });
-  return { success: true, message: 'Account deactivated and scheduled for retention compliance.' };
+  invalidateAuthCache(targetUserId);
+  invalidateAdminDashboardCache();
+  await logAdminAction(adminUser, 'USER_DELETED_PERMANENT', 'User', targetUserId, { email: user.email, role: user.role }, { reason, permanent: true });
+  return { success: true, message: 'User account permanently removed from database.' };
 }
 
 async function bulkDeleteUsers(adminUser, userIds = [], reason = 'Bulk administrative deletion') {
@@ -946,13 +936,13 @@ async function bulkDeleteUsers(adminUser, userIds = [], reason = 'Bulk administr
   let count = 0;
   for (const uid of userIds) {
     try {
-      await softDeleteUser(adminUser, uid, reason, false);
+      await softDeleteUser(adminUser, uid, reason, true);
       count++;
     } catch (err) {
       console.warn(`[BulkDeleteUser] Skipped ${uid}:`, err.message);
     }
   }
-  return { success: true, count, message: `Successfully deleted ${count} user(s).` };
+  return { success: true, count, message: `Successfully deleted ${count} user(s) from database.` };
 }
 
 async function bulkDeleteContractorDocuments(adminUser, docIds = []) {

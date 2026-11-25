@@ -495,9 +495,8 @@ export default function AdminUserManagementPage() {
 
           <button
             type="button"
-            onClick={fetchUsers}
-            disabled={loading}
-            style={styles.refreshBtn}
+            onClick={() => fetchUsers()}
+            style={{ ...styles.refreshBtn, cursor: 'pointer', position: 'relative', zIndex: 2 }}
             title="Refresh list from database"
           >
             <svg

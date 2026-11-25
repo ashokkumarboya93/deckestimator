@@ -13,13 +13,15 @@
 // 6. Bottom Action Save Bar
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import { userProfileApi } from '../../customer/api/userProfileApi';
 import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function ContractorProfilePage() {
-  const { user, contractorProfile: authContractorProfile, refreshUser } = useAuth();
+  const { user, contractorProfile: authContractorProfile, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
   const hasFetchedRef = useRef(false);
@@ -32,6 +34,24 @@ export default function ContractorProfilePage() {
   const [submittingVerification, setSubmittingVerification] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setErrorMsg(null);
+    try {
+      await userProfileApi.deleteAccount();
+      setShowDeleteModal(false);
+      if (typeof logout === 'function') await logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setErrorMsg(err?.message || 'Failed to delete account. Please try again.');
+      setShowDeleteModal(false);
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
 
   // Responsive state
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
@@ -1323,31 +1343,122 @@ export default function ContractorProfilePage() {
         </div>
 
         {/* ======================================================== */}
-        {/* 5. BOTTOM SAVE BUTTONS ROW                               */}
+        {/* 5. BOTTOM SAVE & DELETE ACCOUNT BUTTONS ROW              */}
         {/* ======================================================== */}
-        <div style={styles.bottomActionBar}>
+        <div style={{ ...styles.bottomActionBar, justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={loadAllProfileData}
-            style={{ ...styles.cancelBtn, padding: isMobile ? '7px 14px' : '9px 18px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', textAlign: 'center' }}
-            disabled={saving}
+            onClick={() => setShowDeleteModal(true)}
+            style={{
+              padding: isMobile ? '7px 14px' : '9px 18px',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1.5px solid #FECACA',
+              borderRadius: '8px',
+              fontSize: isMobile ? '11.5px' : '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+            }}
           >
-            Reset Form
+            Delete Account
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            style={{ ...styles.saveBtn, padding: isMobile ? '7px 16px' : '9px 22px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
-            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flex: isMobile ? '1 1 100%' : 'none' }}>
+            <button
+              type="button"
+              onClick={loadAllProfileData}
+              style={{ ...styles.cancelBtn, padding: isMobile ? '7px 14px' : '9px 18px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', textAlign: 'center' }}
+              disabled={saving}
+            >
+              Reset Form
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              style={{ ...styles.saveBtn, padding: isMobile ? '7px 16px' : '9px 22px', fontSize: isMobile ? '11.5px' : '13px', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+            </button>
+          </div>
         </div>
       </form>
+
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+          onClick={() => !deletingAccount && setShowDeleteModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '14px',
+              maxWidth: '430px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '17px', fontWeight: '800', color: '#991B1B' }}>
+              Delete Contractor Account?
+            </h3>
+            <p style={{ margin: '0 0 18px 0', fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+              This will permanently remove your contractor account (<strong>{email}</strong>), profile, and verification records from the database. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={handleDeleteAccount}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: deletingAccount ? 'not-allowed' : 'pointer',
+                  opacity: deletingAccount ? 0.7 : 1,
+                }}
+              >
+                {deletingAccount ? 'Deleting...' : 'Yes, Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

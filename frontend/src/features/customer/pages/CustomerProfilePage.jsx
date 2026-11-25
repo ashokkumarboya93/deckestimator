@@ -3,6 +3,7 @@
 // =============================================
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { userProfileApi } from '../api/userProfileApi';
 import { compressAvatarImage, resolveAvatarUrl } from '../../../utils/imageOptimizer';
@@ -24,7 +25,8 @@ function EyeToggleIcon({ visible }) {
 }
 
 export default function CustomerProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const hasFetchedRef = useRef(false);
   const isDirtyRef = useRef(false);
@@ -57,6 +59,24 @@ export default function CustomerProfilePage() {
   const [compressingPhoto, setCompressingPhoto] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setErrorMsg(null);
+    try {
+      await userProfileApi.deleteAccount();
+      setShowDeleteModal(false);
+      if (typeof logout === 'function') await logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setErrorMsg(err?.message || 'Failed to delete account. Please try again.');
+      setShowDeleteModal(false);
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
 
   const applyUserToForm = (u) => {
     if (!u) return;
@@ -231,48 +251,52 @@ export default function CustomerProfilePage() {
     <div className="drp-prof-wrap">
       <style>{`
         .drp-prof-wrap {
-          max-width: 960px;
+          max-width: 1200px;
           margin: 0 auto;
-          padding: 10px 18px 24px;
+          padding: 24px 20px 60px;
           box-sizing: border-box;
           font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
         .drp-prof-header {
+          background-color: #FFFFFF;
+          border: 1.5px solid #CBD5E1;
+          border-radius: 14px;
+          padding: 20px 24px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
+          gap: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
           flex-wrap: wrap;
         }
         .drp-prof-card {
           background-color: #FFFFFF;
-          border-radius: 9px;
-          border: 1px solid #E2E8F0;
-          padding: 12px 18px;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          border-radius: 14px;
+          border: 1.5px solid #CBD5E1;
+          padding: 22px 26px;
+          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
           box-sizing: border-box;
         }
         .drp-prof-grid-2 {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px 18px;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 16px;
         }
         .drp-prof-grid-3 {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px 14px;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 16px;
         }
         .drp-prof-col-full {
           grid-column: 1 / -1;
         }
         .drp-prof-input {
           width: 100%;
-          max-width: 360px;
           box-sizing: border-box;
-          padding: 7px 11px;
-          border-radius: 6px;
-          border: 1px solid #CBD5E1;
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1.5px solid #CBD5E1;
           font-size: 13px !important;
           color: #0F172A;
           background-color: #FFFFFF;
@@ -280,7 +304,7 @@ export default function CustomerProfilePage() {
           transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
         .drp-prof-input-wide {
-          max-width: 520px;
+          width: 100%;
         }
         .drp-prof-input:focus {
           border-color: #034EA2;
@@ -291,13 +315,11 @@ export default function CustomerProfilePage() {
           display: flex;
           align-items: center;
           width: 100%;
-          max-width: 360px;
         }
         .drp-prof-method-group {
           display: flex;
-          gap: 6px;
+          gap: 8px;
           width: 100%;
-          max-width: 360px;
         }
         .drp-prof-pw-input {
           padding-right: 36px !important;
@@ -757,8 +779,24 @@ export default function CustomerProfilePage() {
             </div>
           </div>
 
-          {/* Bottom Save Action */}
-          <div style={styles.actionsBar}>
+          {/* Bottom Save & Delete Actions */}
+          <div style={{ ...styles.actionsBar, justifyContent: 'space-between', flexWrap: 'wrap', marginTop: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              style={{
+                padding: '9px 18px',
+                backgroundColor: '#FEF2F2',
+                color: '#DC2626',
+                border: '1.5px solid #FECACA',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              Delete Account
+            </button>
             <button
               type="submit"
               disabled={saving || compressingPhoto}
@@ -773,6 +811,79 @@ export default function CustomerProfilePage() {
             </button>
           </div>
         </form>
+      )}
+
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+          onClick={() => !deletingAccount && setShowDeleteModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '14px',
+              maxWidth: '430px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '17px', fontWeight: '800', color: '#991B1B' }}>
+              Delete Your Account?
+            </h3>
+            <p style={{ margin: '0 0 18px 0', fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+              This will permanently remove your account (<strong>{email}</strong>) and profile data from the database. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={handleDeleteAccount}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: deletingAccount ? 'not-allowed' : 'pointer',
+                  opacity: deletingAccount ? 0.7 : 1,
+                }}
+              >
+                {deletingAccount ? 'Deleting...' : 'Yes, Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

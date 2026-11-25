@@ -54,10 +54,15 @@ async function registerUser(userData) {
     throw new BadRequestError('Mobile phone number is mandatory for account registration.');
   }
 
-  // Fast indexed existence check
-  const existingUser = await User.exists({ email: normalizedEmail });
+  // Fast indexed existence check (also clean up legacy soft-disabled ghost accounts)
+  const existingUser = await User.findOne({ email: normalizedEmail }).select('_id accountStatus').lean();
   if (existingUser) {
-    throw new ConflictError('An account with this email already exists.');
+    if (existingUser.accountStatus === 'disabled') {
+      await User.findByIdAndDelete(existingUser._id);
+      await ContractorProfile.deleteOne({ userId: existingUser._id });
+    } else {
+      throw new ConflictError('An account with this email already exists.');
+    }
   }
 
   const role = userData.role || ROLES.CUSTOMER;

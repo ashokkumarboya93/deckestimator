@@ -94,9 +94,52 @@ async function getUnblockRequestStatus(req, res, next) {
   }
 }
 
+/**
+ * Permanently delete the authenticated user's own account and associated profile records.
+ */
+async function deleteMyAccount(req, res, next) {
+  try {
+    const userId = req.user.id || req.user._id;
+    const User = require('./users.model');
+    const ContractorProfile = require('../contractors/contractorProfile.model');
+    const VerificationDocument = require('../contractors/verificationDocument.model');
+    const DiscountAssignment = require('../discounts/discountAssignment.model');
+    const Notification = require('../notifications/notification.model');
+    const { invalidateAuthCache } = require('../../middleware/authenticate');
+
+    const userDoc = await User.findById(userId).select('role email');
+    if (!userDoc) {
+      return res.status(404).json({ success: false, message: 'Account not found.' });
+    }
+    if (String(userDoc.role).toLowerCase() === 'admin') {
+      return res.status(403).json({ success: false, message: 'Administrator accounts cannot be self-deleted from this endpoint.' });
+    }
+
+    await Promise.all([
+      User.findByIdAndDelete(userId),
+      ContractorProfile.deleteOne({ userId }),
+      VerificationDocument.deleteMany({ userId }),
+      DiscountAssignment.deleteMany({ contractorId: userId }),
+      UserRequest.deleteMany({ userId }),
+      Notification.deleteMany({ userId }),
+    ]);
+
+    invalidateAuthCache(userId);
+    res.clearCookie('accessToken', { httpOnly: true, sameSite: 'lax' });
+
+    res.status(200).json({
+      success: true,
+      message: 'Your account has been permanently deleted from the database.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getProfile,
   updateProfile,
+  deleteMyAccount,
   submitUnblockRequest,
   getUnblockRequestStatus,
 };

@@ -24,5 +24,14 @@ export const userProfileApi = {
       body: JSON.stringify(profileData),
     });
   },
+
+  /**
+   * Permanently delete current user account from database
+   */
+  async deleteAccount() {
+    return apiClient(ENDPOINTS.USERS.ME, {
+      method: 'DELETE',
+    });
+  },
 };
 

@@ -687,10 +687,10 @@ export default function AdminLeadManagementPage() {
 
         {/* Shiny Refresh Button */}
         <button
+          type="button"
           onClick={() => fetchLeads()}
-          style={styles.shinyRefreshBtn}
+          style={{ ...styles.shinyRefreshBtn, cursor: 'pointer', position: 'relative', zIndex: 2 }}
           title="Refresh Leads Database"
-          disabled={loading}
         >
           <svg
             width="14"
