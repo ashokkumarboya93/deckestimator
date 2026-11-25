@@ -75,7 +75,7 @@ async function authenticate(req, res, next) {
     let user = getCachedAuthUser(decoded.id);
     if (!user) {
       user = await User.findById(decoded.id)
-        .select('accountStatus role email fullName phone')
+        .select('accountStatus role email fullName phone createdAt')
         .lean();
       if (user) {
         setCachedAuthUser(user);
@@ -118,6 +118,7 @@ async function authenticate(req, res, next) {
       email: user.email,
       fullName: user.fullName || '',
       phone: user.phone || '',
+      createdAt: user.createdAt || null,
     };
 
     next();

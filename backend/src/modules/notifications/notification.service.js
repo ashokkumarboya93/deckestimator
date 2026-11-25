@@ -12,18 +12,28 @@ async function getUserNotifications(user, query = {}) {
   const userId = user.id || user._id;
   const role = user.role;
 
+  // Broadcast notifications should only appear if created on or after the user's account creation
+  // (ensures newly registered accounts start with 0 notifications).
+  const broadcastFilter = {
+    recipientType: { $in: ['all', role] },
+    targetRole: { $in: ['all', role] },
+    $and: [
+      { $or: [{ userId: null }, { userId: { $exists: false } }] },
+      { recipientType: { $ne: 'specific' } },
+    ],
+  };
+  if (user.createdAt) {
+    broadcastFilter.createdAt = { $gte: new Date(user.createdAt) };
+  } else {
+    // If createdAt isn't present on token/user, only return direct user-targeted notifications
+    broadcastFilter._id = null;
+  }
+
   const filter = {
     clearedBy: { $ne: userId },
     $or: [
       { userId },
-      {
-        recipientType: { $in: ['all', role] },
-        targetRole: { $in: ['all', role] },
-        $and: [
-          { $or: [{ userId: null }, { userId: { $exists: false } }] },
-          { recipientType: { $ne: 'specific' } },
-        ],
-      },
+      broadcastFilter,
     ],
   };
 

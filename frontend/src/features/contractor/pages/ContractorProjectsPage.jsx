@@ -1041,29 +1041,28 @@ export default function ContractorProjectsPage() {
           <div style={{ padding: '8px' }}>
             <SkeletonTable rows={5} columns={7} />
           </div>
+        ) : filteredEstimates.length === 0 ? (
+          <div style={styles.emptyWrap}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
+            <h3 style={styles.emptyTitle}>No Projects Found</h3>
+            <p style={styles.emptyDesc}>
+              {searchTerm || statusFilter !== 'ALL'
+                ? 'No projects matched your search criteria. Try clearing filters.'
+                : 'You have not created any deck restoration estimates yet.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/contractor/decks/new')}
+              style={styles.emptyBtn}
+            >
+              + Create New Estimation
+            </button>
+          </div>
         ) : isMobile ? (
-          filteredEstimates.length === 0 ? (
-            <div style={styles.emptyWrap}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-              <h3 style={styles.emptyTitle}>No Projects Found</h3>
-              <p style={styles.emptyDesc}>
-                {searchTerm || statusFilter !== 'ALL'
-                  ? 'No projects matched your search criteria. Try clearing filters.'
-                  : 'You have not created any deck restoration estimates yet.'}
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/contractor/decks/new')}
-                style={styles.emptyBtn}
-              >
-                + Create New Estimation
-              </button>
-            </div>
-          ) : (
           /* Mobile Card View — Customer Portal Standard Compact Layout */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px' }}>
             {paginatedEstimates.map((est) => {
@@ -1308,7 +1307,6 @@ export default function ContractorProjectsPage() {
               );
             })}
           </div>
-        )
       ) : (
         /* Desktop Table View */
           <div style={{ overflowX: 'auto' }}>
