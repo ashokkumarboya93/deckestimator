@@ -258,6 +258,119 @@ export default function AdminVerificationProgressPage() {
     title: '',
   });
 
+  // Read records tracking for realtime interactive bubble alerts
+  const [readItemIds, setReadItemIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const [tabAlertCounts, setTabAlertCounts] = useState({
+    verifications: 0,
+    documents: 0,
+    customers: 0,
+    contractors: 0,
+    discount_requests: 0,
+  });
+
+  const markItemAsRead = (id) => {
+    if (!id) return;
+    const current = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+    if (!current.includes(id)) {
+      const updated = [...current, id];
+      localStorage.setItem('drp_admin_read_verif_items', JSON.stringify(updated));
+      setReadItemIds(updated);
+      setTabAlertCounts((prev) => ({
+        ...prev,
+        [activeTab]: Math.max(0, (prev[activeTab] || 1) - 1),
+      }));
+      window.dispatchEvent(new Event('drp_admin_alerts_updated'));
+    }
+  };
+
+  const markTabAsRead = (tabId, itemsList = []) => {
+    const idsToMark = (itemsList || []).map((i) => i._id || i.id).filter(Boolean);
+    const current = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+    const updated = Array.from(new Set([...current, ...idsToMark]));
+    localStorage.setItem('drp_admin_read_verif_items', JSON.stringify(updated));
+    setReadItemIds(updated);
+    setTabAlertCounts((prev) => ({ ...prev, [tabId]: 0 }));
+    window.dispatchEvent(new Event('drp_admin_alerts_updated'));
+  };
+
+  const loadAllTabCounters = async () => {
+    try {
+      const storedRead = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+
+      const [vRes, dRes, cRes, contRes, reqRes] = await Promise.allSettled([
+        adminApi.getVerifications({ status: 'pending' }),
+        adminApi.getContractorDocuments({ status: 'pending' }),
+        adminApi.getUsers({ role: 'customer', limit: 100 }),
+        adminApi.getUsers({ role: 'contractor', limit: 100 }),
+        adminApi.getDiscountRequests({ status: 'PENDING' }),
+      ]);
+
+      const pendingVerifs = vRes.status === 'fulfilled' ? (vRes.value?.data || []) : [];
+      const unreadVerifs = pendingVerifs.filter((v) => !storedRead.includes(v._id || v.id)).length;
+
+      const pendingDocs = dRes.status === 'fulfilled' ? (dRes.value?.data?.data || dRes.value?.data || []) : [];
+      const unreadDocs = pendingDocs.filter((d) => {
+        const st = (d.documentStatus || 'pending').toLowerCase();
+        return (st === 'pending' || st === 'pending_review') && !storedRead.includes(d._id || d.id);
+      }).length;
+
+      const custList = cRes.status === 'fulfilled' ? (cRes.value?.data || []) : [];
+      const unreadCusts = custList.filter((c) => {
+        const isRecent = matchesDaysFilter(c.createdAt, '7d');
+        const isUnread = !storedRead.includes(c._id || c.id);
+        return (isRecent || c.accountStatus === 'pending') && isUnread;
+      }).length;
+
+      const contList = contRes.status === 'fulfilled' ? (contRes.value?.data || []) : [];
+      const unreadConts = contList.filter((c) => {
+        const vStatus = (c.contractorProfile?.verificationStatus || 'unverified').toLowerCase();
+        const needsReview = vStatus === 'pending' || vStatus === 'unverified';
+        return needsReview && !storedRead.includes(c._id || c.id);
+      }).length;
+
+      const reqList = reqRes.status === 'fulfilled' ? (reqRes.value?.data?.requests || reqRes.value?.data || []) : [];
+      const unreadReqs = reqList.filter((r) => {
+        const st = (r.status || 'PENDING').toUpperCase();
+        return st === 'PENDING' && !storedRead.includes(r._id || r.id);
+      }).length;
+
+      setTabAlertCounts({
+        verifications: unreadVerifs,
+        documents: unreadDocs,
+        customers: unreadCusts,
+        contractors: unreadConts,
+        discount_requests: unreadReqs,
+      });
+    } catch (err) {
+      console.warn('Failed to load tab alert counts:', err);
+    }
+  };
+
   // Outside click listener to dismiss 3-dots menus
   useEffect(() => {
     const handleOutsideClick = () => setActiveMenuId(null);
@@ -265,13 +378,28 @@ export default function AdminVerificationProgressPage() {
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
-  // Reset page, search, and selection when switching tabs
+  // Reset page, search, and selection when switching tabs & mark tab records as read
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     setSearchTerm('');
     setSelectedIds([]);
     setActiveMenuId(null);
     setPage(1);
+
+    // Immediate mark as read on tab open so bubble counter decreases
+    setTimeout(() => {
+      let items = [];
+      if (newTab === 'verifications') items = verifications.filter((v) => v.status === 'pending');
+      else if (newTab === 'documents') items = contractorDocs.filter((d) => (d.documentStatus || 'pending') === 'pending');
+      else if (newTab === 'customers') items = customers;
+      else if (newTab === 'contractors') items = contractors.filter((c) => (c.contractorProfile?.verificationStatus || 'unverified') !== 'verified');
+      else if (newTab === 'discount_requests') items = discountRequests.filter((r) => (r.status || 'PENDING').toUpperCase() === 'PENDING');
+      if (items.length > 0) {
+        markTabAsRead(newTab, items);
+      } else {
+        setTabAlertCounts((prev) => ({ ...prev, [newTab]: 0 }));
+      }
+    }, 150);
   };
 
   // Secure Document Viewer with Authorization Token (Fixes previewing landing page)
@@ -347,6 +475,7 @@ export default function AdminVerificationProgressPage() {
     if (!silent) setLoading(true);
     setError(null);
     try {
+      loadAllTabCounters();
       if (activeTab === 'verifications') {
         const res = await adminApi.getVerifications({ status: verifFilter !== 'all' ? verifFilter : undefined });
         setVerifications(res.data || []);
@@ -555,6 +684,12 @@ export default function AdminVerificationProgressPage() {
         } else if (activeTab === 'verifications') {
           await adminApi.bulkDeleteVerifications([id]);
           setSuccessMsg('✓ Verification record deleted successfully.');
+        } else if (activeTab === 'customers') {
+          await adminApi.bulkDeleteUserRecordsOnly([id], 'customer');
+          setSuccessMsg('✓ Customer estimate records cleared. User login account remains untouched.');
+        } else if (activeTab === 'contractors') {
+          await adminApi.bulkDeleteUserRecordsOnly([id], 'contractor');
+          setSuccessMsg('✓ Contractor verification & estimate records cleared. User login account remains untouched.');
         }
       }
       loadTabData();
@@ -801,10 +936,11 @@ export default function AdminVerificationProgressPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs with Interactive Real-Data Bubbled Alerts */}
       <div style={styles.tabContainer}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
+          const alertCount = tabAlertCounts[tab.id] || 0;
           return (
             <button
               key={tab.id}
@@ -814,9 +950,17 @@ export default function AdminVerificationProgressPage() {
                 ...(isActive ? styles.tabButtonActive : {}),
               }}
             >
-              {tab.label}
-              {tab.id === 'verifications' && verifCounts.pending > 0 && (
-                <span style={styles.tabCounter}>{verifCounts.pending}</span>
+              <span>{tab.label}</span>
+              {alertCount > 0 && (
+                <span
+                  style={{
+                    ...styles.tabCounter,
+                    backgroundColor: tab.id === 'discount_requests' ? '#D97706' : tab.id === 'verifications' ? '#EF4444' : '#2563EB',
+                  }}
+                  title={`${alertCount} new / pending records`}
+                >
+                  {alertCount}
+                </span>
               )}
             </button>
           );
@@ -891,6 +1035,17 @@ export default function AdminVerificationProgressPage() {
                   <option value="60d">Last 60 Days</option>
                 </select>
               </div>
+
+              {tabAlertCounts.verifications > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markTabAsRead('verifications', filteredVerifications)}
+                  style={styles.markReadBtn}
+                  title="Mark all pending verifications as read"
+                >
+                  ✓ Mark Read ({tabAlertCounts.verifications})
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1012,7 +1167,10 @@ export default function AdminVerificationProgressPage() {
                             <div style={styles.actionButtonGroup}>
                               <button
                                 type="button"
-                                onClick={() => setViewContractorModal(item)}
+                                onClick={() => {
+                                  markItemAsRead(itemId);
+                                  setViewContractorModal(item);
+                                }}
                                 style={styles.actionBtnOutline}
                                 title="View contractor submission details and location"
                               >
@@ -1021,13 +1179,19 @@ export default function AdminVerificationProgressPage() {
                               {item.status === 'pending' ? (
                                 <>
                                   <button
-                                    onClick={() => handleApproveVerification(item)}
+                                    onClick={() => {
+                                      markItemAsRead(itemId);
+                                      handleApproveVerification(item);
+                                    }}
                                     style={styles.actionBtnSuccess}
                                   >
                                     Approve
                                   </button>
                                   <button
-                                    onClick={() => handleOpenRejectModal(item)}
+                                    onClick={() => {
+                                      markItemAsRead(itemId);
+                                      handleOpenRejectModal(item);
+                                    }}
                                     style={styles.actionBtnDanger}
                                   >
                                     Reject
@@ -1035,19 +1199,33 @@ export default function AdminVerificationProgressPage() {
                                 </>
                               ) : item.status === 'rejected' ? (
                                 <button
-                                  onClick={() => handleApproveVerification(item)}
+                                  onClick={() => {
+                                    markItemAsRead(itemId);
+                                    handleApproveVerification(item);
+                                  }}
                                   style={styles.actionBtnSuccess}
                                 >
                                   Re-Approve
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => handleOpenRejectModal(item)}
+                                  onClick={() => {
+                                    markItemAsRead(itemId);
+                                    handleOpenRejectModal(item);
+                                  }}
                                   style={styles.actionBtnOutline}
                                 >
                                   Revoke
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSingleDeleteModal(itemId, `verification record for ${item.contractorName || 'contractor'}`)}
+                                style={styles.actionBtnDangerOutline}
+                                title="Delete verification record (User account is not deleted)"
+                              >
+                                Delete
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1152,6 +1330,17 @@ export default function AdminVerificationProgressPage() {
                 </select>
               </div>
 
+              {tabAlertCounts.documents > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markTabAsRead('documents', filteredContractorDocs)}
+                  style={styles.markReadBtn}
+                  title="Mark all pending documents as read"
+                >
+                  ✓ Mark Read ({tabAlertCounts.documents})
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -1200,7 +1389,7 @@ export default function AdminVerificationProgressPage() {
               <tbody>
                 {currentContractorDocs.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
+                    <td colSpan="6" style={styles.emptyTd}>No contractor documents found matching this filter.</td>
                   </tr>
                 ) : (
                   currentContractorDocs.map((doc) => {
@@ -1259,7 +1448,10 @@ export default function AdminVerificationProgressPage() {
                           <div style={styles.actionButtonGroup}>
                             <button
                               type="button"
-                              onClick={() => setViewingDocModal(doc)}
+                              onClick={() => {
+                                markItemAsRead(docId);
+                                setViewingDocModal(doc);
+                              }}
                               style={styles.actionBtnOutline}
                               title="Inspect document file"
                             >
@@ -1269,7 +1461,10 @@ export default function AdminVerificationProgressPage() {
                               <button
                                 type="button"
                                 disabled={docSubmitting}
-                                onClick={() => handleReviewDocument(docId, 'verified')}
+                                onClick={() => {
+                                  markItemAsRead(docId);
+                                  handleReviewDocument(docId, 'verified');
+                                }}
                                 style={styles.actionBtnSuccess}
                                 title="Approve document to unlock contractor wholesale discounts"
                               >
@@ -1280,13 +1475,24 @@ export default function AdminVerificationProgressPage() {
                               <button
                                 type="button"
                                 disabled={docSubmitting}
-                                onClick={() => setDocReviewModal({ open: true, doc, action: 'reject', notes: '' })}
+                                onClick={() => {
+                                  markItemAsRead(docId);
+                                  setDocReviewModal({ open: true, doc, action: 'reject', notes: '' });
+                                }}
                                 style={styles.actionBtnDanger}
                                 title="Reject document"
                               >
                                 Reject
                               </button>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSingleDeleteModal(docId, `document record ${doc.originalFileName || ''}`)}
+                              style={styles.actionBtnDangerOutline}
+                              title="Delete document record (User account is not deleted)"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1387,6 +1593,17 @@ export default function AdminVerificationProgressPage() {
                 </select>
               </div>
 
+              {tabAlertCounts.customers > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markTabAsRead('customers', filteredCustomers)}
+                  style={styles.markReadBtn}
+                  title="Mark new customer accounts as read"
+                >
+                  ✓ Mark Read ({tabAlertCounts.customers})
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -1436,7 +1653,7 @@ export default function AdminVerificationProgressPage() {
               <tbody>
                 {currentCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={styles.emptyTd}>No customers found matching this filter.</td>
+                    <td colSpan="7" style={styles.emptyTd}>No customers found matching this filter.</td>
                   </tr>
                 ) : (
                   currentCustomers.map((c) => {
@@ -1466,20 +1683,33 @@ export default function AdminVerificationProgressPage() {
                         </td>
                         <td style={styles.td}>{new Date(c.createdAt || Date.now()).toLocaleDateString()}</td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/users/${custId}`, {
-                              state: {
-                                from: '/admin/verification-progress',
-                                fromTab: 'customers',
-                                fromTitle: '← Back to Verification & Progress',
-                              },
-                            })}
-                            style={styles.actionBtnOutline}
-                            title="View complete user dossier"
-                          >
-                            View Profile
-                          </button>
+                          <div style={styles.actionButtonGroup}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markItemAsRead(custId);
+                                navigate(`/admin/users/${custId}`, {
+                                  state: {
+                                    from: '/admin/verification-progress',
+                                    fromTab: 'customers',
+                                    fromTitle: '← Back to Verification & Progress',
+                                  },
+                                });
+                              }}
+                              style={styles.actionBtnOutline}
+                              title="View complete user dossier"
+                            >
+                              Profile
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSingleDeleteModal(custId, `estimates/project records of ${custName}`)}
+                              style={styles.actionBtnDangerOutline}
+                              title="Clear customer project records (User login account remains untouched)"
+                            >
+                              Delete Records
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1580,6 +1810,17 @@ export default function AdminVerificationProgressPage() {
                 </select>
               </div>
 
+              {tabAlertCounts.contractors > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markTabAsRead('contractors', filteredContractors)}
+                  style={styles.markReadBtn}
+                  title="Mark unverified / pending contractors as read"
+                >
+                  ✓ Mark Read ({tabAlertCounts.contractors})
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => loadTabData(false)}
@@ -1630,7 +1871,7 @@ export default function AdminVerificationProgressPage() {
               <tbody>
                 {currentContractors.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={styles.emptyTd}>No contractors found matching this filter.</td>
+                    <td colSpan="8" style={styles.emptyTd}>No contractors found matching this filter.</td>
                   </tr>
                 ) : (
                   currentContractors.map((c) => {
@@ -1674,20 +1915,33 @@ export default function AdminVerificationProgressPage() {
                           </span>
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/users/${contId}`, {
-                              state: {
-                                from: '/admin/verification-progress',
-                                fromTab: 'contractors',
-                                fromTitle: '← Back to Verification & Progress',
-                              },
-                            })}
-                            style={styles.actionBtnOutline}
-                            title="View complete user dossier"
-                          >
-                            View Profile
-                          </button>
+                          <div style={styles.actionButtonGroup}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markItemAsRead(contId);
+                                navigate(`/admin/users/${contId}`, {
+                                  state: {
+                                    from: '/admin/verification-progress',
+                                    fromTab: 'contractors',
+                                    fromTitle: '← Back to Verification & Progress',
+                                  },
+                                });
+                              }}
+                              style={styles.actionBtnOutline}
+                              title="View complete user dossier"
+                            >
+                              Profile
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSingleDeleteModal(contId, `verification & estimate records of ${contName}`)}
+                              style={styles.actionBtnDangerOutline}
+                              title="Clear contractor records (User login account remains untouched)"
+                            >
+                              Delete Records
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1781,6 +2035,17 @@ export default function AdminVerificationProgressPage() {
                 </select>
               </div>
 
+              {tabAlertCounts.discount_requests > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markTabAsRead('discount_requests', filteredDiscountRequests)}
+                  style={styles.markReadBtn}
+                  title="Mark all pending discount requests as read"
+                >
+                  ✓ Mark Read ({tabAlertCounts.discount_requests})
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => loadTabData()}
@@ -1830,7 +2095,7 @@ export default function AdminVerificationProgressPage() {
               <tbody>
                 {currentDiscountRequests.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={styles.emptyState}>
+                    <td colSpan="7" style={styles.emptyState}>
                       <div style={styles.emptyIcon}>🏷️</div>
                       <div style={styles.emptyTitle}>No discount requests found</div>
                       <div style={styles.emptySub}>
@@ -1961,12 +2226,15 @@ export default function AdminVerificationProgressPage() {
                         </td>
 
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
                             <button
                               type="button"
-                              onClick={() => setInspectDiscountModal(item)}
+                              onClick={() => {
+                                markItemAsRead(reqId);
+                                setInspectDiscountModal(item);
+                              }}
                               style={{
-                                padding: '6px 14px',
+                                padding: '5px 10px',
                                 backgroundColor: '#EFF6FF',
                                 color: '#1D4ED8',
                                 border: '1px solid #BFDBFE',
@@ -1976,150 +2244,167 @@ export default function AdminVerificationProgressPage() {
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '5px',
+                                gap: '4px',
                                 transition: 'all 0.15s ease',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                               }}
                               title="View full discount request preview, conversions history, and moderation options"
                             >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                 <circle cx="12" cy="12" r="3" />
                               </svg>
-                              View Request
+                              View
                             </button>
 
-                            <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markItemAsRead(reqId);
+                                handleOpenTuneModal(item);
+                              }}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#F0FDF4',
+                                color: '#15803D',
+                                border: '1px solid #86EFAC',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Tune wholesale discount % and approve"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Tune %
+                            </button>
+
+                            {status !== 'REJECTED' && (
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuId(activeMenuId === reqId ? null : reqId);
+                                onClick={() => {
+                                  markItemAsRead(reqId);
+                                  handleOpenRejectDiscountModal(item);
                                 }}
                                 style={{
-                                  width: '30px',
-                                  height: '30px',
+                                  padding: '5px 9px',
+                                  backgroundColor: '#FFFBEB',
+                                  color: '#B45309',
+                                  border: '1px solid #FDE68A',
                                   borderRadius: '6px',
-                                  border: '1px solid #E2E8F0',
-                                  backgroundColor: '#FFFFFF',
-                                  color: '#475569',
-                                  fontSize: '18px',
-                                  lineHeight: 1,
+                                  fontSize: '12px',
+                                  fontWeight: '700',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontWeight: 'bold',
+                                  gap: '4px',
                                   transition: 'all 0.15s ease',
                                 }}
-                                title="More options"
+                                title="Reject wholesale discount request"
                               >
-                                ⋮
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <line x1="15" y1="9" x2="9" y2="15" />
+                                  <line x1="9" y1="9" x2="15" y2="15" />
+                                </svg>
+                                Reject
                               </button>
-                              {activeMenuId === reqId && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: 0,
-                                    top: '34px',
-                                    backgroundColor: '#FFFFFF',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                                    zIndex: 50,
-                                    minWidth: '150px',
-                                    overflow: 'hidden',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    padding: '4px',
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      const targetId = cUser._id || cUser.id || item.contractorId;
-                                      navigate(`/admin/users/${targetId}`, {
-                                        state: {
-                                          from: '/admin/verification-progress',
-                                          fromTab: 'discount_requests',
-                                          fromTitle: '← Back to Verification & Progress',
-                                        },
-                                      });
-                                    }}
-                                    style={{
-                                      padding: '8px 12px',
-                                      textAlign: 'left',
-                                      background: 'none',
-                                      border: 'none',
-                                      fontSize: '13px',
-                                      color: '#1E293B',
-                                      cursor: 'pointer',
-                                      borderRadius: '4px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      fontWeight: '500',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                  >
-                                    View Profile
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      setReplyModal({ open: true, request: item, message: '', submitting: false });
-                                    }}
-                                    style={{
-                                      padding: '8px 12px',
-                                      textAlign: 'left',
-                                      background: 'none',
-                                      border: 'none',
-                                      fontSize: '13px',
-                                      color: '#1E293B',
-                                      cursor: 'pointer',
-                                      borderRadius: '4px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      fontWeight: '500',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                  >
-                                    Send Reply
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      handleOpenSingleDeleteModal(reqId, 'discount request');
-                                    }}
-                                    style={{
-                                      padding: '8px 12px',
-                                      textAlign: 'left',
-                                      background: 'none',
-                                      border: 'none',
-                                      fontSize: '13px',
-                                      color: '#DC2626',
-                                      cursor: 'pointer',
-                                      borderRadius: '4px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      fontWeight: '600',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markItemAsRead(reqId);
+                                setReplyModal({ open: true, request: item, message: '', submitting: false });
+                              }}
+                              style={{
+                                padding: '5px 9px',
+                                backgroundColor: '#F5F3FF',
+                                color: '#6D28D9',
+                                border: '1px solid #DDD6FE',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Send direct reply message to contractor"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                              </svg>
+                              Reply
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markItemAsRead(reqId);
+                                const targetId = cUser._id || cUser.id || item.contractorId;
+                                navigate(`/admin/users/${targetId}`, {
+                                  state: {
+                                    from: '/admin/verification-progress',
+                                    fromTab: 'discount_requests',
+                                    fromTitle: '← Back to Verification & Progress',
+                                  },
+                                });
+                              }}
+                              style={{
+                                padding: '5px 9px',
+                                backgroundColor: '#F8FAFC',
+                                color: '#475569',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="View contractor user profile"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                              </svg>
+                              Profile
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSingleDeleteModal(reqId, `discount request for ${item.businessName || 'Contractor'}`)}
+                              style={{
+                                padding: '5px 9px',
+                                backgroundColor: '#FEF2F2',
+                                color: '#DC2626',
+                                border: '1px solid #FECACA',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Delete discount request record (User account is not deleted)"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -2586,6 +2871,7 @@ export default function AdminVerificationProgressPage() {
                             type="button"
                             onClick={() => {
                               setContractorDocsModal({ open: false, request: null });
+                              markItemAsRead(doc._id || doc.id);
                               setViewingDocModal(doc);
                             }}
                             style={{
@@ -2863,7 +3149,10 @@ export default function AdminVerificationProgressPage() {
                       <button
                         key={doc._id || idx}
                         type="button"
-                        onClick={() => setViewingDocModal(doc)}
+                        onClick={() => {
+                          markItemAsRead(doc._id || doc.id);
+                          setViewingDocModal(doc);
+                        }}
                         style={styles.actionBtnOutline}
                       >
                         📄 {doc.documentType || doc.originalFileName || `Document #${idx + 1}`}
@@ -2874,13 +3163,44 @@ export default function AdminVerificationProgressPage() {
               )}
             </div>
 
-            <div style={styles.modalFooter}>
+            <div style={{ ...styles.modalFooter, display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setInspectDiscountModal(null)}
                 style={styles.modalBtnSecondary}
               >
                 Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const req = inspectDiscountModal;
+                  const targetId = req.contractorId?._id || req.contractorId?.id || req.contractorId;
+                  setInspectDiscountModal(null);
+                  if (targetId) {
+                    navigate(`/admin/users/${targetId}`, {
+                      state: {
+                        from: '/admin/verification-progress',
+                        fromTab: 'discount_requests',
+                        fromTitle: '← Back to Verification & Progress',
+                      },
+                    });
+                  }
+                }}
+                style={{ ...styles.actionBtnOutline, padding: '8px 14px', fontSize: '13px', fontWeight: '700' }}
+              >
+                👤 Contractor Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const req = inspectDiscountModal;
+                  setInspectDiscountModal(null);
+                  setReplyModal({ open: true, request: req, message: '', submitting: false });
+                }}
+                style={{ ...styles.actionBtnOutline, padding: '8px 14px', fontSize: '13px', fontWeight: '700', color: '#6d28d9', borderColor: '#ddd6fe', backgroundColor: '#f5f3ff' }}
+              >
+                ✉ Send Reply
               </button>
               <button
                 type="button"
@@ -3277,9 +3597,45 @@ const styles = {
     backgroundColor: '#ef4444',
     color: '#ffffff',
     fontSize: '11px',
-    fontWeight: '700',
-    padding: '1px 6px',
-    borderRadius: '10px',
+    fontWeight: '800',
+    padding: '2px 7px',
+    borderRadius: '12px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '18px',
+    height: '18px',
+    lineHeight: 1,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+  },
+  actionBtnDangerOutline: {
+    padding: '6px 12px',
+    backgroundColor: '#fff1f2',
+    color: '#e11d48',
+    border: '1px solid #fecdd3',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    transition: 'all 0.15s ease',
+  },
+  markReadBtn: {
+    padding: '8px 14px',
+    backgroundColor: '#f1f5f9',
+    color: '#334155',
+    border: '1.5px solid #cbd5e1',
+    borderRadius: '8px',
+    fontSize: '12.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    height: '40px',
+    transition: 'all 0.15s ease',
   },
   filterBar: {
     display: 'flex',

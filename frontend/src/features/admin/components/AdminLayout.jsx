@@ -117,60 +117,84 @@ export default function AdminLayout() {
   // Load badge counts across core operational modules
   useEffect(() => {
     let mounted = true;
-    adminApi
-      .getDashboardSummary()
-      .then((res) => {
-        if (mounted && res?.data?.summary) {
-          setHotLeadsCount(res.data.summary.hotPriorityLeads || 0);
-        }
-      })
-      .catch(() => {});
 
-    adminApi
-      .getVerifications({ status: 'pending' })
-      .then((res) => {
-        if (mounted && res?.counts?.pending !== undefined) {
-          setPendingVerifications(res.counts.pending);
+    const loadBadgeCounts = () => {
+      const storedRead = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+        } catch {
+          return [];
         }
-      })
-      .catch(() => {});
+      })();
 
-    adminApi
-      .getDiscountRequests({ status: 'PENDING' })
-      .then((res) => {
-        const list = res?.data?.requests || res?.data || [];
-        if (mounted && Array.isArray(list)) {
-          setPendingDiscountRequests(list.filter((r) => (r.status || '').toUpperCase() === 'PENDING').length);
-        }
-      })
-      .catch(() => {});
+      adminApi
+        .getDashboardSummary()
+        .then((res) => {
+          if (mounted && res?.data?.summary) {
+            setHotLeadsCount(res.data.summary.hotPriorityLeads || 0);
+          }
+        })
+        .catch(() => {});
 
-    adminApi
-      .getUserRequests({ status: 'pending' })
-      .then((res) => {
-        const list = res?.data?.data || res?.data || [];
-        if (mounted && Array.isArray(list)) {
-          setPendingUserRequests(list.filter((r) => (r.status || '').toLowerCase() === 'pending').length);
-        }
-      })
-      .catch(() => {});
+      adminApi
+        .getVerifications({ status: 'pending' })
+        .then((res) => {
+          const list = res?.data || [];
+          if (mounted) {
+            const unread = list.filter((v) => !storedRead.includes(v._id || v.id)).length;
+            setPendingVerifications(unread);
+          }
+        })
+        .catch(() => {});
 
-    adminApi
-      .getProjects({ limit: 100 })
-      .then((res) => {
-        const list = res?.data?.projects || res?.data || [];
-        if (mounted && Array.isArray(list)) {
-          const inReview = list.filter((p) => {
-            const st = (p.status || p.projectStatus || '').toLowerCase();
-            return st === 'in_review' || st === 'requested';
-          }).length;
-          setPendingProjectsCount(inReview);
-        }
-      })
-      .catch(() => {});
+      adminApi
+        .getDiscountRequests({ status: 'PENDING' })
+        .then((res) => {
+          const list = res?.data?.requests || res?.data || [];
+          if (mounted && Array.isArray(list)) {
+            const unread = list.filter(
+              (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedRead.includes(r._id || r.id)
+            ).length;
+            setPendingDiscountRequests(unread);
+          }
+        })
+        .catch(() => {});
+
+      adminApi
+        .getUserRequests({ status: 'pending' })
+        .then((res) => {
+          const list = res?.data?.data || res?.data || [];
+          if (mounted && Array.isArray(list)) {
+            setPendingUserRequests(list.filter((r) => (r.status || '').toLowerCase() === 'pending').length);
+          }
+        })
+        .catch(() => {});
+
+      adminApi
+        .getProjects({ limit: 100 })
+        .then((res) => {
+          const list = res?.data?.projects || res?.data || [];
+          if (mounted && Array.isArray(list)) {
+            const inReview = list.filter((p) => {
+              const st = (p.status || p.projectStatus || '').toLowerCase();
+              return st === 'in_review' || st === 'requested';
+            }).length;
+            setPendingProjectsCount(inReview);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadBadgeCounts();
+
+    const handleAlertsUpdated = () => {
+      loadBadgeCounts();
+    };
+    window.addEventListener('drp_admin_alerts_updated', handleAlertsUpdated);
 
     return () => {
       mounted = false;
+      window.removeEventListener('drp_admin_alerts_updated', handleAlertsUpdated);
     };
   }, [currentPath]);
 
