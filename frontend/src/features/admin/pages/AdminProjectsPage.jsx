@@ -205,6 +205,18 @@ export default function AdminProjectsPage() {
     setSelectedProject(proj);
     setIsDetailsModalOpen(true);
     setLoadingDetails(true);
+
+    // Mark project as read for admin alert bubble
+    try {
+      const readProjects = JSON.parse(localStorage.getItem('drp_admin_read_projects') || '[]');
+      const idKey = proj._id || proj.id || proj.projectId || proj.estimateReference;
+      if (idKey && !readProjects.includes(idKey)) {
+        readProjects.push(idKey);
+        localStorage.setItem('drp_admin_read_projects', JSON.stringify(readProjects));
+        window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
+      }
+    } catch (_) {}
+
     try {
       const targetId = proj._id || proj.id;
       const full = await adminApi.getProjectDetails(targetId);

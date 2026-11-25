@@ -241,6 +241,12 @@ export default function AdminLeadManagementPage() {
       next.add(leadKey);
       try {
         localStorage.setItem('deck_admin_opened_leads', JSON.stringify([...next]));
+        const readLeads = JSON.parse(localStorage.getItem('drp_admin_read_leads') || '[]');
+        if (!readLeads.includes(leadKey)) {
+          readLeads.push(leadKey);
+          localStorage.setItem('drp_admin_read_leads', JSON.stringify(readLeads));
+        }
+        window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
       } catch {}
       return next;
     });
@@ -329,6 +335,24 @@ export default function AdminLeadManagementPage() {
   };
 
   const handleOpenUserProfile = (lead) => {
+    const leadKey = lead?._id || lead?.id || lead?.leadNumber;
+    if (leadKey) {
+      setOpenedLeadIds((prev) => {
+        const next = new Set(prev);
+        next.add(leadKey);
+        try {
+          localStorage.setItem('deck_admin_opened_leads', JSON.stringify([...next]));
+          const readLeads = JSON.parse(localStorage.getItem('drp_admin_read_leads') || '[]');
+          if (!readLeads.includes(leadKey)) {
+            readLeads.push(leadKey);
+            localStorage.setItem('drp_admin_read_leads', JSON.stringify(readLeads));
+          }
+          window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
+        } catch {}
+        return next;
+      });
+    }
+
     const targetUserId =
       lead?.userId ||
       lead?.customerId ||
@@ -352,22 +376,27 @@ export default function AdminLeadManagementPage() {
     if (!id) return;
     const idsToDelete = Array.isArray(id) ? id : [id];
 
-    // Instant optimistic UI update
-    setLeads((prev) => prev.filter((item) => !idsToDelete.includes(item._id || item.id)));
-    setSelectedLeadIds((prev) => prev.filter((item) => !idsToDelete.includes(item)));
-
-    if (selectedLead && idsToDelete.includes(selectedLead._id || selectedLead.id)) {
-      setSelectedLead(null);
-      setLeadDossier(null);
-    }
-    // Instant dismiss
-    setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false });
-    setSuccessMsg(`Deleted "${identifier}" successfully.`);
-    setTimeout(() => setSuccessMsg(null), 3000);
+    setDeleteModalState((prev) => ({ ...prev, loading: true }));
 
     try {
       await Promise.all(idsToDelete.map((leadId) => adminApi.deleteLead(leadId)));
+
+      setLeads((prev) => prev.filter((item) => !idsToDelete.includes(item._id || item.id)));
+      setSelectedLeadIds((prev) => prev.filter((item) => !idsToDelete.includes(item)));
+
+      if (selectedLead && idsToDelete.includes(selectedLead._id || selectedLead.id)) {
+        setSelectedLead(null);
+        setLeadDossier(null);
+      }
+
+      setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false });
+      setSuccessMsg(`Deleted "${identifier}" successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+
+      fetchLeads(pagination.page);
+      window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
     } catch (err) {
+      setDeleteModalState({ isOpen: false, id: null, identifier: '', loading: false });
       setError(`Failed to delete: ${err.message}`);
       fetchLeads(pagination.page);
     }
@@ -562,7 +591,7 @@ export default function AdminLeadManagementPage() {
                   style={styles.unreadBubbleBadge}
                   title={`${unopened} unopened in ${tab.label}`}
                 >
-                  {unopened} new
+                  {unopened}
                 </span>
               )}
             </button>
@@ -639,17 +668,21 @@ export default function AdminLeadManagementPage() {
           )}
         </div>
 
-        {/* Status Filter */}
+        {/* Status & Priority Filter */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           style={styles.shinySelect}
+          title="Filter by status or priority tag"
         >
           <option value="all">All Statuses</option>
-          <option value="new">New</option>
-          <option value="contacted">Contacted</option>
-          <option value="in_progress">In Progress</option>
-          <option value="converted">Converted</option>
+          <option value="hot">🔥 Hot Priority</option>
+          <option value="opened">👁️ Opened / Viewed</option>
+          <option value="unopened">🔔 Unopened / New</option>
+          <option value="in_progress">⚙️ In Progress</option>
+          <option value="pending">⏳ Pending Review</option>
+          <option value="converted">✅ Converted / Completed</option>
+          <option value="contacted">📞 Contacted</option>
         </select>
 
         {/* Shiny Refresh Button */}
@@ -745,8 +778,15 @@ export default function AdminLeadManagementPage() {
                     Boolean(l.isAccepted);
 
                   // Type & Source label
-                  const isEstimation = l.isEstimationService || l.contactSource === 'Estimation Service' || l.estimateId;
-                  const isReachOut = l.isReachOut || !isEstimation;
+                  const isEstimation = Boolean(
+                    l.isEstimationService ||
+                    l.contactSource === 'Estimation Service' ||
+                    l.estimateId ||
+                    l.estimateSnapshot?.estimateId ||
+                    l.leadSource === 'customer_estimator' ||
+                    l.leadSource === 'contractor_estimator'
+                  );
+                  const isReachOut = !isEstimation;
                   const leadLocation = (l.location && l.location !== '—' && l.location !== '-' && l.location !== 'Shamong, NJ') ? l.location : (l.city ? `${l.city}${l.state ? `, ${l.state}` : ''}` : (l.address?.city ? `${l.address.city}, ${l.address.state || ''}` : 'Location Pending'));
 
                   return (
@@ -812,7 +852,7 @@ export default function AdminLeadManagementPage() {
                             </span>
                             {isReachOut ? (
                               <span style={styles.badgeReachOut}>
-                                ★ Reach Out
+                                Reach Out
                               </span>
                             ) : (
                               <span style={styles.badgeEstimationService}>
@@ -821,7 +861,7 @@ export default function AdminLeadManagementPage() {
                             )}
                           </div>
                           <span style={styles.sourceLabel}>
-                            {l.contactSource || (isCust ? 'Customer Support' : 'Contractor Support')}
+                            {isEstimation ? 'Estimation Service' : 'Reach Out'}
                           </span>
                           <span style={styles.leadIdSmall}>#{l.leadNumber || l.leadId}</span>
                         </div>
@@ -998,11 +1038,25 @@ export default function AdminLeadManagementPage() {
 
       {/* 5. View Details Large Dossier Modal (Expanded Comprehensive Report Preview) */}
       {selectedLead && (() => {
-        const leadPhotos = selectedLead.photos?.length
-          ? selectedLead.photos
-          : leadDossier?.photos?.length
-          ? leadDossier.photos
-          : leadDossier?.deckDetails?.photos || [];
+        const rawPhotosList = [
+          ...(Array.isArray(selectedLead?.photos) ? selectedLead.photos : []),
+          ...(Array.isArray(leadDossier?.photos) ? leadDossier.photos : []),
+          ...(Array.isArray(leadDossier?.lead?.photos) ? leadDossier.lead.photos : []),
+          ...(Array.isArray(leadDossier?.deckDetails?.photos) ? leadDossier.deckDetails.photos : []),
+          ...(Array.isArray(leadDossier?.estimateDetails?.photos) ? leadDossier.estimateDetails.photos : []),
+          ...(Array.isArray(leadDossier?.estimateDetails?.deckDetails?.photos) ? leadDossier.estimateDetails.deckDetails.photos : []),
+          ...(Array.isArray(selectedLead?.deckSnapshot?.photos) ? selectedLead.deckSnapshot.photos : []),
+        ].filter(Boolean);
+
+        const seenUrls = new Set();
+        const leadPhotos = [];
+        for (const p of rawPhotosList) {
+          const u = typeof p === 'string' ? p : (p?.url || p?.dataUrl || p?.data || p?.preview || '');
+          if (u && !seenUrls.has(u)) {
+            seenUrls.add(u);
+            leadPhotos.push(p);
+          }
+        }
 
         const combinedLead = {
           ...selectedLead,
@@ -1343,8 +1397,8 @@ export default function AdminLeadManagementPage() {
                       )}
                     </div>
 
-                    {/* SECTION 8: UPLOADED INSPECTION PHOTOS GALLERY — ONLY FOR ESTIMATION LEADS */}
-                    {!selectedLead.isReachOut && (
+                    {/* SECTION 8: UPLOADED INSPECTION PHOTOS GALLERY */}
+                    {(leadPhotos.length > 0 || !selectedLead.isReachOut) && (
                       <div style={styles.dossierSectionCard}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1365,7 +1419,7 @@ export default function AdminLeadManagementPage() {
                         {leadPhotos.length > 0 ? (
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
                             {leadPhotos.map((photo, idx) => {
-                              const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.data || '');
+                              const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.dataUrl || photo?.data || photo?.preview || '');
                               return (
                                 <div
                                   key={idx}
@@ -1667,8 +1721,8 @@ export default function AdminLeadManagementPage() {
       <ConfirmModal
         isOpen={deleteModalState.isOpen}
         title="Permanently Delete Lead Record?"
-        message={`Are you sure you want to permanently delete lead "${deleteModalState.identifier}"? All associated inquiries and audit records for this lead will be removed.`}
-        confirmLabel="Delete Lead"
+        message={`Are you sure you want to permanently delete lead record "${deleteModalState.identifier}"? Note: This deletes only the lead inquiry record. Customer accounts, contractor credentials, and saved estimations will remain completely intact.`}
+        confirmLabel={deleteModalState.loading ? 'Deleting...' : 'Delete Lead'}
         variant="danger"
         isLoading={deleteModalState.loading}
         onConfirm={handleConfirmDeleteLead}

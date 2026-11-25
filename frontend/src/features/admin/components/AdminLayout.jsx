@@ -119,7 +119,7 @@ export default function AdminLayout() {
     let mounted = true;
 
     const loadBadgeCounts = () => {
-      const storedRead = (() => {
+      const storedReadVerif = (() => {
         try {
           return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
         } catch {
@@ -127,59 +127,98 @@ export default function AdminLayout() {
         }
       })();
 
+      const storedReadLeads = (() => {
+        try {
+          const s1 = JSON.parse(localStorage.getItem('drp_admin_read_leads') || '[]');
+          const s2 = JSON.parse(localStorage.getItem('deck_admin_opened_leads') || '[]');
+          return Array.from(new Set([...s1, ...s2]));
+        } catch {
+          return [];
+        }
+      })();
+
+      const storedReadUsers = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_users') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+
+      const storedReadProjects = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_projects') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+
+      // 1. Leads
       adminApi
-        .getDashboardSummary()
+        .getLeads({ tab: 'all', limit: 100 })
         .then((res) => {
-          if (mounted && res?.data?.summary) {
-            setHotLeadsCount(res.data.summary.hotPriorityLeads || 0);
+          const list = res?.data?.data || res?.data || [];
+          if (mounted && Array.isArray(list)) {
+            const unreadLeads = list.filter(
+              (l) => !l.isOpened && !storedReadLeads.includes(l._id || l.id || l.leadNumber)
+            ).length;
+            setHotLeadsCount(unreadLeads);
           }
         })
         .catch(() => {});
 
+      // 2. Verifications
       adminApi
         .getVerifications({ status: 'pending' })
         .then((res) => {
           const list = res?.data || [];
           if (mounted) {
-            const unread = list.filter((v) => !storedRead.includes(v._id || v.id)).length;
+            const unread = list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
             setPendingVerifications(unread);
           }
         })
         .catch(() => {});
 
+      // 3. Discount Requests
       adminApi
         .getDiscountRequests({ status: 'PENDING' })
         .then((res) => {
           const list = res?.data?.requests || res?.data || [];
           if (mounted && Array.isArray(list)) {
             const unread = list.filter(
-              (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedRead.includes(r._id || r.id)
+              (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedReadVerif.includes(r._id || r.id)
             ).length;
             setPendingDiscountRequests(unread);
           }
         })
         .catch(() => {});
 
+      // 4. User Requests
       adminApi
         .getUserRequests({ status: 'pending' })
         .then((res) => {
           const list = res?.data?.data || res?.data || [];
           if (mounted && Array.isArray(list)) {
-            setPendingUserRequests(list.filter((r) => (r.status || '').toLowerCase() === 'pending').length);
+            const unreadUsers = list.filter(
+              (r) => (r.status || '').toLowerCase() === 'pending' && !storedReadUsers.includes(r._id || r.id)
+            ).length;
+            setPendingUserRequests(unreadUsers);
           }
         })
         .catch(() => {});
 
+      // 5. Projects
       adminApi
         .getProjects({ limit: 100 })
         .then((res) => {
           const list = res?.data?.projects || res?.data || [];
           if (mounted && Array.isArray(list)) {
-            const inReview = list.filter((p) => {
-              const st = (p.status || p.projectStatus || '').toLowerCase();
-              return st === 'in_review' || st === 'requested';
+            const unreadProjects = list.filter((p) => {
+              const st = (p.status || p.projectStatus || p.stage || '').toLowerCase();
+              const isPendingStage = st === 'in_review' || st === 'requested' || st === 'created';
+              return isPendingStage && !storedReadProjects.includes(p._id || p.id || p.projectId || p.estimateReference);
             }).length;
-            setPendingProjectsCount(inReview);
+            setPendingProjectsCount(unreadProjects);
           }
         })
         .catch(() => {});
@@ -245,7 +284,7 @@ export default function AdminLayout() {
       path: '/admin/users',
       label: 'User Management',
       badge: pendingUserRequests > 0 ? pendingUserRequests : null,
-      badgeColor: '#2563EB',
+      badgeColor: '#DC2626',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -259,7 +298,7 @@ export default function AdminLayout() {
       path: '/admin/verification-progress',
       label: 'Verification & Progress',
       badge: (pendingVerifications + pendingDiscountRequests) > 0 ? (pendingVerifications + pendingDiscountRequests) : null,
-      badgeColor: '#D97706',
+      badgeColor: '#DC2626',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -284,7 +323,7 @@ export default function AdminLayout() {
       path: '/admin/projects',
       label: 'Projects',
       badge: pendingProjectsCount > 0 ? pendingProjectsCount : null,
-      badgeColor: '#7C3AED',
+      badgeColor: '#DC2626',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />

@@ -654,7 +654,18 @@ export default function AdminUserManagementPage() {
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <button
                           type="button"
-                          onClick={() => setRequestModal({ open: true, request: req, notes: req.adminNotes || '' })}
+                          onClick={() => {
+                            try {
+                              const readUsers = JSON.parse(localStorage.getItem('drp_admin_read_users') || '[]');
+                              const idKey = req._id || req.id;
+                              if (idKey && !readUsers.includes(idKey)) {
+                                readUsers.push(idKey);
+                                localStorage.setItem('drp_admin_read_users', JSON.stringify(readUsers));
+                                window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
+                              }
+                            } catch (_) {}
+                            setRequestModal({ open: true, request: req, notes: req.adminNotes || '' });
+                          }}
                           style={{
                             padding: '6px 12px',
                             backgroundColor: '#eff6ff',

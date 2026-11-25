@@ -955,7 +955,7 @@ export default function AdminVerificationProgressPage() {
                 <span
                   style={{
                     ...styles.tabCounter,
-                    backgroundColor: tab.id === 'discount_requests' ? '#D97706' : tab.id === 'verifications' ? '#EF4444' : '#2563EB',
+                    backgroundColor: '#EF4444',
                   }}
                   title={`${alertCount} new / pending records`}
                 >

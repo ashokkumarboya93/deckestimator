@@ -1879,21 +1879,39 @@ async function listLeads({
     query.userType = { $in: ['Contractor', 'contractor'] };
   } else if (normalizedTab === 'reachout' || normalizedTab === 'reachouts' || normalizedTab === 'all_reach_outs' || normalizedTab === 'reach_outs') {
     andClauses.push({
-      $or: [
-        { estimateId: null },
-        { estimateId: { $exists: false } },
-        { 'estimateSnapshot.estimateId': null },
-        { 'estimateSnapshot.estimateId': { $exists: false } },
-        { contactSource: { $in: [/reach out/i, /support/i, /contact/i, /inquiry/i] } },
+      $and: [
+        { $or: [{ estimateId: null }, { estimateId: { $exists: false } }] },
+        { $or: [{ 'estimateSnapshot.estimateId': null }, { 'estimateSnapshot.estimateId': { $exists: false } }] },
       ],
     });
   }
 
-  // Status Filter
+  // Status & Priority Tag Filter
   if (status && status !== 'all') {
     const stLower = status.toLowerCase();
-    if (stLower === 'in_progress') {
-      query.status = { $in: ['in_progress', 'quote_in_progress', 'accepted'] };
+    if (stLower === 'hot') {
+      andClauses.push({
+        $or: [
+          { latestContactDate: { $gte: sevenDaysAgo } },
+          { createdAt: { $gte: sevenDaysAgo } },
+          { priority: 'HOT' },
+        ],
+      });
+    } else if (stLower === 'opened' || stLower === 'viewed') {
+      andClauses.push({ isOpened: true });
+    } else if (stLower === 'unopened' || stLower === 'new') {
+      andClauses.push({ isOpened: { $ne: true } });
+    } else if (stLower === 'in_progress') {
+      andClauses.push({
+        $or: [
+          { status: { $in: ['in_progress', 'quote_in_progress', 'accepted'] } },
+          { 'estimateSnapshot.status': 'in_progress' },
+        ],
+      });
+    } else if (stLower === 'converted' || stLower === 'completed') {
+      andClauses.push({ status: { $in: ['converted', 'completed'] } });
+    } else if (stLower === 'pending' || stLower === 'requested') {
+      andClauses.push({ status: { $in: ['new', 'pending', 'requested'] } });
     } else {
       query.status = stLower;
     }
@@ -2012,12 +2030,9 @@ async function listLeads({
   const skip = (Number(page) - 1) * Number(limit);
 
   const reachOutClause = {
-    $or: [
-      { estimateId: null },
-      { estimateId: { $exists: false } },
-      { 'estimateSnapshot.estimateId': null },
-      { 'estimateSnapshot.estimateId': { $exists: false } },
-      { contactSource: { $in: [/reach out/i, /support/i, /contact/i, /inquiry/i] } },
+    $and: [
+      { $or: [{ estimateId: null }, { estimateId: { $exists: false } }] },
+      { $or: [{ 'estimateSnapshot.estimateId': null }, { 'estimateSnapshot.estimateId': { $exists: false } }] },
     ],
   };
 
@@ -2031,15 +2046,14 @@ async function listLeads({
 
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
-      .select('-deckSnapshot.photos -__v')
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
       .populate('contractorId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
       .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt avatar')
-      .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
+      .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions photos')
       .populate(
         'estimateId',
-        'estimateNumber estimateReference totalCost totalAmount estimateStatus ' +
-        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.surfaceMaterial deckDetails.components deckDetails.services ' +
+        'estimateNumber estimateReference totalCost totalAmount estimateStatus photos ' +
+        'deckDetails.projectName deckDetails.areaSqFt deckDetails.deckLength deckDetails.deckWidth deckDetails.surfaceMaterial deckDetails.components deckDetails.services deckDetails.photos ' +
         'pricingSnapshot.spec pricingSnapshot.calculatedTotal pricingSnapshot.total'
       )
       .sort(sortOption)
@@ -2099,7 +2113,7 @@ async function listLeads({
 
     const est = l.estimateId;
     const requestedMessage = l.enquiry?.message || l.enquiry?.subject || (l.contactHistory?.[0]?.notes) || 'Project Service Request';
-    const isEstimationService = !!(l.estimateId || l.estimateSnapshot?.estimateId);
+    const isEstimationService = !!(l.estimateId || l.estimateSnapshot?.estimateId || l.leadSource === 'customer_estimator' || l.leadSource === 'contractor_estimator');
     const estimatedValue = est?.totalAmount || est?.pricingSnapshot?.calculatedTotal || l.estimateSnapshot?.totalAmount || est?.totalCost || 0;
     const woodSpecies = est?.deckDetails?.surfaceMaterial || est?.pricingSnapshot?.spec?.woodSpecies || l.deckSnapshot?.surfaceMaterial || 'Pressure Treated Pine';
     const deckArea = est?.deckDetails?.areaSqFt || est?.pricingSnapshot?.spec?.floorArea || l.deckSnapshot?.area || l.deckId?.dimensions?.area || 0;
@@ -2124,6 +2138,14 @@ async function listLeads({
     else if (spec.services?.length) sectionInputs.push(`Services: ${spec.services.join(', ')}`);
     const selectedInputsSummary = sectionInputs.length > 0 ? sectionInputs.join(' | ') : (l.enquiry?.subject || 'Standard Deck Restoration');
 
+    const rawPhotos = [
+      ...(Array.isArray(l.photos) ? l.photos : []),
+      ...(Array.isArray(l.deckSnapshot?.photos) ? l.deckSnapshot.photos : []),
+      ...(Array.isArray(l.deckId?.photos) ? l.deckId.photos : []),
+      ...(Array.isArray(est?.photos) ? est.photos : []),
+      ...(Array.isArray(est?.deckDetails?.photos) ? est.deckDetails.photos : []),
+    ];
+
     return {
       _id: l._id.toString(),
       id: l._id.toString(),
@@ -2133,7 +2155,7 @@ async function listLeads({
       email: contactEmail,
       phone: contactPhone,
       userType: isCust ? 'Customer' : 'Contractor',
-      contactSource: isEstimationService ? 'Estimation Service' : (l.contactSource || (isCust ? 'Contact Us' : 'Reach Out')),
+      contactSource: isEstimationService ? 'Estimation Service' : 'Reach Out',
       contactCount: l.contactCount || 1,
       priority: priorityLabel,
       isHot,
@@ -2175,7 +2197,8 @@ async function listLeads({
       estimateSnapshot: l.estimateSnapshot,
       deckId: l.deckId?._id?.toString() || null,
       estimateId: est?._id?.toString() || null,
-      photoCount: l.deckSnapshot?.photoCount || 0,
+      photos: rawPhotos,
+      photoCount: rawPhotos.length || l.deckSnapshot?.photoCount || 0,
       propertyAddress: l.deckId?.propertyAddress || l.deckSnapshot?.propertyAddress || null,
       structureDetails: l.deckId?.structureDetails || l.deckSnapshot?.structureDetails || null,
       surfaceDetails: l.deckId?.surfaceDetails || l.deckSnapshot?.surfaceDetails || null,
@@ -2223,8 +2246,8 @@ async function getLeadDetails(leadId) {
     .populate('customerId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
     .populate('contractorId', 'fullName email phone role accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
     .populate('contractorProfileId', 'businessName licenseNumber licenseJurisdiction yearsOfExperience verificationStatus approvedAt businessAddress avatar')
-    .populate('deckId', 'projectName deckShape dimensions surfaceDetails structureDetails propertyAddress visibleConditions')
-    .populate('estimateId', 'estimateNumber estimateReference subtotal minimumAdjustment minimumJobPrice totalCost totalAmount estimateStatus deckDetails pricingSnapshot')
+    .populate('deckId')
+    .populate('estimateId')
     .lean();
 
   if (!lead) {
@@ -2232,6 +2255,36 @@ async function getLeadDetails(leadId) {
     error.statusCode = 404;
     throw error;
   }
+
+  let deckImages = [];
+  const resolvedDeckId = lead.deckId?._id || lead.deckId;
+  if (resolvedDeckId) {
+    try {
+      const DeckImage = mongoose.model('DeckImage');
+      const foundImages = await DeckImage.find({ deckId: resolvedDeckId }).lean();
+      if (foundImages && foundImages.length > 0) {
+        deckImages = foundImages.map((img) => ({
+          name: img.originalFilename || 'Deck Inspection Photo',
+          url: `/api/v1/files/decks/${resolvedDeckId}/images/${img._id}`,
+          dataUrl: `/api/v1/files/decks/${resolvedDeckId}/images/${img._id}`,
+          size: img.fileSize,
+          type: img.mimeType,
+          category: img.imageDescription || 'deck_photo',
+          uploadedAt: img.uploadedAt || img.createdAt,
+        }));
+      }
+    } catch (_) {}
+  }
+
+  const allPhotos = [
+    ...(Array.isArray(lead.photos) ? lead.photos : []),
+    ...(Array.isArray(lead.deckSnapshot?.photos) ? lead.deckSnapshot.photos : []),
+    ...(Array.isArray(lead.estimateSnapshot?.photos) ? lead.estimateSnapshot.photos : []),
+    ...(Array.isArray(lead.deckId?.photos) ? lead.deckId.photos : []),
+    ...(Array.isArray(lead.estimateId?.photos) ? lead.estimateId.photos : []),
+    ...(Array.isArray(lead.estimateId?.deckDetails?.photos) ? lead.estimateId.deckDetails.photos : []),
+    ...deckImages,
+  ];
 
   const isCust = (lead.userType || '').toLowerCase() === 'customer';
   const userObj = isCust ? lead.customerId : lead.contractorId;
@@ -2265,6 +2318,7 @@ async function getLeadDetails(leadId) {
   const contactDate = lead.latestContactDate || lead.createdAt || new Date();
   const diffDays = Math.floor((Date.now() - new Date(contactDate).getTime()) / (1000 * 60 * 60 * 24));
   const isHot = diffDays <= 7;
+  const isEstimationService = !!(lead.estimateId || lead.estimateSnapshot?.estimateId || lead.leadSource === 'customer_estimator' || lead.leadSource === 'contractor_estimator');
 
   return {
     lead: {
@@ -2280,9 +2334,13 @@ async function getLeadDetails(leadId) {
       email: userObj?.email || (isCust ? lead.customerSnapshot?.email : lead.contractorSnapshot?.email) || 'N/A',
       phone: userObj?.phone || (isCust ? lead.customerSnapshot?.phone : lead.contractorSnapshot?.phone) || '—',
       userType: isCust ? 'Customer' : 'Contractor',
+      contactSource: isEstimationService ? 'Estimation Service' : 'Reach Out',
       avatar: userObj?.avatar || lead.contractorProfileId?.avatar || '',
       isOpened: true,
-      isReachOut: !(lead.estimateId || lead.estimateSnapshot?.estimateId),
+      isEstimationService,
+      isReachOut: !isEstimationService,
+      photos: allPhotos,
+      photoCount: allPhotos.length,
       minJobApplied: Boolean(
         lead.estimateId?.pricingSnapshot?.minJobApplied ??
         lead.estimateSnapshot?.minJobApplied ??
@@ -2347,7 +2405,7 @@ async function getLeadDetails(leadId) {
     } : null,
     estimateDetails: lead.estimateId || null,
     deckDetails: lead.deckId || lead.deckSnapshot || null,
-    photos: lead.deckId?.photos || lead.deckSnapshot?.photos || [],
+    photos: allPhotos,
     propertyAddress: lead.deckId?.propertyAddress || lead.deckSnapshot?.propertyAddress || null,
     structureDetails: lead.deckId?.structureDetails || lead.deckSnapshot?.structureDetails || null,
     surfaceDetails: lead.deckId?.surfaceDetails || lead.deckSnapshot?.surfaceDetails || null,
