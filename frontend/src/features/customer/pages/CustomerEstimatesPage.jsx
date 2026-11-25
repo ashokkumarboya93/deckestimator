@@ -109,16 +109,37 @@ export default function CustomerEstimatesPage() {
 
   // Fetch estimates from backend using fast compact projection (excludes heavy photos from list)
   const fetchEstimates = useCallback(async (isRefresh = false) => {
+    let hasCached = false;
+    if (!isRefresh) {
+      try {
+        const raw = localStorage.getItem('drp_cust_estimates_cache');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setEstimates(parsed);
+            hasCached = true;
+          }
+        }
+      } catch {
+        // Ignore
+      }
+    }
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    else if (!hasCached) setLoading(true);
     setError(null);
     if (isRefresh) hydratedCacheRef.current.clear();
     try {
       const data = await getEstimates({ limit: 50, compact: '1' });
       const list = data?.estimates || data?.data?.estimates || (Array.isArray(data) ? data : []);
-      setEstimates(Array.isArray(list) ? list : []);
+      const safeList = Array.isArray(list) ? list : [];
+      setEstimates(safeList);
+      try {
+        localStorage.setItem('drp_cust_estimates_cache', JSON.stringify(safeList));
+      } catch {
+        // Ignore quota
+      }
     } catch (err) {
-      setError(err.message || 'Failed to fetch your estimates.');
+      if (!hasCached) setError(err.message || 'Failed to fetch your estimates.');
     } finally {
       setLoading(false);
       setRefreshing(false);

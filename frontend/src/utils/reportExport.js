@@ -463,14 +463,21 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
   `;
 
   // Use html2pdf to download PDF directly
+  const safeRef = String(refNum || 'ESTIMATE').replace(/[^a-zA-Z0-9-_]/g, '_');
+  const fileName = `DeckRestorationPlus-Estimate-${safeRef}.pdf`;
   const opt = {
     margin: [6, 6, 6, 6],
-    filename: `DeckRestorationPlus-Estimate-${refNum}.pdf`,
+    filename: fileName,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
+  reportElement.style.position = 'fixed';
+  reportElement.style.left = '-10000px';
+  reportElement.style.top = '0';
+  reportElement.style.zIndex = '99999';
+  reportElement.style.backgroundColor = '#FFFFFF';
   document.body.appendChild(reportElement);
   try {
     // Wait for all report images (logo, visuals, inspection photos) to fully load in DOM before capturing
@@ -481,18 +488,30 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
         return new Promise((resolve) => {
           img.onload = resolve;
           img.onerror = resolve;
-          setTimeout(resolve, 2500);
+          setTimeout(resolve, 2000);
         });
       })
     );
 
     const html2pdfModule = await import('html2pdf.js');
-    const html2pdf = html2pdfModule.default || html2pdfModule;
+    const html2pdf =
+      typeof html2pdfModule.default === 'function'
+        ? html2pdfModule.default
+        : typeof html2pdfModule.default?.default === 'function'
+        ? html2pdfModule.default.default
+        : typeof html2pdfModule === 'function'
+        ? html2pdfModule
+        : null;
+
+    if (!html2pdf) {
+      throw new Error('PDF export engine failed to initialize.');
+    }
+
     const pdfBlob = await html2pdf().from(reportElement).set(opt).outputPdf('blob');
     const blobUrl = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = `DRP-UserProfile-${safeName}.pdf`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -552,8 +571,16 @@ export function downloadEstimateExcel(est = {}, cust = {}) {
     ['Wood Species', est.woodSpecies || 'Pressure Treated Pine'],
     ['Elevation Tier', est.height || est.accessType || 'Ground Level (0-4 ft)'],
     ['Existing Coating', est.existingCoating || 'None / Bare'],
-    ['Services Selected', (est.services || snap.services || ['Deep Cleaning', 'Sealing']).join('; ')],
-    ['Surface Conditions', (est.conditions || est.visibleConditions || ['Standard Weathered']).join('; ')],
+    ['Services Selected', (() => {
+      const rawSvcs = est.services || est.selectedServices || est.deckDetails?.services || snap.services || ['Deep Cleaning', 'Sealing'];
+      const arr = Array.isArray(rawSvcs) ? rawSvcs : [rawSvcs];
+      return arr.map((s) => (typeof s === 'object' && s ? (s.serviceName || s.name || s.label || s.serviceKey || '') : String(s || ''))).filter(Boolean).join('; ') || 'Standard Restoration';
+    })()],
+    ['Surface Conditions', (() => {
+      const rawConds = est.conditions || est.visibleConditions || est.deckDetails?.visibleConditions || ['Standard Weathered'];
+      const arr = Array.isArray(rawConds) ? rawConds : [rawConds];
+      return arr.map((c) => (typeof c === 'object' && c ? (c.label || c.name || '') : String(c || ''))).filter(Boolean).join('; ') || 'Standard Weathered';
+    })()],
     ['', ''],
     ['FINANCIAL SUMMARY', ''],
     ['Guaranteed Estimate Total', `$${Number(totalAmount).toFixed(2)}`],
@@ -701,13 +728,14 @@ export async function downloadUserProfilePdf(profileData = {}) {
     </div>
   `;
 
-  document.body.appendChild(reportElement);
   reportElement.style.position = 'fixed';
-  reportElement.style.left = '0';
+  reportElement.style.left = '-10000px';
   reportElement.style.top = '0';
-  reportElement.style.zIndex = '-9999';
+  reportElement.style.zIndex = '99999';
   reportElement.style.opacity = '1';
   reportElement.style.pointerEvents = 'none';
+  reportElement.style.backgroundColor = '#FFFFFF';
+  document.body.appendChild(reportElement);
 
   try {
     const safeName = (userName).replace(/[^a-zA-Z0-9-_]/g, '_');

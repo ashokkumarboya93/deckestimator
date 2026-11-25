@@ -26,6 +26,10 @@ export const adminApi = {
     const res = await client.get('/admin/dashboard/summary', { params: { dateRange } });
     return res.data;
   },
+  getAlertsSummary: async () => {
+    const res = await client.get('/admin/alerts/summary');
+    return res.data;
+  },
 
   // 2. User Management
   getUsers: async (params = {}) => {
