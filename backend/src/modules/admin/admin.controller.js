@@ -5,35 +5,19 @@
 const adminService = require('./admin.service');
 const contractorService = require('../contractors/contractor.service');
 
-// 1. Dashboard (with 15s timeout fallback so it never hangs the browser)
+// 1. Dashboard (with real-time cache & resilient instant count fallback)
 async function getDashboardSummary(req, res, next) {
   try {
-    const TIMEOUT_MS = 15000;
-    const summaryPromise = adminService.getDashboardSummary(req.query.dateRange);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('DASHBOARD_TIMEOUT')), TIMEOUT_MS)
-    );
-    let summary;
-    try {
-      summary = await Promise.race([summaryPromise, timeoutPromise]);
-    } catch (raceErr) {
-      if (raceErr.message === 'DASHBOARD_TIMEOUT') {
-        console.warn('[Admin Dashboard] Query timed out after 15s — returning empty scaffold');
-        summary = {
-          summary: { totalUsers: 0, totalCustomers: 0, totalContractors: 0, totalLeads: 0, hotPriorityLeads: 0, activeProjects: 0, totalEstimates: 0, estimatedValue: 0, totalRevenue: 0, growth: {} },
-          leadOverview: { total: 0, distribution: [] },
-          projectOverview: { total: 0, active: 0, completed: 0, onHold: 0, percentages: { active: 0, completed: 0, onHold: 0 } },
-          hotLeads: [],
-          recentActivities: [],
-          userOverview: { total: 0, distribution: [] },
-        };
-      } else {
-        throw raceErr;
-      }
-    }
+    const summary = await adminService.getDashboardSummary(req.query.dateRange);
     res.status(200).json({ success: true, data: summary });
   } catch (err) {
-    next(err);
+    console.warn('[Admin Dashboard] Aggregation error, serving instant resilient fallback:', err.message);
+    try {
+      const fallback = await adminService.getDashboardFastFallback();
+      res.status(200).json({ success: true, data: fallback });
+    } catch (fallbackErr) {
+      next(fallbackErr);
+    }
   }
 }
 

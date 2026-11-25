@@ -429,7 +429,7 @@ async function createEstimate(data, user, ipAddress) {
   // Apply Contractor Discount if role is Contractor
   let discountBreakdown = { applied: false, discountPercentage: 0, discountAmount: 0, originalTotal: totalAmountVal };
   if (user.role === ROLES.CONTRACTOR) {
-    let appliedDiscount = Number(data.contractorDiscountPercent) || 10;
+    let appliedDiscount = Number(data.contractorDiscountPercent) || 5;
     try {
       const assignment = await DiscountAssignment.findOne({
         contractorId: user.id || user._id,
@@ -438,7 +438,9 @@ async function createEstimate(data, user, ipAddress) {
       if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
         appliedDiscount = assignment.discountPolicyId.discountValue;
       } else {
-        const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+        const defaultPol = await DiscountPolicy.findOne({
+          $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+        });
         if (defaultPol && typeof defaultPol.discountValue === 'number') {
           appliedDiscount = defaultPol.discountValue;
         }
@@ -943,7 +945,7 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
 
   let totalAmountVal = chosenBase;
   if (user.role === ROLES.CONTRACTOR) {
-    let appliedDiscount = Number(payload.contractorDiscountPercent) || 10;
+    let appliedDiscount = Number(payload.contractorDiscountPercent) || 5;
     try {
       const assignment = await DiscountAssignment.findOne({
         contractorId: user.id || user._id,
@@ -952,7 +954,9 @@ async function updateEstimate(id, payload = {}, user, ipAddress) {
       if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
         appliedDiscount = assignment.discountPolicyId.discountValue;
       } else {
-        const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+        const defaultPol = await DiscountPolicy.findOne({
+          $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+        });
         if (defaultPol && typeof defaultPol.discountValue === 'number') {
           appliedDiscount = defaultPol.discountValue;
         }

@@ -26,3 +26,4 @@ export default function VGradeLoader({ color = 'currentColor', style = {} }) {
     </div>
   );
 }
+

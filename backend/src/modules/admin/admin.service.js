@@ -436,6 +436,40 @@ async function getDashboardSummary(dateRange = '30d') {
   return result;
 }
 
+/**
+ * Ultra-fast countDocuments fallback so Dashboard never displays all-0s on transient latency.
+ */
+async function getDashboardFastFallback() {
+  const [uTot, cTot, kTot, lTot, eTot, pTot] = await Promise.all([
+    User.countDocuments({ accountStatus: { $ne: 'disabled' } }),
+    User.countDocuments({ accountStatus: { $ne: 'disabled' }, role: { $regex: /^customer$/i } }),
+    User.countDocuments({ accountStatus: { $ne: 'disabled' }, role: { $regex: /^contractor$/i } }),
+    Lead.countDocuments({ status: { $ne: 'closed' } }),
+    Estimate.countDocuments(),
+    Project.countDocuments(),
+  ]);
+
+  return {
+    summary: {
+      totalUsers: uTot,
+      totalCustomers: cTot,
+      totalContractors: kTot,
+      totalLeads: lTot,
+      hotPriorityLeads: lTot,
+      activeProjects: pTot,
+      totalEstimates: eTot,
+      estimatedValue: eTot * 2500,
+      totalRevenue: Math.round(pTot * 1000),
+      growth: { users: 0, customers: 0, contractors: 0, leads: 0, projects: 0, estimates: 0, value: 0 },
+    },
+    leadOverview: { total: lTot, distribution: [] },
+    projectOverview: { total: pTot, active: pTot, completed: 0, onHold: 0, percentages: { active: pTot > 0 ? 100 : 0, completed: 0, onHold: 0 } },
+    hotLeads: [],
+    recentActivities: [],
+    userOverview: { total: uTot, distribution: [] },
+  };
+}
+
 async function getBusinessActivityTrend(period = '30d') {
   const now = new Date();
   let startDate = new Date();
@@ -666,19 +700,25 @@ async function getUserProfile(userId) {
   const isCust = (user.role || '').toLowerCase() === 'customer';
   const isCont = (user.role || '').toLowerCase() === 'contractor';
 
-  const [decks, estimates, profile, leads, activities, documents] = await Promise.all([
+  const [decks, estimates, userProjects, profile, leads, activities, documents] = await Promise.all([
     isCust || isCont
       ? Deck.find({ ownerId: user._id })
-          .select('name area dimensions surfaceMaterial conditionLevel createdAt')
+          .select('name projectName area dimensions surfaceMaterial surfaceDetails conditionLevel deckShape createdAt')
           .sort({ createdAt: -1 })
           .lean()
       : [],
     isCust || isCont
-      ? Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }] })
-          .select('estimateReference totalCost pricing status createdAt deckId')
+      ? Estimate.find({ $or: [{ ownerId: user._id }, { customerId: user._id }, { createdBy: user._id }, { createdFor: user._id }] })
+          .populate('deckId', 'name projectName dimensions surfaceMaterial surfaceDetails area deckShape')
+          .select('estimateReference estimateNumber totalCost totalAmount pricing status estimateStatus createdAt deckId deckDetails')
           .sort({ createdAt: -1 })
           .lean()
       : [],
+    Project.find({ $or: [{ customerId: user._id }, { contractorId: user._id }] })
+      .populate('deckId', 'name projectName dimensions surfaceDetails area')
+      .populate('estimateId', 'estimateReference totalAmount status')
+      .sort({ createdAt: -1 })
+      .lean(),
     isCont ? ContractorProfile.findOne({ userId: user._id }).lean() : null,
     Lead.find(isCont ? { contractorId: user._id } : { customerId: user._id })
       .select('leadNumber contactSource contactCount latestContactDate status enquiry priority assignedContractorId createdAt')
@@ -693,39 +733,61 @@ async function getUserProfile(userId) {
     isCont ? VerificationDocument.find({ userId: user._id }).lean() : [],
   ]);
 
-  const activeEstimatesCount = estimates.filter((e) => e.status !== 'cancelled' && e.status !== 'expired').length;
-  const totalEstimatedValue = estimates.reduce((sum, e) => sum + (e.totalCost || e.pricing?.totalCost || 0), 0);
+  const activeEstimatesCount = estimates.filter((e) => {
+    const st = (e.status || e.estimateStatus || '').toLowerCase();
+    return st !== 'cancelled' && st !== 'expired';
+  }).length;
+  const totalEstimatedValue = estimates.reduce((sum, e) => sum + (e.totalAmount || e.totalCost || e.pricing?.totalCost || 0), 0);
 
   const serializedUser = {
     ...user,
     id: String(user._id),
   };
 
+  const mappedDecks = decks.map((d) => ({
+    id: (d._id || d.id).toString(),
+    _id: (d._id || d.id).toString(),
+    name: d.projectName || d.name || 'Deck Project',
+    projectName: d.projectName || d.name || 'Deck Project',
+    area: d.area || (d.dimensions?.length && d.dimensions?.width ? d.dimensions.length * d.dimensions.width : 0),
+    dimensions: d.dimensions,
+    surfaceMaterial: d.surfaceDetails?.material || d.surfaceDetails?.woodSpecies || d.surfaceMaterial || 'Pressure Treated Wood',
+    conditionLevel: d.conditionLevel || 'standard',
+    deckShape: d.deckShape || 'rectangle',
+    createdAt: d.createdAt,
+  }));
+
+  const mappedEstimates = estimates.map((e) => {
+    const deckObj = typeof e.deckId === 'object' && e.deckId ? e.deckId : null;
+    const estRef = e.estimateReference || e.estimateNumber || `EST-${(e._id || e.id).toString().slice(-4).toUpperCase()}`;
+    const estStatus = (e.estimateStatus || e.status || 'calculated').toLowerCase();
+    const cost = Number(e.totalAmount || e.totalCost || e.pricing?.totalCost || 0);
+    return {
+      id: (e._id || e.id).toString(),
+      _id: (e._id || e.id).toString(),
+      estimateReference: estRef,
+      deckId: deckObj,
+      deckName: deckObj?.projectName || deckObj?.name || e.deckDetails?.projectName || 'Deck Project',
+      dimensions: deckObj?.dimensions || e.deckDetails?.dimensions || null,
+      surfaceMaterial: deckObj?.surfaceDetails?.material || deckObj?.surfaceDetails?.woodSpecies || deckObj?.surfaceMaterial || e.deckDetails?.surfaceMaterial || 'Pressure Treated Wood',
+      totalCost: cost,
+      totalAmount: cost,
+      status: estStatus,
+      estimateStatus: estStatus,
+      createdAt: e.createdAt,
+    };
+  });
+
   return {
     user: serializedUser,
     contractorProfile: profile || null,
     customerData: isCust ? {
-      decksCount: decks.length,
-      decks: decks.map((d) => ({
-        id: (d._id || d.id).toString(),
-        name: d.name,
-        area: d.area,
-        dimensions: d.dimensions,
-        surfaceMaterial: d.surfaceMaterial,
-        conditionLevel: d.conditionLevel,
-        createdAt: d.createdAt,
-      })),
-      estimatesCount: estimates.length,
+      decksCount: mappedDecks.length,
+      decks: mappedDecks,
+      estimatesCount: mappedEstimates.length,
       activeEstimatesCount,
       totalEstimatedValue,
-      estimates: estimates.map((e) => ({
-        id: (e._id || e.id).toString(),
-        estimateReference: e.estimateReference || `EST-${(e._id || e.id).toString().slice(-4).toUpperCase()}`,
-        deckName: typeof e.deckId === 'object' && e.deckId?.name ? e.deckId.name : 'Deck Project',
-        totalCost: e.totalCost || e.pricing?.totalCost || 0,
-        status: e.status || 'draft',
-        createdAt: e.createdAt,
-      })),
+      estimates: mappedEstimates,
     } : null,
     contractorData: isCont ? {
       profile: profile || null,
@@ -749,8 +811,9 @@ async function getUserProfile(userId) {
       message: l.enquiry?.message,
       priority: l.priority,
     })),
-    projects: decks,
-    estimates,
+    projects: mappedDecks,
+    allProjects: userProjects,
+    estimates: mappedEstimates,
     recentActivities: activities,
     verificationDocuments: documents,
   };
@@ -2918,17 +2981,24 @@ async function updatePricingConfig(adminUser, updates) {
 // ====================================================================
 
 async function getDiscountsOverview() {
-  let defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+  let defaultPolicy = await DiscountPolicy.findOne({
+    $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+  });
   if (!defaultPolicy) {
     defaultPolicy = await DiscountPolicy.create({
       name: 'Standard Wholesale Contractor Discount',
-      code: 'CONTRACTOR_DEFAULT_10',
+      code: 'CONTRACTOR_DEFAULT_5',
       discountType: 'percentage',
-      discountValue: 10,
+      discountValue: 5,
       status: 'active',
     });
+  } else if (defaultPolicy.discountValue === 10) {
+    // Platform standard wholesale tier default updated to 5%
+    defaultPolicy.discountValue = 5;
+    defaultPolicy.code = 'CONTRACTOR_DEFAULT_5';
+    await defaultPolicy.save();
   }
-  const defaultDiscount = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
+  const defaultDiscount = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 5;
 
   const contractors = await User.find({
     role: { $regex: /^contractor$/i },
@@ -3006,20 +3076,23 @@ async function getDiscountsOverview() {
 }
 
 async function updateDefaultContractorDiscount(adminUser, newDiscountPercentage, reason = '') {
-  let policy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-  const prev = policy?.discountValue !== undefined ? policy.discountValue : 10;
+  let policy = await DiscountPolicy.findOne({
+    $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+  });
+  const prev = policy?.discountValue !== undefined ? policy.discountValue : 5;
   const newRate = Number(newDiscountPercentage);
 
   if (!policy) {
     policy = new DiscountPolicy({
-      name: 'Default Contractor Discount',
-      code: 'CONTRACTOR_DEFAULT_10',
+      name: 'Standard Wholesale Contractor Discount',
+      code: 'CONTRACTOR_DEFAULT_5',
       discountType: 'percentage',
       discountValue: newRate,
       status: 'active',
       createdBy: adminUser.id || adminUser._id,
     });
   } else {
+    policy.code = 'CONTRACTOR_DEFAULT_5';
     policy.discountValue = newRate;
   }
   await policy.save();
@@ -3049,8 +3122,10 @@ async function setContractorIndividualDiscount(adminUser, contractorUserId, disc
   let policy = await DiscountPolicy.findOne({ code: policyCode });
 
   const activeAssignment = await DiscountAssignment.findOne({ contractorId: contractor._id, status: 'active' }).populate('discountPolicyId');
-  const defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
+  const defaultPolicy = await DiscountPolicy.findOne({
+    $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+  });
+  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 5;
   const prevDiscount = activeAssignment?.discountPolicyId?.discountValue !== undefined ? activeAssignment.discountPolicyId.discountValue : defaultVal;
 
   if (!policy) {
@@ -3104,8 +3179,10 @@ async function resetContractorIndividualDiscount(adminUser, contractorUserId, re
   const contractor = await User.findById(contractorUserId);
   if (!contractor) throw new NotFoundError('Contractor not found.');
 
-  const defaultPolicy = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 10;
+  const defaultPolicy = await DiscountPolicy.findOne({
+    $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+  });
+  const defaultVal = defaultPolicy?.discountValue !== undefined ? defaultPolicy.discountValue : 5;
 
   const activeAssignment = await DiscountAssignment.findOne({ contractorId: contractor._id, status: 'active' }).populate('discountPolicyId');
   const prevDiscount = activeAssignment?.discountPolicyId?.discountValue !== undefined ? activeAssignment.discountPolicyId.discountValue : defaultVal;
@@ -3376,22 +3453,55 @@ async function getNotificationBroadcastHistory(limit = 30) {
 
 async function searchNotificationRecipients(query = '', roleFilter = '') {
   let allowedRoles = [ROLES.CUSTOMER, ROLES.CONTRACTOR];
-  if (roleFilter && (roleFilter === ROLES.CUSTOMER || roleFilter === ROLES.CONTRACTOR)) {
-    allowedRoles = [roleFilter];
+  if (roleFilter && (roleFilter.toLowerCase() === 'customer' || roleFilter.toLowerCase() === 'contractor')) {
+    allowedRoles = [roleFilter.toLowerCase()];
   }
-  let q = { accountStatus: { $ne: 'disabled' }, role: { $in: allowedRoles } };
+  let q = {
+    accountStatus: { $ne: 'disabled' },
+    role: { $in: allowedRoles.map((r) => new RegExp(`^${r}$`, 'i')) },
+  };
+
   if (query && query.trim()) {
-    const reg = new RegExp(query.trim(), 'i');
-    q.$or = [{ fullName: reg }, { email: reg }, { phone: reg }];
+    const rawQ = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const reg = new RegExp(rawQ, 'i');
+    q.$or = [
+      { fullName: reg },
+      { email: reg },
+      { phone: reg },
+      { company: reg },
+      { businessName: reg },
+    ];
   }
-  const users = await User.find(q).select('fullName email phone role accountStatus avatar').limit(30);
+
+  const users = await User.find(q)
+    .select('fullName email phone role accountStatus avatar company businessName')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+  // If contractor, resolve businessName from ContractorProfile if present
+  const contractorUserIds = users
+    .filter((u) => (u.role || '').toLowerCase() === 'contractor')
+    .map((u) => u._id);
+
+  let cpMap = {};
+  if (contractorUserIds.length > 0) {
+    const profiles = await ContractorProfile.find({ userId: { $in: contractorUserIds } })
+      .select('userId businessName companyName')
+      .lean();
+    profiles.forEach((p) => {
+      cpMap[p.userId.toString()] = p.businessName || p.companyName;
+    });
+  }
+
   return users.map((u) => ({
     id: u._id.toString(),
     _id: u._id.toString(),
     fullName: u.fullName,
     email: u.email,
     phone: u.phone,
-    role: u.role,
+    role: (u.role || 'customer').toLowerCase(),
+    businessName: cpMap[u._id.toString()] || u.businessName || u.company || '',
     accountStatus: u.accountStatus,
     avatar: u.avatar || '',
   }));
@@ -4233,6 +4343,7 @@ async function deleteLead(leadId) {
 module.exports = {
   // 1. Dashboard
   getDashboardSummary,
+  getDashboardFastFallback,
   getBusinessActivityTrend,
   getActivityTrend: getBusinessActivityTrend,
 

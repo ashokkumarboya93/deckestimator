@@ -488,7 +488,15 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
 
     const html2pdfModule = await import('html2pdf.js');
     const html2pdf = html2pdfModule.default || html2pdfModule;
-    await html2pdf().from(reportElement).set(opt).save();
+    const pdfBlob = await html2pdf().from(reportElement).set(opt).outputPdf('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `DRP-UserProfile-${safeName}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
   } finally {
     if (document.body.contains(reportElement)) {
       document.body.removeChild(reportElement);
@@ -722,7 +730,15 @@ export async function downloadUserProfilePdf(profileData = {}) {
       throw new Error('PDF export engine failed to initialize.');
     }
 
-    await html2pdf().from(reportElement).set(opt).save();
+    const pdfBlob = await html2pdf().from(reportElement).set(opt).outputPdf('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `DRP-UserProfile-${safeName}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
   } finally {
     if (document.body.contains(reportElement)) {
       document.body.removeChild(reportElement);

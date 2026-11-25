@@ -36,6 +36,7 @@ router.get('/dashboard/summary', adminController.getDashboardSummary);
 router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
 
 // 2. User Management & Moderation
+router.get('/users/search-recipients', adminController.searchRecipients);
 router.get('/users', adminController.listUsers);
 router.post('/users/bulk-delete', adminController.bulkDeleteUsers);
 router.get('/users/:id/export', adminController.exportSingleUserDossier);
@@ -124,7 +125,6 @@ router.put('/settings', adminController.updateSystemSettings);
 // Targeted Notifications Dispatcher
 router.post('/notifications/dispatch', adminController.dispatchNotification);
 router.get('/notifications/history', adminController.getNotificationHistory);
-router.get('/users/search-recipients', adminController.searchRecipients);
 
 // 11. Permissions Matrix
 router.get('/permissions', adminController.getPermissionsMatrix);

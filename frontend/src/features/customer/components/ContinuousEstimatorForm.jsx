@@ -891,7 +891,7 @@ export default function ContinuousEstimatorForm({
 
   // Contractor Wholesale Discount State (Default checked as requested)
   const [applyContractorDiscount, setApplyContractorDiscount] = useState(true);
-  const [contractorDiscountPercent, setContractorDiscountPercent] = useState(10);
+  const [contractorDiscountPercent, setContractorDiscountPercent] = useState(5);
 
   // Minimum Job Mobilization Price Toggle (Default FALSE: pure calculated price without minimum job price)
   const [applyMinJobPrice, setApplyMinJobPrice] = useState(false);

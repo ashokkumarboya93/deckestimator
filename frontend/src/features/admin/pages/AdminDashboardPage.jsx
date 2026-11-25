@@ -99,11 +99,17 @@ export default function AdminDashboardPage() {
         : trRes?.data || trRes;
 
       if (summaryPayload && summaryPayload.summary) {
-        setSummaryData(summaryPayload);
-        try {
-          localStorage.setItem('drp_admin_dashboard_cache', JSON.stringify(summaryPayload));
-        } catch {
-          // Ignore quota errors
+        const isEmptyScaffold =
+          summaryPayload.summary.totalUsers === 0 &&
+          summaryPayload.summary.totalEstimates === 0 &&
+          summaryData?.summary?.totalUsers > 0;
+        if (!isEmptyScaffold) {
+          setSummaryData(summaryPayload);
+          try {
+            localStorage.setItem('drp_admin_dashboard_cache', JSON.stringify(summaryPayload));
+          } catch {
+            // Ignore quota errors
+          }
         }
       }
       if (trendPayload && trendPayload.series) {

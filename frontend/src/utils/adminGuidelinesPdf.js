@@ -492,3 +492,4 @@ export async function downloadCalculatorFormulasPdf() {
 
   await generatePdfFromElement(container, 'Deck_Restoration_Calculator_Engine_Formulas_Guide.pdf');
 }
+

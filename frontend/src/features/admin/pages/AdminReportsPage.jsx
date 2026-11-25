@@ -43,6 +43,7 @@ export default function AdminReportsPage() {
   // Search & filter states for tabs
   const [auditSearch, setAuditSearch] = useState('');
   const [auditFilterType, setAuditFilterType] = useState('all');
+  const [expandedAuditIds, setExpandedAuditIds] = useState({});
   const [leadsSearch, setLeadsSearch] = useState('');
   const [projectsSearch, setProjectsSearch] = useState('');
   const [contractorSearch, setContractorSearch] = useState('');
@@ -1376,13 +1377,82 @@ export default function AdminReportsPage() {
                               </span>
                             </td>
                             <td style={styles.td}>
-                              <div style={{ fontSize: '12px', color: '#334155', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {log.newValue ? (
-                                  typeof log.newValue === 'object' ? JSON.stringify(log.newValue) : String(log.newValue)
-                                ) : (
-                                  'Executed administrative adjustment'
-                                )}
-                              </div>
+                              {(() => {
+                                const rowKey = log.id || log._id || idx;
+                                const isExpanded = Boolean(expandedAuditIds[rowKey]);
+                                const rawVal = log.newValue;
+                                let summaryText = 'Executed administrative adjustment';
+                                let fullText = summaryText;
+
+                                if (rawVal) {
+                                  if (typeof rawVal === 'object') {
+                                    fullText = JSON.stringify(rawVal, null, 2);
+                                    const parts = [];
+                                    if (rawVal.status) parts.push(`Status: ${rawVal.status}`);
+                                    if (rawVal.discount !== undefined) parts.push(`Discount: ${rawVal.discount}%`);
+                                    if (rawVal.newDiscount !== undefined) parts.push(`New Discount: ${rawVal.newDiscount}%`);
+                                    if (rawVal.totalAmount !== undefined) parts.push(`Total: $${Number(rawVal.totalAmount).toLocaleString()}`);
+                                    if (rawVal.totalCost !== undefined) parts.push(`Cost: $${Number(rawVal.totalCost).toLocaleString()}`);
+                                    if (rawVal.title) parts.push(`Title: ${rawVal.title}`);
+                                    if (rawVal.recipientType) parts.push(`Target: ${rawVal.recipientType}`);
+                                    if (rawVal.reason) parts.push(`Reason: ${rawVal.reason}`);
+                                    if (rawVal.deckDetails?.projectName) parts.push(`Project: ${rawVal.deckDetails.projectName}`);
+                                    summaryText = parts.length > 0 ? parts.join(' • ') : JSON.stringify(rawVal);
+                                  } else {
+                                    fullText = String(rawVal);
+                                    summaryText = fullText;
+                                  }
+                                }
+
+                                const needsToggle = fullText.length > 75 || (typeof rawVal === 'object' && rawVal !== null);
+                                const shortPreview = summaryText.length > 85 ? `${summaryText.slice(0, 82)}...` : summaryText;
+
+                                return (
+                                  <div style={{ fontSize: '12px', color: '#334155', maxWidth: '340px' }}>
+                                    {isExpanded ? (
+                                      <pre style={{
+                                        margin: 0,
+                                        padding: '8px 10px',
+                                        backgroundColor: '#F8FAFC',
+                                        border: '1px solid #E2E8F0',
+                                        borderRadius: '6px',
+                                        fontSize: '11px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-word',
+                                        maxHeight: '220px',
+                                        overflowY: 'auto',
+                                      }}>
+                                        {fullText}
+                                      </pre>
+                                    ) : (
+                                      <span style={{ lineHeight: 1.45, display: 'inline-block', wordBreak: 'break-word' }}>
+                                        {shortPreview}
+                                      </span>
+                                    )}
+                                    {needsToggle && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedAuditIds((prev) => ({ ...prev, [rowKey]: !prev[rowKey] }))}
+                                        style={{
+                                          display: 'inline-block',
+                                          marginLeft: isExpanded ? 0 : '6px',
+                                          marginTop: isExpanded ? '6px' : 0,
+                                          background: 'none',
+                                          border: 'none',
+                                          padding: 0,
+                                          color: '#034EA2',
+                                          fontSize: '11px',
+                                          fontWeight: '700',
+                                          cursor: 'pointer',
+                                          textDecoration: 'underline',
+                                        }}
+                                      >
+                                        {isExpanded ? 'See Less' : 'See More'}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td style={styles.td}>
                               <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace' }}>

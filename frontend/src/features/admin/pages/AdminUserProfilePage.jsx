@@ -83,7 +83,7 @@ export default function AdminUserProfilePage() {
 
   const handleConfirmBlockToggle = async () => {
     if (!profileData?.user) return;
-    const currentStatus = profileData.user.accountStatus || 'active';
+    const currentStatus = (profileData.user.accountStatus || profileData.user.status || 'active').toLowerCase();
     const newStatus = currentStatus === 'blocked' ? 'active' : 'blocked';
 
     setActionLoading(true);
@@ -95,7 +95,7 @@ export default function AdminUserProfilePage() {
       );
       setSuccessMsg(`User status successfully updated to ${newStatus.toUpperCase()}`);
       setIsBlockModalOpen(false);
-      fetchProfile();
+      await fetchProfile();
     } catch (err) {
       setError(err?.message || 'Failed to update account status.');
     } finally {
@@ -544,51 +544,112 @@ export default function AdminUserProfilePage() {
         {estimates.length === 0 && decks.length === 0 ? (
           <p style={styles.emptyNote}>No project or estimation activity recorded for this user yet.</p>
         ) : (
-          <div style={styles.tableResponsive}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Estimate / Project</th>
-                  <th style={styles.th}>Deck Dimensions</th>
-                  <th style={styles.th}>Surface Material</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Estimated Cost</th>
-                  <th style={styles.th}>Created Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {estimates.map((est, idx) => (
-                  <tr key={est._id || est.id || idx} style={styles.tr}>
-                    <td style={styles.td}>
-                      <span style={{ fontWeight: '700', color: '#0f172a' }}>
-                        {est.estimateReference || `EST-#${(est._id || est.id || '').slice(-5).toUpperCase()}`}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {est.deckId?.dimensions?.length && est.deckId?.dimensions?.width
-                        ? `${est.deckId.dimensions.length}ft × ${est.deckId.dimensions.width}ft (${est.deckId.area || est.deckId.dimensions.length * est.deckId.dimensions.width} sq ft)`
-                        : est.dimensions
-                        ? `${est.dimensions} sq ft`
-                        : 'Custom Spec'}
-                    </td>
-                    <td style={styles.td}>{est.deckId?.surfaceMaterial || est.surfaceMaterial || 'Pressure Treated'}</td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.statusPillSmall,
-                        backgroundColor: est.status === 'calculated' || est.status === 'finalized' ? '#ecfdf5' : '#f1f5f9',
-                        color: est.status === 'calculated' || est.status === 'finalized' ? '#065f46' : '#475569',
-                      }}>
-                        {(est.status || 'draft').toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, fontWeight: '700', color: '#0f172a' }}>
-                      ${Number(est.totalCost || est.pricing?.totalCost || est.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={styles.td}>{new Date(est.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {estimates.length > 0 && (
+              <div>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  Estimations ({estimates.length})
+                </h3>
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Estimate / Project</th>
+                        <th style={styles.th}>Deck Dimensions</th>
+                        <th style={styles.th}>Surface Material</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Estimated Cost</th>
+                        <th style={styles.th}>Created Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {estimates.map((est, idx) => {
+                        const dims = est.deckId?.dimensions || est.dimensions;
+                        const dimLabel = dims?.length && dims?.width
+                          ? `${dims.length}ft × ${dims.width}ft (${dims.area || dims.length * dims.width} sq ft)`
+                          : dims?.area
+                          ? `${dims.area} sq ft`
+                          : typeof dims === 'number'
+                          ? `${dims} sq ft`
+                          : 'Custom Spec';
+                        const matLabel = est.deckId?.surfaceDetails?.woodSpecies || est.deckId?.surfaceDetails?.material || est.deckId?.surfaceMaterial || est.surfaceMaterial || 'Pressure Treated';
+                        const estStatus = (est.estimateStatus || est.status || 'created').toLowerCase();
+                        return (
+                          <tr key={est._id || est.id || idx} style={styles.tr}>
+                            <td style={styles.td}>
+                              <span style={{ fontWeight: '700', color: '#0f172a', display: 'block' }}>
+                                {est.estimateReference || `EST-#${(est._id || est.id || '').slice(-5).toUpperCase()}`}
+                              </span>
+                              {est.deckName && (
+                                <span style={{ fontSize: '11px', color: '#64748b' }}>{est.deckName}</span>
+                              )}
+                            </td>
+                            <td style={styles.td}>{dimLabel}</td>
+                            <td style={styles.td}>{matLabel}</td>
+                            <td style={styles.td}>
+                              <span style={{
+                                ...styles.statusPillSmall,
+                                backgroundColor: estStatus === 'calculated' || estStatus === 'finalized' || estStatus === 'completed' ? '#ecfdf5' : estStatus === 'requested' || estStatus === 'in_review' ? '#eff6ff' : '#f1f5f9',
+                                color: estStatus === 'calculated' || estStatus === 'finalized' || estStatus === 'completed' ? '#065f46' : estStatus === 'requested' || estStatus === 'in_review' ? '#1d4ed8' : '#475569',
+                              }}>
+                                {estStatus.toUpperCase()}
+                              </span>
+                            </td>
+                            <td style={{ ...styles.td, fontWeight: '700', color: '#0f172a' }}>
+                              ${Number(est.totalCost || est.pricing?.totalCost || est.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={styles.td}>{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {decks.length > 0 && (
+              <div>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  Deck Projects ({decks.length})
+                </h3>
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Deck Project Name</th>
+                        <th style={styles.th}>Dimensions &amp; Area</th>
+                        <th style={styles.th}>Shape</th>
+                        <th style={styles.th}>Material</th>
+                        <th style={styles.th}>Created Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {decks.map((dk, idx) => {
+                        const dims = dk.dimensions;
+                        const areaVal = dk.area || dims?.area || (dims?.length && dims?.width ? dims.length * dims.width : null);
+                        const dimText = dims?.length && dims?.width
+                          ? `${dims.length}ft × ${dims.width}ft (${areaVal || '-'} sq ft)`
+                          : areaVal
+                          ? `${areaVal} sq ft`
+                          : 'Custom Dimensions';
+                        return (
+                          <tr key={dk._id || dk.id || idx} style={styles.tr}>
+                            <td style={{ ...styles.td, fontWeight: '700', color: '#0f172a' }}>
+                              {dk.projectName || dk.name || `Deck #${idx + 1}`}
+                            </td>
+                            <td style={styles.td}>{dimText}</td>
+                            <td style={styles.td}>{(dk.deckShape || 'rectangle').replace(/_/g, ' ').toUpperCase()}</td>
+                            <td style={styles.td}>{dk.surfaceMaterial || dk.surfaceDetails?.woodSpecies || dk.surfaceDetails?.material || 'Wood'}</td>
+                            <td style={styles.td}>{dk.createdAt ? new Date(dk.createdAt).toLocaleDateString() : 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

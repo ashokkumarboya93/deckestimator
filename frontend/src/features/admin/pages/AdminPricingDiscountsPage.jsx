@@ -146,8 +146,23 @@ export default function AdminPricingDiscountsPage() {
   const [engineConfig, setEngineConfig] = useState(DEFAULT_ENGINE_CONFIG);
 
   // Contractor Discounts & Policy State
-  const [discountData, setDiscountData] = useState(null);
-  const [defaultDiscountVal, setDefaultDiscountVal] = useState(10);
+  const [discountData, setDiscountData] = useState(() => {
+    try {
+      const cached = localStorage.getItem('drp_admin_discounts_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [defaultDiscountVal, setDefaultDiscountVal] = useState(() => {
+    try {
+      const cached = localStorage.getItem('drp_admin_discounts_cache');
+      const parsed = cached ? JSON.parse(cached) : null;
+      return parsed?.defaultDiscount !== undefined ? parsed.defaultDiscount : 5;
+    } catch {
+      return 5;
+    }
+  });
   const [defaultReason, setDefaultReason] = useState('');
   const [savingDefaultDiscount, setSavingDefaultDiscount] = useState(false);
 
@@ -204,16 +219,16 @@ export default function AdminPricingDiscountsPage() {
   }, []);
 
   const loadAllData = async () => {
-    setLoading(true);
+    if (!discountData) setLoading(true);
     setError(null);
     try {
-      const [pricingRes, discountRes] = await Promise.all([
+      const [pricingResult, discountResult] = await Promise.allSettled([
         adminApi.getPricingConfig(),
         adminApi.getDiscountsOverview(),
       ]);
 
-      if (pricingRes?.data) {
-        const rp = pricingRes.data.restorationPricing;
+      if (pricingResult.status === 'fulfilled' && pricingResult.value?.data) {
+        const rp = pricingResult.value.data.restorationPricing;
         if (rp && typeof rp === 'object') {
           setEngineConfig({
             ...DEFAULT_ENGINE_CONFIG,
@@ -232,22 +247,72 @@ export default function AdminPricingDiscountsPage() {
         }
       }
 
+      const discountRes = discountResult.status === 'fulfilled' ? discountResult.value : null;
       // Safe unwrap of discount data (whether returned as res.data or direct object)
-      const unwrappedDiscount =
+      let unwrappedDiscount =
         discountRes?.data?.contractors !== undefined
           ? discountRes.data
           : discountRes?.contractors !== undefined
           ? discountRes
           : discountRes?.data || discountRes;
 
+      // Fallback: if discounts endpoint failed or returned 0 contractors, fetch contractors from users endpoint
+      if (!unwrappedDiscount || !Array.isArray(unwrappedDiscount.contractors) || unwrappedDiscount.contractors.length === 0) {
+        try {
+          const usersRes = await adminApi.getUsers({ role: 'contractor', limit: 100 });
+          const rawUsers = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes?.data?.data) ? usersRes.data.data : []);
+          if (rawUsers.length > 0) {
+            const defRate = unwrappedDiscount?.defaultDiscount !== undefined ? unwrappedDiscount.defaultDiscount : 5;
+            const mappedContractors = rawUsers.map((c) => {
+              const idStr = (c._id || c.id || '').toString();
+              return {
+                id: idStr,
+                _id: idStr,
+                contractorId: `CT-${idStr.slice(-4).toUpperCase()}`,
+                name: c.fullName || c.name,
+                fullName: c.fullName || c.name,
+                email: c.email,
+                phone: c.phone || '',
+                businessName: c.contractorProfile?.businessName || c.company || c.businessName || 'Independent Pro',
+                verificationStatus: c.contractorProfile?.verificationStatus || 'APPROVED',
+                completedProjects: 0,
+                defaultDiscount: `${defRate}%`,
+                currentDiscount: `${defRate}%`,
+                discountType: 'Default',
+                hasCustomDiscount: false,
+                customDiscount: null,
+                rawDiscount: defRate,
+                overrideReason: '',
+              };
+            });
+            unwrappedDiscount = {
+              defaultDiscount: defRate,
+              contractorsWithDiscounts: 0,
+              activeDiscountRules: 0,
+              contractors: mappedContractors,
+              auditHistory: unwrappedDiscount?.auditHistory || [],
+            };
+          }
+        } catch {
+          // Keep existing cached state if fallback also fails
+        }
+      }
+
       if (unwrappedDiscount && typeof unwrappedDiscount === 'object') {
         setDiscountData(unwrappedDiscount);
         if (unwrappedDiscount.defaultDiscount !== undefined) {
           setDefaultDiscountVal(unwrappedDiscount.defaultDiscount);
         }
+        try {
+          localStorage.setItem('drp_admin_discounts_cache', JSON.stringify(unwrappedDiscount));
+        } catch {
+          // Ignore storage quota
+        }
       }
     } catch (err) {
-      setError(err?.message || 'Could not load pricing and discount data.');
+      if (!discountData) {
+        setError(err?.message || 'Could not load pricing and discount data.');
+      }
     } finally {
       setLoading(false);
     }

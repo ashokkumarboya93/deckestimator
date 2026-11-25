@@ -169,13 +169,25 @@ export default function AdminLayout() {
         })
         .catch(() => {});
 
-      // 2. Verifications (Amber Gold Bubble)
-      adminApi
-        .getVerifications({ status: 'pending' })
-        .then((res) => {
-          const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []);
-          if (mounted && Array.isArray(list)) {
-            const unread = list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
+      // 2. Verifications & Contractor Documents (Amber Gold Bubble)
+      Promise.allSettled([
+        adminApi.getVerifications({ status: 'pending' }),
+        adminApi.getContractorDocuments({ status: 'pending' }),
+      ])
+        .then(([vRes, dRes]) => {
+          let unread = 0;
+          if (vRes.status === 'fulfilled') {
+            const list = Array.isArray(vRes.value?.data) ? vRes.value.data : (Array.isArray(vRes.value?.data?.data) ? vRes.value.data.data : []);
+            unread += list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
+          }
+          if (dRes.status === 'fulfilled') {
+            const docs = Array.isArray(dRes.value?.data?.data) ? dRes.value.data.data : (Array.isArray(dRes.value?.data) ? dRes.value.data : []);
+            unread += docs.filter((d) => {
+              const st = (d.documentStatus || 'pending').toLowerCase();
+              return (st === 'pending' || st === 'pending_review') && !storedReadVerif.includes(d._id || d.id);
+            }).length;
+          }
+          if (mounted) {
             setPendingVerifications(unread);
           }
         })

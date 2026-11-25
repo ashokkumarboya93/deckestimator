@@ -250,6 +250,7 @@ async function getContractorApplicableDiscounts(contractorUserId) {
     status: DISCOUNT_POLICY_STATUS.ACTIVE,
     $or: [
       { isGeneralEligibility: true },
+      { code: 'CONTRACTOR_DEFAULT_5' },
       { code: 'CONTRACTOR_DEFAULT_10' },
       { code: /^DISC_/i },
     ],
@@ -286,12 +287,12 @@ async function getContractorApplicableDiscounts(contractorUserId) {
 }
 
 /**
- * Gets effective discount rate for contractor (assigned or default 10%).
+ * Gets effective discount rate for contractor (assigned or default 5%).
  */
 async function getContractorEffectiveDiscount(contractorUserId) {
-  let rate = 10;
+  let rate = 5;
   let policyName = 'Contractor Wholesale Discount';
-  let policyCode = 'CONTRACTOR_DEFAULT_10';
+  let policyCode = 'CONTRACTOR_DEFAULT_5';
 
   try {
     // 1. Check for active individual contractor discount override assignment
@@ -308,7 +309,9 @@ async function getContractorEffectiveDiscount(contractorUserId) {
     }
 
     // 2. Fall back to Platform Default Wholesale Discount policy
-    const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
+    const defaultPol = await DiscountPolicy.findOne({
+      $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+    });
     if (defaultPol && typeof defaultPol.discountValue === 'number') {
       rate = defaultPol.discountValue;
       policyName = defaultPol.name;
