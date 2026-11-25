@@ -49,6 +49,11 @@ function generateToken(user) {
 async function registerUser(userData) {
   const normalizedEmail = userData.email.trim().toLowerCase();
 
+  // Mobile phone number is mandatory for registration
+  if (!userData.phone || !userData.phone.trim()) {
+    throw new BadRequestError('Mobile phone number is mandatory for account registration.');
+  }
+
   // Fast indexed existence check
   const existingUser = await User.exists({ email: normalizedEmail });
   if (existingUser) {
@@ -265,31 +270,46 @@ async function requestPasswordReset(email) {
   user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
   await user.save({ validateBeforeSave: false });
 
-  console.log(`[PASSWORD_RESET] Token generated for ${user.email}`);
+  const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const resetLink = `${frontendOrigin}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+
+  console.log(`[PASSWORD_RESET_EMAIL] ========================================`);
+  console.log(`[PASSWORD_RESET_EMAIL] To: ${user.email}`);
+  console.log(`[PASSWORD_RESET_EMAIL] Subject: Deck Restoration Plus — Reset Your Password`);
+  console.log(`[PASSWORD_RESET_EMAIL] Reset Link: ${resetLink}`);
+  console.log(`[PASSWORD_RESET_EMAIL] ========================================`);
 
   return {
-    message: 'If an account exists with that email address, password reset instructions have been generated.',
+    message: `A secure password reset link has been dispatched to ${user.email}. Click the link to reset your account password.`,
     resetToken: rawToken,
+    resetLink,
+    email: user.email,
   };
 }
 
 /**
- * Complete password reset using valid, unexpired reset token.
+ * Complete password reset using valid, unexpired reset token and email lookup verification.
  */
-async function resetPasswordWithToken(rawToken, newPassword) {
+async function resetPasswordWithToken(rawToken, newPassword, email) {
   if (!rawToken || !newPassword) {
     throw new BadRequestError('Reset token and new password are required.');
   }
 
   const hashedToken = crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
 
-  const user = await User.findOne({
+  const query = {
     passwordResetToken: hashedToken,
     passwordResetExpires: { $gt: new Date() },
-  });
+  };
+
+  if (email && email.trim()) {
+    query.email = email.trim().toLowerCase();
+  }
+
+  const user = await User.findOne(query);
 
   if (!user) {
-    throw new BadRequestError('Password reset token is invalid or has expired.');
+    throw new BadRequestError('Password reset link is invalid, expired, or does not match the provided email address.');
   }
 
   user.passwordHash = await User.hashPassword(newPassword);
@@ -307,7 +327,7 @@ async function resetPasswordWithToken(rawToken, newPassword) {
   }
 
   return {
-    message: 'Password has been reset successfully. You can now log in with your new password.',
+    message: 'Your password has been securely reset. You can now log in with your new password.',
   };
 }
 

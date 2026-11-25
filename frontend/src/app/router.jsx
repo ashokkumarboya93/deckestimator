@@ -15,6 +15,7 @@ import AdminLayout from '../features/admin/components/AdminLayout';
 // Core & Auth Pages (Lazy Loaded)
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'));
+const ResetPasswordPage = lazy(() => import('../features/auth/pages/ResetPasswordPage'));
 const LandingPage = lazy(() => import('../features/landing/pages/LandingPage'));
 
 // Customer Pages (Lazy Loaded)
@@ -103,6 +104,14 @@ const router = createBrowserRouter([
         element: (
           <GuestOnly>
             <RegisterPage />
+          </GuestOnly>
+        ),
+      },
+      {
+        path: 'reset-password',
+        element: (
+          <GuestOnly>
+            <ResetPasswordPage />
           </GuestOnly>
         ),
       },

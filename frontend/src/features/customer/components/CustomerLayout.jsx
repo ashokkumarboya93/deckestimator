@@ -22,6 +22,7 @@ import mainLogoDeck from '../../../assets/images/MainLodo.png';
 import mainLogoV2 from '../../../assets/images/Main_Logo_v2.png';
 import CustomerFooter from './CustomerFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
+import WelcomeGreetingModal from '../../../components/common/WelcomeGreetingModal';
 import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 
 export default function CustomerLayout() {
@@ -45,6 +46,26 @@ export default function CustomerLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [projectName, setProjectName] = useState('');
+
+  // First-time welcome greeting modal (only displays once per registered user)
+  const [showWelcomeGreeting, setShowWelcomeGreeting] = useState(() => {
+    if (!user) return false;
+    const uid = user.id || user._id;
+    if (!uid) return false;
+    if (localStorage.getItem(`drp_welcome_shown_${uid}`)) return false;
+    const isNew = localStorage.getItem(`drp_show_welcome_${uid}`) || localStorage.getItem('drp_newly_registered');
+    return Boolean(isNew);
+  });
+
+  const handleCloseWelcome = () => {
+    setShowWelcomeGreeting(false);
+    const uid = user?.id || user?._id;
+    if (uid) {
+      localStorage.setItem(`drp_welcome_shown_${uid}`, 'true');
+      localStorage.removeItem(`drp_show_welcome_${uid}`);
+    }
+    localStorage.removeItem('drp_newly_registered');
+  };
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -780,6 +801,14 @@ export default function CustomerLayout() {
         {/* FOOTER: Included for every page */}
         <CustomerFooter onOpenGuide={() => setIsHelpOpen(true)} />
       </div>
+
+      {/* First-Time Welcome / Greeting Modal */}
+      <WelcomeGreetingModal
+        isOpen={showWelcomeGreeting}
+        onClose={handleCloseWelcome}
+        user={user}
+        role="customer"
+      />
 
       {/* Educational Walkthrough Modal */}
       {isHelpOpen && (

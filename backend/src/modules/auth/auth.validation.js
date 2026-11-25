@@ -35,7 +35,11 @@ const registerSchema = {
       .messages({
         'any.only': 'Role must be either customer or contractor',
       }),
-    phone: Joi.string().trim().allow('').max(20).optional(),
+    phone: Joi.string().trim().min(7).max(20).required().messages({
+      'string.empty': 'Mobile phone number is required',
+      'string.min': 'Please enter a valid phone number (at least 7 digits)',
+      'any.required': 'Mobile phone number is required',
+    }),
 
     // Contractor specific fields (required if role is contractor)
     businessName: Joi.when('role', {
@@ -85,6 +89,10 @@ const resetPasswordSchema = {
   body: Joi.object({
     token: Joi.string().trim().required().messages({
       'string.empty': 'Reset token is required',
+    }),
+    email: Joi.string().trim().email().required().messages({
+      'string.empty': 'Email address is required for identity lookup',
+      'string.email': 'Please enter a valid email address',
     }),
     newPassword: Joi.string()
       .min(8)

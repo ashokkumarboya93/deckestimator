@@ -67,10 +67,10 @@ export const authApi = {
   /**
    * Reset password with token.
    */
-  async resetPassword({ token, newPassword, confirmPassword }) {
+  async resetPassword({ token, newPassword, confirmPassword, email }) {
     return apiClient(ENDPOINTS.AUTH.RESET_PASSWORD, {
       method: 'POST',
-      body: JSON.stringify({ token, newPassword, confirmPassword }),
+      body: JSON.stringify({ token, newPassword, confirmPassword, email }),
     });
   },
 };

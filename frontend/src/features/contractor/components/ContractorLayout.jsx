@@ -23,6 +23,7 @@ import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
+import WelcomeGreetingModal from '../../../components/common/WelcomeGreetingModal';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
@@ -58,6 +59,29 @@ export default function ContractorLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(0);
+
+  // First-time welcome greeting modal state (shown once per contractor account)
+  const [showWelcomeGreeting, setShowWelcomeGreeting] = useState(() => {
+    try {
+      const uid = user?.id || user?._id;
+      if (!uid) return false;
+      const alreadyShown = localStorage.getItem(`drp_welcome_shown_${uid}`);
+      const shouldShow = localStorage.getItem(`drp_show_welcome_${uid}`) || localStorage.getItem('drp_newly_registered');
+      return !alreadyShown && Boolean(shouldShow);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleCloseWelcome = () => {
+    setShowWelcomeGreeting(false);
+    const uid = user?.id || user?._id;
+    if (uid) {
+      localStorage.setItem(`drp_welcome_shown_${uid}`, 'true');
+      localStorage.removeItem(`drp_show_welcome_${uid}`);
+    }
+    localStorage.removeItem('drp_newly_registered');
+  };
   const [projectName, setProjectName] = useState('');
   const [contractorProfile, setContractorProfile] = useState(null);
   const [signoutHover, setSignoutHover] = useState(false);
@@ -825,6 +849,14 @@ export default function ContractorLayout() {
         {/* Dedicated Contractor Portal Footer (Shown on every page) */}
         <ContractorFooter />
       </div>
+
+      {/* First-Time Welcome Greeting Modal */}
+      <WelcomeGreetingModal
+        isOpen={showWelcomeGreeting}
+        onClose={handleCloseWelcome}
+        user={user}
+        role="contractor"
+      />
 
       {/* 3. HELP & GUIDE MODAL */}
       {isHelpOpen && (
