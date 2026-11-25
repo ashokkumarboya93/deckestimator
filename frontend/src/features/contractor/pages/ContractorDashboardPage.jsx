@@ -11,7 +11,7 @@
 // - Polished theme-based outlined shiny buttons for product cards
 // - Fully non-clipping email box container with live copy feedback
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDecks } from '../../customer/api/decksApi';
 import { getEstimates } from '../../customer/api/estimatesApi';
@@ -127,6 +127,70 @@ export default function ContractorDashboardPage() {
     const price = Number(est.pricingSnapshot?.finalTotal || est.totalAmount || est.subtotal || 0);
     return sum + price;
   }, 0);
+
+  const recentDeckProjects = useMemo(() => {
+    if (projects.length > 0) {
+      return projects.map((p) => {
+        const pId = p._id || p.id;
+        const projectEst = estimates.find((e) => {
+          const dId = e.deckId?._id || e.deckId?.id || e.deckId;
+          return dId === pId || e._id === pId;
+        });
+        const rawStatus = String(
+          projectEst?.estimateStatus ||
+          projectEst?.status ||
+          p.completionStatus ||
+          p.status ||
+          'CREATED'
+        ).toUpperCase();
+        const area = p.dimensions?.area || p.area || projectEst?.deckDetails?.areaSqFt || projectEst?.pricingSnapshot?.A || 420;
+        const estPrice = projectEst
+          ? Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0)
+          : 0;
+        const estValStr = estPrice > 0 ? `$${estPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '$2,450 – $3,680';
+        const projectName = p.projectName || projectEst?.deckDetails?.projectName || projectEst?.estimateName || 'Residential Deck';
+        const clientName = p.ownerId?.fullName || p.ownerName || projectEst?.customerSnapshot?.fullName || 'Verified Client';
+        const date = p.createdAt || p.updatedAt || projectEst?.createdAt || Date.now();
+        const targetUrl = projectEst ? `/contractor/projects/${projectEst._id || projectEst.id}` : '/contractor/projects';
+        return {
+          id: pId,
+          projectName,
+          clientName,
+          area,
+          estValStr,
+          rawStatus,
+          date,
+          targetUrl,
+        };
+      });
+    }
+
+    if (estimates.length > 0) {
+      return estimates.map((est) => {
+        const estId = est._id || est.id;
+        const rawStatus = String(est.estimateStatus || est.status || 'CREATED').toUpperCase();
+        const area = est.deckDetails?.areaSqFt || est.deckDetails?.deckArea || est.pricingSnapshot?.A || 420;
+        const estPrice = Number(est.pricingSnapshot?.finalTotal || est.totalAmount || est.subtotal || 0);
+        const estValStr = estPrice > 0 ? `$${estPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '$2,450 – $3,680';
+        const projectName = est.deckDetails?.projectName || est.estimateName || est.projectName || 'Residential Deck';
+        const clientName = est.ownerId?.fullName || est.ownerName || est.customerSnapshot?.fullName || 'Verified Client';
+        const date = est.createdAt || est.updatedAt || Date.now();
+        const targetUrl = `/contractor/projects/${estId}`;
+        return {
+          id: estId,
+          projectName,
+          clientName,
+          area,
+          estValStr,
+          rawStatus,
+          date,
+          targetUrl,
+        };
+      });
+    }
+
+    return [];
+  }, [projects, estimates]);
 
   const fmt = (num) => `$${Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
@@ -708,32 +772,23 @@ export default function ContractorDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {projects.length > 0 ? (
-                    projects.slice(0, 5).map((p) => {
-                      const projectEst = estimates.find((e) => {
-                        const dId = e.deckId?._id || e.deckId?.id || e.deckId;
-                        return dId === (p._id || p.id);
-                      });
-                      const estValStr = projectEst
-                        ? `$${Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                        : '$2,450 – $3,680';
-
-                      const rawStatus = String(p.status || projectEst?.status || 'CREATED').toUpperCase();
+                  {recentDeckProjects.length > 0 ? (
+                    recentDeckProjects.slice(0, 5).map((p) => {
                       const statusClass =
-                        rawStatus === 'COMPLETED' || rawStatus === 'APPROVED'
+                        p.rawStatus === 'COMPLETED' || p.rawStatus === 'APPROVED'
                           ? styles.statusCompleted
-                          : rawStatus === 'IN_REVIEW' || rawStatus === 'IN_PROGRESS'
+                          : p.rawStatus === 'IN_REVIEW' || p.rawStatus === 'IN_PROGRESS'
                             ? styles.statusInProgress
                             : styles.statusCreated;
 
-                      const formattedDate = new Date(p.createdAt || p.updatedAt || Date.now()).toLocaleDateString('en-US', {
+                      const formattedDate = new Date(p.date).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       });
 
                       return (
-                        <tr key={p._id || p.id} style={styles.tr}>
+                        <tr key={p.id} style={styles.tr}>
                           <td style={styles.td}>
                             <div style={styles.projectCell}>
                               <div style={styles.projectThumbCircle}>
@@ -744,27 +799,27 @@ export default function ContractorDashboardPage() {
                                 </svg>
                               </div>
                               <div>
-                                <div style={styles.projectTitle}>{p.projectName || 'Residential Deck'}</div>
-                                <div style={styles.clientSub}>{p.ownerId?.fullName || p.ownerName || 'Verified Client'}</div>
+                                <div style={styles.projectTitle}>{p.projectName}</div>
+                                <div style={styles.clientSub}>{p.clientName}</div>
                               </div>
                             </div>
                           </td>
                           <td style={styles.td}>
                             <span style={styles.deckAreaPill}>
-                              {p.dimensions?.area ? `${p.dimensions.area} sq ft` : (p.area ? `${p.area} sq ft` : '420 sq ft')}
+                              {p.area} sq ft
                             </span>
                           </td>
-                          <td style={styles.tdBold}>{estValStr}</td>
+                          <td style={styles.tdBold}>{p.estValStr}</td>
                           <td style={styles.td}>
                             <span style={statusClass}>
-                              {rawStatus.replace(/_/g, ' ')}
+                              {p.rawStatus.replace(/_/g, ' ')}
                             </span>
                           </td>
                           <td style={styles.tdDate}>{formattedDate}</td>
                           <td style={{ ...styles.td, textAlign: 'center' }}>
                             <button
                               type="button"
-                              onClick={() => navigate('/contractor/projects')}
+                              onClick={() => navigate(p.targetUrl)}
                               style={styles.actionViewBtn}
                             >
                               View
@@ -793,57 +848,46 @@ export default function ContractorDashboardPage() {
 
             {/* Mobile Project Cards View (<= 1024px) */}
             <div className="contractor-dash-mobile-cards">
-              {projects.length > 0 ? (
-                projects.slice(0, 5).map((p) => {
-                  const projectEst = estimates.find((e) => {
-                    const dId = e.deckId?._id || e.deckId?.id || e.deckId;
-                    return dId === (p._id || p.id);
-                  });
-                  const estValStr = projectEst
-                    ? `$${Number(projectEst.pricingSnapshot?.finalTotal || projectEst.totalAmount || projectEst.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                    : '$2,450 – $3,680';
-                  const rawStatus = String(p.status || projectEst?.status || 'CREATED').toUpperCase();
+              {recentDeckProjects.length > 0 ? (
+                recentDeckProjects.slice(0, 5).map((p) => {
                   const statusClass =
-                    rawStatus === 'COMPLETED' || rawStatus === 'APPROVED'
+                    p.rawStatus === 'COMPLETED' || p.rawStatus === 'APPROVED'
                       ? styles.statusCompleted
-                      : rawStatus === 'IN_REVIEW' || rawStatus === 'IN_PROGRESS'
+                      : p.rawStatus === 'IN_REVIEW' || p.rawStatus === 'IN_PROGRESS'
                         ? styles.statusInProgress
                         : styles.statusCreated;
-                  const formattedDate = new Date(p.createdAt || p.updatedAt || Date.now()).toLocaleDateString('en-US', {
+                  const formattedDate = new Date(p.date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
                   });
-                  const area = p.dimensions?.area || p.area || 420;
-
-                  const targetUrl = projectEst ? `/contractor/projects/${projectEst._id || projectEst.id}` : '/contractor/projects';
 
                   return (
-                    <div key={p._id || p.id} style={styles.mobileCard}>
+                    <div key={p.id} style={styles.mobileCard}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
-                        <div style={{ minWidth: 0, flex: 1, cursor: 'pointer' }} onClick={() => navigate(targetUrl)}>
+                        <div style={{ minWidth: 0, flex: 1, cursor: 'pointer' }} onClick={() => navigate(p.targetUrl)}>
                           <div style={{ fontSize: '13px', fontWeight: '800', color: '#1E3A63', wordBreak: 'break-word' }}>
-                            {p.projectName || 'Residential Deck'}
+                            {p.projectName}
                           </div>
                           <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '2px' }}>
-                            {p.ownerId?.fullName || p.ownerName || 'Verified Client'} • {formattedDate}
+                            {p.clientName} • {formattedDate}
                           </div>
                         </div>
                         <span style={{ ...statusClass, fontSize: '10px', padding: '2.5px 8px', borderRadius: '12px', flexShrink: 0 }}>
-                          {rawStatus.replace(/_/g, ' ')}
+                          {p.rawStatus.replace(/_/g, ' ')}
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={styles.deckAreaPill}>{area} sq ft</span>
+                          <span style={styles.deckAreaPill}>{p.area} sq ft</span>
                           <strong style={{ fontSize: '13.5px', color: '#15803D', fontWeight: '800' }}>
-                            {estValStr}
+                            {p.estValStr}
                           </strong>
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate(targetUrl)}
+                          onClick={() => navigate(p.targetUrl)}
                           style={{ ...styles.actionViewBtn, padding: '4px 12px', height: '28px', fontSize: '11px' }}
                         >
                           View

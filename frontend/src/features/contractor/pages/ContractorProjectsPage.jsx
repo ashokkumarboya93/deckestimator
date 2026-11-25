@@ -35,16 +35,16 @@ export default function ContractorProjectsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Pagination & Responsiveness
-  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
-  const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 540 : false));
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+  const [isSmallMobile, setIsSmallMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 480 : false));
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 1024);
-        setIsSmallMobile(window.innerWidth < 540);
+        setIsMobile(window.innerWidth < 768);
+        setIsSmallMobile(window.innerWidth < 480);
       }
     };
     window.addEventListener('resize', handleResize);

@@ -656,7 +656,7 @@ export default function AdminProjectsPage() {
       <div style={styles.card}>
         {loading ? (
           <div style={{ padding: '4px' }}>
-            <SkeletonTable rows={5} columns={7} />
+            <SkeletonTable rows={5} columns={6} />
           </div>
         ) : projects.length === 0 ? (
           <div style={styles.emptyBox}>
@@ -678,7 +678,7 @@ export default function AdminProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.th, width: '48px', textAlign: 'center' }}>
+                  <th style={{ ...styles.th, width: '44px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={allCurrentPageSelected}
@@ -687,19 +687,17 @@ export default function AdminProjectsPage() {
                       title="Select all projects on this page"
                     />
                   </th>
-                  <th style={styles.th}>Project / Estimation</th>
-                  <th style={styles.th}>Customer / Initiator</th>
-                  <th style={styles.th}>Assigned Contractor</th>
-                  <th style={styles.th}>Dimensions & Specs</th>
-                  <th style={styles.th}>Estimated Value</th>
-                  <th style={styles.th}>Life Cycle Stage</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                  <th style={{ ...styles.th, width: '32%' }}>Project / Estimation</th>
+                  <th style={{ ...styles.th, width: '25%' }}>Customer / Initiator</th>
+                  <th style={{ ...styles.th, width: '18%' }}>Estimated Value</th>
+                  <th style={{ ...styles.th, width: '13%' }}>Life Cycle Stage</th>
+                  <th style={{ ...styles.th, width: '12%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {projects.map((p) => (
                   <tr key={p._id || p.id} style={styles.tr}>
-                    <td style={{ ...styles.td, width: '48px', textAlign: 'center' }}>
+                    <td style={{ ...styles.td, width: '44px', textAlign: 'center' }}>
                       <input
                         type="checkbox"
                         checked={selectedProjectIds.includes(p._id || p.id)}
@@ -722,35 +720,25 @@ export default function AdminProjectsPage() {
                       </div>
                     </td>
 
-                    {/* Customer */}
+                    {/* Customer / Initiator */}
                     <td style={styles.td}>
                       <div style={styles.contactName}>{p.customerName || 'Homeowner Customer'}</div>
                       <div style={styles.contactEmail}>{p.userEmail || '—'}</div>
-                      {p.userPhone && <div style={styles.contactPhone}>{p.userPhone}</div>}
-                    </td>
-
-                    {/* Contractor */}
-                    <td style={styles.td}>
-                      <div style={styles.contactName}>{p.contractorName || 'Deck Restoration Plus Staff'}</div>
-                      <div style={styles.contactRoleBadge}>
-                        {p.userRole === 'contractor' ? 'Contractor Estimate' : 'Customer Request'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                        {p.userPhone && <span style={styles.contactPhone}>{p.userPhone}</span>}
+                        <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', backgroundColor: p.userRole === 'contractor' ? '#eff6ff' : '#ecfdf5', color: p.userRole === 'contractor' ? '#1d4ed8' : '#047857', fontWeight: '700' }}>
+                          {p.userRole === 'contractor' ? 'Contractor' : 'Customer'}
+                        </span>
                       </div>
                     </td>
 
-                    {/* Dimensions & Specs */}
-                    <td style={styles.td}>
-                      <div style={styles.specPrimary}>
-                        {p.deckSpecs?.dimensions ? `${p.deckSpecs.dimensions} ft` : p.deckSize || '400 sq ft'}
-                      </div>
-                      <div style={styles.specSecondary}>
-                        {p.woodSpecies || p.deckSpecs?.woodSpecies || 'Pressure Treated Pine'}
-                      </div>
-                    </td>
-
-                    {/* Estimated Value */}
+                    {/* Estimated Value & Total SqFt */}
                     <td style={styles.td}>
                       <div style={styles.amountPrimary}>
                         ${Number(p.totalAmount || 0).toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#047857', fontWeight: '700', marginTop: '2px' }}>
+                        {p.areaSqFt || p.deckSpecs?.area || 400} sq ft
                       </div>
                       <div style={styles.amountSub}>Calculated Price</div>
                     </td>
@@ -1874,7 +1862,7 @@ const styles = {
     boxSizing: 'border-box',
   },
   tableResponsive: {
-    overflowX: 'auto',
+    overflowX: 'hidden',
     width: '100%',
   },
   table: {
@@ -1882,7 +1870,7 @@ const styles = {
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '12.5px',
-    tableLayout: 'auto',
+    tableLayout: 'fixed',
   },
   th: {
     padding: '10px 12px',

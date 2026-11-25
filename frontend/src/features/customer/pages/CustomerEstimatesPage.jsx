@@ -253,7 +253,7 @@ export default function CustomerEstimatesPage() {
 
   // Map Backend Status to Target Workflow
   function getNormalizedStatus(est) {
-    const raw = (est?.estimateStatus || '').toUpperCase();
+    const raw = (est?.estimateStatus || est?.status || '').toUpperCase();
     if (raw === 'COMPLETED') return 'COMPLETED';
     if (raw === 'IN_PROGRESS') return 'IN_PROGRESS';
     if (raw === 'REQUESTED' || raw === 'IN_REVIEW' || raw === 'SUBMITTED' || raw === 'APPROVED') return 'REQUESTED';

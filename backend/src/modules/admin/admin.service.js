@@ -63,8 +63,12 @@ async function logAdminAction(adminUser, action, entityType, entityId, oldValue,
 const dashboardSummaryCache = new Map();
 const DASHBOARD_SUMMARY_TTL = 30000; // 30 seconds TTL — dashboard polls every 10s but data changes rarely
 
+const projectsFacetCache = { data: null, timestamp: 0 };
+const PROJECTS_FACET_TTL = 15000; // 15 seconds TTL
+
 function invalidateAdminDashboardCache() {
   dashboardSummaryCache.clear();
+  projectsFacetCache.data = null;
 }
 
 async function getDashboardSummary(dateRange = '30d') {
@@ -1395,19 +1399,11 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  // Both Customer and Contractor Estimations are monitored as Projects
-  const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
-    Estimate.find(query)
-      .select('-__v')
-      .populate('ownerId', 'fullName email phone role avatar address')
-      .populate('createdBy', 'fullName email phone role avatar address')
-      .populate('deckId', '-__v')
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean(),
-    Estimate.countDocuments(query),
-    Estimate.aggregate([
+  const getFacetPromise = () => {
+    if (projectsFacetCache.data && Date.now() - projectsFacetCache.timestamp < PROJECTS_FACET_TTL) {
+      return Promise.resolve(projectsFacetCache.data);
+    }
+    return Estimate.aggregate([
       {
         $facet: {
           total: [{ $count: 'count' }],
@@ -1433,7 +1429,26 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
           ],
         },
       },
-    ]),
+    ]).then((res) => {
+      projectsFacetCache.data = res;
+      projectsFacetCache.timestamp = Date.now();
+      return res;
+    });
+  };
+
+  // Both Customer and Contractor Estimations are monitored as Projects (using ultra-lean projection)
+  const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
+    Estimate.find(query)
+      .select('estimateReference estimateNumber estimateName estimateStatus estimateType totalAmount subtotal deckDetails deckId ownerId createdBy customerSnapshot assignedContractorName createdAt updatedAt photos services notes conditionFlags')
+      .populate('ownerId', 'fullName email phone role avatar address')
+      .populate('createdBy', 'fullName email phone role avatar address')
+      .populate('deckId', 'projectName dimensions surfaceDetails structureDetails propertyAddress visibleConditions photos')
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Estimate.countDocuments(query),
+    getFacetPromise(),
   ]);
 
   const mapped = estimates.map((e) => {
@@ -1658,6 +1673,7 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
       {
         $set: {
           estimateStatus: mappedEstimateStatus,
+          status: mappedEstimateStatus,
           'customerFacingStatus.status': mappedEstimateStatus,
           'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
           'customerFacingStatus.updatedAt': new Date(),
@@ -1674,6 +1690,7 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
       {
         $set: {
           estimateStatus: mappedEstimateStatus,
+          status: mappedEstimateStatus,
           'customerFacingStatus.status': mappedEstimateStatus,
           'customerFacingStatus.note': actualNote || `Admin updated stage to ${targetStage.replace(/_/g, ' ').toUpperCase()}`,
           'customerFacingStatus.updatedAt': new Date(),
@@ -1682,6 +1699,22 @@ async function updateProjectProgress(adminUser, projectId, { stage, status, prog
       { new: true }
     );
   }
+
+  // Also sync Deck document if estimate has associated deck
+  if (estimate?.deckId) {
+    try {
+      const Deck = mongoose.model('Deck');
+      await Deck.findByIdAndUpdate(estimate.deckId, {
+        $set: {
+          status: mappedEstimateStatus,
+          completionStatus: targetStage === 'completed' ? 'complete' : 'draft',
+          updatedAt: new Date(),
+        },
+      });
+    } catch (_) {}
+  }
+
+  invalidateAdminDashboardCache();
 
   const projectFilter = estimate
     ? { $or: [{ estimateId: estimate._id }, ...(matchedProject ? [{ _id: matchedProject._id }] : [])] }
@@ -4023,6 +4056,7 @@ async function deleteProject(projectId) {
     }
   }
 
+  invalidateAdminDashboardCache();
   return { id: projectId, message: 'Project estimation deleted successfully.' };
 }
 
@@ -4035,6 +4069,7 @@ async function bulkDeleteProjects(projectIds = []) {
     return { deletedCount: 0, message: 'No valid project IDs provided.' };
   }
   const res = await Estimate.deleteMany({ _id: { $in: validIds } });
+  invalidateAdminDashboardCache();
   return { deletedCount: res.deletedCount, message: `Successfully deleted ${res.deletedCount} project estimations.` };
 }
 
