@@ -334,11 +334,16 @@ export const adminApi = {
     return `${BASE_URL}/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
   },
   downloadReportsExport: async (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
-    const res = await client.get('/admin/reports/export', {
-      params: { format, tab, dateRange },
-      responseType: 'blob',
+    const token = localStorage.getItem('deck_auth_token');
+    const url = `${BASE_URL}/admin/reports/export?format=${encodeURIComponent(format)}&tab=${encodeURIComponent(tab)}&dateRange=${encodeURIComponent(dateRange)}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    return res.data;
+    if (!res.ok) {
+      throw new Error(`Export failed (${res.status})`);
+    }
+    return res.blob();
   },
 
   // 13. Admin Profile & Hierarchy
