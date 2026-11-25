@@ -250,6 +250,7 @@ async function getContractorApplicableDiscounts(contractorUserId) {
     status: DISCOUNT_POLICY_STATUS.ACTIVE,
     $or: [
       { isGeneralEligibility: true },
+      { code: 'CONTRACTOR_DEFAULT_5' },
       { code: 'CONTRACTOR_DEFAULT_10' },
       { code: /^DISC_/i },
     ],
@@ -286,23 +287,15 @@ async function getContractorApplicableDiscounts(contractorUserId) {
 }
 
 /**
- * Gets effective discount rate for contractor (assigned or default 10%).
+ * Gets effective discount rate for contractor (assigned or default 5%).
  */
 async function getContractorEffectiveDiscount(contractorUserId) {
   let rate = 5;
   let policyName = 'Contractor Wholesale Discount';
-  let policyCode = 'CONTRACTOR_WHOLESALE';
+  let policyCode = 'CONTRACTOR_DEFAULT_5';
 
   try {
-    // 1. Check contractor profile specific discount tier tuned by admin
-    const profile = await ContractorProfile.findOne({ userId: contractorUserId }).select('wholesaleDiscountTier').lean();
-    if (profile && typeof profile.wholesaleDiscountTier === 'number' && profile.wholesaleDiscountTier > 0) {
-      rate = profile.wholesaleDiscountTier;
-      policyName = `Contractor Wholesale Discount (${rate}%)`;
-      policyCode = `CONTRACTOR_TIER_${rate}`;
-      return { rate, policyName, policyCode };
-    }
-
+    // 1. Check for active individual contractor discount override assignment
     const assignment = await DiscountAssignment.findOne({
       contractorId: contractorUserId,
       status: 'active',
@@ -310,21 +303,25 @@ async function getContractorEffectiveDiscount(contractorUserId) {
 
     if (assignment && assignment.discountPolicyId && typeof assignment.discountPolicyId.discountValue === 'number') {
       rate = assignment.discountPolicyId.discountValue;
-      policyName = assignment.discountPolicyId.name || policyName;
-      policyCode = assignment.discountPolicyId.code || policyCode;
-    } else {
-      const defaultPol = await DiscountPolicy.findOne({ code: 'CONTRACTOR_DEFAULT_10' });
-      if (defaultPol && typeof defaultPol.discountValue === 'number') {
-        rate = defaultPol.discountValue;
-        policyName = defaultPol.name;
-        policyCode = defaultPol.code;
-      }
+      policyName = assignment.discountPolicyId.name || `Contractor Custom Discount (${rate}%)`;
+      policyCode = assignment.discountPolicyId.code || `CONTRACTOR_CUSTOM_${rate}`;
+      return { rate, policyName, policyCode, isCustom: true };
+    }
+
+    // 2. Fall back to Platform Default Wholesale Discount policy
+    const defaultPol = await DiscountPolicy.findOne({
+      $or: [{ code: 'CONTRACTOR_DEFAULT_5' }, { code: 'CONTRACTOR_DEFAULT_10' }],
+    });
+    if (defaultPol && typeof defaultPol.discountValue === 'number') {
+      rate = defaultPol.discountValue;
+      policyName = defaultPol.name;
+      policyCode = defaultPol.code;
     }
   } catch (err) {
     console.warn('[Get Contractor Effective Discount Warning]:', err.message);
   }
 
-  return { rate, policyName, policyCode };
+  return { rate, policyName, policyCode, isCustom: false };
 }
 
 /**
@@ -601,16 +598,34 @@ async function getAllDiscountRequests(query = {}) {
   const enriched = await Promise.all(
     requests.map(async (r) => {
       const cId = r.contractorId?._id || r.contractorId;
-      const [prof, docs] = await Promise.all([
+      const [prof, docs, estimates] = await Promise.all([
         ContractorProfile.findOne({ userId: cId }).lean(),
         VerificationDocument.find({ contractorId: cId, status: { $ne: 'deleted' } }).lean(),
+        Estimate.find({ contractorId: cId }).select('totalPrice finalPrice pricing status createdAt').lean(),
       ]);
+
+      const completedEsts = (estimates || []).filter((e) => {
+        const s = String(e.status || '').toUpperCase();
+        return s === 'COMPLETED' || s === 'ACCEPTED' || s === 'APPROVED' || s === 'CONVERTED';
+      });
+
+      const totalCompletedEstimatesCost = completedEsts.reduce((sum, e) => {
+        return sum + (e.finalPrice || e.totalPrice || e.pricing?.totalPrice || e.pricing?.totalCost || 0);
+      }, 0);
+
+      const totalEstimatesCost = (estimates || []).reduce((sum, e) => {
+        return sum + (e.finalPrice || e.totalPrice || e.pricing?.totalPrice || e.pricing?.totalCost || 0);
+      }, 0);
 
       return {
         ...r,
         contractorProfile: prof || null,
         documents: docs || [],
         currentTier: prof?.wholesaleDiscountTier || 5,
+        totalEstimatesCount: (estimates || []).length,
+        completedEstimatesCount: completedEsts.length,
+        totalCompletedEstimatesCost: Math.round(totalCompletedEstimatesCost * 100) / 100,
+        totalEstimatesCost: Math.round(totalEstimatesCost * 100) / 100,
       };
     })
   );
@@ -696,6 +711,63 @@ async function rejectDiscountRequest(requestId, { adminNotes = '' }, adminUser) 
   return reqDoc;
 }
 
+/**
+ * Delete a discount request.
+ */
+async function deleteDiscountRequest(requestId) {
+  const reqDoc = await DiscountRequest.findByIdAndDelete(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+  return reqDoc;
+}
+
+/**
+ * Bulk delete discount requests.
+ */
+async function bulkDeleteDiscountRequests(requestIds = []) {
+  if (!Array.isArray(requestIds) || requestIds.length === 0) {
+    return { success: true, count: 0, message: 'No requests selected.' };
+  }
+  const res = await DiscountRequest.deleteMany({ _id: { $in: requestIds } });
+  return { success: true, count: res.deletedCount, message: `Successfully deleted ${res.deletedCount} discount request(s).` };
+}
+
+/**
+ * Send an administrative reply to a contractor regarding their discount request.
+ */
+async function replyDiscountRequest(requestId, { message = '' }, adminUser) {
+  const reqDoc = await DiscountRequest.findById(requestId);
+  if (!reqDoc) {
+    throw new NotFoundError('Discount request not found.');
+  }
+
+  const trimmed = (message || '').trim();
+  if (!trimmed) {
+    throw new BadRequestError('Reply message cannot be empty.');
+  }
+
+  reqDoc.adminNotes = (reqDoc.adminNotes ? reqDoc.adminNotes + '\n\n' : '') + `[Admin Reply by ${adminUser.fullName || 'Admin'} on ${new Date().toLocaleDateString()}]: ${trimmed}`;
+  await reqDoc.save();
+
+  try {
+    await Notification.create({
+      recipientType: 'specific',
+      userId: reqDoc.contractorId,
+      targetRole: 'contractor',
+      title: 'Deck Restoration Plus: Message Regarding Your Wholesale Discount',
+      message: trimmed,
+      category: 'SUPPORT',
+      notificationType: 'DISCOUNT_REPLY',
+      isRead: false,
+    });
+  } catch (notifErr) {
+    console.warn('[Notification Error]:', notifErr.message);
+  }
+
+  return reqDoc;
+}
+
 module.exports = {
   createDiscountPolicy,
   getDiscountPolicies,
@@ -712,4 +784,7 @@ module.exports = {
   getAllDiscountRequests,
   approveDiscountRequest,
   rejectDiscountRequest,
+  deleteDiscountRequest,
+  bulkDeleteDiscountRequests,
+  replyDiscountRequest,
 };

@@ -164,6 +164,7 @@ export function LoginForm() {
         token: resetToken.trim(),
         newPassword,
         confirmPassword,
+        email: forgotEmail.trim().toLowerCase(),
       });
       setForgotSuccess(res?.message || 'Password reset successfully! You can now sign in.');
       setFormData((prev) => ({ ...prev, email: forgotEmail, password: '' }));
@@ -345,7 +346,7 @@ export function LoginForm() {
         >
           {submitting ? (
             <span style={styles.btnContent}>
-              <span style={styles.spinner} />
+              <div className="ld-dots" style={{ '--ink': '#ffffff', marginRight: '8px' }}><i></i><i></i><i></i></div>
               <span>Signing In...</span>
             </span>
           ) : (
@@ -441,7 +442,14 @@ export function LoginForm() {
                     style={{ ...styles.modalPrimaryBtn, opacity: forgotSubmitting ? 0.7 : 1 }}
                     disabled={forgotSubmitting}
                   >
-                    {forgotSubmitting ? 'Generating...' : 'Generate Reset Token'}
+                    {forgotSubmitting ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="ld-dots" style={{ '--ink': '#ffffff' }}><i></i><i></i><i></i></div>
+                        <span>Sending Link...</span>
+                      </span>
+                    ) : (
+                      'Generate Reset Token & Link'
+                    )}
                   </button>
                 </div>
               </form>
@@ -507,8 +515,24 @@ export function LoginForm() {
                     style={{ ...styles.modalPrimaryBtn, opacity: forgotSubmitting ? 0.7 : 1 }}
                     disabled={forgotSubmitting}
                   >
-                    {forgotSubmitting ? 'Updating...' : 'Set New Password'}
+                    {forgotSubmitting ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="ld-dots" style={{ '--ink': '#ffffff' }}><i></i><i></i><i></i></div>
+                        <span>Updating...</span>
+                      </span>
+                    ) : (
+                      'Set New Password'
+                    )}
                   </button>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                  <Link
+                    to={`/reset-password?token=${encodeURIComponent(resetToken)}&email=${encodeURIComponent(forgotEmail)}`}
+                    onClick={() => setShowForgotModal(false)}
+                    style={{ fontSize: '12px', color: '#034EA2', fontWeight: '600', textDecoration: 'underline' }}
+                  >
+                    Or open full-screen reset page &rarr;
+                  </Link>
                 </div>
               </form>
             )}

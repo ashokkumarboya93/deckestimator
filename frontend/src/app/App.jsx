@@ -2,7 +2,7 @@
 // Deck Estimator — Root Application Component
 // =============================================
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import RouteLoadingFallback from '../components/common/RouteLoadingFallback';
@@ -12,6 +12,17 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Scroll to the beginning of the page immediately on any route navigation
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const scrollContainers = document.querySelectorAll('.mainWrapper, [data-scroll-container="true"]');
+    scrollContainers.forEach((el) => {
+      el.scrollTop = 0;
+    });
+  }, [location.pathname]);
+
   async function handleLogout() {
     await logout();
     navigate('/login');
@@ -20,7 +31,7 @@ function App() {
   const isCustomerRoute = location.pathname.startsWith('/customer');
   const isContractorRoute = location.pathname.startsWith('/contractor');
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/reset-password';
   const isLandingRoute = location.pathname === '/' || location.pathname === '/landing';
 
   // Dedicated Portal Experience for Customer, Contractor, Admin, Auth, and Landing routes

@@ -40,7 +40,11 @@ export const adminApi = {
     return res.data;
   },
   softDeleteUser: async (id, reason = '', permanent = false) => {
-    const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, body: JSON.stringify({ reason, permanent }) });
+    const res = await client.delete(`/admin/users/${id}`, { params: { permanent }, data: { reason, permanent } });
+    return res.data;
+  },
+  bulkDeleteUsers: async (userIds = [], reason = '') => {
+    const res = await client.post('/admin/users/bulk-delete', { ids: userIds, reason });
     return res.data;
   },
   getUserRequests: async (params = {}) => {
@@ -63,6 +67,18 @@ export const adminApi = {
   },
   reviewContractorDocument: async (id, status, notes = '') => {
     const res = await client.patch(`/admin/contractor-documents/${id}/review`, { status, notes });
+    return res.data;
+  },
+  bulkDeleteContractorDocuments: async (docIds = []) => {
+    const res = await client.post('/admin/contractor-documents/bulk-delete', { ids: docIds });
+    return res.data;
+  },
+  bulkDeleteVerifications: async (profileIds = []) => {
+    const res = await client.post('/admin/verifications/bulk-delete', { ids: profileIds });
+    return res.data;
+  },
+  bulkDeleteUserRecordsOnly: async (userIds = [], role = 'customer') => {
+    const res = await client.post('/admin/verification-records/bulk-delete', { ids: userIds, role });
     return res.data;
   },
   approveVerification: async (id) => {
@@ -90,10 +106,26 @@ export const adminApi = {
     const res = await client.post(`/discounts/admin/requests/${id}/reject`, { adminNotes });
     return res.data;
   },
+  deleteDiscountRequest: async (id) => {
+    const res = await client.delete(`/discounts/admin/requests/${id}`);
+    return res.data;
+  },
+  bulkDeleteDiscountRequests: async (requestIds = []) => {
+    const res = await client.post('/discounts/admin/requests/bulk-delete', { ids: requestIds });
+    return res.data;
+  },
+  replyDiscountRequest: async (id, message = '') => {
+    const res = await client.post(`/discounts/admin/requests/${id}/reply`, { message });
+    return res.data;
+  },
 
   // 4. Projects & Progress
   getProjects: async (params = {}) => {
     return client.get('/admin/projects', { params });
+  },
+  getProjectDetails: async (id) => {
+    const res = await client.get(`/admin/projects/${id}`);
+    return res.data;
   },
   updateProjectProgress: async (id, payload) => {
     const res = await client.patch(`/admin/projects/${id}/progress`, payload);
@@ -249,6 +281,10 @@ export const adminApi = {
     const res = await client.put(`/admin/discounts/contractors/${contractorId}`, { discount, reason });
     return res.data;
   },
+  resetContractorDiscount: async (contractorId, reason = '') => {
+    const res = await client.post(`/admin/discounts/contractors/${contractorId}/reset`, { reason });
+    return res.data;
+  },
 
   // 10. System Settings & Info
   getSystemSettings: async () => {
@@ -267,8 +303,11 @@ export const adminApi = {
     const res = await client.get('/admin/notifications/history', { params: { limit } });
     return res.data;
   },
-  searchRecipients: async (q = '') => {
-    const res = await client.get('/admin/users/search-recipients', { params: { q } });
+  searchRecipients: async (q = '', role = '') => {
+    const params = {};
+    if (q) params.q = q;
+    if (role && role !== 'all') params.role = role;
+    const res = await client.get('/admin/users/search-recipients', { params });
     return res.data;
   },
 

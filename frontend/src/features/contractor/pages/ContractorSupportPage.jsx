@@ -19,9 +19,23 @@ import { contractorDiscountApi } from '../api/contractorDiscountApi';
 import { contractorLeadApi } from '../api/contractorLeadApi';
 import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 import { OPERATING_HOURS_SCHEDULES } from '../../../constants/operatingHours';
+import { useContactChannels } from '../../../utils/contactChannels';
 
 export default function ContractorSupportPage() {
   const { user } = useAuth();
+  const contact = useContactChannels();
+  const phoneClean = (contact.supportPhone || '').replace(/[^0-9]/g, '');
+
+  // Responsive state
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
+  const isMobile = windowWidth < 1024;
+  const isSmallMobile = windowWidth < 540;
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Dynamic Pricing & Discount State
   const [pricingConfig, setPricingConfig] = useState(null);
@@ -204,7 +218,7 @@ export default function ContractorSupportPage() {
   ];
 
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '12px 10px 40px 10px' : '24px 32px 48px 32px' }}>
       <style>{`
         /* Contact Hub & Schedules Grid */
         .drp-cnt-top-grid {
@@ -229,31 +243,38 @@ export default function ContractorSupportPage() {
         }
 
         /* Responsive Tablet & Mobile Media Queries */
-        @media (max-width: 1080px) {
+        @media (max-width: 1024px) {
           .drp-cnt-top-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
           }
-        }
-        @media (max-width: 820px) {
           .drp-cnt-schedule-grid {
             grid-template-columns: 1fr !important;
           }
           .drp-cnt-two-col-grid {
             grid-template-columns: 1fr !important;
+            gap: 14px !important;
           }
         }
         @media (max-width: 640px) {
           .drp-cnt-top-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
           }
           .drp-cnt-form-row {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 440px) {
+          .drp-cnt-top-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+        }
       `}</style>
 
       {/* 1. Header Banner */}
-      <div style={styles.headerCard}>
+      <div style={{ ...styles.headerCard, padding: isMobile ? '16px 14px' : '24px 30px' }}>
         <div style={styles.portalBadge}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -269,7 +290,7 @@ export default function ContractorSupportPage() {
       </div>
 
       {/* Direct Office Contact Redesign matching customer design specification */}
-      <div style={styles.sectionCard}>
+      <div style={{ ...styles.sectionCard, padding: isMobile ? '16px 14px' : '24px' }}>
         {/* Section Header */}
         <div style={styles.sectionHeader}>
           <div style={styles.hubHeaderIcon}>
@@ -299,9 +320,13 @@ export default function ContractorSupportPage() {
                 <span style={styles.panelTitle}>Phone Lines</span>
               </div>
               <div style={styles.panelBody}>
-                <a href="tel:18664403325" style={styles.contactBoldLink}>Main: (866) 440-DECK</a>
-                <a href="tel:16092683436" style={{ ...styles.contactBoldLink, fontSize: '12px' }}>Shamong: (609) 268-3436</a>
-                <span style={styles.contactSubText}>Mon – Fri: 8:00 AM – 5:00 PM EST</span>
+                <a href={`tel:${phoneClean || '18566668888'}`} style={styles.contactBoldLink}>Direct: {contact.supportPhone || '(856) 666-8888'}</a>
+                {contact.whatsappNumber && (
+                  <a href={`https://wa.me/${(contact.whatsappNumber || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ ...styles.contactBoldLink, fontSize: '12px', color: '#16A34A' }}>
+                    WhatsApp: {contact.whatsappNumber}
+                  </a>
+                )}
+                <span style={styles.contactSubText}>{contact.operatingHours || 'Mon – Fri: 8:00 AM – 6:00 PM EST'}</span>
               </div>
             </div>
           </div>
@@ -319,12 +344,12 @@ export default function ContractorSupportPage() {
                 <span style={styles.panelTitle}>Official Email</span>
               </div>
               <div style={styles.panelBody}>
-                <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>info@deckrestorationplus.com</span>
+                <span style={{ fontWeight: '700', color: '#1E3A63', wordBreak: 'break-all' }}>{contact.supportEmail || 'support@deckestimator.com'}</span>
               </div>
             </div>
             <div style={styles.panelActionsRow}>
               <a
-                href="mailto:info@deckrestorationplus.com?subject=Contractor%20Partner%20Inquiry"
+                href={`mailto:${contact.supportEmail || 'support@deckestimator.com'}?subject=Contractor%20Partner%20Inquiry`}
                 style={{ ...styles.actionPill, ...styles.actionPillDark }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -335,7 +360,11 @@ export default function ContractorSupportPage() {
               </a>
               <button
                 type="button"
-                onClick={handleCopyEmail}
+                onClick={() => {
+                  navigator.clipboard?.writeText(contact.supportEmail || 'support@deckestimator.com');
+                  setCopiedEmail(true);
+                  setTimeout(() => setCopiedEmail(false), 2000);
+                }}
                 style={{ ...styles.actionPill, ...styles.actionPillOutline }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -526,7 +555,7 @@ export default function ContractorSupportPage() {
       {/* 4. Two-Column Layout: Partner Inquiry Form (Routes to Admin All Reach Outs & Contractors) + FAQ Accordion */}
       <div className="drp-cnt-two-col-grid">
         {/* Left: Submit Partner Inquiry */}
-        <div style={styles.inquiryCard}>
+        <div style={{ ...styles.inquiryCard, padding: isMobile ? '16px 14px' : '24px' }}>
           <div style={styles.sectionHeader}>
             <div style={styles.inquiryHeaderIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E3A63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -631,6 +660,8 @@ export default function ContractorSupportPage() {
                   onMouseLeave={() => setBtnHover(false)}
                   style={{
                     ...styles.submitBtnOutlined,
+                    width: isMobile ? '100%' : 'auto',
+                    justifyContent: 'center',
                     backgroundColor: btnHover ? '#EFF6FF' : '#FFFFFF',
                     borderColor: btnHover ? '#0284C7' : '#1E3A63',
                     color: btnHover ? '#0284C7' : '#1E3A63',
@@ -652,7 +683,7 @@ export default function ContractorSupportPage() {
         </div>
 
         {/* Right: Contractor FAQ Accordion (10 Comprehensive Q&As) */}
-        <div style={styles.faqCard}>
+        <div style={{ ...styles.faqCard, padding: isMobile ? '16px 14px' : '24px' }}>
           <div style={styles.sectionHeader}>
             <div style={styles.faqHeaderIcon}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

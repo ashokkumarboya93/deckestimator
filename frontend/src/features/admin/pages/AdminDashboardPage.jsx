@@ -99,11 +99,17 @@ export default function AdminDashboardPage() {
         : trRes?.data || trRes;
 
       if (summaryPayload && summaryPayload.summary) {
-        setSummaryData(summaryPayload);
-        try {
-          localStorage.setItem('drp_admin_dashboard_cache', JSON.stringify(summaryPayload));
-        } catch {
-          // Ignore quota errors
+        const isEmptyScaffold =
+          summaryPayload.summary.totalUsers === 0 &&
+          summaryPayload.summary.totalEstimates === 0 &&
+          summaryData?.summary?.totalUsers > 0;
+        if (!isEmptyScaffold) {
+          setSummaryData(summaryPayload);
+          try {
+            localStorage.setItem('drp_admin_dashboard_cache', JSON.stringify(summaryPayload));
+          } catch {
+            // Ignore quota errors
+          }
         }
       }
       if (trendPayload && trendPayload.series) {
@@ -521,7 +527,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) — Informational Static Metric Card */}
+        {/* Card 8: ESTIMATED VALUE (Mint / Green Dollar) — Aggregated Live Pipeline Value Metric Card */}
         <div style={{ ...styles.cardGreenRef, cursor: 'default' }} title="Total Pipeline Value">
           <div style={styles.cardRefInner}>
             <div style={styles.cardRefLeft}>

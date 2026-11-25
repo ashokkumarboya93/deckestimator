@@ -48,8 +48,21 @@ export default function AdminUserManagementPage() {
   // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [daysFilter, setDaysFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+
+  // Multi-select & Bulk Actions
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+    open: false,
+    isBulk: false,
+    user: null,
+    count: 0,
+    name: '',
+    reason: '',
+  });
 
   // Modals & User Requests
   const [selectedUser, setSelectedUser] = useState(null);
@@ -61,7 +74,7 @@ export default function AdminUserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, [activeTab, statusFilter, page]);
+  }, [activeTab, statusFilter, daysFilter, page, pageSize]);
 
   // Live auto-filter search while typing (debounced)
   useEffect(() => {
@@ -72,6 +85,24 @@ export default function AdminUserManagementPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const matchesDaysFilter = (dateVal, filter) => {
+    if (!filter || filter === 'all') return true;
+    if (!dateVal) return false;
+    const itemDate = new Date(dateVal).getTime();
+    if (isNaN(itemDate)) return true;
+    const now = Date.now();
+    const diffMs = now - itemDate;
+    if (diffMs < 0) return true;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    if (filter === 'today') return diffHours <= 24;
+    if (filter === '2d') return diffHours <= 48;
+    if (filter === '7d') return diffHours <= 24 * 7;
+    if (filter === '15d') return diffHours <= 24 * 15;
+    if (filter === '30d') return diffHours <= 24 * 30;
+    if (filter === '60d') return diffHours <= 24 * 60;
+    return true;
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -79,37 +110,42 @@ export default function AdminUserManagementPage() {
       if (activeTab === 'requests') {
         const res = await adminApi.getUserRequests({
           page,
-          limit: 12,
+          limit: pageSize,
           status: statusFilter !== 'all' ? statusFilter : undefined,
           search: searchTerm.trim() || undefined,
         });
         const reqList = res.data?.data || res.data || [];
-        setUserRequests(reqList);
-        setPagination(res.data?.pagination || res.pagination || { page: 1, totalPages: 1, total: reqList.length });
+        const filteredReqs = daysFilter !== 'all' ? reqList.filter((r) => matchesDaysFilter(r.createdAt, daysFilter)) : reqList;
+        setUserRequests(filteredReqs);
+        setPagination(res.data?.pagination || res.pagination || { page: 1, totalPages: Math.ceil(filteredReqs.length / pageSize) || 1, total: filteredReqs.length });
         return;
       }
 
       const params = {
         page,
-        limit: 12,
+        limit: pageSize,
         search: searchTerm.trim() || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        registrationDate: daysFilter !== 'all' ? daysFilter : undefined,
       };
 
       if (activeTab === 'customer') params.role = 'customer';
       else if (activeTab === 'contractor') params.role = 'contractor';
 
       const res = await adminApi.getUsers(params);
-      const userList = res.data || [];
+      let userList = res.data || [];
+      if (daysFilter !== 'all') {
+        userList = userList.filter((u) => matchesDaysFilter(u.createdAt, daysFilter));
+      }
       setUsers(userList);
-      if (activeTab === 'all' && !searchTerm.trim() && statusFilter === 'all' && page === 1) {
+      if (activeTab === 'all' && !searchTerm.trim() && statusFilter === 'all' && daysFilter === 'all' && page === 1) {
         try {
           localStorage.setItem('drp_admin_users_cache', JSON.stringify(userList));
         } catch {
           // Ignore
         }
       }
-      setPagination(res.pagination || { page: 1, totalPages: 1, total: userList.length });
+      setPagination(res.pagination || { page: 1, totalPages: Math.ceil(userList.length / pageSize) || 1, total: userList.length });
     } catch (err) {
       setError(err?.message || 'Failed to load users');
     } finally {
@@ -127,14 +163,12 @@ export default function AdminUserManagementPage() {
     setError(null);
     try {
       const targetId = actionModal.user._id || actionModal.user.id;
-      if (actionModal.type === 'delete') {
-        await adminApi.softDeleteUser(targetId, actionModal.reason);
-        setSuccessMsg(`User ${actionModal.user.name || actionModal.user.fullName} successfully soft-deleted.`);
-      } else {
-        const newStatus = actionModal.type === 'block' ? 'blocked' : actionModal.type === 'unblock' ? 'active' : actionModal.type;
-        await adminApi.updateUserStatus(targetId, newStatus, actionModal.reason);
-        setSuccessMsg(`User status updated to ${newStatus.toUpperCase()}`);
-      }
+      const userName = actionModal.user.fullName || actionModal.user.name || 'User';
+      const defaultReason = actionModal.type === 'block' ? 'Administrative account block' : 'Administrative account reinstatement';
+      const reason = actionModal.reason.trim() || defaultReason;
+      const newStatus = actionModal.type === 'block' ? 'blocked' : 'active';
+      await adminApi.updateUserStatus(targetId, newStatus, reason);
+      setSuccessMsg(`✓ User status updated to ${newStatus.toUpperCase()}`);
       setActionModal({ open: false, type: '', user: null, reason: '' });
       fetchUsers();
     } catch (err) {
@@ -166,6 +200,145 @@ export default function AdminUserManagementPage() {
       setError(err?.message || 'Failed to process user appeal.');
     } finally {
       setRequestSubmitting(false);
+    }
+  };
+
+  // Selection & Bulk Handlers
+  const toggleSelectUser = (id) => {
+    setSelectedUserIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const isAllCurrentPageSelected = users.length > 0 && users.every((u) => selectedUserIds.includes(u._id || u.id));
+
+  const toggleSelectAllCurrentPage = () => {
+    if (isAllCurrentPageSelected) {
+      const currentIds = new Set(users.map((u) => u._id || u.id));
+      setSelectedUserIds((prev) => prev.filter((id) => !currentIds.has(id)));
+    } else {
+      const currentIds = users.map((u) => u._id || u.id);
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
+
+  const handleExportSelected = (format = 'csv') => {
+    const listToExport = selectedUserIds.length > 0
+      ? users.filter((u) => selectedUserIds.includes(u._id || u.id))
+      : users;
+
+    if (listToExport.length === 0) {
+      alert('No user records available to export.');
+      return;
+    }
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(listToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = ['ID', 'Full Name', 'Email', 'Role', 'Status', 'Phone', 'Company', 'Joined Date'];
+      const rows = listToExport.map((u) => [
+        u._id || u.id || '',
+        u.fullName || u.name || '',
+        u.email || '',
+        u.role || '',
+        normalizeUserStatus(u.accountStatus || u.status),
+        u.phone || '',
+        u.contractorProfile?.companyName || '',
+        u.createdAt ? new Date(u.createdAt).toISOString() : '',
+      ]);
+      const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    setSuccessMsg(`✓ Exported ${listToExport.length} user record(s).`);
+  };
+
+  const handleExportSingleUser = (u, format = 'csv') => {
+    if (!u) return;
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(u, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `user_${(u.fullName || u.name || 'account').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = ['ID', 'Full Name', 'Email', 'Role', 'Status', 'Phone', 'Company', 'Joined Date'];
+      const row = [
+        u._id || u.id || '',
+        u.fullName || u.name || '',
+        u.email || '',
+        u.role || '',
+        normalizeUserStatus(u.accountStatus || u.status),
+        u.phone || '',
+        u.contractorProfile?.companyName || '',
+        u.createdAt ? new Date(u.createdAt).toISOString() : '',
+      ];
+      const csvContent = [headers.join(','), row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `user_${(u.fullName || u.name || 'account').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    setSuccessMsg(`✓ Exported dossier for ${u.fullName || u.name || 'user'}.`);
+  };
+
+  const handleOpenBulkDeleteModal = () => {
+    if (selectedUserIds.length === 0) return;
+    setDeleteConfirmModal({
+      open: true,
+      isBulk: true,
+      user: null,
+      count: selectedUserIds.length,
+      name: `${selectedUserIds.length} selected accounts`,
+      reason: '',
+    });
+  };
+
+  const handleOpenSingleDeleteModal = (u) => {
+    setDeleteConfirmModal({
+      open: true,
+      isBulk: false,
+      user: u,
+      count: 1,
+      name: u.fullName || u.name || 'this user',
+      reason: '',
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    const { isBulk, user, reason } = deleteConfirmModal;
+    setActionSubmitting(true);
+    setError(null);
+    try {
+      if (isBulk) {
+        await adminApi.bulkDeleteUsers(selectedUserIds, reason || 'Bulk administrative deletion');
+        setSuccessMsg(`✓ Successfully deleted ${selectedUserIds.length} user account(s).`);
+        setSelectedUserIds([]);
+      } else if (user) {
+        const targetId = user._id || user.id;
+        await adminApi.softDeleteUser(targetId, reason || 'Administrative deletion');
+        setSuccessMsg(`✓ User account for ${user.fullName || user.name || 'user'} has been deleted.`);
+      }
+      setDeleteConfirmModal({ open: false, isBulk: false, user: null, count: 0, name: '', reason: '' });
+      fetchUsers();
+    } catch (err) {
+      setError(err?.message || 'Failed to complete account deletion.');
+    } finally {
+      setActionSubmitting(false);
     }
   };
 
@@ -281,34 +454,49 @@ export default function AdminUserManagementPage() {
             {activeTab === 'requests' ? (
               <>
                 <option value="all">All Appeal Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="resolved">Resolved</option>
-                <option value="rejected">Rejected</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="blocked">Blocked</option>
               </>
             ) : activeTab === 'activity' ? (
               <>
                 <option value="all">All Moderation Actions</option>
-                <option value="active">Active Transitions</option>
-                <option value="blocked">Blocked Actions</option>
-                <option value="pending">Pending Verifications</option>
+                <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+                <option value="blocked">Blocked</option>
               </>
             ) : (
               <>
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="blocked">Blocked</option>
                 <option value="inactive">Inactive</option>
+                <option value="blocked">Blocked</option>
               </>
             )}
           </select>
 
+          <label style={styles.filterLabel}>Days Range:</label>
+          <select
+            value={daysFilter}
+            onChange={(e) => {
+              setDaysFilter(e.target.value);
+              setPage(1);
+            }}
+            style={styles.selectInput}
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="2d">Last 2 Days</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="15d">Last 15 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="60d">Last 60 Days</option>
+          </select>
+
           <button
             type="button"
-            onClick={fetchUsers}
-            disabled={loading}
-            style={styles.refreshBtn}
+            onClick={() => fetchUsers()}
+            style={{ ...styles.refreshBtn, cursor: 'pointer', position: 'relative', zIndex: 2 }}
             title="Refresh list from database"
           >
             <svg
@@ -331,6 +519,64 @@ export default function AdminUserManagementPage() {
         </div>
       </div>
 
+      {/* Bulk Action Bar (When users are selected) */}
+      {selectedUserIds.length > 0 && activeTab !== 'activity' && (
+        <div style={styles.bulkActionBar}>
+          <div style={styles.bulkActionLeft}>
+            <span style={styles.bulkSelectedCount}>
+              <strong>{selectedUserIds.length}</strong> {selectedUserIds.length === 1 ? 'user' : 'users'} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedUserIds([])}
+              style={styles.bulkDeselectBtn}
+            >
+              Deselect All
+            </button>
+          </div>
+          <div style={styles.bulkActionRight}>
+            <button
+              type="button"
+              onClick={() => handleExportSelected('csv')}
+              style={styles.bulkExportBtn}
+              title="Download selected accounts as CSV"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportSelected('json')}
+              style={styles.bulkExportBtn}
+              title="Download selected accounts as JSON"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export JSON
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenBulkDeleteModal}
+              style={styles.bulkDeleteBtn}
+              title="Bulk delete selected user accounts"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Delete Selected ({selectedUserIds.length})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Requests Tab View */}
       {activeTab === 'requests' ? (
         <div style={styles.card}>
@@ -347,12 +593,12 @@ export default function AdminUserManagementPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>User / Account</th>
-                  <th style={styles.th}>Role</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Submitted Date</th>
-                  <th style={styles.th}>Appeal Summary</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                  <th style={{ ...styles.th, width: '27%' }}>User / Account</th>
+                  <th style={{ ...styles.th, width: '11%' }}>Role</th>
+                  <th style={{ ...styles.th, width: '11%' }}>Status</th>
+                  <th style={{ ...styles.th, width: '15%' }}>Submitted Date</th>
+                  <th style={{ ...styles.th, width: '22%' }}>Appeal Summary</th>
+                  <th style={{ ...styles.th, width: '14%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -391,7 +637,7 @@ export default function AdminUserManagementPage() {
                       </td>
                       <td style={styles.td}>
                         <span style={getStatusBadgeStyle(req.status)}>
-                          {(req.status || 'pending').toUpperCase()}
+                          {normalizeUserStatus(req.status)}
                         </span>
                       </td>
                       <td style={styles.td}>
@@ -407,7 +653,18 @@ export default function AdminUserManagementPage() {
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <button
                           type="button"
-                          onClick={() => setRequestModal({ open: true, request: req, notes: req.adminNotes || '' })}
+                          onClick={() => {
+                            try {
+                              const readUsers = JSON.parse(localStorage.getItem('drp_admin_read_users') || '[]');
+                              const idKey = req._id || req.id;
+                              if (idKey && !readUsers.includes(idKey)) {
+                                readUsers.push(idKey);
+                                localStorage.setItem('drp_admin_read_users', JSON.stringify(readUsers));
+                                window.dispatchEvent(new CustomEvent('drp_admin_alerts_updated'));
+                              }
+                            } catch (_) {}
+                            setRequestModal({ open: true, request: req, notes: req.adminNotes || '' });
+                          }}
                           style={{
                             padding: '6px 12px',
                             backgroundColor: '#eff6ff',
@@ -447,19 +704,20 @@ export default function AdminUserManagementPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Timestamp</th>
-                  <th style={styles.th}>Target User</th>
-                  <th style={styles.th}>Action / Status</th>
-                  <th style={styles.th}>Admin Reason</th>
-                  <th style={styles.th}>Changed By</th>
+                  <th style={{ ...styles.th, width: '18%' }}>Timestamp</th>
+                  <th style={{ ...styles.th, width: '26%' }}>Target User</th>
+                  <th style={{ ...styles.th, width: '14%' }}>Action / Status</th>
+                  <th style={{ ...styles.th, width: '26%' }}>Admin Reason</th>
+                  <th style={{ ...styles.th, width: '16%' }}>Changed By</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
                   const activityRows = users.flatMap((u) => (u.moderationHistory || []).map((m, i) => ({ ...m, user: u, key: `${u._id}-${i}` })))
                     .filter((act) => {
-                      if (statusFilter !== 'all' && (act.newStatus || '').toLowerCase() !== statusFilter.toLowerCase()) {
-                        return false;
+                      if (statusFilter !== 'all') {
+                        const targetNorm = normalizeUserStatus(act.newStatus);
+                        if (targetNorm !== statusFilter.toUpperCase()) return false;
                       }
                       if (searchTerm.trim()) {
                         const q = searchTerm.toLowerCase();
@@ -485,7 +743,7 @@ export default function AdminUserManagementPage() {
                       <td style={styles.td}>{new Date(m.changedAt || Date.now()).toLocaleString()}</td>
                       <td style={styles.td}><strong>{m.user.name || m.user.fullName}</strong> ({m.user.email})</td>
                       <td style={styles.td}>
-                        <span style={getStatusBadgeStyle(m.newStatus)}>{(m.newStatus || '').toUpperCase()}</span>
+                        <span style={getStatusBadgeStyle(m.newStatus)}>{normalizeUserStatus(m.newStatus)}</span>
                       </td>
                       <td style={styles.td}>{m.reason || 'Standard system action'}</td>
                       <td style={styles.td}>{m.changedBy || 'Admin System'}</td>
@@ -520,12 +778,21 @@ export default function AdminUserManagementPage() {
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>User / Entity</th>
-                      <th style={styles.th}>Role</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Contact Info</th>
-                      <th style={styles.th}>Joined Date</th>
-                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      <th style={{ ...styles.th, width: '38px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isAllCurrentPageSelected}
+                          onChange={toggleSelectAllCurrentPage}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          title="Select all on this page"
+                        />
+                      </th>
+                      <th style={{ ...styles.th, width: '27%' }}>User / Entity</th>
+                      <th style={{ ...styles.th, width: '11%' }}>Role</th>
+                      <th style={{ ...styles.th, width: '11%' }}>Status</th>
+                      <th style={{ ...styles.th, width: '14%' }}>Contact Info</th>
+                      <th style={{ ...styles.th, width: '12%' }}>Joined Date</th>
+                      <th style={{ ...styles.th, width: '25%', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -533,8 +800,17 @@ export default function AdminUserManagementPage() {
                       const userId = u._id || u.id;
                       const userName = u.fullName || u.name || 'Unnamed User';
                       const userStatus = u.accountStatus || u.status || 'ACTIVE';
+                      const isSelected = selectedUserIds.includes(userId);
                       return (
-                      <tr key={userId} style={styles.tr}>
+                      <tr key={userId} style={{ ...styles.tr, backgroundColor: isSelected ? '#f8fafc' : undefined }}>
+                        <td style={{ ...styles.td, width: '38px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectUser(userId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td style={styles.td}>
                           <div style={styles.userCell}>
                             <div style={styles.avatarPill}>
@@ -565,7 +841,7 @@ export default function AdminUserManagementPage() {
                         </td>
                         <td style={styles.td}>
                           <span style={getStatusBadgeStyle(userStatus)}>
-                            {userStatus.toUpperCase()}
+                            {normalizeUserStatus(userStatus)}
                           </span>
                         </td>
                         <td style={styles.td}>
@@ -585,7 +861,14 @@ export default function AdminUserManagementPage() {
                             >
                               Profile
                             </button>
-                            {userStatus.toLowerCase() === 'blocked' ? (
+                            <button
+                              onClick={() => handleExportSingleUser(u, 'csv')}
+                              style={styles.actionBtnExport}
+                              title="Export user dossier as CSV"
+                            >
+                              Export
+                            </button>
+                            {normalizeUserStatus(userStatus) === 'BLOCKED' ? (
                               <button
                                 onClick={() => handleOpenStatusAction(u, 'unblock')}
                                 style={styles.actionBtnSuccess}
@@ -603,9 +886,9 @@ export default function AdminUserManagementPage() {
                               </button>
                             )}
                             <button
-                              onClick={() => handleOpenStatusAction(u, 'delete')}
+                              onClick={() => handleOpenSingleDeleteModal(u)}
                               style={styles.actionBtnDanger}
-                              title="Soft delete user account"
+                              title="Delete user account"
                             >
                               Delete
                             </button>
@@ -619,30 +902,67 @@ export default function AdminUserManagementPage() {
               </div>
             )}
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div style={styles.paginationBar}>
+            {/* Pagination with Range Selector */}
+            <div style={styles.paginationBar}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <span style={styles.paginationInfo}>
-                  Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} users)
+                  Showing {users.length > 0 ? (page - 1) * pageSize + 1 : 0} to {Math.min(page * pageSize, pagination.total || users.length)} of {pagination.total || users.length} records
                 </span>
-                <div style={styles.paginationBtns}>
-                  <button
-                    disabled={pagination.page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    style={pagination.page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Show:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '12px',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
                   >
-                    Previous
-                  </button>
-                  <button
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                    style={pagination.page >= pagination.totalPages ? styles.pageBtnDisabled : styles.pageBtn}
-                  >
-                    Next
-                  </button>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                  </select>
                 </div>
               </div>
-            )}
+              <div style={styles.paginationBtns}>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  style={page <= 1 ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.min(5, Math.ceil((pagination.total || users.length) / pageSize) || 1) }, (_, i) => {
+                  const pNum = i + 1;
+                  const isCurrent = page === pNum;
+                  return (
+                    <button
+                      key={pNum}
+                      onClick={() => setPage(pNum)}
+                      style={isCurrent ? styles.pageBtnActive : styles.pageBtn}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+                <button
+                  disabled={page >= Math.ceil((pagination.total || users.length) / pageSize)}
+                  onClick={() => setPage((p) => p + 1)}
+                  style={page >= Math.ceil((pagination.total || users.length) / pageSize) ? styles.pageBtnDisabled : styles.pageBtn}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -675,7 +995,7 @@ export default function AdminUserManagementPage() {
                 </div>
                 <div style={styles.profileField}>
                   <span style={styles.fieldLabel}>Account Status</span>
-                  <span style={getStatusBadgeStyle(selectedUser.status)}>{(selectedUser.status || 'ACTIVE').toUpperCase()}</span>
+                  <span style={getStatusBadgeStyle(selectedUser.status)}>{normalizeUserStatus(selectedUser.status)}</span>
                 </div>
                 <div style={styles.profileField}>
                   <span style={styles.fieldLabel}>Phone</span>
@@ -751,25 +1071,19 @@ export default function AdminUserManagementPage() {
         </div>
       )}
 
-      {/* CONFIRMATION / REASON MODAL (BLOCK / UNBLOCK / DELETE) */}
+      {/* CONFIRMATION / REASON MODAL (BLOCK / UNBLOCK) */}
       {actionModal.open && actionModal.user && (
         <div style={styles.modalOverlay} onClick={() => setActionModal({ open: false, type: '', user: null, reason: '' })}>
           <div style={styles.modalContentSmall} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>
-              {actionModal.type === 'delete'
-                ? 'Confirm Account Deletion'
-                : actionModal.type === 'block'
-                ? 'Confirm Account Block'
-                : 'Confirm Account Unblock'}
+              {actionModal.type === 'block' ? 'Confirm Account Block' : 'Confirm Account Unblock'}
             </h3>
             <p style={styles.modalSub}>
-              {actionModal.type === 'delete'
-                ? `Are you sure you want to soft-delete ${actionModal.user.name}'s account? The record will be preserved for compliance and data retention.`
-                : `Are you sure you want to change account standing for ${actionModal.user.name}?`}
+              Are you sure you want to {actionModal.type === 'block' ? 'block platform access for' : 'reinstate and unblock'} <strong>{actionModal.user.fullName || actionModal.user.name || 'this user'}</strong>?
             </p>
 
             <div style={{ marginTop: '16px' }}>
-              <label style={styles.inputLabel}>Reason / Audit Note (Required):</label>
+              <label style={styles.inputLabel}>Reason / Audit Note (Optional):</label>
               <textarea
                 rows={3}
                 style={styles.modalTextarea}
@@ -781,6 +1095,7 @@ export default function AdminUserManagementPage() {
 
             <div style={styles.modalFooter}>
               <button
+                type="button"
                 onClick={() => setActionModal({ open: false, type: '', user: null, reason: '' })}
                 style={styles.modalBtnSecondary}
                 disabled={actionSubmitting}
@@ -788,11 +1103,105 @@ export default function AdminUserManagementPage() {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleConfirmAction}
-                style={actionModal.type === 'delete' ? styles.actionBtnDangerLg : styles.actionBtnPrimaryLg}
-                disabled={actionSubmitting || !actionModal.reason.trim()}
+                style={actionModal.type === 'block' ? styles.actionBtnWarning : styles.actionBtnPrimaryLg}
+                disabled={actionSubmitting}
               >
-                {actionSubmitting ? 'Processing...' : 'Confirm Action'}
+                {actionSubmitting ? 'Processing...' : `Confirm ${actionModal.type === 'block' ? 'Block' : 'Unblock'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION POPUP MODAL (Individual & Bulk Records) */}
+      {deleteConfirmModal.open && (
+        <div
+          style={styles.modalOverlay}
+          onClick={() => setDeleteConfirmModal({ open: false, isBulk: false, user: null, count: 0, name: '', reason: '' })}
+        >
+          <div
+            style={{
+              ...styles.modalContentSmall,
+              maxWidth: '460px',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#dc2626',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>
+                  Confirm Account Deletion
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>
+                  {deleteConfirmModal.isBulk ? `Delete ${deleteConfirmModal.count} selected accounts` : `Delete ${deleteConfirmModal.name}`}
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, marginBottom: '14px' }}>
+              Are you sure you want to delete {deleteConfirmModal.isBulk ? `these ${deleteConfirmModal.count} selected user accounts` : `the user account for ${deleteConfirmModal.name}`}? This will revoke active login credentials and archive user data.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.inputLabel}>Administrative Reason (Optional):</label>
+              <textarea
+                rows={2}
+                style={styles.modalTextarea}
+                placeholder="Optional audit justification..."
+                value={deleteConfirmModal.reason}
+                onChange={(e) => setDeleteConfirmModal((prev) => ({ ...prev, reason: e.target.value }))}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ open: false, isBulk: false, user: null, count: 0, name: '', reason: '' })}
+                style={styles.modalBtnSecondary}
+                disabled={actionSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                style={{
+                  ...styles.actionBtnDangerLg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                disabled={actionSubmitting}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                {actionSubmitting ? 'Deleting...' : deleteConfirmModal.isBulk ? `Yes, Delete Accounts (${deleteConfirmModal.count})` : 'Yes, Delete Account'}
               </button>
             </div>
           </div>
@@ -909,6 +1318,17 @@ function getRoleBadgeStyle(role) {
   return { ...base, backgroundColor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
 }
 
+export function normalizeUserStatus(rawStatus) {
+  const s = String(rawStatus || '').toLowerCase().trim();
+  if (s === 'blocked' || s === 'suspended' || s === 'banned' || s === 'rejected') {
+    return 'BLOCKED';
+  }
+  if (s === 'active' || s === 'approved' || s === 'verified' || s === 'resolved') {
+    return 'ACTIVE';
+  }
+  return 'INACTIVE';
+}
+
 function getStatusBadgeStyle(status) {
   const base = {
     display: 'inline-block',
@@ -918,15 +1338,90 @@ function getStatusBadgeStyle(status) {
     fontWeight: '700',
     letterSpacing: '0.04em',
   };
-  const s = (status || '').toLowerCase();
-  if (s === 'active' || s === 'approved') return { ...base, backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
-  if (s === 'blocked' || s === 'rejected') return { ...base, backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' };
-  if (s === 'pending') return { ...base, backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
-  return { ...base, backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' };
+  const norm = normalizeUserStatus(status);
+  if (norm === 'ACTIVE') return { ...base, backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' };
+  if (norm === 'BLOCKED') return { ...base, backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' };
+  return { ...base, backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' };
 }
 
 // Component Styles
 const styles = {
+  bulkActionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eff6ff',
+    border: '1.5px solid #bfdbfe',
+    borderRadius: '8px',
+    padding: '10px 16px',
+    marginBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '10px',
+    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)',
+  },
+  bulkActionLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  bulkSelectedCount: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1e3a8a',
+  },
+  bulkDeselectBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#3b82f6',
+    fontSize: '12px',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    fontWeight: '600',
+  },
+  bulkActionRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  bulkExportBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#334155',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  bulkDeleteBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#dc2626',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  pageBtnActive: {
+    padding: '6px 12px',
+    backgroundColor: '#1e3a8a',
+    color: '#ffffff',
+    border: '1px solid #1e3a8a',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
   container: {
     padding: '24px 32px',
     backgroundColor: '#f8fafc',
@@ -1122,19 +1617,21 @@ const styles = {
     color: '#64748b',
   },
   tableResponsive: {
-    overflowX: 'auto',
+    width: '100%',
+    overflowX: 'hidden',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     textAlign: 'left',
+    tableLayout: 'auto',
   },
   th: {
-    padding: '12px 14px',
-    fontSize: '12px',
+    padding: '10px 10px',
+    fontSize: '11.5px',
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.04em',
     color: '#64748b',
     borderBottom: '1px solid #e2e8f0',
     backgroundColor: '#f8fafc',
@@ -1144,8 +1641,8 @@ const styles = {
     transition: 'background-color 0.1s ease',
   },
   td: {
-    padding: '14px',
-    fontSize: '14px',
+    padding: '11px 10px',
+    fontSize: '13.5px',
     color: '#1e293b',
     verticalAlign: 'middle',
   },
@@ -1196,10 +1693,12 @@ const styles = {
   },
   actionButtonGroup: {
     display: 'inline-flex',
-    gap: '6px',
+    alignItems: 'center',
+    gap: '4px',
+    flexWrap: 'nowrap',
   },
   actionBtnOutline: {
-    padding: '5px 10px',
+    padding: '5px 9px',
     backgroundColor: '#ffffff',
     border: '1px solid #cbd5e1',
     borderRadius: '6px',
@@ -1208,8 +1707,18 @@ const styles = {
     color: '#334155',
     cursor: 'pointer',
   },
+  actionBtnExport: {
+    padding: '5px 9px',
+    backgroundColor: '#eff6ff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#1d4ed8',
+    cursor: 'pointer',
+  },
   actionBtnWarning: {
-    padding: '5px 10px',
+    padding: '5px 9px',
     backgroundColor: '#fffbeb',
     border: '1px solid #fcd34d',
     borderRadius: '6px',
@@ -1219,7 +1728,7 @@ const styles = {
     cursor: 'pointer',
   },
   actionBtnSuccess: {
-    padding: '5px 10px',
+    padding: '5px 9px',
     backgroundColor: '#ecfdf5',
     border: '1px solid #6ee7b7',
     borderRadius: '6px',
@@ -1229,7 +1738,7 @@ const styles = {
     cursor: 'pointer',
   },
   actionBtnDanger: {
-    padding: '5px 10px',
+    padding: '5px 9px',
     backgroundColor: '#fef2f2',
     border: '1px solid #fca5a5',
     borderRadius: '6px',

@@ -89,12 +89,16 @@ export function RegistrationForm() {
       }
     }
 
-    if (touched.phone && trimmedPhone) {
-      const cleanPhone = trimmedPhone.replace(/[\s\-().+]/g, '');
-      if (trimmedPhone.length > 20) {
-        errs.phone = 'Phone number must not exceed 20 characters.';
-      } else if (!/^\d{10,15}$/.test(cleanPhone)) {
-        errs.phone = 'Please enter a valid 10 to 15 digit phone number.';
+    if (touched.phone) {
+      if (!trimmedPhone) {
+        errs.phone = 'Mobile phone number is mandatory for account registration.';
+      } else {
+        const cleanPhone = trimmedPhone.replace(/[\s\-().+]/g, '');
+        if (trimmedPhone.length > 20) {
+          errs.phone = 'Phone number must not exceed 20 characters.';
+        } else if (!/^\d{7,15}$/.test(cleanPhone)) {
+          errs.phone = 'Please enter a valid phone number (at least 7 to 15 digits).';
+        }
       }
     }
 
@@ -174,7 +178,11 @@ export function RegistrationForm() {
     const trimmedName = formData.fullName.trim();
     const trimmedPhone = formData.phone.trim();
     const cleanPhone = trimmedPhone.replace(/[\s\-().+]/g, '');
-    const isPhoneValid = !trimmedPhone || (trimmedPhone.length <= 20 && /^\d{10,15}$/.test(cleanPhone));
+    const isPhoneValid = Boolean(trimmedPhone && trimmedPhone.length <= 20 && cleanPhone.length >= 7 && cleanPhone.length <= 15);
+
+    if (!trimmedPhone) {
+      setErrors((prev) => ({ ...prev, phone: 'Mobile phone number is mandatory for account registration.' }));
+    }
 
     if (
       trimmedName.length < 2 ||
@@ -205,7 +213,7 @@ export function RegistrationForm() {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         role: formData.role,
-        ...(formData.phone.trim() ? { phone: formData.phone.trim() } : {}),
+        phone: formData.phone.trim(),
         ...(formData.role === 'contractor'
           ? {
               businessName: formData.businessName.trim(),
@@ -219,6 +227,12 @@ export function RegistrationForm() {
 
       const res = await register(payload);
       setRegistrationSuccess('Account created successfully!');
+
+      const newUserId = res?.user?.id || res?.user?._id || res?.data?.user?.id || res?.data?.user?._id;
+      if (newUserId) {
+        localStorage.setItem(`drp_show_welcome_${newUserId}`, 'true');
+      }
+      localStorage.setItem('drp_just_registered', 'true');
 
       if (formData.role === 'contractor') {
         navigate('/contractor/verification-request', { replace: true });
@@ -388,11 +402,13 @@ export function RegistrationForm() {
           {errors.email && <p style={styles.fieldErrorText} className="auth-field-error">{errors.email}</p>}
         </div>
 
-        {/* Phone Number */}
+        {/* Phone Number (Mandatory) */}
         <div style={styles.fieldGroup} className="auth-field-group">
           <div style={styles.labelRow} className="auth-label-row">
-            <label htmlFor="reg-phone" style={styles.label} className="auth-label">Phone Number</label>
-            <span style={styles.labelHint} className="auth-label-hint">Optional (10–15 digits)</span>
+            <label htmlFor="reg-phone" style={styles.label} className="auth-label">
+              Mobile Phone Number <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <span style={styles.labelHint} className="auth-label-hint">Required (7–15 digits)</span>
           </div>
           <div
             className="auth-input-wrap"
@@ -410,10 +426,11 @@ export function RegistrationForm() {
               name="phone"
               autoComplete="tel"
               maxLength={20}
+              required
               value={formData.phone}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="(555) 000-0000"
+              placeholder="e.g. (856) 555-0199"
               style={styles.input}
               className="auth-input"
               disabled={submitting}
@@ -672,7 +689,7 @@ export function RegistrationForm() {
         >
           {submitting ? (
             <span style={styles.btnContent}>
-              <span style={styles.spinner} />
+              <div className="ld-dots" style={{ '--ink': '#ffffff', marginRight: '8px' }}><i></i><i></i><i></i></div>
               <span>Creating Account...</span>
             </span>
           ) : (

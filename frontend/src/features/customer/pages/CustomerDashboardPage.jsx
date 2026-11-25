@@ -71,15 +71,15 @@ export default function CustomerDashboardPage() {
 
     const total = totalCount !== null ? totalCount : estimates.length;
     const created = estimates.filter((e) => {
-      const st = (e.estimateStatus || 'CREATED').toUpperCase();
+      const st = (e.estimateStatus || e.status || 'CREATED').toUpperCase();
       return st === 'CREATED' || st === 'DRAFT';
     }).length;
     const completed = estimates.filter((e) => {
-      const st = (e.estimateStatus || '').toUpperCase();
+      const st = (e.estimateStatus || e.status || '').toUpperCase();
       return st === 'COMPLETED' || st === 'APPROVED';
     }).length;
     const inProgress = estimates.filter((e) => {
-      const st = (e.estimateStatus || '').toUpperCase();
+      const st = (e.estimateStatus || e.status || '').toUpperCase();
       return st === 'IN_PROGRESS' || st === 'REQUESTED' || st === 'IN_REVIEW' || st === 'SUBMITTED';
     }).length;
 
@@ -833,7 +833,7 @@ export default function CustomerDashboardPage() {
                       est.pricingSnapshot?.billableArea ||
                       400;
                     const scope = getEstimateScope(est);
-                    const stage = mapStage(est.estimateStatus);
+                    const stage = mapStage(est.estimateStatus || est.status);
                     const isDownloading = downloadingId === estId;
 
                     return (
@@ -983,7 +983,7 @@ export default function CustomerDashboardPage() {
                   est.pricingSnapshot?.billableArea ||
                   400;
                 const scope = getEstimateScope(est);
-                const stage = mapStage(est.estimateStatus);
+                const stage = mapStage(est.estimateStatus || est.status);
                 const isDownloading = downloadingId === estId;
 
                 return (

@@ -122,7 +122,11 @@ async function forgotPassword(req, res, next) {
  */
 async function resetPassword(req, res, next) {
   try {
-    const result = await authService.resetPasswordWithToken(req.body.token, req.body.newPassword);
+    const result = await authService.resetPasswordWithToken(
+      req.body.token,
+      req.body.newPassword,
+      req.body.email
+    );
     res.status(200).json({
       success: true,
       data: result,

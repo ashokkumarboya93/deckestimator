@@ -36,7 +36,9 @@ router.get('/dashboard/summary', adminController.getDashboardSummary);
 router.get('/dashboard/trend', adminController.getBusinessActivityTrend);
 
 // 2. User Management & Moderation
+router.get('/users/search-recipients', adminController.searchRecipients);
 router.get('/users', adminController.listUsers);
+router.post('/users/bulk-delete', adminController.bulkDeleteUsers);
 router.get('/users/:id/export', adminController.exportSingleUserDossier);
 router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.updateUserStatus);
@@ -48,10 +50,13 @@ router.patch('/user-requests/:id/action', adminController.handleUserRequest);
 
 // 3. Contractor Verifications & Documents
 router.get('/verifications', adminController.listVerifications);
+router.post('/verifications/bulk-delete', adminController.bulkDeleteVerifications);
+router.post('/verification-records/bulk-delete', adminController.bulkDeleteUserRecordsOnly);
 router.post('/verifications/:id/approve', adminController.approveContractorVerification);
 router.post('/verifications/:id/reject', adminController.rejectContractorVerification);
 router.get('/verifications/:contractorId/history', adminController.getVerificationHistory);
 router.get('/contractor-documents', adminController.listContractorDocuments);
+router.post('/contractor-documents/bulk-delete', adminController.bulkDeleteContractorDocuments);
 router.get('/contractor-documents/:id/file', adminController.downloadContractorDocument);
 router.get('/contractor-documents/:id/stream', adminController.downloadContractorDocument);
 router.patch('/contractor-documents/:id/review', adminController.reviewContractorDocument);
@@ -59,6 +64,7 @@ router.patch('/contractor-documents/:id', adminController.reviewContractorDocume
 
 // 4. Projects & Progress Tracking
 router.get('/projects', adminController.listProjects);
+router.get('/projects/:id', adminController.getProjectDetails);
 router.patch('/projects/:id/progress', adminController.updateProjectProgress);
 router.delete('/projects/:id', adminController.deleteProject);
 router.post('/projects/bulk-delete', adminController.bulkDeleteProjects);
@@ -109,6 +115,8 @@ router.put('/pricing', adminController.updatePricingConfig);
 router.get('/discounts', adminController.getDiscountsOverview);
 router.put('/discounts/default', adminController.updateDefaultContractorDiscount);
 router.put('/discounts/contractors/:contractorId', adminController.setContractorIndividualDiscount);
+router.post('/discounts/contractors/:contractorId/reset', adminController.resetContractorIndividualDiscount);
+router.delete('/discounts/contractors/:contractorId', adminController.resetContractorIndividualDiscount);
 
 // 10. System Settings & Information
 router.get('/settings', adminController.getSystemSettings);
@@ -117,7 +125,6 @@ router.put('/settings', adminController.updateSystemSettings);
 // Targeted Notifications Dispatcher
 router.post('/notifications/dispatch', adminController.dispatchNotification);
 router.get('/notifications/history', adminController.getNotificationHistory);
-router.get('/users/search-recipients', adminController.searchRecipients);
 
 // 11. Permissions Matrix
 router.get('/permissions', adminController.getPermissionsMatrix);

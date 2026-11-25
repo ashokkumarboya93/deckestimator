@@ -230,7 +230,7 @@ export default function AdminLoginPage() {
               >
                 {loading ? (
                   <span style={styles.btnContent}>
-                    <span style={styles.spinner} />
+                    <div className="ld-dots" style={{ '--ink': '#F59E0B', marginRight: '8px' }}><i></i><i></i><i></i></div>
                     <span>Verifying Credentials...</span>
                   </span>
                 ) : (

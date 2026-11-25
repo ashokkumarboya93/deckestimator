@@ -42,7 +42,10 @@ export default function AdminLayout() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingVerifications, setPendingVerifications] = useState(0);
+  const [pendingDiscountRequests, setPendingDiscountRequests] = useState(0);
+  const [pendingUserRequests, setPendingUserRequests] = useState(0);
   const [hotLeadsCount, setHotLeadsCount] = useState(0);
+  const [pendingProjectsCount, setPendingProjectsCount] = useState(0);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -111,31 +114,159 @@ export default function AdminLayout() {
 
   const currentPath = location.pathname;
 
-  // Load badge counts
+  // Load badge counts across core operational modules
   useEffect(() => {
     let mounted = true;
-    adminApi
-      .getDashboardSummary()
-      .then((res) => {
-        if (mounted && res?.data?.summary) {
-          setHotLeadsCount(res.data.summary.hotPriorityLeads || 0);
-        }
-      })
-      .catch(() => {});
 
-    adminApi
-      .getVerifications({ status: 'pending' })
-      .then((res) => {
-        if (mounted && res?.counts?.pending !== undefined) {
-          setPendingVerifications(res.counts.pending);
+    const loadBadgeCounts = () => {
+      const storedReadVerif = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_verif_items') || '[]');
+        } catch {
+          return [];
         }
-      })
-      .catch(() => {});
+      })();
+
+      const storedReadLeads = (() => {
+        try {
+          const s1 = JSON.parse(localStorage.getItem('drp_admin_read_leads') || '[]');
+          const s2 = JSON.parse(localStorage.getItem('deck_admin_opened_leads') || '[]');
+          return Array.from(new Set([...s1, ...s2]));
+        } catch {
+          return [];
+        }
+      })();
+
+      const storedReadUsers = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_users') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+
+      const storedReadProjects = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('drp_admin_read_projects') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+
+      // 1. Leads Management (Red Alert Bubble)
+      adminApi
+        .getLeads({ tab: 'all', limit: 100 })
+        .then((res) => {
+          const list = Array.isArray(res?.data?.data)
+            ? res.data.data
+            : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.leads) ? res.data.leads : []));
+          if (mounted && Array.isArray(list)) {
+            const unreadLeads = list.filter(
+              (l) => !l.isOpened && !storedReadLeads.includes(l._id || l.id || l.leadNumber)
+            ).length;
+            setHotLeadsCount(unreadLeads);
+          }
+        })
+        .catch(() => {});
+
+      // 2. Verifications & Contractor Documents (Amber Gold Bubble)
+      Promise.allSettled([
+        adminApi.getVerifications({ status: 'pending' }),
+        adminApi.getContractorDocuments({ status: 'pending' }),
+      ])
+        .then(([vRes, dRes]) => {
+          let unread = 0;
+          if (vRes.status === 'fulfilled') {
+            const list = Array.isArray(vRes.value?.data) ? vRes.value.data : (Array.isArray(vRes.value?.data?.data) ? vRes.value.data.data : []);
+            unread += list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
+          }
+          if (dRes.status === 'fulfilled') {
+            const docs = Array.isArray(dRes.value?.data?.data) ? dRes.value.data.data : (Array.isArray(dRes.value?.data) ? dRes.value.data : []);
+            unread += docs.filter((d) => {
+              const st = (d.documentStatus || 'pending').toLowerCase();
+              return (st === 'pending' || st === 'pending_review') && !storedReadVerif.includes(d._id || d.id);
+            }).length;
+          }
+          if (mounted) {
+            setPendingVerifications(unread);
+          }
+        })
+        .catch(() => {});
+
+      // 3. Discount Requests (Amber Gold Bubble)
+      adminApi
+        .getDiscountRequests({ status: 'PENDING' })
+        .then((res) => {
+          const list = Array.isArray(res?.data?.requests)
+            ? res.data.requests
+            : (Array.isArray(res?.data) ? res.data : []);
+          if (mounted && Array.isArray(list)) {
+            const unread = list.filter(
+              (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedReadVerif.includes(r._id || r.id)
+            ).length;
+            setPendingDiscountRequests(unread);
+          }
+        })
+        .catch(() => {});
+
+      // 4. User Requests & Appeals (Amber Orange Bubble)
+      adminApi
+        .getUserRequests({ status: 'pending' })
+        .then((res) => {
+          const list = Array.isArray(res?.data?.data)
+            ? res.data.data
+            : (Array.isArray(res?.data) ? res.data : []);
+          if (mounted && Array.isArray(list)) {
+            const unreadUsers = list.filter(
+              (r) => (r.status || '').toLowerCase() === 'pending' && !storedReadUsers.includes(r._id || r.id)
+            ).length;
+            setPendingUserRequests(unreadUsers);
+          }
+        })
+        .catch(() => {});
+
+      // 5. Projects (Distinct Purple Bubble)
+      adminApi
+        .getProjects({ limit: 50 })
+        .then((res) => {
+          const list = Array.isArray(res?.data?.projects)
+            ? res.data.projects
+            : (Array.isArray(res?.projects) ? res.projects : (Array.isArray(res?.data) ? res.data : []));
+          if (mounted && Array.isArray(list)) {
+            const unreadProjects = list.filter((p) => {
+              const st = (p.status || p.projectStatus || p.stage || '').toLowerCase();
+              const isActionable = st === 'requested' || st === 'in_review' || st === 'created';
+              return isActionable && !storedReadProjects.includes(p._id || p.id || p.projectId || p.estimateReference);
+            }).length;
+            setPendingProjectsCount(unreadProjects);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadBadgeCounts();
+
+    const interval = setInterval(loadBadgeCounts, 15000);
+    const handleEvents = () => loadBadgeCounts();
+
+    window.addEventListener('drp_admin_alerts_updated', handleEvents);
+    window.addEventListener('drp_lead_updated', handleEvents);
+    window.addEventListener('drp_project_updated', handleEvents);
+    window.addEventListener('drp_verif_updated', handleEvents);
+    window.addEventListener('drp_user_updated', handleEvents);
+    window.addEventListener('focus', handleEvents);
 
     return () => {
       mounted = false;
+      clearInterval(interval);
+      window.removeEventListener('drp_admin_alerts_updated', handleEvents);
+      window.removeEventListener('drp_lead_updated', handleEvents);
+      window.removeEventListener('drp_project_updated', handleEvents);
+      window.removeEventListener('drp_verif_updated', handleEvents);
+      window.removeEventListener('drp_user_updated', handleEvents);
+      window.removeEventListener('focus', handleEvents);
     };
-  }, []);
+  }, [currentPath]);
 
   const handleLogout = async () => {
     try {
@@ -150,15 +281,15 @@ export default function AdminLayout() {
     return currentPath.startsWith(path);
   };
 
-  // Compute breadcrumbs & title
+  // Compute breadcrumbs & title (Removed "Platform Governance" and "Operations & Approvals" per user requirement)
   const getPageMeta = () => {
-    if (currentPath.includes('/admin/users')) return { title: 'User Management', category: 'Platform Governance' };
-    if (currentPath.includes('/admin/verification-progress')) return { title: 'Verification & Progress', category: 'Operations & Approvals' };
-    if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: 'Enquiries Hub' };
-    if (currentPath.includes('/admin/projects')) return { title: 'Projects', category: 'Deck Project Directory' };
-    if (currentPath.includes('/admin/pricing') || currentPath.includes('/admin/discounts')) return { title: 'Pricing & Discounts', category: 'Calculation & Incentives' };
-    if (currentPath.includes('/admin/reports')) return { title: 'Reports & Analytics', category: 'Business Insights' };
-    if (currentPath.includes('/admin/settings')) return { title: 'System Settings', category: 'Configuration & Communications' };
+    if (currentPath.includes('/admin/users')) return { title: 'User Management', category: '' };
+    if (currentPath.includes('/admin/verification-progress')) return { title: 'Verification & Progress', category: '' };
+    if (currentPath.includes('/admin/leads')) return { title: 'Lead Management', category: '' };
+    if (currentPath.includes('/admin/projects')) return { title: 'Projects', category: '' };
+    if (currentPath.includes('/admin/pricing') || currentPath.includes('/admin/discounts')) return { title: 'Pricing & Discounts', category: '' };
+    if (currentPath.includes('/admin/reports')) return { title: 'Reports & Analytics', category: '' };
+    if (currentPath.includes('/admin/settings')) return { title: 'System Settings', category: '' };
     if (currentPath.includes('/admin/guidelines')) return { title: 'Admin Guidelines', category: 'Operational Manual & SOP' };
     if (currentPath.includes('/admin/profile')) return { title: 'My Profile', category: 'Account Management' };
     return { title: 'Dashboard', category: 'Business Overview' };
@@ -166,7 +297,7 @@ export default function AdminLayout() {
 
   const meta = getPageMeta();
 
-  // Exact 11 items
+  // Exact 11 items with custom colored small bubble badges for core operational workflows
   const menuItems = [
     {
       path: '/admin/dashboard',
@@ -183,6 +314,8 @@ export default function AdminLayout() {
     {
       path: '/admin/users',
       label: 'User Management',
+      badge: pendingUserRequests > 0 ? pendingUserRequests : null,
+      badgeColor: '#EA580C',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -195,7 +328,8 @@ export default function AdminLayout() {
     {
       path: '/admin/verification-progress',
       label: 'Verification & Progress',
-      badge: pendingVerifications > 0 ? pendingVerifications : null,
+      badge: (pendingVerifications + pendingDiscountRequests) > 0 ? (pendingVerifications + pendingDiscountRequests) : null,
+      badgeColor: '#D97706',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -207,7 +341,7 @@ export default function AdminLayout() {
       path: '/admin/leads',
       label: 'Lead Management',
       badge: hotLeadsCount > 0 ? hotLeadsCount : null,
-      badgeColor: '#ef4444',
+      badgeColor: '#EF4444',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -219,6 +353,8 @@ export default function AdminLayout() {
     {
       path: '/admin/projects',
       label: 'Projects',
+      badge: pendingProjectsCount > 0 ? pendingProjectsCount : null,
+      badgeColor: '#8B5CF6',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -368,8 +504,22 @@ export default function AdminLayout() {
                   justifyContent: isSidebarExpanded ? 'flex-start' : 'center',
                 }}
               >
-                <div style={{ ...styles.linkIcon, color: active ? '#ffffff' : '#94a3b8' }}>
+                <div style={{ ...styles.linkIcon, position: 'relative', color: active ? '#ffffff' : '#94a3b8' }}>
                   {item.icon}
+                  {!isSidebarExpanded && item.badge && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-3px',
+                        right: '-3px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: item.badgeColor || '#EF4444',
+                        boxShadow: `0 0 6px ${item.badgeColor || '#EF4444'}`,
+                      }}
+                    />
+                  )}
                 </div>
                 {isSidebarExpanded && (
                   <span style={styles.linkText}>{item.label}</span>
@@ -465,7 +615,7 @@ export default function AdminLayout() {
               </button>
             )}
             <div>
-              <div style={styles.breadcrumbCategory}>{meta.category}</div>
+              {meta.category ? <div style={styles.breadcrumbCategory}>{meta.category}</div> : null}
               <h1 style={{ ...styles.breadcrumbTitle, fontSize: isMobile ? '1rem' : '1.18rem' }}>{meta.title}</h1>
             </div>
           </div>
@@ -480,8 +630,10 @@ export default function AdminLayout() {
               >
                 {user?.avatar && resolveAvatarUrl(user.avatar) ? (
                   <img
+                    key={String(user.avatar).substring(0, 32)}
                     src={resolveAvatarUrl(user.avatar)}
                     alt={user.fullName || 'Admin'}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     style={{
                       width: '32px',
                       height: '32px',
@@ -681,11 +833,18 @@ const styles = {
     textOverflow: 'ellipsis',
   },
   badge: {
-    fontSize: '10px',
-    fontWeight: '700',
+    fontSize: '11px',
+    fontWeight: '800',
     color: '#ffffff',
     borderRadius: '10px',
-    padding: '1px 7px',
+    padding: '2px 7px',
+    marginLeft: 'auto',
+    minWidth: '18px',
+    textAlign: 'center',
+    lineHeight: '1.3',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+    letterSpacing: '0.2px',
+    transition: 'transform 0.15s ease',
   },
   navDivider: {
     height: '1px',
@@ -712,7 +871,8 @@ const styles = {
   header: {
     height: '66px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '2.5px solid #C96D22',
+    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

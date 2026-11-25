@@ -23,6 +23,7 @@ import mainLogo from '../../../assets/images/MainLodo.png';
 import ContractorFooter from './ContractorFooter';
 import BlockedAccountPortal from '../../auth/components/BlockedAccountPortal';
 import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
+import WelcomeGreetingModal from '../../../components/common/WelcomeGreetingModal';
 
 export default function ContractorLayout() {
   const { user, logout } = useAuth();
@@ -58,6 +59,29 @@ export default function ContractorLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [leadsCount, setLeadsCount] = useState(0);
+
+  // First-time welcome greeting modal state (shown once per contractor account)
+  const [showWelcomeGreeting, setShowWelcomeGreeting] = useState(() => {
+    try {
+      const uid = user?.id || user?._id;
+      if (!uid) return false;
+      const alreadyShown = localStorage.getItem(`drp_welcome_shown_${uid}`);
+      const shouldShow = localStorage.getItem(`drp_show_welcome_${uid}`) || localStorage.getItem('drp_newly_registered');
+      return !alreadyShown && Boolean(shouldShow);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleCloseWelcome = () => {
+    setShowWelcomeGreeting(false);
+    const uid = user?.id || user?._id;
+    if (uid) {
+      localStorage.setItem(`drp_welcome_shown_${uid}`, 'true');
+      localStorage.removeItem(`drp_show_welcome_${uid}`);
+    }
+    localStorage.removeItem('drp_newly_registered');
+  };
   const [projectName, setProjectName] = useState('');
   const [contractorProfile, setContractorProfile] = useState(null);
   const [signoutHover, setSignoutHover] = useState(false);
@@ -589,7 +613,6 @@ export default function ContractorLayout() {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: isMobile ? (isSmallMobile ? '140px' : '220px') : 'none',
                   }}
                 >
                   {currentPath.includes('/dashboard') || currentPath === '/contractor' || currentPath === '/contractor/'
@@ -614,21 +637,21 @@ export default function ContractorLayout() {
             )}
           </div>
 
-          {/* Right: Notifications, Profile, Logout (No clipping, mobile clean spacing) */}
+          {/* Right: Notifications, Profile, Logout (No clipping, mobile clean spacing matching Customer Portal) */}
           <div style={{ ...styles.headerRight, gap: isMobile ? '6px' : '12px', flexShrink: 0 }}>
-            {/* Quick Action Button for Contractor (Hidden on estimator page itself) */}
-            {!isEstimatorPage && (
+            {/* Quick Action Button for Contractor — Desktop only to keep mobile navbar clean and uncluttered */}
+            {!isMobile && !isEstimatorPage && (
               <Link
                 to="/contractor/decks/new"
                 style={{
                   ...styles.primaryActionBtn,
-                  padding: isMobile ? '5px 8px' : '8px 18px',
-                  fontSize: isMobile ? '11px' : '13.5px',
+                  padding: '8px 18px',
+                  fontSize: '13.5px',
                   whiteSpace: 'nowrap',
                 }}
                 title="Start New Estimation"
               >
-                <span>{isMobile ? '+ New' : '+ New Estimation'}</span>
+                <span>+ New Estimation</span>
               </Link>
             )}
 
@@ -827,6 +850,14 @@ export default function ContractorLayout() {
         <ContractorFooter />
       </div>
 
+      {/* First-Time Welcome Greeting Modal */}
+      <WelcomeGreetingModal
+        isOpen={showWelcomeGreeting}
+        onClose={handleCloseWelcome}
+        user={user}
+        role="contractor"
+      />
+
       {/* 3. HELP & GUIDE MODAL */}
       {isHelpOpen && (
         <div style={styles.modalOverlay} onClick={() =>setIsHelpOpen(false)}>
@@ -1011,7 +1042,8 @@ const styles = {
   topHeader: {
     height: '65px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e2e8f0',
+    borderBottom: '2.5px solid #C96D22',
+    boxShadow: '0 2px 6px rgba(201, 109, 34, 0.08)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

@@ -9,6 +9,7 @@ const LeadActivity = require('./leadActivity.model');
 const Deck = require('../decks/deck.model');
 const DeckImage = require('../files/deckImage.model');
 const Estimate = require('../estimates/estimate.model');
+const Project = require('../admin/project.model');
 const ContractorProfile = require('../contractors/contractorProfile.model');
 const User = require('../users/users.model');
 const AuditLog = require('../../shared/models/auditLog.model');
@@ -1017,6 +1018,30 @@ async function submitReachOutEnquiry(user, payload = {}) {
       ],
     });
     await lead.save();
+  }
+
+  // Automatically synchronize Estimate status to REQUESTED and ensure Project record exists
+  if (payload.estimateId) {
+    try {
+      await Estimate.findByIdAndUpdate(payload.estimateId, {
+        $set: { estimateStatus: 'REQUESTED' },
+      });
+      const existingProj = await Project.findOne({ estimateId: payload.estimateId });
+      if (!existingProj) {
+        await Project.create({
+          projectId: `PRJ-${Date.now().toString(36).toUpperCase()}`,
+          projectName: deckSnapshot?.projectName || payload.projectName || 'Deck Restoration Project',
+          customerId: isCustomer ? userId : null,
+          contractorId: isContractor ? userId : null,
+          deckId: payload.deckId || (resolvedDeck ? resolvedDeck._id : null),
+          estimateId: payload.estimateId,
+          status: 'requested',
+          progress: 10,
+        });
+      }
+    } catch (syncErr) {
+      console.warn('[Lead->Estimate/Project Sync Warning]:', syncErr.message);
+    }
   }
 
   // Notify admins fire-and-forget so Admin Dashboard / Leads reflects new reach-out immediately

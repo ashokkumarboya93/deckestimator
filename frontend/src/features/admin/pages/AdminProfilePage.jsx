@@ -2,23 +2,25 @@
 // Deck Estimator — Admin Profile & Hierarchy Management
 // =============================================
 // Features:
-// 1. Personal Profile details (Name, Phone, Avatar picture upload with instant preview)
-// 2. Change password with secure validation
-// 3. Parent Admin vs Child Admin Hierarchy:
+// 1. Personal Profile details (Name, Phone, Avatar picture upload with instant preview & client-side compression)
+// 2. Change password with secure validation & show/hide toggle
+// 3. Parent Admin vs Child Admin Security Hierarchy:
 //    - Current admin identified as Parent (Root) or Child Admin
-//    - Parent Admin can create / invite new Child Admin accounts
-//    - Parent Admin can delete Child Admin accounts
-//    - Parent Admin cannot be deleted (protected)
-//    - Child Admin has full operational access but cannot create or delete other admins
+//    - Parent Admin can create / provision new Child Admin accounts
+//    - Parent Admin can delete Child Admin accounts via secure confirmation modal
+//    - Parent Admin cannot be deleted (master protected)
+//    - Child Admin has full operational access to platform (leads, projects, pricing, verifications)
+//      but is strictly restricted from creating or deleting other administrator accounts
+// 4. Instant sync with top navigation bar avatar and name
 
 import React, { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { ConfirmModal } from '../../../components/common';
-import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
+import { resolveAvatarUrl, compressAvatarImage } from '../../../utils/imageOptimizer';
 
 export default function AdminProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const fileInputRef = useRef(null);
 
   // Profile State
@@ -29,6 +31,7 @@ export default function AdminProfilePage() {
     avatar: '',
     role: 'admin',
     isParentAdmin: false,
+    adminPermissions: [],
     createdAt: null,
   });
 
@@ -38,10 +41,12 @@ export default function AdminProfilePage() {
     newPassword: '',
     confirmPassword: '',
   });
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
 
   // Hierarchy State
   const [hierarchy, setHierarchy] = useState({
-    isParentAdmin: false,
+    isParentAdmin: true,
     currentAdmin: null,
     admins: [],
   });
@@ -75,8 +80,9 @@ export default function AdminProfilePage() {
         adminApi.getHierarchy(),
       ]);
 
-      if (profRes.status === 'fulfilled' && profRes.value?.data) {
-        const d = profRes.value.data;
+      if (profRes.status === 'fulfilled' && profRes.value) {
+        const raw = profRes.value;
+        const d = raw?.data?.data !== undefined ? raw.data.data : (raw?.data !== undefined ? raw.data : raw);
         setProfile({
           name: d.name || d.fullName || '',
           email: d.email || '',
@@ -84,6 +90,7 @@ export default function AdminProfilePage() {
           avatar: d.avatar || '',
           role: d.role || 'admin',
           isParentAdmin: d.isParentAdmin ?? (d.email === 'admin@deckestimator.com'),
+          adminPermissions: d.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'],
           createdAt: d.createdAt,
         });
       } else if (user) {
@@ -93,43 +100,63 @@ export default function AdminProfilePage() {
           phone: user.phone || '',
           avatar: user.avatar || '',
           role: user.role || 'admin',
-          isParentAdmin: user.email === 'admin@deckestimator.com',
+          isParentAdmin: user.email === 'admin@deckestimator.com' || Boolean(user.isParentAdmin),
+          adminPermissions: user.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'],
           createdAt: user.createdAt,
         });
       }
 
       if (hierRes.status === 'fulfilled' && hierRes.value) {
         const rawHier = hierRes.value;
-        const hierPayload = rawHier.admins ? rawHier : (rawHier.data?.admins ? rawHier.data : (rawHier.data || rawHier));
-        setHierarchy(hierPayload);
+        const hierData = rawHier?.data?.data !== undefined ? rawHier.data.data : (rawHier?.data !== undefined ? rawHier.data : rawHier);
+        const adminsList = Array.isArray(hierData.admins)
+          ? hierData.admins
+          : (Array.isArray(hierData.data?.admins) ? hierData.data.admins : (Array.isArray(rawHier) ? rawHier : []));
+        setHierarchy({
+          isParentAdmin: Boolean(hierData.isParentAdmin ?? hierData.data?.isParentAdmin ?? (user?.email === 'admin@deckestimator.com')),
+          currentAdmin: hierData.currentAdmin || hierData.data?.currentAdmin || null,
+          admins: adminsList,
+        });
       }
-    } catch {
-      // Graceful fallback
+    } catch (err) {
+      console.error('Error loading admin profile and hierarchy:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Avatar Upload Handler
-  const handleAvatarFileSelect = (e) => {
+  // Avatar Upload Handler with High-Performance Client Compression
+  const handleAvatarFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg('Avatar image size must be under 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Avatar image size must be under 10MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64Url = reader.result;
-      setProfile((prev) => ({ ...prev, avatar: base64Url }));
-      setSuccessMsg('Photo selected! Click "Save Profile Changes" to persist.');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const optimizedDataUrl = await compressAvatarImage(file, 256, 0.85);
+      setProfile((prev) => ({ ...prev, avatar: optimizedDataUrl }));
+      setSuccessMsg('Photo selected! Click "Save Profile Changes" to save to MongoDB and update navbar.');
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProfile((prev) => ({ ...prev, avatar: reader.result }));
+        setSuccessMsg('Photo selected! Click "Save Profile Changes" to save to MongoDB and update navbar.');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  // Update Profile Details
+  // Avatar Remove Handler
+  const handleRemovePhoto = () => {
+    setProfile((prev) => ({ ...prev, avatar: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setSuccessMsg('Photo removed! Click "Save Profile Changes" to apply and revert navbar avatar.');
+  };
+
+  // Update Profile Details & Sync with Navbar
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -139,9 +166,24 @@ export default function AdminProfilePage() {
       await adminApi.updateProfile({
         name: profile.name,
         phone: profile.phone,
-        avatar: profile.avatar,
+        avatar: profile.avatar || '',
       });
-      setSuccessMsg('✓ Admin profile details and photo successfully saved to MongoDB Atlas.');
+      const updatedUser = {
+        ...(user || {}),
+        fullName: profile.name,
+        name: profile.name,
+        phone: profile.phone,
+        avatar: profile.avatar || '',
+      };
+      if (refreshUser) {
+        await refreshUser(updatedUser);
+      }
+      try {
+        localStorage.setItem('drp_session_sync', String(Date.now()));
+        window.dispatchEvent(new Event('drp_avatar_updated'));
+      } catch {}
+
+      setSuccessMsg('✓ Admin profile details and photo successfully saved to MongoDB Atlas and updated in the navbar.');
       loadAllAdminData();
     } catch (err) {
       setErrorMsg(err?.message || 'Failed to update admin profile.');
@@ -169,10 +211,10 @@ export default function AdminProfilePage() {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-      setSuccessMsg('✓ Administrator password changed successfully.');
+      setSuccessMsg('✓ Administrator password changed successfully with strong encryption.');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setErrorMsg(err?.message || 'Failed to change administrator password.');
+      setErrorMsg(err?.message || 'Failed to change administrator password. Please verify your current password.');
     } finally {
       setChangingPassword(false);
     }
@@ -228,7 +270,38 @@ export default function AdminProfilePage() {
     }
   };
 
-  const isParent = profile.isParentAdmin || hierarchy.isParentAdmin;
+  const isParent = Boolean(profile.isParentAdmin || hierarchy.isParentAdmin || profile.email === 'admin@deckestimator.com');
+
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <div style={{ ...styles.skeletonBox, width: '320px', height: '28px', marginBottom: '8px' }} />
+          <div style={{ ...styles.skeletonBox, width: '480px', height: '16px' }} />
+        </div>
+        <div style={styles.grid}>
+          <div style={{ ...styles.accountCard, minHeight: '380px' }}>
+            <div style={{ ...styles.skeletonBox, width: '90px', height: '90px', borderRadius: '50%', margin: '0 auto 16px' }} />
+            <div style={{ ...styles.skeletonBox, width: '180px', height: '20px', margin: '0 auto 8px' }} />
+            <div style={{ ...styles.skeletonBox, width: '220px', height: '14px', margin: '0 auto 20px' }} />
+            <div style={{ ...styles.skeletonBox, width: '100%', height: '120px', borderRadius: '8px' }} />
+          </div>
+          <div style={styles.formsCol}>
+            <div style={{ ...styles.card, height: '240px', marginBottom: '20px' }}>
+              <div style={{ ...styles.skeletonBox, width: '200px', height: '20px', marginBottom: '12px' }} />
+              <div style={{ ...styles.skeletonBox, width: '100%', height: '40px', marginBottom: '12px' }} />
+              <div style={{ ...styles.skeletonBox, width: '100%', height: '40px' }} />
+            </div>
+            <div style={{ ...styles.card, height: '240px' }}>
+              <div style={{ ...styles.skeletonBox, width: '200px', height: '20px', marginBottom: '12px' }} />
+              <div style={{ ...styles.skeletonBox, width: '100%', height: '40px', marginBottom: '12px' }} />
+              <div style={{ ...styles.skeletonBox, width: '100%', height: '40px' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -237,7 +310,7 @@ export default function AdminProfilePage() {
         <div>
           <h1 style={styles.title}>Admin Profile &amp; Role Management</h1>
           <p style={styles.subtitle}>
-            Manage administrator credentials, contact information, profile avatar, and administrative hierarchy.
+            Manage administrator credentials, contact information, profile avatar, and administrative access control.
           </p>
         </div>
       </div>
@@ -262,6 +335,26 @@ export default function AdminProfilePage() {
           </svg>
           <span style={{ marginLeft: 8, flex: 1 }}>{errorMsg}</span>
           <button onClick={() => setErrorMsg(null)} style={styles.alertCloseBtn}>✕</button>
+        </div>
+      )}
+
+      {/* Security Status Card */}
+      {!isParent && (
+        <div style={styles.childSecurityNotice}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.2" style={{ flexShrink: 0, marginTop: '2px' }}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0369a1', marginBottom: '4px' }}>
+                Delegated Child Administrator Session Active
+              </div>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#0c4a6e', lineHeight: '1.5' }}>
+                You are operating with delegated administrator clearance. You have full operational control over <strong>Lead Management</strong>, <strong>Project Lifecycles</strong>, <strong>Contractor Verifications</strong>, <strong>Pricing Tuning</strong>, and <strong>Business Analytics</strong>. Adding or removing platform administrators is protected and reserved exclusively for the Root/Parent Administrator.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -314,13 +407,25 @@ export default function AdminProfilePage() {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={styles.changePhotoBtn}
-          >
-            Change Photo
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={styles.changePhotoBtn}
+            >
+              {profile.avatar ? 'Change Photo' : 'Upload Photo'}
+            </button>
+            {Boolean(profile.avatar) && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                style={styles.removePhotoBtn}
+                title="Remove profile picture"
+              >
+                ✕ Remove Photo
+              </button>
+            )}
+          </div>
 
           <div style={styles.metaBox}>
             <div style={styles.metaRow}>
@@ -384,7 +489,7 @@ export default function AdminProfilePage() {
 
               <div style={{ marginTop: '16px' }}>
                 <button type="submit" disabled={savingProfile} style={styles.btnPrimary}>
-                  {savingProfile ? 'Saving...' : 'Save Profile Changes'}
+                  {savingProfile ? 'Saving Changes...' : 'Save Profile Changes'}
                 </button>
               </div>
             </form>
@@ -398,25 +503,43 @@ export default function AdminProfilePage() {
             <form onSubmit={handleChangePassword}>
               <div style={styles.formGroup}>
                 <label style={styles.inputLabel}>Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  style={styles.input}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showCurrentPw ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    style={styles.input}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPw(!showCurrentPw)}
+                    style={styles.pwToggleBtn}
+                  >
+                    {showCurrentPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
-                  <label style={styles.inputLabel}>New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    style={styles.input}
-                    required
-                  />
+                  <label style={styles.inputLabel}>New Password (Min 8 Chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showNewPw ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      style={styles.input}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                      style={styles.pwToggleBtn}
+                    >
+                      {showNewPw ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Confirm New Password</label>
@@ -432,7 +555,7 @@ export default function AdminProfilePage() {
 
               <div style={{ marginTop: '16px' }}>
                 <button type="submit" disabled={changingPassword} style={styles.btnSecondary}>
-                  {changingPassword ? 'Updating...' : 'Update Password'}
+                  {changingPassword ? 'Updating Password...' : 'Update Password'}
                 </button>
               </div>
             </form>
@@ -457,19 +580,25 @@ export default function AdminProfilePage() {
                 fontSize: '11px',
                 fontWeight: '700',
               }}>
-                {isParent ? 'Parent Admin Console' : 'Child Admin View'}
+                {isParent ? 'Root Administrator Console' : 'Delegated Admin View'}
               </span>
             </div>
             <p style={{ ...styles.cardSub, margin: '4px 0 0' }}>
-              {isParent
-                ? 'As the Parent Administrator, you have full authority to invite and create Child Administrators, or revoke their accounts. Parent Admin accounts cannot be deleted.'
-                : 'You are signed in as a Child Administrator. You have full access to manage projects, verify contractors, update pricing, and dispatch leads. Administrator delegation is restricted to the Parent Administrator.'}
+              Platform administrators have authority to oversee operational projects, verify contractors, update pricing cards, and dispatch leads.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={loadAllAdminData}
+            style={styles.btnRefreshHierarchy}
+            title="Refresh administrators list"
+          >
+            ↻ Refresh Admins List
+          </button>
         </div>
 
-        {/* If Parent Admin: Show "Add Child Admin" Form */}
-        {isParent && (
+        {/* Administrator Provisioning Form (Parent Admin Only) */}
+        {isParent ? (
           <div style={styles.createAdminBox}>
             <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
               + Add Child Administrator Account
@@ -532,6 +661,21 @@ export default function AdminProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+        ) : (
+          <div style={styles.restrictedAdminBox}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <strong style={{ fontSize: '13px', color: '#475569' }}>
+                Administrator Provisioning Locked
+              </strong>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
+              Only the Parent/Root Administrator has authorization to provision or invite new administrator accounts.
+            </p>
           </div>
         )}
 
@@ -616,13 +760,13 @@ export default function AdminProfilePage() {
                           onClick={() => handleDeleteChildAdmin(adm._id || adm.id, adm.email)}
                           disabled={deletingId === (adm._id || adm.id)}
                           style={styles.btnDeleteChild}
-                          title="Revoke and delete this child administrator account"
+                          title="Revoke and delete this administrator account"
                         >
                           {deletingId === (adm._id || adm.id) ? 'Deleting...' : 'Delete Admin'}
                         </button>
                       ) : (
-                        <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                          Operational
+                        <span style={styles.protectedBadge}>
+                          Protected
                         </span>
                       )}
                     </td>
@@ -671,6 +815,11 @@ const styles = {
     color: '#64748b',
     margin: 0,
   },
+  skeletonBox: {
+    backgroundColor: '#e2e8f0',
+    borderRadius: '6px',
+    animation: 'pulse 1.5s infinite ease-in-out',
+  },
   alertSuccess: {
     display: 'flex',
     alignItems: 'center',
@@ -695,6 +844,13 @@ const styles = {
     fontSize: '13.5px',
     fontWeight: '600',
   },
+  childSecurityNotice: {
+    padding: '14px 18px',
+    backgroundColor: '#f0f9ff',
+    border: '1.5px solid #bae6fd',
+    borderRadius: '10px',
+    marginBottom: '20px',
+  },
   alertCloseBtn: {
     background: 'none',
     border: 'none',
@@ -702,155 +858,170 @@ const styles = {
     color: 'inherit',
     fontWeight: '700',
     padding: '0 4px',
-    marginLeft: '12px',
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: '320px 1fr',
     gap: '24px',
+    alignItems: 'start',
   },
   accountCard: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '24px',
+    padding: '28px 20px',
     textAlign: 'center',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-    height: 'fit-content',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  },
+  avatarImg: {
+    width: '96px',
+    height: '96px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '3px solid #034EA2',
+    boxShadow: '0 4px 10px rgba(3, 78, 162, 0.2)',
   },
   avatarLarge: {
-    width: '90px',
-    height: '90px',
+    width: '96px',
+    height: '96px',
     borderRadius: '50%',
-    backgroundColor: '#1E3A63',
+    backgroundColor: '#0F2C59',
     color: '#ffffff',
     fontSize: '36px',
-    fontWeight: '700',
+    fontWeight: '800',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 4px 12px rgba(30, 58, 99, 0.25)',
-  },
-  avatarImg: {
-    width: '90px',
-    height: '90px',
-    borderRadius: '50%',
-    objectFit: 'cover',
-    border: '3px solid #1E3A63',
-    boxShadow: '0 4px 12px rgba(30, 58, 99, 0.25)',
+    border: '3px solid #034EA2',
+    boxShadow: '0 4px 10px rgba(3, 78, 162, 0.2)',
   },
   avatarUploadBtn: {
     position: 'absolute',
-    bottom: '0',
-    right: '0',
-    backgroundColor: '#1E3A63',
-    border: '2px solid #ffffff',
-    borderRadius: '50%',
+    bottom: '2px',
+    right: '2px',
     width: '28px',
     height: '28px',
+    borderRadius: '50%',
+    backgroundColor: '#034EA2',
+    border: '2px solid #ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-  },
-  changePhotoBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#0284C7',
-    fontSize: '12px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    marginTop: '6px',
-    textDecoration: 'underline',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
   },
   adminName: {
-    margin: 0,
     fontSize: '18px',
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0f172a',
+    margin: '0 0 4px',
   },
   adminEmail: {
     fontSize: '13px',
     color: '#64748b',
-    marginTop: '4px',
     display: 'block',
+    marginBottom: '12px',
+    wordBreak: 'break-all',
   },
   roleBadgeContainer: {
-    marginTop: '12px',
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '14px',
   },
   parentRoleBadge: {
+    display: 'inline-block',
+    padding: '4px 12px',
+    borderRadius: '9999px',
     backgroundColor: '#FEF3C7',
     color: '#92400E',
     border: '1px solid #FCD34D',
-    borderRadius: '20px',
-    padding: '4px 12px',
     fontSize: '11px',
     fontWeight: '800',
-    letterSpacing: '0.04em',
+    letterSpacing: '0.4px',
   },
   childRoleBadge: {
+    display: 'inline-block',
+    padding: '4px 12px',
+    borderRadius: '9999px',
     backgroundColor: '#EFF6FF',
     color: '#1E40AF',
     border: '1px solid #BFDBFE',
-    borderRadius: '20px',
-    padding: '4px 12px',
     fontSize: '11px',
     fontWeight: '700',
-    letterSpacing: '0.04em',
+    letterSpacing: '0.4px',
+  },
+  changePhotoBtn: {
+    padding: '6px 14px',
+    backgroundColor: '#034EA2',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  removePhotoBtn: {
+    padding: '6px 14px',
+    backgroundColor: '#FEF2F2',
+    color: '#DC2626',
+    border: '1px solid #FECACA',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
   metaBox: {
-    marginTop: '24px',
-    paddingTop: '20px',
-    borderTop: '1px solid #f1f5f9',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
+    marginTop: '20px',
+    padding: '14px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '8px',
     textAlign: 'left',
+    fontSize: '12px',
+    color: '#475569',
   },
   metaRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: '12px',
-    color: '#64748b',
+    padding: '6px 0',
+    borderBottom: '1px solid #e2e8f0',
   },
   formsCol: {
     display: 'flex',
     flexDirection: 'column',
+    gap: '20px',
   },
   card: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
     padding: '24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
   cardTitle: {
-    margin: '0 0 4px',
     fontSize: '16px',
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0f172a',
+    margin: '0 0 4px',
   },
   cardSub: {
-    margin: '0 0 20px',
     fontSize: '13px',
     color: '#64748b',
+    margin: '0 0 18px',
   },
   formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    marginBottom: '16px',
+    marginBottom: '14px',
   },
   formRow: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
+    gap: '14px',
   },
   inputLabel: {
-    fontSize: '13px',
-    fontWeight: '600',
+    display: 'block',
+    fontSize: '12.5px',
+    fontWeight: '700',
     color: '#334155',
+    marginBottom: '6px',
   },
   subInputLabel: {
     display: 'block',
@@ -860,46 +1031,75 @@ const styles = {
     marginBottom: '4px',
   },
   input: {
+    width: '100%',
     padding: '9px 12px',
     borderRadius: '6px',
     border: '1px solid #cbd5e1',
     fontSize: '13px',
-    color: '#0f172a',
+    boxSizing: 'border-box',
     outline: 'none',
+  },
+  pwToggleBtn: {
+    position: 'absolute',
+    right: '10px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: '#64748b',
+    fontSize: '11px',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
   inputSmall: {
     width: '100%',
-    padding: '8px 10px',
+    padding: '7px 10px',
     borderRadius: '6px',
     border: '1px solid #cbd5e1',
-    fontSize: '12.5px',
-    color: '#0f172a',
-    outline: 'none',
+    fontSize: '12px',
     boxSizing: 'border-box',
+    outline: 'none',
   },
   btnPrimary: {
-    padding: '9px 20px',
-    backgroundColor: '#1E3A63',
+    padding: '10px 22px',
+    backgroundColor: '#034EA2',
     color: '#ffffff',
     border: 'none',
     borderRadius: '6px',
     fontSize: '13px',
-    fontWeight: '600',
+    fontWeight: '700',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
   btnSecondary: {
-    padding: '9px 20px',
-    backgroundColor: '#ffffff',
-    color: '#1E3A63',
-    border: '1px solid #cbd5e1',
+    padding: '10px 22px',
+    backgroundColor: '#0F2C59',
+    color: '#ffffff',
+    border: 'none',
     borderRadius: '6px',
     fontSize: '13px',
-    fontWeight: '600',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  btnRefreshHierarchy: {
+    padding: '6px 12px',
+    backgroundColor: '#f1f5f9',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: '700',
+    color: '#334155',
     cursor: 'pointer',
   },
   createAdminBox: {
     padding: '16px 18px',
+    backgroundColor: '#F8FAFC',
+    border: '1.5px solid #E2E8F0',
+    borderRadius: '10px',
+    marginBottom: '20px',
+  },
+  restrictedAdminBox: {
+    padding: '14px 18px',
     backgroundColor: '#F8FAFC',
     border: '1.5px solid #E2E8F0',
     borderRadius: '10px',
@@ -922,7 +1122,6 @@ const styles = {
     fontWeight: '700',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
-    transition: 'all 0.15s ease',
   },
   tableResponsive: {
     overflowX: 'auto',
@@ -957,7 +1156,7 @@ const styles = {
     width: '28px',
     height: '28px',
     borderRadius: '50%',
-    backgroundColor: '#1E3A63',
+    backgroundColor: '#0F2C59',
     color: '#ffffff',
     fontSize: '12px',
     fontWeight: '700',

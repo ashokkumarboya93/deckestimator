@@ -123,4 +123,25 @@ router.post(
   discountController.rejectDiscountRequest
 );
 
+router.post(
+  '/admin/requests/bulk-delete',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.bulkDeleteDiscountRequests
+);
+
+router.delete(
+  '/admin/requests/:id',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.deleteDiscountRequest
+);
+
+router.post(
+  '/admin/requests/:id/reply',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  discountController.replyDiscountRequest
+);
+
 module.exports = router;

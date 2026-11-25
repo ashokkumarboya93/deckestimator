@@ -140,9 +140,35 @@ const adminController = require('./modules/admin/admin.controller');
 app.get('/api/v1/settings/public', async (req, res, next) => {
   try {
     const PlatformSetting = require('./modules/admin/platformSetting.model');
-    const settings = await PlatformSetting.find({ isPublic: true });
-    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-    res.status(200).json({ success: true, data: settings });
+    const settings = await PlatformSetting.find({
+      $or: [
+        { isPublic: true },
+        { key: { $in: ['SUPPORT_PHONE', 'WHATSAPP_NUMBER', 'SUPPORT_EMAIL', 'BUSINESS_ADDRESS', 'OPERATING_HOURS', 'COMPANY_NAME', 'BRAND_TAGLINE'] } },
+      ],
+    }).lean();
+
+    const channels = {
+      supportPhone: '(856) 666-8888',
+      whatsappNumber: '+1 (856) 555-0199',
+      supportEmail: 'support@deckestimator.com',
+      businessAddress: '1452 Boardwalk Ave, Cherry Hill, NJ 08002',
+      operatingHours: 'Mon - Fri: 8:00 AM - 6:00 PM EST, Sat: 9:00 AM - 2:00 PM EST',
+      companyName: 'Deck Restoration Plus',
+      brandTagline: 'Commercial & Residential Exterior Wood Restoration Specialists',
+    };
+
+    settings.forEach((s) => {
+      if (s.key === 'SUPPORT_PHONE' && s.value) channels.supportPhone = s.value;
+      if (s.key === 'WHATSAPP_NUMBER' && s.value) channels.whatsappNumber = s.value;
+      if (s.key === 'SUPPORT_EMAIL' && s.value) channels.supportEmail = s.value;
+      if (s.key === 'BUSINESS_ADDRESS' && s.value) channels.businessAddress = s.value;
+      if (s.key === 'OPERATING_HOURS' && s.value) channels.operatingHours = s.value;
+      if (s.key === 'COMPANY_NAME' && s.value) channels.companyName = s.value;
+      if (s.key === 'BRAND_TAGLINE' && s.value) channels.brandTagline = s.value;
+    });
+
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.status(200).json({ success: true, data: settings, channels });
   } catch (err) {
     next(err);
   }

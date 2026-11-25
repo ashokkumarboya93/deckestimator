@@ -5,35 +5,19 @@
 const adminService = require('./admin.service');
 const contractorService = require('../contractors/contractor.service');
 
-// 1. Dashboard (with 15s timeout fallback so it never hangs the browser)
+// 1. Dashboard (with real-time cache & resilient instant count fallback)
 async function getDashboardSummary(req, res, next) {
   try {
-    const TIMEOUT_MS = 15000;
-    const summaryPromise = adminService.getDashboardSummary(req.query.dateRange);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('DASHBOARD_TIMEOUT')), TIMEOUT_MS)
-    );
-    let summary;
-    try {
-      summary = await Promise.race([summaryPromise, timeoutPromise]);
-    } catch (raceErr) {
-      if (raceErr.message === 'DASHBOARD_TIMEOUT') {
-        console.warn('[Admin Dashboard] Query timed out after 15s — returning empty scaffold');
-        summary = {
-          summary: { totalUsers: 0, totalCustomers: 0, totalContractors: 0, totalLeads: 0, hotPriorityLeads: 0, activeProjects: 0, totalEstimates: 0, estimatedValue: 0, totalRevenue: 0, growth: {} },
-          leadOverview: { total: 0, distribution: [] },
-          projectOverview: { total: 0, active: 0, completed: 0, onHold: 0, percentages: { active: 0, completed: 0, onHold: 0 } },
-          hotLeads: [],
-          recentActivities: [],
-          userOverview: { total: 0, distribution: [] },
-        };
-      } else {
-        throw raceErr;
-      }
-    }
+    const summary = await adminService.getDashboardSummary(req.query.dateRange);
     res.status(200).json({ success: true, data: summary });
   } catch (err) {
-    next(err);
+    console.warn('[Admin Dashboard] Aggregation error, serving instant resilient fallback:', err.message);
+    try {
+      const fallback = await adminService.getDashboardFastFallback();
+      res.status(200).json({ success: true, data: fallback });
+    } catch (fallbackErr) {
+      next(fallbackErr);
+    }
   }
 }
 
@@ -99,6 +83,17 @@ async function softDeleteUser(req, res, next) {
   }
 }
 
+async function bulkDeleteUsers(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.userIds || [];
+    const reason = req.body.reason || 'Bulk administrative deletion';
+    const result = await adminService.bulkDeleteUsers(req.user, ids, reason);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getUserRequests(req, res, next) {
   try {
     const result = await adminService.listUserRequests(req.query);
@@ -154,6 +149,37 @@ async function reviewContractorDocument(req, res, next) {
   }
 }
 
+async function bulkDeleteContractorDocuments(req, res, next) {
+  try {
+    const ids = req.body.ids || req.body.docIds || [];
+    const result = await adminService.bulkDeleteContractorDocuments(req.user, ids);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteVerifications(req, res, next) {
+  try {
+    const ids = req.body.ids || [];
+    const result = await adminService.bulkDeleteVerifications(req.user, ids);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function bulkDeleteUserRecordsOnly(req, res, next) {
+  try {
+    const ids = req.body.ids || [];
+    const role = req.body.role || 'customer';
+    const result = await adminService.bulkDeleteUserRecordsOnly(req.user, ids, role);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 3. Verifications
 async function listVerifications(req, res, next) {
   try {
@@ -196,6 +222,15 @@ async function listProjects(req, res, next) {
   try {
     const result = await adminService.listProjects(req.query);
     res.status(200).json({ success: true, data: result.data, pagination: result.pagination, counts: result.counts });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getProjectDetails(req, res, next) {
+  try {
+    const project = await adminService.getProjectDetails(req.params.id);
+    res.status(200).json({ success: true, data: project });
   } catch (err) {
     next(err);
   }
@@ -510,6 +545,16 @@ async function setContractorIndividualDiscount(req, res, next) {
   }
 }
 
+async function resetContractorIndividualDiscount(req, res, next) {
+  try {
+    const { reason } = req.body || {};
+    const result = await adminService.resetContractorIndividualDiscount(req.user, req.params.contractorId, reason);
+    res.status(200).json({ success: true, data: result, message: 'Contractor discount reset to platform default.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 10. System Settings & Info
 async function getSystemSettings(req, res, next) {
   try {
@@ -551,7 +596,7 @@ async function getNotificationHistory(req, res, next) {
 
 async function searchRecipients(req, res, next) {
   try {
-    const data = await adminService.searchNotificationRecipients(req.query.q);
+    const data = await adminService.searchNotificationRecipients(req.query.q, req.query.role);
     res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -674,16 +719,21 @@ module.exports = {
   exportSingleUserDossier,
   updateUserStatus,
   softDeleteUser,
+  bulkDeleteUsers,
   getUserRequests,
   handleUserRequest,
   listContractorDocuments,
   downloadContractorDocument,
   reviewContractorDocument,
+  bulkDeleteContractorDocuments,
   listVerifications,
   approveContractorVerification,
   rejectContractorVerification,
   getVerificationHistory,
+  bulkDeleteVerifications,
+  bulkDeleteUserRecordsOnly,
   listProjects,
+  getProjectDetails,
   updateProjectProgress,
   deleteProject,
   bulkDeleteProjects,
@@ -716,6 +766,7 @@ module.exports = {
   getDiscountsOverview,
   updateDefaultContractorDiscount,
   setContractorIndividualDiscount,
+  resetContractorIndividualDiscount,
   getSystemSettings,
   updateSystemSettings,
   dispatchNotification,
