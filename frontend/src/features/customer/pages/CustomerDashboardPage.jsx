@@ -33,23 +33,48 @@ export default function CustomerDashboardPage() {
   const [error, setError] = useState(null);
 
   const loadDashboardData = useCallback(async (isManual = false) => {
+    const cacheKey = `drp_cust_dashboard_cache_${user?.id || user?._id || 'anon'}`;
+    let hasCached = false;
+    if (!isManual) {
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.estimates)) {
+            setEstimates(parsed.estimates);
+            setSummary(parsed.summary || null);
+            setTotalCount(parsed.total ?? null);
+            setLoading(false);
+            hasCached = true;
+          }
+        }
+      } catch {
+        // Ignore cache error
+      }
+    }
     if (isManual) setRefreshing(true);
-    else setLoading(true);
+    else if (!hasCached) setLoading(true);
     setError(null);
     try {
       const estRes = await getEstimates({ limit: 8, compact: '1' });
-      setEstimates(estRes?.estimates || []);
-      setSummary(estRes?.summary || null);
-      setTotalCount(
-        estRes?.pagination?.total !== undefined ? estRes.pagination.total : null
-      );
+      const nextEstimates = estRes?.estimates || [];
+      const nextSummary = estRes?.summary || null;
+      const nextTotal = estRes?.pagination?.total !== undefined ? estRes.pagination.total : null;
+      setEstimates(nextEstimates);
+      setSummary(nextSummary);
+      setTotalCount(nextTotal);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ estimates: nextEstimates, summary: nextSummary, total: nextTotal, ts: Date.now() }));
+      } catch {
+        // Ignore quota error
+      }
     } catch (err) {
-      setError(err.message || 'Failed to load dashboard data.');
+      if (!hasCached) setError(err.message || 'Failed to load dashboard data.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.id, user?._id]);
 
   useEffect(() => {
     loadDashboardData();

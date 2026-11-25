@@ -176,7 +176,28 @@ export default function AdminLeadManagementPage() {
   const fetchLeads = useCallback(async (pageToFetch = pagination.page, limitToFetch = pageSize) => {
     const safePage = Number(pageToFetch) > 0 ? Number(pageToFetch) : 1;
     const safeLimit = Number(limitToFetch) > 0 ? Number(limitToFetch) : 25;
-    setLoading(true);
+    const isDefaultQuery = safePage === 1 && !searchTerm.trim() && statusFilter === 'all' && dateRangeFilter === 'all' && !lastDateFilter;
+    const cacheKey = `drp_admin_leads_cache_${activeTab}`;
+    let hasCached = false;
+    if (isDefaultQuery) {
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.data)) {
+            setLeads(parsed.data);
+            if (parsed.counts) setCounts(parsed.counts);
+            if (parsed.unopenedCounts) setUnopenedCounts(parsed.unopenedCounts);
+            if (parsed.pagination) setPagination(parsed.pagination);
+            setLoading(false);
+            hasCached = true;
+          }
+        }
+      } catch {
+        // Ignore cache error
+      }
+    }
+    if (!hasCached) setLoading(true);
     setIsRefreshing(true);
     setError(null);
     try {
@@ -190,19 +211,34 @@ export default function AdminLeadManagementPage() {
         limit: safeLimit,
       });
 
-      setLeads(res.data || []);
+      const nextLeads = res.data || [];
+      setLeads(nextLeads);
       if (res.counts) setCounts(res.counts);
       if (res.unopenedCounts) setUnopenedCounts(res.unopenedCounts);
-      if (res.pagination) {
-        setPagination({
-          page: res.pagination.page || safePage,
-          limit: res.pagination.limit || safeLimit,
-          total: res.pagination.total ?? (res.data?.length || 0),
-          totalPages: res.pagination.totalPages || Math.ceil((res.pagination.total ?? (res.data?.length || 0)) / safeLimit) || 1,
-        });
+      const nextPagination = res.pagination ? {
+        page: res.pagination.page || safePage,
+        limit: res.pagination.limit || safeLimit,
+        total: res.pagination.total ?? nextLeads.length,
+        totalPages: res.pagination.totalPages || Math.ceil((res.pagination.total ?? nextLeads.length) / safeLimit) || 1,
+      } : null;
+      if (nextPagination) {
+        setPagination(nextPagination);
+      }
+      if (isDefaultQuery) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: nextLeads,
+            counts: res.counts,
+            unopenedCounts: res.unopenedCounts,
+            pagination: nextPagination,
+            ts: Date.now(),
+          }));
+        } catch {
+          // Ignore quota error
+        }
       }
     } catch (err) {
-      setError(err?.message || 'Failed to load leads from database.');
+      if (!hasCached) setError(err?.message || 'Failed to load leads from database.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);

@@ -61,37 +61,70 @@ export default function ContractorDashboardPage() {
   }, []);
 
   async function loadDashboardData() {
-    setLoading(true);
+    const cacheKey = `drp_cont_dashboard_cache_${user?.id || user?._id || 'anon'}`;
+    let hasCached = false;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.profile) setProfile(parsed.profile);
+          if (Array.isArray(parsed.projects)) setProjects(parsed.projects);
+          if (Array.isArray(parsed.estimates)) setEstimates(parsed.estimates);
+          if (parsed.commissionSummary) setCommissionSummary(parsed.commissionSummary);
+          if (Array.isArray(parsed.discounts)) setDiscounts(parsed.discounts);
+          setLoading(false);
+          hasCached = true;
+        }
+      }
+    } catch {
+      // Ignore cache error
+    }
+    if (!hasCached) setLoading(true);
     setError(null);
     try {
       const [profRes, decksRes, estRes, commRes, discRes] = await Promise.allSettled([
         contractorLeadApi.getProfile(),
         getDecks({ limit: 20 }),
-        getEstimates({ limit: 50 }),
+        getEstimates({ limit: 50, compact: '1' }),
         contractorCommissionApi.getCommissionSummary(),
         contractorDiscountApi.getEligibleDiscounts(),
       ]);
 
+      const nextCache = {};
       if (profRes.status === 'fulfilled' && profRes.value?.data) {
         setProfile(profRes.value.data);
+        nextCache.profile = profRes.value.data;
       }
       if (decksRes.status === 'fulfilled') {
         const dList = decksRes.value?.decks || decksRes.value?.data?.decks || decksRes.value?.data || [];
-        setProjects(Array.isArray(dList) ? dList : []);
+        const safeD = Array.isArray(dList) ? dList : [];
+        setProjects(safeD);
+        nextCache.projects = safeD;
       }
       if (estRes.status === 'fulfilled') {
         const eList = estRes.value?.estimates || estRes.value?.data?.estimates || estRes.value?.data || [];
-        setEstimates(Array.isArray(eList) ? eList : []);
+        const safeE = Array.isArray(eList) ? eList : [];
+        setEstimates(safeE);
+        nextCache.estimates = safeE;
       }
       if (commRes.status === 'fulfilled') {
         setCommissionSummary(commRes.value?.data || null);
+        nextCache.commissionSummary = commRes.value?.data || null;
       }
       if (discRes.status === 'fulfilled') {
         const discList = discRes.value?.data || [];
-        setDiscounts(Array.isArray(discList) ? discList : []);
+        const safeDisc = Array.isArray(discList) ? discList : [];
+        setDiscounts(safeDisc);
+        nextCache.discounts = safeDisc;
+      }
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ ...nextCache, ts: Date.now() }));
+      } catch {
+        // Ignore quota error
       }
     } catch (err) {
-      setError(err?.message || 'Failed to load dashboard data.');
+      if (!hasCached) setError(err?.message || 'Failed to load dashboard data.');
     } finally {
       setLoading(false);
     }

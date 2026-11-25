@@ -53,15 +53,37 @@ export default function AdminReportsPage() {
   }, [activeTab, dateRange]);
 
   const fetchReport = async () => {
-    setLoading(true);
+    const cacheKey = `drp_admin_reports_cache_${activeTab}_${dateRange}`;
+    let hasCached = false;
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.data) {
+          setReportData(parsed.data);
+          setLoading(false);
+          hasCached = true;
+        }
+      }
+    } catch {
+      // Ignore cache error
+    }
+    if (!hasCached) setLoading(true);
     setError(null);
     try {
       const res = await adminApi.getReports(activeTab, { dateRange });
       // Safely unwrap data payload regardless of response envelope
       const raw = res?.data?.metrics !== undefined ? res.data : (res?.metrics !== undefined ? res : (res?.data || res));
       setReportData(raw || null);
+      if (raw) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ data: raw, ts: Date.now() }));
+        } catch {
+          // Ignore quota error
+        }
+      }
     } catch (err) {
-      setError(err?.message || 'Failed to load report analytics.');
+      if (!hasCached) setError(err?.message || 'Failed to load report analytics.');
     } finally {
       setLoading(false);
     }

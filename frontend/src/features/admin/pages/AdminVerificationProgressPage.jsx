@@ -456,8 +456,10 @@ export default function AdminVerificationProgressPage() {
     loadTabData(false);
 
     const interval = setInterval(() => {
-      loadTabData(true);
-    }, 15000);
+      if (typeof document === 'undefined' || !document.hidden) {
+        loadTabData(true);
+      }
+    }, 30000);
 
     const handleFocus = () => {
       loadTabData(true);

@@ -74,7 +74,31 @@ export default function AdminProjectsPage() {
     lastDate = lastDateFilter,
     limit = pageSize
   ) => {
-    setLoading(true);
+    const isDefaultQuery = pageNum === 1 && !(search || '').trim() && dateRange === 'all' && !lastDate;
+    const cacheKey = `drp_admin_projects_cache_${filter}`;
+    let hasCached = false;
+    if (isDefaultQuery) {
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.data)) {
+            setProjects(parsed.data);
+            if (parsed.counts) setCounts(parsed.counts);
+            if (parsed.pagination) {
+              setTotalPages(parsed.pagination.totalPages || 1);
+              setTotalProjects(parsed.pagination.total || parsed.data.length);
+              setPage(parsed.pagination.page || 1);
+            }
+            setLoading(false);
+            hasCached = true;
+          }
+        }
+      } catch {
+        // Ignore cache error
+      }
+    }
+    if (!hasCached) setLoading(true);
     setIsRefreshing(true);
     setError(null);
     try {
@@ -86,20 +110,33 @@ export default function AdminProjectsPage() {
         page: pageNum,
         limit,
       });
-      setProjects(res.data || []);
+      const nextData = res.data || [];
+      setProjects(nextData);
       if (res.counts) {
         setCounts(res.counts);
       }
       if (res.pagination) {
         setTotalPages(res.pagination.totalPages || 1);
-        setTotalProjects(res.pagination.total || res.data?.length || 0);
+        setTotalProjects(res.pagination.total || nextData.length || 0);
         setPage(res.pagination.page || pageNum);
       } else {
         setTotalPages(1);
-        setTotalProjects(res.data?.length || 0);
+        setTotalProjects(nextData.length || 0);
+      }
+      if (isDefaultQuery) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: nextData,
+            counts: res.counts,
+            pagination: res.pagination,
+            ts: Date.now(),
+          }));
+        } catch {
+          // Ignore quota error
+        }
       }
     } catch (err) {
-      setError(err?.message || 'Failed to load projects');
+      if (!hasCached) setError(err?.message || 'Failed to load projects');
     } finally {
       setLoading(false);
       setIsRefreshing(false);

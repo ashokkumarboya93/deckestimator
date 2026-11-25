@@ -595,6 +595,9 @@ async function getBusinessActivityTrend(period = '30d') {
 // 2. USER MANAGEMENT (4 Tabs & Account Moderation)
 // ====================================================================
 
+const usersFacetCache = { data: null, timestamp: 0 };
+const USERS_FACET_TTL_MS = 20000;
+
 async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, status, search, sort = 'newest', registrationDate }) {
   const roleFilter = role || userType;
   const query = { accountStatus: { $ne: 'disabled' } };
@@ -643,10 +646,12 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
 
   const skip = (Number(page) - 1) * Number(limit);
 
-  const [users, total, countFacet] = await Promise.all([
-    User.find(query).select('-passwordHash -__v').sort(sortOption).skip(skip).limit(Number(limit)).lean(),
-    User.countDocuments(query),
-    User.aggregate([
+  const getUsersFacetPromise = () => {
+    const now = Date.now();
+    if (usersFacetCache.data && now - usersFacetCache.timestamp < USERS_FACET_TTL_MS) {
+      return Promise.resolve(usersFacetCache.data);
+    }
+    return User.aggregate([
       {
         $facet: {
           totalUsers: [{ $match: { accountStatus: { $ne: 'disabled' } } }, { $count: 'count' }],
@@ -659,7 +664,17 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
           ],
         },
       },
-    ]),
+    ]).then((res) => {
+      usersFacetCache.data = res;
+      usersFacetCache.timestamp = Date.now();
+      return res;
+    });
+  };
+
+  const [users, total, countFacet] = await Promise.all([
+    User.find(query).select('-passwordHash -__v').sort(sortOption).skip(skip).limit(Number(limit)).lean(),
+    User.countDocuments(query),
+    getUsersFacetPromise(),
   ]);
 
   const userIds = users.map((u) => u._id);
@@ -698,8 +713,14 @@ async function listUsers({ page = 1, limit = 10, userType, role, accountStatus, 
   const enrichedUsers = users.map((u) => {
     const idStr = u._id.toString();
     const cp = profileMap[idStr] || null;
+    let avatar = u.avatar;
+    if (avatar && avatar.startsWith('data:image')) {
+      avatar = persistAvatarIfBase64(u._id, avatar);
+      User.updateOne({ _id: u._id }, { $set: { avatar } }).catch(() => {});
+    }
     return {
       ...u,
+      avatar,
       userId: `U-${idStr.slice(-4).toUpperCase()}`,
       projectsCount: deckMap[idStr] || 0,
       estimatesCount: estMap[idStr] || 0,
@@ -1541,8 +1562,8 @@ async function listProjects({ page = 1, limit = 50, status = 'all', search = '',
   const [estimates, totalEstimates, statusFacetResult] = await Promise.all([
     Estimate.find(query)
       .select('estimateReference estimateNumber estimateName estimateStatus estimateType totalAmount subtotal deckDetails deckId ownerId createdBy customerSnapshot assignedContractorName createdAt updatedAt photos services notes conditionFlags')
-      .populate('ownerId', 'fullName email phone role avatar address')
-      .populate('createdBy', 'fullName email phone role avatar address')
+      .populate('ownerId', 'fullName email phone role address')
+      .populate('createdBy', 'fullName email phone role address')
       .populate('deckId', 'projectName dimensions surfaceDetails structureDetails propertyAddress visibleConditions photos')
       .sort({ updatedAt: -1, createdAt: -1 })
       .skip(skip)
@@ -2178,6 +2199,28 @@ async function listLeads({
     ],
   };
 
+  const getLeadsCountsPromise = () => {
+    if (!global.__leadsCountsCache) global.__leadsCountsCache = { data: null, timestamp: 0 };
+    const now = Date.now();
+    if (global.__leadsCountsCache.data && now - global.__leadsCountsCache.timestamp < 20000) {
+      return Promise.resolve(global.__leadsCountsCache.data);
+    }
+    return Promise.all([
+      Lead.countDocuments(hotClause),
+      Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] } }),
+      Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] } }),
+      Lead.countDocuments(reachOutClause),
+      Lead.countDocuments({ ...hotClause, isOpened: { $ne: true } }),
+      Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] }, isOpened: { $ne: true } }),
+      Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] }, isOpened: { $ne: true } }),
+      Lead.countDocuments({ ...reachOutClause, isOpened: { $ne: true } }),
+    ]).then((res) => {
+      global.__leadsCountsCache.data = res;
+      global.__leadsCountsCache.timestamp = Date.now();
+      return res;
+    });
+  };
+
   const [leads, total, counts] = await Promise.all([
     Lead.find(query)
       .populate('customerId', 'fullName email phone accountStatus createdAt emailVerifiedAt phoneVerifiedAt avatar')
@@ -2195,17 +2238,7 @@ async function listLeads({
       .limit(Number(limit))
       .lean(),
     Lead.countDocuments(query),
-    Promise.all([
-      Lead.countDocuments(hotClause),
-      Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] } }),
-      Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] } }),
-      Lead.countDocuments(reachOutClause),
-      // Unopened / unread counts for bubble alert
-      Lead.countDocuments({ ...hotClause, isOpened: { $ne: true } }),
-      Lead.countDocuments({ userType: { $in: ['Customer', 'customer'] }, isOpened: { $ne: true } }),
-      Lead.countDocuments({ userType: { $in: ['Contractor', 'contractor'] }, isOpened: { $ne: true } }),
-      Lead.countDocuments({ ...reachOutClause, isOpened: { $ne: true } }),
-    ]),
+    getLeadsCountsPromise(),
   ]);
 
   const mapped = leads.map((l) => {
@@ -3616,8 +3649,17 @@ async function savePermissionsMatrix(adminUser, permissionsList) {
 // 12. REPORTS & ANALYTICS (8 Tabs)
 // ====================================================================
 
+const reportsAnalyticsCache = new Map();
+const REPORTS_CACHE_TTL_MS = 30000;
+
 async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRange = '30d' } = {}) {
-  // 1. Fetch all core live collections
+  const cacheKey = `${reportTab}:${dateRange}`;
+  const cached = reportsAnalyticsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < REPORTS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  // 1. Fetch all core live collections (lean projections — omit photos/documents/heavy blobs)
   const [
     allEstimates,
     allProjects,
@@ -3627,14 +3669,25 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
     auditLogs,
     discountLogs,
   ] = await Promise.all([
-    Estimate.find().sort({ createdAt: -1 }).lean(),
+    Estimate.find()
+      .select('_id totalAmount estimateStatus createdAt ownerId createdBy deckDetails.surfaceMaterial deckDetails.woodSpecies deckDetails.deckCondition deckDetails.areaSqFt deckDetails.area pricingSnapshot.spec pricingSnapshot.A selectedServices selectedMaterials')
+      .sort({ createdAt: -1 })
+      .lean(),
     Project.find()
+      .select('_id projectId projectName status progress estimateId customerId contractorId createdAt')
       .populate('customerId', 'fullName email phone')
       .populate('contractorId', 'fullName email phone')
       .lean(),
-    Lead.find().sort({ createdAt: -1 }).lean(),
-    User.find({ accountStatus: { $ne: 'disabled' } }).lean(),
-    ContractorProfile.find().lean(),
+    Lead.find()
+      .select('_id leadNumber userType status priority contactSource createdAt latestContactDate customerSnapshot contractorSnapshot')
+      .sort({ createdAt: -1 })
+      .lean(),
+    User.find({ accountStatus: { $ne: 'disabled' } })
+      .select('_id fullName email phone role company businessName verificationStatus avatar accountStatus')
+      .lean(),
+    ContractorProfile.find()
+      .select('userId businessName businessPhone verificationStatus avatar')
+      .lean(),
     AuditLog.find().sort({ createdAt: -1 }).limit(100).populate('performedBy', 'fullName email role').lean(),
     DiscountAuditLog.find().sort({ createdAt: -1 }).limit(50).lean(),
   ]);
@@ -3979,7 +4032,7 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, 100);
 
-  return {
+  const result = {
     metrics: {
       totalRevenue, // Real completed revenue ($15,496)
       totalUsers,
@@ -4067,6 +4120,9 @@ async function getReportsAnalyticsData(reportTab = 'business_overview', { dateRa
       createdAt: p.createdAt,
     })),
   };
+
+  reportsAnalyticsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
 }
 
 async function exportReportsData(format = 'csv', { tab = 'business_overview', dateRange = '30d' } = {}) {
