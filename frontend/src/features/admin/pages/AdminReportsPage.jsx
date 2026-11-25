@@ -7,15 +7,15 @@
 //     * COMPLETED PROJECTS (Completed restoration projects)
 //     * TOTAL REVENUE (Sum of completed estimations)
 //     * TOTAL ESTIMATIONS VALUE (Sum of all platform estimates)
-// - 6 Focused Tabs:
-//     1. Business Overview (Full-width Gross Revenue Trajectory SVG & Live Conversion Funnel)
+// - 6 Dedicated Business Tabs:
+//     1. Business Overview (Gross Revenue Trajectory SVG & Live Lead Conversion Funnel Bar Chart)
 //     2. Revenue Analytics (Revenue Breakdown & Margin Streams from real estimates)
-//     3. Leads & Funnel (Bar chart conversion funnel & live database inquiries table)
-//     4. Contractor Performance (Ranked contractor leaderboard by conversions & revenue)
-//     5. Catalog & Wood Demand (Wood species distribution & coating product demand)
+//     3. Leads & Projects (Visual plots: Project status bars, Leads fluid curve, Users bar graph + data tables)
+//     4. Contractor Performance (Ranked contractor leaderboard by completed projects & revenue)
+//     5. Catalog & Wood Demand (Area statistics, Wood species bars, Services chosen bars, Deck conditions)
 //     6. System Audit Trail (Searchable & filterable log of all admin/platform actions)
 // - Interactive SVG Charts with hover tooltips and dynamic indicators
-// - Export to CSV & Excel with date filtering
+// - Export to CSV, Excel, and PDF with date filtering
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '../api/adminApi';
@@ -23,7 +23,7 @@ import { adminApi } from '../api/adminApi';
 const TABS = [
   { id: 'business_overview', label: 'Business Overview' },
   { id: 'revenue', label: 'Revenue Analytics' },
-  { id: 'leads', label: 'Leads & Funnel' },
+  { id: 'leads', label: 'Leads & Projects' },
   { id: 'contractors', label: 'Contractor Performance' },
   { id: 'catalog', label: 'Catalog & Wood Demand' },
   { id: 'audit', label: 'System Audit Trail' },
@@ -44,6 +44,7 @@ export default function AdminReportsPage() {
   const [auditSearch, setAuditSearch] = useState('');
   const [auditFilterType, setAuditFilterType] = useState('all');
   const [leadsSearch, setLeadsSearch] = useState('');
+  const [projectsSearch, setProjectsSearch] = useState('');
   const [contractorSearch, setContractorSearch] = useState('');
 
   useEffect(() => {
@@ -55,7 +56,9 @@ export default function AdminReportsPage() {
     setError(null);
     try {
       const res = await adminApi.getReports(activeTab, { dateRange });
-      setReportData(res?.data || null);
+      // Safely unwrap data payload regardless of response envelope
+      const raw = res?.data?.metrics !== undefined ? res.data : (res?.metrics !== undefined ? res : (res?.data || res));
+      setReportData(raw || null);
     } catch (err) {
       setError(err?.message || 'Failed to load report analytics.');
     } finally {
@@ -67,11 +70,17 @@ export default function AdminReportsPage() {
   const monthlyRevenue = reportData?.monthlyRevenue || [];
   const materialSelection = reportData?.materialSelection || [];
   const materialsUsage = reportData?.materialsUsage || [];
+  const servicesDemand = reportData?.servicesDemand || [];
+  const conditionDemand = reportData?.conditionDemand || [];
+  const areaStats = reportData?.areaStats || { min: 0, max: 0, avg: 0, totalSqFt: 0 };
   const leadFunnel = reportData?.leadFunnel || [];
   const contractorRanking = reportData?.contractorRanking || [];
   const financialStreams = reportData?.financialStreams || [];
   const auditLogs = reportData?.auditLogs || [];
   const recentLeads = reportData?.recentLeads || [];
+  const recentProjects = reportData?.recentProjects || [];
+  const userDistribution = reportData?.userDistribution || [];
+  const projectStatusDistribution = reportData?.projectStatusDistribution || [];
 
   // Filtered Audit Logs
   const filteredAuditLogs = useMemo(() => {
@@ -122,6 +131,19 @@ export default function AdminReportsPage() {
     );
   }, [recentLeads, leadsSearch]);
 
+  // Filtered Projects
+  const filteredProjects = useMemo(() => {
+    if (!projectsSearch.trim()) return recentProjects;
+    const q = projectsSearch.toLowerCase();
+    return recentProjects.filter(
+      (p) =>
+        (p.projectId || '').toLowerCase().includes(q) ||
+        (p.projectName || '').toLowerCase().includes(q) ||
+        (p.customerName || '').toLowerCase().includes(q) ||
+        (p.status || '').toLowerCase().includes(q)
+    );
+  }, [recentProjects, projectsSearch]);
+
   // Full-Width Dynamic SVG Revenue Trajectory Chart Calculations
   const chartWidth = 980;
   const chartHeight = 220;
@@ -144,8 +166,13 @@ export default function AdminReportsPage() {
 
   const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
 
-  // Live Funnel Bar Chart Renderer
-  const renderFunnelGraph = (data) => {
+  // Export to PDF via clean print dialog
+  const handleExportPdf = () => {
+    window.print();
+  };
+
+  // Modern Bar Chart Renderer for "Live Lead Conversion Funnel"
+  const renderFunnelBarChart = (data) => {
     const funnel =
       Array.isArray(data) && data.length > 0
         ? data
@@ -199,6 +226,7 @@ export default function AdminReportsPage() {
           </div>
         </div>
 
+        {/* Clear Bar Chart Representation */}
         <div style={styles.funnelStepsGrid}>
           {funnel.map((stage, idx) => {
             const countNum = Number(stage.count) || 0;
@@ -208,8 +236,8 @@ export default function AdminReportsPage() {
               <div key={idx} style={styles.funnelStageBox}>
                 <div style={styles.funnelStageHeader}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: stepColor }} />
-                    <strong style={{ fontSize: '13px', color: '#0F2C59' }}>{stage.step}</strong>
+                    <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: stepColor }} />
+                    <strong style={{ fontSize: '13.5px', color: '#0F2C59' }}>{stage.step}</strong>
                   </div>
                   <span style={{ ...styles.funnelBadge, backgroundColor: `${stepColor}15`, color: stepColor, border: `1px solid ${stepColor}33` }}>
                     {countNum} Records
@@ -235,7 +263,7 @@ export default function AdminReportsPage() {
                   <span style={styles.funnelDesc}>{stage.desc || 'Active database record pipeline stage'}</span>
                   {idx > 0 && (
                     <span style={styles.conversionPill}>
-                      ↓ {stage.conversion}% step retention
+                      ↓ {stage.conversion}% stage retention
                     </span>
                   )}
                 </div>
@@ -256,7 +284,7 @@ export default function AdminReportsPage() {
             <h1 style={styles.title}>Reports & Business Analytics</h1>
             <span style={styles.liveDbPill}>
               <span style={styles.pulseDot} />
-              Live Bussiness Updates
+              Live Business Updates
             </span>
           </div>
           <p style={styles.subtitle}>
@@ -279,6 +307,7 @@ export default function AdminReportsPage() {
             target="_blank"
             rel="noreferrer"
             style={styles.shinyExportBtn}
+            title="Download CSV table"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -292,6 +321,7 @@ export default function AdminReportsPage() {
             target="_blank"
             rel="noreferrer"
             style={styles.shinyExportGreenBtn}
+            title="Download Excel spreadsheet"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -301,6 +331,20 @@ export default function AdminReportsPage() {
             </svg>
             Export Excel
           </a>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            style={styles.shinyExportPdfBtn}
+            title="Export formatted report to PDF"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Export PDF
+          </button>
         </div>
       </div>
 
@@ -422,7 +466,7 @@ export default function AdminReportsPage() {
                 </div>
               </div>
 
-              {/* Full-Width Interactive Gross Revenue Trajectory SVG Chart (Single Element, No Space Wasted) */}
+              {/* Full-Width Interactive Gross Revenue Trajectory SVG Chart */}
               <div style={styles.chartCardFullWidth}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
@@ -522,9 +566,9 @@ export default function AdminReportsPage() {
                 </div>
               </div>
 
-              {/* Conversion Funnel Graph on Business Overview */}
+              {/* Live Lead Conversion Funnel Bar Chart */}
               <div style={{ marginTop: '24px' }}>
-                {renderFunnelGraph(leadFunnel)}
+                {renderFunnelBarChart(leadFunnel)}
               </div>
             </div>
           )}
@@ -576,64 +620,187 @@ export default function AdminReportsPage() {
                   <span style={styles.badgeSuccess}>100% Real Live Database Calculation</span>
                 </div>
 
-                <div style={styles.tableResponsive}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Financial Stream</th>
-                        <th style={styles.th}>Gross Volume</th>
-                        <th style={styles.th}>Trade Discounts Deducted</th>
-                        <th style={styles.th}>Net Platform Volume</th>
-                        <th style={styles.th}>Revenue Share</th>
-                        <th style={styles.th}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {financialStreams.map((f, idx) => (
-                        <tr key={idx} style={styles.tr}>
-                          <td style={styles.td}>
-                            <strong>{f.stream}</strong>
-                          </td>
-                          <td style={styles.td}>${f.gross.toLocaleString()}</td>
-                          <td style={styles.td}>
-                            <span style={{ color: '#B91C1C', fontWeight: '700' }}>
-                              -${f.discount.toLocaleString()} (10%)
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <strong style={{ color: '#0F2C59' }}>${f.net.toLocaleString()}</strong>
-                          </td>
-                          <td style={styles.td}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ width: '80px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ width: `${f.share}%`, height: '100%', backgroundColor: '#034EA2' }}></div>
-                              </div>
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#034EA2' }}>{f.share}%</span>
-                            </div>
-                          </td>
-                          <td style={styles.td}>
-                            <span style={styles.badgeSuccess}>Live Database</span>
-                          </td>
+                {financialStreams.length === 0 ? (
+                  <div style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>
+                    No revenue stream records available for this period.
+                  </div>
+                ) : (
+                  <div style={styles.tableResponsive}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>Financial Stream</th>
+                          <th style={styles.th}>Gross Volume</th>
+                          <th style={styles.th}>Trade Discounts Deducted</th>
+                          <th style={styles.th}>Net Platform Volume</th>
+                          <th style={styles.th}>Revenue Share</th>
+                          <th style={styles.th}>Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {financialStreams.map((f, idx) => (
+                          <tr key={idx} style={styles.tr}>
+                            <td style={styles.td}>
+                              <strong>{f.stream}</strong>
+                            </td>
+                            <td style={styles.td}>${f.gross.toLocaleString()}</td>
+                            <td style={styles.td}>
+                              <span style={{ color: '#B91C1C', fontWeight: '700' }}>
+                                -${f.discount.toLocaleString()} (10%)
+                              </span>
+                            </td>
+                            <td style={styles.td}>
+                              <strong style={{ color: '#0F2C59' }}>${f.net.toLocaleString()}</strong>
+                            </td>
+                            <td style={styles.td}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: '80px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${f.share}%`, height: '100%', backgroundColor: '#034EA2' }}></div>
+                                </div>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#034EA2' }}>{f.share}%</span>
+                              </div>
+                            </td>
+                            <td style={styles.td}>
+                              <span style={styles.badgeSuccess}>Live Database</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* ==================================================================== */}
-          {/* TAB 3: LEADS & FUNNEL */}
+          {/* TAB 3: LEADS & PROJECTS (Renamed from Leads & Funnel) */}
           {/* ==================================================================== */}
           {activeTab === 'leads' && (
             <div>
-              {renderFunnelGraph(leadFunnel)}
+              {/* Visual Plots Grid for Projects, Leads, and Users */}
+              <div style={styles.chartsGrid}>
+                {/* 1. Projects Distribution Bar Chart */}
+                <div style={styles.chartCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h3 style={styles.cardTitle}>Deck Projects Pipeline</h3>
+                    <span style={styles.badgeContractor}>{metrics.totalProjects || 0} Total</span>
+                  </div>
+                  <p style={styles.cardSub}>Restoration project volume distributed by lifecycle status</p>
+                  
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {projectStatusDistribution.map((p, idx) => (
+                      <div key={idx}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: '700', color: '#0F2C59' }}>{p.label}</span>
+                          <span style={{ fontWeight: '800', color: p.color }}>{p.count} projects ({p.percentage}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '12px', backgroundColor: '#F1F5F9', borderRadius: '6px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(6, p.percentage)}%`, height: '100%', backgroundColor: p.color, borderRadius: '6px' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              <div style={{ ...styles.card, marginTop: '24px' }}>
+                {/* 2. Platform User Roles Bar Chart */}
+                <div style={styles.chartCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h3 style={styles.cardTitle}>Platform User Accounts</h3>
+                    <span style={styles.badgeCustomer}>{metrics.totalUsers || 0} Users</span>
+                  </div>
+                  <p style={styles.cardSub}>Customer homeowners vs contractor pros vs platform administrators</p>
+                  
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {userDistribution.map((u, idx) => (
+                      <div key={idx}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: '700', color: '#0F2C59' }}>{u.label}</span>
+                          <span style={{ fontWeight: '800', color: u.color }}>{u.count} registered ({u.percentage}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '12px', backgroundColor: '#F1F5F9', borderRadius: '6px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(6, u.percentage)}%`, height: '100%', backgroundColor: u.color, borderRadius: '6px' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Fluid Area Trend Plot for Leads Progression */}
+              <div style={{ ...styles.card, marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <h3 style={styles.cardTitle}>Inquiries & Leads Fluid Acquisition Flow</h3>
+                    <p style={styles.cardSub}>Progression of homeowner and trade partner inquiries through evaluation stages</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '4px 10px', borderRadius: '6px' }}>
+                      🔥 {metrics.hotLeads || 0} Hot Inquiries
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '4px 10px', borderRadius: '6px' }}>
+                      📊 {metrics.totalLeads || 0} Total Recorded
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fluid SVG Curve */}
+                <div style={styles.svgBox}>
+                  <svg viewBox="0 0 900 160" style={{ width: '100%', height: '160px' }}>
+                    <defs>
+                      <linearGradient id="fluidLeadsGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Background Grid Lines */}
+                    <line x1="50" y1="20" x2="850" y2="20" stroke="#F1F5F9" strokeWidth="1" />
+                    <line x1="50" y1="75" x2="850" y2="75" stroke="#F1F5F9" strokeWidth="1" />
+                    <line x1="50" y1="130" x2="850" y2="130" stroke="#CBD5E1" strokeWidth="1.5" />
+
+                    {/* Fluid Path */}
+                    <path
+                      d="M 100 40 Q 250 110, 400 60 T 700 80 T 800 100 L 800 130 L 100 130 Z"
+                      fill="url(#fluidLeadsGrad)"
+                    />
+                    <path
+                      d="M 100 40 Q 250 110, 400 60 T 700 80 T 800 100"
+                      fill="none"
+                      stroke="#0284c7"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                    />
+
+                    {/* Stage Markers */}
+                    <g>
+                      <circle cx="100" cy="40" r="6" fill="#0284c7" stroke="#fff" strokeWidth="2.5" />
+                      <text x="100" y="30" fontSize="11" fontWeight="800" fill="#034EA2" textAnchor="middle">Initial ({metrics.totalLeads || 0})</text>
+                      <text x="100" y="145" fontSize="11" fontWeight="700" fill="#64748B" textAnchor="middle">New Reach-Out</text>
+                    </g>
+                    <g>
+                      <circle cx="400" cy="60" r="6" fill="#6366f1" stroke="#fff" strokeWidth="2.5" />
+                      <text x="400" y="50" fontSize="11" fontWeight="800" fill="#4338ca" textAnchor="middle">Evaluated ({metrics.totalEstimates || 0})</text>
+                      <text x="400" y="145" fontSize="11" fontWeight="700" fill="#64748B" textAnchor="middle">Estimates Calculated</text>
+                    </g>
+                    <g>
+                      <circle cx="700" cy="80" r="6" fill="#f59e0b" stroke="#fff" strokeWidth="2.5" />
+                      <text x="700" y="70" fontSize="11" fontWeight="800" fill="#b45309" textAnchor="middle">Active ({metrics.activeProjects || 0})</text>
+                      <text x="700" y="145" fontSize="11" fontWeight="700" fill="#64748B" textAnchor="middle">Dispatched</text>
+                    </g>
+                    <g>
+                      <circle cx="800" cy="100" r="6" fill="#10b981" stroke="#fff" strokeWidth="2.5" />
+                      <text x="800" y="90" fontSize="11" fontWeight="800" fill="#15803d" textAnchor="middle">Done ({metrics.completedProjects || 0})</text>
+                      <text x="800" y="145" fontSize="11" fontWeight="700" fill="#64748B" textAnchor="middle">Completed</text>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+
+              {/* Data Table 1: Inquiries & Leads */}
+              <div style={{ ...styles.card, marginTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h3 style={styles.cardTitle}>Recent Database Inquiries & Lead Pipeline ({filteredLeads.length})</h3>
+                    <h3 style={styles.cardTitle}>Live Database Inquiries & Lead Pipeline ({filteredLeads.length})</h3>
                     <p style={styles.cardSub}>Live recorded leads and customer requests from MongoDB</p>
                   </div>
                   <input
@@ -710,6 +877,71 @@ export default function AdminReportsPage() {
                   </table>
                 </div>
               </div>
+
+              {/* Data Table 2: Deck Projects Table */}
+              <div style={{ ...styles.card, marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <h3 style={styles.cardTitle}>Recent Deck Restoration Projects ({filteredProjects.length})</h3>
+                    <p style={styles.cardSub}>Active and completed field restoration projects</p>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search projects..."
+                    value={projectsSearch}
+                    onChange={(e) => setProjectsSearch(e.target.value)}
+                    style={styles.searchInput}
+                  />
+                </div>
+
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Project ID</th>
+                        <th style={styles.th}>Project Name</th>
+                        <th style={styles.th}>Customer</th>
+                        <th style={styles.th}>Contractor Partner</th>
+                        <th style={styles.th}>Progress</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Created Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProjects.map((p) => (
+                        <tr key={p._id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <code style={styles.codeBadge}>{p.projectId}</code>
+                          </td>
+                          <td style={styles.td}>
+                            <strong>{p.projectName}</strong>
+                          </td>
+                          <td style={styles.td}>{p.customerName}</td>
+                          <td style={styles.td}>{p.contractorName}</td>
+                          <td style={styles.td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '70px', height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{ width: `${p.progress || 0}%`, height: '100%', backgroundColor: p.progress === 100 ? '#10b981' : '#034EA2' }} />
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0F2C59' }}>{p.progress || 0}%</span>
+                            </div>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={p.status === 'completed' ? styles.badgeSuccess : styles.badgeNormal}>
+                              {(p.status || 'in_progress').toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={{ fontSize: '12px', color: '#64748B' }}>
+                              {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Recent'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -758,7 +990,7 @@ export default function AdminReportsPage() {
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
+                                justifyCenter: 'center',
                                 width: '28px',
                                 height: '28px',
                                 borderRadius: '50%',
@@ -839,9 +1071,41 @@ export default function AdminReportsPage() {
           {/* ==================================================================== */}
           {activeTab === 'catalog' && (
             <div>
-              {/* Top Visual Cards for Wood & Materials Demand */}
+              {/* Top Deck Surface Area Statistics Tiles */}
+              <div style={styles.kpiGrid}>
+                <div style={styles.kpiCard}>
+                  <span style={styles.kpiLabel}>Total Deck Surface Measured</span>
+                  <strong style={{ ...styles.kpiVal, color: '#034EA2' }}>
+                    {(areaStats.totalSqFt || 0).toLocaleString()} sq ft
+                  </strong>
+                  <span style={styles.kpiSub}>Calculated across {areaStats.count || metrics.totalEstimates || 0} active deck plans</span>
+                </div>
+                <div style={styles.kpiCard}>
+                  <span style={styles.kpiLabel}>Average Deck Size</span>
+                  <strong style={{ ...styles.kpiVal, color: '#15803D' }}>
+                    {(areaStats.avg || 0).toLocaleString()} sq ft
+                  </strong>
+                  <span style={styles.kpiSub}>Mean surface area per customer home</span>
+                </div>
+                <div style={styles.kpiCard}>
+                  <span style={styles.kpiLabel}>Smallest Footprint</span>
+                  <strong style={{ ...styles.kpiVal, color: '#6D28D9' }}>
+                    {(areaStats.min || 0).toLocaleString()} sq ft
+                  </strong>
+                  <span style={styles.kpiSub}>Compact balcony / landing entry</span>
+                </div>
+                <div style={styles.kpiCard}>
+                  <span style={styles.kpiLabel}>Largest Footprint</span>
+                  <strong style={{ ...styles.kpiVal, color: '#B45309' }}>
+                    {(areaStats.max || 0).toLocaleString()} sq ft
+                  </strong>
+                  <span style={styles.kpiSub}>Expansive multi-tier estate platform</span>
+                </div>
+              </div>
+
+              {/* Bar Chart Visual Plots Grid */}
               <div style={styles.chartsGrid}>
-                {/* 1. Wood Species Visual Distribution */}
+                {/* 1. Wood Species Visual Distribution Bar Chart */}
                 <div style={styles.chartCard}>
                   <h3 style={styles.cardTitle}>Deck Wood Species Popularity</h3>
                   <p style={styles.cardSub}>Lumber selections dynamically aggregated from live database estimates</p>
@@ -873,7 +1137,79 @@ export default function AdminReportsPage() {
                   </div>
                 </div>
 
-                {/* 2. Coating Materials & Prep Products Usage */}
+                {/* 2. Restoration Services Demand Bar Chart */}
+                <div style={styles.chartCard}>
+                  <h3 style={styles.cardTitle}>Restoration Services Chosen</h3>
+                  <p style={styles.cardSub}>Specific service stages requested across all calculated estimates</p>
+                  
+                  <div style={styles.woodListWrapper}>
+                    {servicesDemand.length === 0 ? (
+                      <span style={{ fontSize: '13px', color: '#64748B' }}>No service components recorded yet.</span>
+                    ) : (
+                      servicesDemand.map((s, idx) => {
+                        const colors = ['#0284C7', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#3B82F6'];
+                        const barColor = colors[idx % colors.length];
+                        return (
+                          <div key={idx} style={styles.woodRow}>
+                            <div style={styles.woodLabelRow}>
+                              <span style={styles.woodName}><strong>{s.name}</strong></span>
+                              <span style={styles.woodStat}>
+                                {s.count} requests ({s.percentage}%)
+                              </span>
+                            </div>
+                            <div style={styles.woodProgressBarTrack}>
+                              <div
+                                style={{
+                                  ...styles.woodProgressBarFill,
+                                  width: `${Math.max(8, s.percentage)}%`,
+                                  backgroundColor: barColor,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Deck Conditions Diagnosed Bar Chart */}
+                <div style={styles.chartCard}>
+                  <h3 style={styles.cardTitle}>Deck Physical Conditions Diagnosed</h3>
+                  <p style={styles.cardSub}>Existing weathering, coating peeling, and surface decay</p>
+                  
+                  <div style={styles.woodListWrapper}>
+                    {conditionDemand.length === 0 ? (
+                      <span style={{ fontSize: '13px', color: '#64748B' }}>No condition metrics recorded yet.</span>
+                    ) : (
+                      conditionDemand.map((c, idx) => {
+                        const colors = ['#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#3B82F6'];
+                        const barColor = colors[idx % colors.length];
+                        return (
+                          <div key={idx} style={styles.woodRow}>
+                            <div style={styles.woodLabelRow}>
+                              <span style={styles.woodName}><strong>{c.name}</strong></span>
+                              <span style={styles.woodStat}>
+                                {c.count} decks ({c.percentage}%)
+                              </span>
+                            </div>
+                            <div style={styles.woodProgressBarTrack}>
+                              <div
+                                style={{
+                                  ...styles.woodProgressBarFill,
+                                  width: `${Math.max(8, c.percentage)}%`,
+                                  backgroundColor: barColor,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Coating Materials & Prep Products Usage */}
                 <div style={styles.chartCard}>
                   <h3 style={styles.cardTitle}>Chemical & Coating Product Demand</h3>
                   <p style={styles.cardSub}>Restoration materials packaged in customer & contractor quote cards</p>
@@ -889,7 +1225,7 @@ export default function AdminReportsPage() {
                           <div style={styles.woodLabelRow}>
                             <span style={styles.woodName}><strong>{p.name}</strong></span>
                             <span style={styles.woodStat}>
-                              {p.count} selections ({pct}%)
+                              {p.count} packages ({pct}%)
                             </span>
                           </div>
                           <div style={styles.woodProgressBarTrack}>
@@ -1203,6 +1539,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
+    flexWrap: 'wrap',
   },
   shinySelect: {
     padding: '7px 14px',
@@ -1242,6 +1579,20 @@ const styles = {
     fontWeight: '800',
     color: '#FFFFFF',
     textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  shinyExportPdfBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    backgroundColor: '#0F2C59',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '12px',
+    fontWeight: '800',
+    color: '#FFFFFF',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
