@@ -53,6 +53,19 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(ROLES),
       default: ROLES.CUSTOMER,
     },
+    isParentAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    parentAdminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    adminPermissions: {
+      type: [String],
+      default: ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'],
+    },
     accountStatus: {
       type: String,
       enum: Object.values(ACCOUNT_STATUS),

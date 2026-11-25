@@ -3992,11 +3992,12 @@ async function exportSingleProjectDossier(projectId, format = 'csv') {
 // ====================================================================
 
 async function getAdminProfile(adminUserId) {
-  const user = await User.findById(adminUserId).select('fullName email phone avatar role isParentAdmin accountStatus lastLoginAt createdAt');
+  const user = await User.findById(adminUserId).select('fullName email phone avatar role isParentAdmin adminPermissions accountStatus lastLoginAt createdAt');
   if (!user) throw new NotFoundError('Admin profile not found.');
   const ret = user.toJSON();
   ret.name = user.fullName;
   ret.isParentAdmin = user.email === 'admin@deckestimator.com' || user.isParentAdmin === true;
+  ret.adminPermissions = user.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'];
   return ret;
 }
 
@@ -4006,7 +4007,10 @@ async function updateAdminProfile(adminUserId, { fullName, name, email, phone, a
 
   const n = fullName || name;
   if (n) user.fullName = n.trim();
-  if (email) user.email = email.trim().toLowerCase();
+  if (email && (user.email === 'admin@deckestimator.com' || user.isParentAdmin === true)) {
+    // Only allow email change if root admin, or keep email stable
+    user.email = email.trim().toLowerCase();
+  }
   if (phone !== undefined) user.phone = phone.trim();
   if (avatar !== undefined) user.avatar = avatar;
 
@@ -4015,6 +4019,7 @@ async function updateAdminProfile(adminUserId, { fullName, name, email, phone, a
   const ret = user.toJSON();
   ret.name = user.fullName;
   ret.isParentAdmin = user.email === 'admin@deckestimator.com' || user.isParentAdmin === true;
+  ret.adminPermissions = user.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'];
   return ret;
 }
 
@@ -4024,7 +4029,7 @@ async function getAdminHierarchy(currentUser) {
   const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
 
   const admins = await User.find({ role: 'admin', deletedAt: null })
-    .select('fullName email phone avatar role isParentAdmin parentAdminId createdAt lastLoginAt')
+    .select('fullName email phone avatar role isParentAdmin adminPermissions parentAdminId createdAt lastLoginAt')
     .sort({ createdAt: 1 })
     .lean();
 
@@ -4037,6 +4042,7 @@ async function getAdminHierarchy(currentUser) {
     phone: adm.phone || '',
     avatar: adm.avatar || '',
     isParentAdmin: adm.email === 'admin@deckestimator.com' || adm.isParentAdmin === true,
+    adminPermissions: adm.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'],
     createdAt: adm.createdAt,
     lastLoginAt: adm.lastLoginAt,
   }));
@@ -4049,16 +4055,22 @@ async function getAdminHierarchy(currentUser) {
       name: currentAdmin.fullName,
       email: currentAdmin.email,
       isParentAdmin: isParent,
+      adminPermissions: currentAdmin.adminPermissions || ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'],
     },
     admins: formattedAdmins,
   };
 }
 
-async function createChildAdmin(currentUser, { fullName, name, email, phone, password }) {
+async function createChildAdmin(currentUser, { fullName, name, email, phone, password, permissions }) {
   const currentAdmin = await User.findById(currentUser?._id || currentUser?.id || currentUser);
   if (!currentAdmin) throw new NotFoundError('Admin user not found.');
   if (currentAdmin.role !== 'admin') {
     throw new ForbiddenError('Administrator clearance required to create administrator accounts.');
+  }
+
+  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
+  if (!isParent) {
+    throw new ForbiddenError('Security Clearance Violation: Only the Parent (Root) Administrator is authorized to provision child administrator accounts.');
   }
 
   const normalizedEmail = (email || '').trim().toLowerCase();
@@ -4070,6 +4082,9 @@ async function createChildAdmin(currentUser, { fullName, name, email, phone, pas
   const plainPassword = password || 'DeckAdmin2026!';
   const passwordHash = await User.hashPassword(plainPassword);
 
+  const defaultPerms = ['users', 'verifications', 'leads', 'projects', 'pricing', 'reports', 'settings'];
+  const assignedPermissions = Array.isArray(permissions) && permissions.length > 0 ? permissions : defaultPerms;
+
   const newAdmin = await User.create({
     fullName: adminName,
     email: normalizedEmail,
@@ -4079,6 +4094,7 @@ async function createChildAdmin(currentUser, { fullName, name, email, phone, pas
     accountStatus: 'active',
     isParentAdmin: false,
     parentAdminId: currentAdmin._id,
+    adminPermissions: assignedPermissions,
     emailVerifiedAt: new Date(),
   });
 
@@ -4091,6 +4107,7 @@ async function createChildAdmin(currentUser, { fullName, name, email, phone, pas
       name: newAdmin.fullName,
       email: newAdmin.email,
       isParentAdmin: false,
+      adminPermissions: newAdmin.adminPermissions,
       createdAt: newAdmin.createdAt,
     },
   };
@@ -4101,6 +4118,11 @@ async function deleteChildAdmin(currentUser, targetAdminId) {
   if (!currentAdmin) throw new NotFoundError('Admin user not found.');
   if (currentAdmin.role !== 'admin') {
     throw new ForbiddenError('Administrator clearance required.');
+  }
+
+  const isParent = currentAdmin.email === 'admin@deckestimator.com' || currentAdmin.isParentAdmin === true;
+  if (!isParent) {
+    throw new ForbiddenError('Security Clearance Violation: Only the Parent (Root) Administrator is authorized to revoke or delete administrator accounts.');
   }
 
   const targetAdmin = await User.findById(targetAdminId);

@@ -153,11 +153,13 @@ export default function AdminLayout() {
         }
       })();
 
-      // 1. Leads
+      // 1. Leads Management (Red Alert Bubble)
       adminApi
         .getLeads({ tab: 'all', limit: 100 })
         .then((res) => {
-          const list = res?.data?.data || res?.data || [];
+          const list = Array.isArray(res?.data?.data)
+            ? res.data.data
+            : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.leads) ? res.data.leads : []));
           if (mounted && Array.isArray(list)) {
             const unreadLeads = list.filter(
               (l) => !l.isOpened && !storedReadLeads.includes(l._id || l.id || l.leadNumber)
@@ -167,23 +169,25 @@ export default function AdminLayout() {
         })
         .catch(() => {});
 
-      // 2. Verifications
+      // 2. Verifications (Amber Gold Bubble)
       adminApi
         .getVerifications({ status: 'pending' })
         .then((res) => {
-          const list = res?.data || [];
-          if (mounted) {
+          const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []);
+          if (mounted && Array.isArray(list)) {
             const unread = list.filter((v) => !storedReadVerif.includes(v._id || v.id)).length;
             setPendingVerifications(unread);
           }
         })
         .catch(() => {});
 
-      // 3. Discount Requests
+      // 3. Discount Requests (Amber Gold Bubble)
       adminApi
         .getDiscountRequests({ status: 'PENDING' })
         .then((res) => {
-          const list = res?.data?.requests || res?.data || [];
+          const list = Array.isArray(res?.data?.requests)
+            ? res.data.requests
+            : (Array.isArray(res?.data) ? res.data : []);
           if (mounted && Array.isArray(list)) {
             const unread = list.filter(
               (r) => (r.status || '').toUpperCase() === 'PENDING' && !storedReadVerif.includes(r._id || r.id)
@@ -193,11 +197,13 @@ export default function AdminLayout() {
         })
         .catch(() => {});
 
-      // 4. User Requests
+      // 4. User Requests & Appeals (Amber Orange Bubble)
       adminApi
         .getUserRequests({ status: 'pending' })
         .then((res) => {
-          const list = res?.data?.data || res?.data || [];
+          const list = Array.isArray(res?.data?.data)
+            ? res.data.data
+            : (Array.isArray(res?.data) ? res.data : []);
           if (mounted && Array.isArray(list)) {
             const unreadUsers = list.filter(
               (r) => (r.status || '').toLowerCase() === 'pending' && !storedReadUsers.includes(r._id || r.id)
@@ -207,16 +213,18 @@ export default function AdminLayout() {
         })
         .catch(() => {});
 
-      // 5. Projects
+      // 5. Projects (Distinct Purple Bubble)
       adminApi
-        .getProjects({ limit: 25 })
+        .getProjects({ limit: 50 })
         .then((res) => {
-          const list = res?.data?.projects || res?.data || [];
+          const list = Array.isArray(res?.data?.projects)
+            ? res.data.projects
+            : (Array.isArray(res?.projects) ? res.projects : (Array.isArray(res?.data) ? res.data : []));
           if (mounted && Array.isArray(list)) {
             const unreadProjects = list.filter((p) => {
               const st = (p.status || p.projectStatus || p.stage || '').toLowerCase();
-              const isPendingStage = st === 'in_review' || st === 'requested' || st === 'created';
-              return isPendingStage && !storedReadProjects.includes(p._id || p.id || p.projectId || p.estimateReference);
+              const isActionable = st === 'requested' || st === 'in_review' || st === 'created';
+              return isActionable && !storedReadProjects.includes(p._id || p.id || p.projectId || p.estimateReference);
             }).length;
             setPendingProjectsCount(unreadProjects);
           }
@@ -226,14 +234,25 @@ export default function AdminLayout() {
 
     loadBadgeCounts();
 
-    const handleAlertsUpdated = () => {
-      loadBadgeCounts();
-    };
-    window.addEventListener('drp_admin_alerts_updated', handleAlertsUpdated);
+    const interval = setInterval(loadBadgeCounts, 15000);
+    const handleEvents = () => loadBadgeCounts();
+
+    window.addEventListener('drp_admin_alerts_updated', handleEvents);
+    window.addEventListener('drp_lead_updated', handleEvents);
+    window.addEventListener('drp_project_updated', handleEvents);
+    window.addEventListener('drp_verif_updated', handleEvents);
+    window.addEventListener('drp_user_updated', handleEvents);
+    window.addEventListener('focus', handleEvents);
 
     return () => {
       mounted = false;
-      window.removeEventListener('drp_admin_alerts_updated', handleAlertsUpdated);
+      clearInterval(interval);
+      window.removeEventListener('drp_admin_alerts_updated', handleEvents);
+      window.removeEventListener('drp_lead_updated', handleEvents);
+      window.removeEventListener('drp_project_updated', handleEvents);
+      window.removeEventListener('drp_verif_updated', handleEvents);
+      window.removeEventListener('drp_user_updated', handleEvents);
+      window.removeEventListener('focus', handleEvents);
     };
   }, [currentPath]);
 
@@ -284,7 +303,7 @@ export default function AdminLayout() {
       path: '/admin/users',
       label: 'User Management',
       badge: pendingUserRequests > 0 ? pendingUserRequests : null,
-      badgeColor: '#DC2626',
+      badgeColor: '#EA580C',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -298,7 +317,7 @@ export default function AdminLayout() {
       path: '/admin/verification-progress',
       label: 'Verification & Progress',
       badge: (pendingVerifications + pendingDiscountRequests) > 0 ? (pendingVerifications + pendingDiscountRequests) : null,
-      badgeColor: '#DC2626',
+      badgeColor: '#D97706',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -310,7 +329,7 @@ export default function AdminLayout() {
       path: '/admin/leads',
       label: 'Lead Management',
       badge: hotLeadsCount > 0 ? hotLeadsCount : null,
-      badgeColor: '#DC2626',
+      badgeColor: '#EF4444',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -323,7 +342,7 @@ export default function AdminLayout() {
       path: '/admin/projects',
       label: 'Projects',
       badge: pendingProjectsCount > 0 ? pendingProjectsCount : null,
-      badgeColor: '#7C3AED',
+      badgeColor: '#8B5CF6',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -473,8 +492,22 @@ export default function AdminLayout() {
                   justifyContent: isSidebarExpanded ? 'flex-start' : 'center',
                 }}
               >
-                <div style={{ ...styles.linkIcon, color: active ? '#ffffff' : '#94a3b8' }}>
+                <div style={{ ...styles.linkIcon, position: 'relative', color: active ? '#ffffff' : '#94a3b8' }}>
                   {item.icon}
+                  {!isSidebarExpanded && item.badge && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-3px',
+                        right: '-3px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: item.badgeColor || '#EF4444',
+                        boxShadow: `0 0 6px ${item.badgeColor || '#EF4444'}`,
+                      }}
+                    />
+                  )}
                 </div>
                 {isSidebarExpanded && (
                   <span style={styles.linkText}>{item.label}</span>
@@ -788,16 +821,18 @@ const styles = {
     textOverflow: 'ellipsis',
   },
   badge: {
-    fontSize: '10.5px',
-    fontWeight: '700',
+    fontSize: '11px',
+    fontWeight: '800',
     color: '#ffffff',
     borderRadius: '10px',
-    padding: '1px 7px',
+    padding: '2px 7px',
     marginLeft: 'auto',
     minWidth: '18px',
     textAlign: 'center',
-    lineHeight: '1.4',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+    lineHeight: '1.3',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+    letterSpacing: '0.2px',
+    transition: 'transform 0.15s ease',
   },
   navDivider: {
     height: '1px',
