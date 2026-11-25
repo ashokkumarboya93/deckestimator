@@ -3454,17 +3454,23 @@ async function searchNotificationRecipients(query = '', roleFilter = '') {
   if (query && query.trim()) {
     const rawQ = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const reg = new RegExp(rawQ, 'i');
+    const matchedProfiles = await ContractorProfile.find({
+      $or: [{ businessName: reg }, { companyName: reg }],
+    }).select('userId').lean();
+    const matchedProfileUserIds = matchedProfiles.map((p) => p.userId).filter(Boolean);
+
     q.$or = [
       { fullName: reg },
       { email: reg },
       { phone: reg },
       { company: reg },
       { businessName: reg },
+      ...(matchedProfileUserIds.length > 0 ? [{ _id: { $in: matchedProfileUserIds } }] : []),
     ];
   }
 
   const users = await User.find(q)
-    .select('fullName email phone role accountStatus avatar company businessName')
+    .select('fullName email phone role accountStatus company businessName')
     .sort({ createdAt: -1 })
     .limit(50)
     .lean();

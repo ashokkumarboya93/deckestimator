@@ -130,14 +130,39 @@ export default function AdminSettingsPage() {
     const timeout = setTimeout(async () => {
       try {
         const res = await adminApi.searchRecipients(searchQuery, recipientRoleFilter);
-        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        let list = Array.isArray(res)
+          ? res
+          : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : []));
+
+        // Fallback to /admin/users if search-recipients returns empty on non-empty query or error
+        if (list.length === 0) {
+          const fallbackParams = {
+            limit: 50,
+            ...(recipientRoleFilter !== 'all' ? { role: recipientRoleFilter } : {}),
+            ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
+          };
+          const uRes = await adminApi.getUsers(fallbackParams);
+          const uList = Array.isArray(uRes?.data) ? uRes.data : (Array.isArray(uRes) ? uRes : []);
+          list = uList
+            .filter((u) => (u.role || '').toLowerCase() !== 'admin')
+            .map((u) => ({
+              id: u.id || u._id,
+              _id: u._id || u.id,
+              fullName: u.fullName || u.name,
+              email: u.email,
+              phone: u.phone || '',
+              role: (u.role || 'customer').toLowerCase(),
+              businessName: u.contractorProfile?.businessName || u.businessName || '',
+            }));
+        }
+
         if (active) setSearchResults(list);
       } catch {
         if (active) setSearchResults([]);
       } finally {
         if (active) setIsSearchingUsers(false);
       }
-    }, 150);
+    }, 120);
     return () => {
       active = false;
       clearTimeout(timeout);

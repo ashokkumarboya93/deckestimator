@@ -1604,9 +1604,9 @@ export default function AdminPricingDiscountsPage() {
             </div>
 
             {/* Contractor Search Dropdown / Autocomplete */}
-            <div style={{ position: 'relative', marginTop: '16px' }} ref={searchBoxRef}>
+            <div style={{ marginTop: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: '280px', maxWidth: '520px' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '280px', maxWidth: '520px' }} ref={searchBoxRef}>
                   <input
                     type="text"
                     placeholder="🔍 Search contractor by name, email, or company to tune discount..."
@@ -1656,57 +1656,60 @@ export default function AdminPricingDiscountsPage() {
                       ✕
                     </button>
                   )}
+
+                  {/* Autocomplete Dropdown (Positioned directly under input) */}
+                  {isSearchDropdownOpen && (
+                    <div style={styles.searchDropdownList}>
+                      {searchDropdownResults.length > 0 ? (
+                        searchDropdownResults.map((c) => (
+                          <div
+                            key={c.id || c._id}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectContractorForTuning(c);
+                            }}
+                            style={styles.searchDropdownItem}
+                          >
+                            <div style={styles.contractorAvatarBadge}>
+                              {(c.fullName || c.name || 'C')[0].toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <strong style={{ fontSize: '13px', color: '#0F2C59', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {c.fullName || c.name}
+                              </strong>
+                              <span style={{ fontSize: '11px', color: '#64748B', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {c.businessName || 'Independent Pro'} • {c.email}
+                              </span>
+                            </div>
+                            <div>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  padding: '3px 8px',
+                                  borderRadius: '12px',
+                                  backgroundColor: c.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
+                                  color: c.hasCustomDiscount ? '#B45309' : '#15803D',
+                                  border: c.hasCustomDiscount ? '1px solid #FCD34D' : '1px solid #86EFAC',
+                                }}
+                              >
+                                {c.hasCustomDiscount ? `Custom: ${c.customDiscount}%` : `Default: ${defaultDiscountVal}%`}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '14px', textAlign: 'center', fontSize: '12.5px', color: '#64748B' }}>
+                          No registered contractors found matching "<strong>{contractorSearchQuery}</strong>"
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <span style={{ fontSize: '12px', color: '#64748B' }}>
                   or click <strong>"Tune Discount"</strong> on any contractor in the directory table below.
                 </span>
               </div>
-
-              {/* Autocomplete Dropdown */}
-              {isSearchDropdownOpen && (
-                <div style={styles.searchDropdownList}>
-                  {searchDropdownResults.length > 0 ? (
-                    searchDropdownResults.map((c) => (
-                      <div
-                        key={c.id || c._id}
-                        onClick={() => handleSelectContractorForTuning(c)}
-                        style={styles.searchDropdownItem}
-                      >
-                        <div style={styles.contractorAvatarBadge}>
-                          {(c.fullName || c.name || 'C')[0].toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <strong style={{ fontSize: '13px', color: '#0F2C59', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {c.fullName || c.name}
-                          </strong>
-                          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {c.businessName || 'Independent Pro'} • {c.email}
-                          </span>
-                        </div>
-                        <div>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '3px 8px',
-                              borderRadius: '12px',
-                              backgroundColor: c.hasCustomDiscount ? '#FEF3C7' : '#DCFCE7',
-                              color: c.hasCustomDiscount ? '#B45309' : '#15803D',
-                              border: c.hasCustomDiscount ? '1px solid #FCD34D' : '1px solid #86EFAC',
-                            }}
-                          >
-                            {c.hasCustomDiscount ? `Custom: ${c.customDiscount}%` : `Default: ${defaultDiscountVal}%`}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '14px', textAlign: 'center', fontSize: '12.5px', color: '#64748B' }}>
-                      No registered contractors found matching "<strong>{contractorSearchQuery}</strong>"
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Selected Contractor Active Pill with Cross Mark */}
               {selectedContractorForTuning && (
