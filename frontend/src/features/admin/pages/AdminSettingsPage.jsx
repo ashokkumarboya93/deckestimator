@@ -94,13 +94,15 @@ export default function AdminSettingsPage() {
     setError(null);
     try {
       const res = await adminApi.getSystemSettings();
-      if (res?.data) {
-        if (res.data.settings) {
-          setSettings((prev) => ({ ...prev, ...res.data.settings }));
-          saveContactChannelsLocally(res.data.settings);
+      // Safely unwrap data payload whether wrapped in res.data or direct
+      const payload = res?.data?.settings !== undefined ? res.data : (res?.settings !== undefined ? res : (res?.data || res));
+      if (payload) {
+        if (payload.settings) {
+          setSettings((prev) => ({ ...prev, ...payload.settings }));
+          saveContactChannelsLocally(payload.settings);
         }
-        if (res.data.systemInfo) {
-          setSysInfo((prev) => ({ ...prev, ...res.data.systemInfo }));
+        if (payload.systemInfo) {
+          setSysInfo((prev) => ({ ...prev, ...payload.systemInfo }));
         }
       }
     } catch (err) {
@@ -113,7 +115,8 @@ export default function AdminSettingsPage() {
   const loadNotifHistory = async () => {
     try {
       const res = await adminApi.getNotificationHistory(30);
-      setNotifHistory(res?.data || []);
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setNotifHistory(list);
     } catch {
       // Keep silent on initial history load failure
     }
@@ -122,18 +125,23 @@ export default function AdminSettingsPage() {
   // User search debounce (filtered by search query and role filter)
   useEffect(() => {
     if (notifForm.recipientType !== 'specific') return;
+    let active = true;
+    setIsSearchingUsers(true);
     const timeout = setTimeout(async () => {
-      setIsSearchingUsers(true);
       try {
         const res = await adminApi.searchRecipients(searchQuery, recipientRoleFilter);
-        setSearchResults(res?.data || []);
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        if (active) setSearchResults(list);
       } catch {
-        setSearchResults([]);
+        if (active) setSearchResults([]);
       } finally {
-        setIsSearchingUsers(false);
+        if (active) setIsSearchingUsers(false);
       }
-    }, 200);
-    return () => clearTimeout(timeout);
+    }, 150);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
   }, [searchQuery, recipientRoleFilter, notifForm.recipientType]);
 
   // Save Settings Handler (Used by Header and Contact tab)
@@ -142,10 +150,14 @@ export default function AdminSettingsPage() {
     setError(null);
     setSuccessMsg(null);
     try {
-      await adminApi.updateSystemSettings({ settings });
-      // Sync locally and trigger instant application-wide update
+      const res = await adminApi.updateSystemSettings({ settings });
+      const payload = res?.data?.settings !== undefined ? res.data : (res?.settings !== undefined ? res : (res?.data || res));
+      if (payload?.settings) {
+        setSettings((prev) => ({ ...prev, ...payload.settings }));
+      }
+      // Sync locally and trigger instant application-wide update across footers & portals
       saveContactChannelsLocally(settings);
-      setSuccessMsg('✓ Contact channels and application settings successfully updated across footers, customer and contractor portals!');
+      setSuccessMsg('✓ Contact channels and application settings successfully saved to application! Live updates synced across footers, customer portal, and contractor portal.');
     } catch (err) {
       setError(err?.message || 'Failed to update system settings in database.');
     } finally {
@@ -153,13 +165,14 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // Specific User Selection Actions
+  // Specific User Selection Actions (Multi-Select Support)
   const handleSelectUser = (u) => {
     const userId = u.id || u._id;
+    if (!userId) return;
     if (notifForm.selectedUsers.some((sel) => (sel.id || sel._id) === userId)) return;
     setNotifForm((prev) => ({
       ...prev,
-      selectedUsers: [...prev.selectedUsers, { ...u, id: userId }],
+      selectedUsers: [...prev.selectedUsers, { ...u, id: userId, _id: userId }],
     }));
   };
 
@@ -208,8 +221,11 @@ export default function AdminSettingsPage() {
       };
 
       const res = await adminApi.dispatchNotification(payload);
+      const recipientNames = notifForm.recipientType === 'specific'
+        ? notifForm.selectedUsers.map((u) => u.fullName).join(', ')
+        : (notifForm.recipientType === 'both' ? 'All Customers & Contractors' : (notifForm.recipientType === 'contractor' ? 'All Contractors' : 'All Customers'));
       const recipientCount = notifForm.recipientType === 'specific' ? notifForm.selectedUsers.length : 'all matching';
-      setSuccessMsg(`✓ Broadcast successfully dispatched! (${recipientCount} recipient(s) reached). Stored in live MongoDB notifications collection.`);
+      setSuccessMsg(`✓ Broadcast successfully dispatched! (${recipientCount} recipient(s) reached: ${recipientNames}). Stored in live MongoDB notifications collection.`);
 
       // Reset form
       setNotifForm({
@@ -479,20 +495,40 @@ export default function AdminSettingsPage() {
                       placeholder="Search recipient by name, email address, or phone number..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ ...styles.input, paddingLeft: '36px' }}
+                      style={{ ...styles.input, paddingLeft: '36px', paddingRight: searchQuery ? '36px' : '14px' }}
                     />
-                    {isSearchingUsers && (
+                    {searchQuery ? (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '10px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#94A3B8',
+                          cursor: 'pointer',
+                          fontWeight: '700',
+                          fontSize: '13px',
+                        }}
+                        title="Clear search"
+                      >
+                        ✕
+                      </button>
+                    ) : isSearchingUsers ? (
                       <span style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
                         Searching database...
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Autocomplete Results Dropdown */}
-                  {searchResults.length > 0 && (
+                  {searchResults.length > 0 ? (
                     <div style={styles.userDropdown}>
-                      <div style={{ padding: '6px 12px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>
-                        SELECT MATCHING RECIPIENTS ({searchResults.length})
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '11px', fontWeight: '700', color: '#64748B' }}>
+                        <span>MATCHING USERS IN DATABASE ({searchResults.length})</span>
+                        <span style={{ fontSize: '10.5px', color: '#94A3B8' }}>Click user or '＋ Add' to select</span>
                       </div>
                       <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
                         {searchResults.map((u) => {
@@ -501,11 +537,14 @@ export default function AdminSettingsPage() {
                           return (
                             <div
                               key={userId}
-                              onClick={() => !isSelected && handleSelectUser(u)}
+                              onClick={() => {
+                                if (isSelected) handleRemoveUser(userId);
+                                else handleSelectUser(u);
+                              }}
                               style={{
                                 ...styles.userDropdownItem,
-                                backgroundColor: isSelected ? '#F1F5F9' : '#FFFFFF',
-                                cursor: isSelected ? 'default' : 'pointer',
+                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                cursor: 'pointer',
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -516,18 +555,20 @@ export default function AdminSettingsPage() {
                                   <div style={{ fontWeight: '700', color: '#0F2C59', fontSize: '13px' }}>
                                     {u.fullName || 'User'}
                                   </div>
-                                  <div style={{ fontSize: '11px', color: '#64748B' }}>
-                                    {u.email} {u.phone ? `• ${u.phone}` : ''}
+                                  <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                                    {u.email} {u.phone ? `• 📞 ${u.phone}` : ''}
                                   </div>
                                 </div>
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={u.role === 'contractor' ? styles.tagContractor : styles.tagCustomer}>
-                                  {u.role.toUpperCase()}
+                                  {u.role ? u.role.toUpperCase() : 'USER'}
                                 </span>
                                 {isSelected ? (
-                                  <span style={{ fontSize: '11px', color: '#15803D', fontWeight: '700' }}>✓ Added</span>
+                                  <span style={{ fontSize: '11px', color: '#15803D', fontWeight: '800', backgroundColor: '#DCFCE7', padding: '3px 8px', borderRadius: '4px' }}>
+                                    ✓ Added
+                                  </span>
                                 ) : (
                                   <button
                                     type="button"
@@ -546,11 +587,17 @@ export default function AdminSettingsPage() {
                         })}
                       </div>
                     </div>
-                  )}
+                  ) : searchQuery.trim() && !isSearchingUsers ? (
+                    <div style={styles.userDropdown}>
+                      <div style={{ padding: '14px 18px', textAlign: 'center', fontSize: '12.5px', color: '#64748B' }}>
+                        No recipients found matching "<strong>{searchQuery}</strong>". Try searching by full name, email address, or phone number.
+                      </div>
+                    </div>
+                  ) : null}
 
                   {/* Selected Recipients Tray */}
-                  <div style={{ marginTop: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ marginTop: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
                         Selected Recipients ({notifForm.selectedUsers.length}):
                       </span>
@@ -558,16 +605,16 @@ export default function AdminSettingsPage() {
                         <button
                           type="button"
                           onClick={handleClearAllSelectedUsers}
-                          style={{ background: 'none', border: 'none', color: '#DC2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                          style={{ background: 'none', border: 'none', color: '#DC2626', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
                         >
-                          Clear All
+                          Clear All ({notifForm.selectedUsers.length})
                         </button>
                       )}
                     </div>
 
                     {notifForm.selectedUsers.length === 0 ? (
                       <div style={styles.emptySelectedBox}>
-                        No specific recipients selected yet. Type a name or email above to pick individual customers and contractors.
+                        No specific recipients selected yet. Type a name, email address, or phone number above to select individual customers and contractors.
                       </div>
                     ) : (
                       <div style={styles.selectedPillRow}>
@@ -578,9 +625,11 @@ export default function AdminSettingsPage() {
                               <span style={u.role === 'contractor' ? styles.chipDotContractor : styles.chipDotCustomer} />
                               <strong style={{ color: '#0F2C59' }}>{u.fullName}</strong>
                               <span style={u.role === 'contractor' ? styles.chipRoleContractor : styles.chipRoleCustomer}>
-                                {u.role}
+                                {u.role ? u.role.toUpperCase() : 'USER'}
                               </span>
-                              <span style={{ fontSize: '11px', color: '#64748B' }}>({u.email})</span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                ({u.email}{u.phone ? ` • ${u.phone}` : ''})
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveUser(userId)}
@@ -1463,11 +1512,12 @@ const styles = {
   userChip: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '5px 10px',
-    backgroundColor: '#F1F5F9',
+    gap: '8px',
+    padding: '6px 12px',
+    backgroundColor: '#FFFFFF',
     borderRadius: '20px',
-    border: '1px solid #CBD5E1',
+    border: '1.5px solid #CBD5E1',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
     fontSize: '12px',
   },
   chipDotCustomer: {
@@ -1497,13 +1547,21 @@ const styles = {
     textTransform: 'uppercase',
   },
   chipRemoveBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#64748B',
+    background: '#FEE2E2',
+    border: '1px solid #FECACA',
+    borderRadius: '50%',
+    color: '#DC2626',
     cursor: 'pointer',
-    fontWeight: '700',
+    fontWeight: '900',
     fontSize: '11px',
-    padding: '0 2px',
+    width: '18px',
+    height: '18px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: '4px',
+    padding: 0,
+    transition: 'all 0.15s ease',
   },
   titleCatGrid: {
     display: 'grid',
