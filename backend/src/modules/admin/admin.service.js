@@ -61,7 +61,7 @@ async function logAdminAction(adminUser, action, entityType, entityId, oldValue,
 // ====================================================================
 
 const dashboardSummaryCache = new Map();
-const DASHBOARD_SUMMARY_TTL = 30000; // 30 seconds TTL — dashboard polls every 10s but data changes rarely
+const DASHBOARD_SUMMARY_TTL = 60000; // 60 seconds TTL — dashboard polls every 10s but data changes rarely
 
 const projectsFacetCache = { data: null, timestamp: 0 };
 const PROJECTS_FACET_TTL = 15000; // 15 seconds TTL
@@ -111,15 +111,8 @@ async function getDashboardSummary(dateRange = '30d') {
   const priorStart = new Date(startDate.getTime() - durationMs);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
-  // Consolidated parallel aggregations using $facet (reduces 28 round-trips down to 6 fast operations)
-  const [
-    userMetrics,
-    leadMetrics,
-    estimateMetrics,
-    projectMetrics,
-    hotLeadsList,
-    recentEstimatesList,
-  ] = await Promise.all([
+  // Consolidated parallel aggregations using $facet with a 4.5s resilience race
+  const aggPromise = Promise.all([
     // 1. User metrics & status breakdown in 1 query
     User.aggregate([
       { $match: { accountStatus: { $ne: 'disabled' } } },
@@ -268,6 +261,31 @@ async function getDashboardSummary(dateRange = '30d') {
       .limit(5)
       .lean(),
   ]);
+
+  let racedResults;
+  try {
+    racedResults = await Promise.race([
+      aggPromise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('AGG_FAST_FALLBACK')), 4500)),
+    ]);
+  } catch (raceErr) {
+    if (raceErr.message === 'AGG_FAST_FALLBACK') {
+      if (cached?.data) return cached.data;
+      const fb = await getDashboardFastFallback();
+      dashboardSummaryCache.set(cacheKey, { data: fb, cachedAt: Date.now() });
+      return fb;
+    }
+    throw raceErr;
+  }
+
+  const [
+    userMetrics,
+    leadMetrics,
+    estimateMetrics,
+    projectMetrics,
+    hotLeadsList,
+    recentEstimatesList,
+  ] = racedResults;
 
   const uTot = userMetrics?.[0]?.totals?.[0] || {};
   const userStatusCounts = userMetrics?.[0]?.statuses || [];
@@ -2993,7 +3011,10 @@ async function getDiscountsOverview() {
   const contractors = await User.find({
     role: { $regex: /^contractor$/i },
     accountStatus: { $ne: 'disabled' },
-  }).sort({ createdAt: -1 }).lean();
+  })
+    .select('fullName email phone role company businessName verificationStatus accountStatus createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
   const contractorIds = contractors.map((c) => c._id);
 
   const [completedProjects, assignments, profiles, auditLogs] = await Promise.all([
