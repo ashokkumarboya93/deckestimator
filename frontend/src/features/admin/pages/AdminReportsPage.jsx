@@ -194,6 +194,23 @@ export default function AdminReportsPage() {
     window.print();
   };
 
+  // Authenticated CSV / Excel download
+  const handleExportData = async (format = 'csv') => {
+    try {
+      const blob = await adminApi.downloadReportsExport(format, activeTab, dateRange);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `drp-report-${activeTab}-${dateRange}.${format === 'excel' ? 'xls' : 'csv'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (err) {
+      setError(err?.message || `Failed to export ${format.toUpperCase()} report.`);
+    }
+  };
+
   // Modern Bar Chart Renderer for "Live Lead Conversion Funnel"
   const renderFunnelBarChart = (data) => {
     const funnel =
@@ -325,10 +342,9 @@ export default function AdminReportsPage() {
             <option value="90d">Last Quarter</option>
             <option value="1y">Past 12 Months</option>
           </select>
-          <a
-            href={adminApi.exportReportsUrl('csv', activeTab, dateRange)}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => handleExportData('csv')}
             style={styles.shinyExportBtn}
             title="Download CSV table"
           >
@@ -338,11 +354,10 @@ export default function AdminReportsPage() {
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Export CSV
-          </a>
-          <a
-            href={adminApi.exportReportsUrl('excel', activeTab, dateRange)}
-            target="_blank"
-            rel="noreferrer"
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportData('excel')}
             style={styles.shinyExportGreenBtn}
             title="Download Excel spreadsheet"
           >
@@ -353,7 +368,7 @@ export default function AdminReportsPage() {
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
             Export Excel
-          </a>
+          </button>
           <button
             type="button"
             onClick={handleExportPdf}

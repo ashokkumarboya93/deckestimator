@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
+import { resolveAvatarUrl } from '../../../utils/imageOptimizer';
 import { ConfirmModal, SkeletonTable, SkeletonShimmer, EmptyState } from '../../../components/common';
 import { designTokens, colors, radii, shadows, typography } from '../../../theme';
 
@@ -1258,7 +1259,8 @@ export default function AdminProjectsPage() {
                 {selectedProject.photos && selectedProject.photos.length > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
                     {selectedProject.photos.map((photo, idx) => {
-                      const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.data || '');
+                      const rawPhotoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.dataUrl || photo?.data || photo?.preview || '');
+                      const photoUrl = resolveAvatarUrl(rawPhotoUrl) || rawPhotoUrl;
                       return (
                         <div
                           key={idx}

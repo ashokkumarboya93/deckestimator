@@ -1455,7 +1455,8 @@ export default function AdminLeadManagementPage() {
                         {leadPhotos.length > 0 ? (
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
                             {leadPhotos.map((photo, idx) => {
-                              const photoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.dataUrl || photo?.data || photo?.preview || '');
+                              const rawPhotoUrl = typeof photo === 'string' ? photo : (photo?.url || photo?.dataUrl || photo?.data || photo?.preview || '');
+                              const photoUrl = resolveAvatarUrl(rawPhotoUrl) || rawPhotoUrl;
                               return (
                                 <div
                                   key={idx}

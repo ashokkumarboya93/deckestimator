@@ -7,6 +7,31 @@
 import mainLogo from '../assets/images/Main_Logo_v2.png';
 import { ESTIMATOR_IMAGES } from '../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../constants/operatingHours';
+import { resolveAvatarUrl } from './imageOptimizer';
+
+function preloadImagesFromHtml(htmlString) {
+  const urls = new Set();
+  const regex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match;
+  while ((match = regex.exec(htmlString)) !== null) {
+    if (match[1]) urls.add(match[1]);
+  }
+  return Promise.all(
+    Array.from(urls).map(
+      (src) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          if (!src.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+          }
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = src;
+          setTimeout(resolve, 2500);
+        })
+    )
+  );
+}
 
 /**
  * Format currency helper
@@ -27,40 +52,48 @@ export function formatMoney(val) {
  */
 export function getEstimatePhotos(est = {}) {
   if (!est) return [];
-  const raw =
-    (Array.isArray(est.photos) && est.photos.length > 0 ? est.photos : null) ||
-    (Array.isArray(est.deckDetails?.photos) && est.deckDetails.photos.length > 0 ? est.deckDetails.photos : null) ||
-    (Array.isArray(est.deckId?.photos) && est.deckId.photos.length > 0 ? est.deckId.photos : null) ||
-    (Array.isArray(est.deckSnapshot?.photos) && est.deckSnapshot.photos.length > 0 ? est.deckSnapshot.photos : null) ||
-    (Array.isArray(est.uploadedPhotos) && est.uploadedPhotos.length > 0 ? est.uploadedPhotos : null) ||
-    (Array.isArray(est.uploadedImages) && est.uploadedImages.length > 0 ? est.uploadedImages : null) ||
-    [];
-
-  return raw
-    .map((p, idx) => {
-      if (!p) return null;
+  const buckets = [
+    est.photos,
+    est.deckDetails?.photos,
+    est.deckId?.photos,
+    est.deckSnapshot?.photos,
+    est.uploadedPhotos,
+    est.uploadedImages,
+  ];
+  const seen = new Set();
+  const merged = [];
+  for (const b of buckets) {
+    if (!Array.isArray(b)) continue;
+    for (let idx = 0; idx < b.length; idx++) {
+      const p = b[idx];
+      if (!p) continue;
+      const rawSrc = typeof p === 'string'
+        ? p.trim()
+        : (p.url || p.dataUrl || p.data || p.preview || p.src || '').trim();
+      if (!rawSrc) continue;
+      const resolvedSrc = resolveAvatarUrl(rawSrc) || rawSrc;
+      if (seen.has(resolvedSrc)) continue;
+      seen.add(resolvedSrc);
       if (typeof p === 'string') {
-        const trimmed = p.trim();
-        if (!trimmed) return null;
-        return {
-          id: `photo-${idx}`,
-          url: trimmed,
-          dataUrl: trimmed,
-          category: `Inspection Photo #${idx + 1}`,
-          name: `Photo ${idx + 1}`,
-        };
+        merged.push({
+          id: `photo-${merged.length}`,
+          url: resolvedSrc,
+          dataUrl: resolvedSrc,
+          category: `Inspection Photo #${merged.length + 1}`,
+          name: `Photo ${merged.length + 1}`,
+        });
+      } else {
+        merged.push({
+          ...p,
+          url: resolvedSrc,
+          dataUrl: resolvedSrc,
+          category: p.category ? String(p.category).replace(/_/g, ' ') : `Inspection Photo #${merged.length + 1}`,
+          name: p.name || `Photo ${merged.length + 1}`,
+        });
       }
-      const src = p.url || p.dataUrl || p.data || p.preview || p.src || '';
-      if (!src) return null;
-      return {
-        ...p,
-        url: src,
-        dataUrl: src,
-        category: p.category ? String(p.category).replace(/_/g, ' ') : `Inspection Photo #${idx + 1}`,
-        name: p.name || `Photo ${idx + 1}`,
-      };
-    })
-    .filter(Boolean);
+    }
+  }
+  return merged;
 }
 
 /**
@@ -462,65 +495,44 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
     </div>
   `;
 
-  // Use html2pdf to download PDF directly
+  // Use html2pdf to download PDF directly via in-flow HTML string (never off-screen left:-10000px which blanks html2canvas)
   const safeRef = String(refNum || 'ESTIMATE').replace(/[^a-zA-Z0-9-_]/g, '_');
   const fileName = `DeckRestorationPlus-Estimate-${safeRef}.pdf`;
   const opt = {
     margin: [6, 6, 6, 6],
     filename: fileName,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
-  reportElement.style.position = 'fixed';
-  reportElement.style.left = '-10000px';
-  reportElement.style.top = '0';
-  reportElement.style.zIndex = '99999';
   reportElement.style.backgroundColor = '#FFFFFF';
-  document.body.appendChild(reportElement);
-  try {
-    // Wait for all report images (logo, visuals, inspection photos) to fully load in DOM before capturing
-    const imgElements = reportElement.querySelectorAll('img');
-    await Promise.all(
-      Array.from(imgElements).map((img) => {
-        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-          setTimeout(resolve, 2000);
-        });
-      })
-    );
+  const htmlMarkup = reportElement.outerHTML;
+  await preloadImagesFromHtml(htmlMarkup);
 
-    const html2pdfModule = await import('html2pdf.js');
-    const html2pdf =
-      typeof html2pdfModule.default === 'function'
-        ? html2pdfModule.default
-        : typeof html2pdfModule.default?.default === 'function'
-        ? html2pdfModule.default.default
-        : typeof html2pdfModule === 'function'
-        ? html2pdfModule
-        : null;
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf =
+    typeof html2pdfModule.default === 'function'
+      ? html2pdfModule.default
+      : typeof html2pdfModule.default?.default === 'function'
+      ? html2pdfModule.default.default
+      : typeof html2pdfModule === 'function'
+      ? html2pdfModule
+      : null;
 
-    if (!html2pdf) {
-      throw new Error('PDF export engine failed to initialize.');
-    }
-
-    const pdfBlob = await html2pdf().from(reportElement).set(opt).outputPdf('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-  } finally {
-    if (document.body.contains(reportElement)) {
-      document.body.removeChild(reportElement);
-    }
+  if (!html2pdf) {
+    throw new Error('PDF export engine failed to initialize.');
   }
+
+  const pdfBlob = await html2pdf().from(htmlMarkup).set(opt).outputPdf('blob');
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
 }
 
 /**
@@ -728,48 +740,37 @@ export async function downloadUserProfilePdf(profileData = {}) {
     </div>
   `;
 
-  reportElement.style.position = 'fixed';
-  reportElement.style.left = '-10000px';
-  reportElement.style.top = '0';
-  reportElement.style.zIndex = '99999';
-  reportElement.style.opacity = '1';
-  reportElement.style.pointerEvents = 'none';
   reportElement.style.backgroundColor = '#FFFFFF';
-  document.body.appendChild(reportElement);
+  const htmlMarkup = reportElement.outerHTML;
+  await preloadImagesFromHtml(htmlMarkup);
 
-  try {
-    const safeName = (userName).replace(/[^a-zA-Z0-9-_]/g, '_');
-    const opt = {
-      margin: [6, 6, 6, 6],
-      filename: `DRP-UserProfile-${safeName}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    };
+  const safeName = (userName).replace(/[^a-zA-Z0-9-_]/g, '_');
+  const opt = {
+    margin: [6, 6, 6, 6],
+    filename: `DRP-UserProfile-${safeName}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  };
 
-    const html2pdfModule = await import('html2pdf.js');
-    const html2pdf = typeof html2pdfModule.default === 'function'
-      ? html2pdfModule.default
-      : (typeof html2pdfModule.default?.default === 'function'
-        ? html2pdfModule.default.default
-        : (typeof html2pdfModule === 'function' ? html2pdfModule : null));
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf = typeof html2pdfModule.default === 'function'
+    ? html2pdfModule.default
+    : (typeof html2pdfModule.default?.default === 'function'
+      ? html2pdfModule.default.default
+      : (typeof html2pdfModule === 'function' ? html2pdfModule : null));
 
-    if (!html2pdf) {
-      throw new Error('PDF export engine failed to initialize.');
-    }
-
-    const pdfBlob = await html2pdf().from(reportElement).set(opt).outputPdf('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = `DRP-UserProfile-${safeName}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-  } finally {
-    if (document.body.contains(reportElement)) {
-      document.body.removeChild(reportElement);
-    }
+  if (!html2pdf) {
+    throw new Error('PDF export engine failed to initialize.');
   }
+
+  const pdfBlob = await html2pdf().from(htmlMarkup).set(opt).outputPdf('blob');
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = `DRP-UserProfile-${safeName}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
 }

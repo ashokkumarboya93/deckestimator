@@ -333,6 +333,13 @@ export const adminApi = {
   exportReportsUrl: (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
     return `${BASE_URL}/admin/reports/export?format=${format}&tab=${tab}&dateRange=${dateRange}`;
   },
+  downloadReportsExport: async (format = 'csv', tab = 'business_overview', dateRange = '30d') => {
+    const res = await client.get('/admin/reports/export', {
+      params: { format, tab, dateRange },
+      responseType: 'blob',
+    });
+    return res.data;
+  },
 
   // 13. Admin Profile & Hierarchy
   getProfile: async () => {
