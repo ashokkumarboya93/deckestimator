@@ -815,26 +815,26 @@ async function updateEstimateStatus(id, newStatus, notes, user, ipAddress) {
 }
 
 async function deleteEstimate(id, user, ipAddress) {
-  const estimate = await Estimate.findById(id);
+  const estimate = await Estimate.findById(id)
+    .select('_id deckId ownerId createdBy estimateReference estimateName estimateStatus totalAmount')
+    .lean();
   if (!estimate) {
     throw new NotFoundError('Estimate not found.');
   }
 
   assertEstimateAccess(estimate, user);
 
-  const oldValues = estimate.toJSON();
-  await Estimate.findByIdAndDelete(id);
+  await Estimate.deleteOne({ _id: id });
 
   if (estimate.deckId) {
-    const otherCount = await Estimate.countDocuments({ deckId: estimate.deckId });
-    if (otherCount === 0) {
-      try {
-        const Deck = require('../decks/deck.model');
-        await Deck.findByIdAndDelete(estimate.deckId);
-      } catch (err) {
-        // Deck already removed
-      }
-    }
+    Estimate.countDocuments({ deckId: estimate.deckId })
+      .then((otherCount) => {
+        if (otherCount === 0) {
+          const Deck = require('../decks/deck.model');
+          return Deck.deleteOne({ _id: estimate.deckId });
+        }
+      })
+      .catch(() => {});
   }
 
   // Asynchronously record audit log without blocking fast client response
@@ -842,12 +842,62 @@ async function deleteEstimate(id, user, ipAddress) {
     performedBy: user.id || user._id,
     action: 'DELETE_ESTIMATE',
     entityId: estimate._id,
-    oldValue: oldValues,
+    oldValue: estimate,
     newValue: null,
     ipAddress,
   }).catch((err) => console.warn('[AUDIT_LOG_NON_BLOCKING_WARN]:', err?.message));
 
   return { id, message: 'Estimate deleted successfully.' };
+}
+
+async function bulkDeleteEstimates(ids = [], user, ipAddress) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { deletedCount: 0, message: 'No estimates selected.' };
+  }
+  const mongoose = require('mongoose');
+  const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) {
+    return { deletedCount: 0, message: 'No valid estimate IDs provided.' };
+  }
+
+  const userId = user.id || user._id;
+  const isAdmin = user.role === ROLES.ADMIN;
+  const filter = isAdmin
+    ? { _id: { $in: validIds } }
+    : { _id: { $in: validIds }, $or: [{ ownerId: userId }, { createdBy: userId }] };
+
+  const targets = await Estimate.find(filter).select('_id deckId').lean();
+  const targetIds = targets.map((t) => t._id);
+  if (targetIds.length === 0) {
+    return { deletedCount: 0, message: 'No matching estimates found to delete.' };
+  }
+
+  const res = await Estimate.deleteMany({ _id: { $in: targetIds } });
+
+  // Non-blocking deck & audit cleanup
+  const deckIds = [...new Set(targets.map((t) => t.deckId).filter(Boolean).map(String))];
+  if (deckIds.length > 0) {
+    Promise.allSettled(
+      deckIds.map(async (did) => {
+        const cnt = await Estimate.countDocuments({ deckId: did });
+        if (cnt === 0) {
+          const Deck = require('../decks/deck.model');
+          await Deck.deleteOne({ _id: did });
+        }
+      })
+    ).catch(() => {});
+  }
+
+  recordAuditLog({
+    performedBy: userId,
+    action: 'BULK_DELETE_ESTIMATES',
+    entityId: targetIds[0],
+    oldValue: { count: res.deletedCount, ids: targetIds },
+    newValue: null,
+    ipAddress,
+  }).catch(() => {});
+
+  return { deletedCount: res.deletedCount, message: `Successfully deleted ${res.deletedCount} estimate(s).` };
 }
 
 async function updateEstimate(id, payload = {}, user, ipAddress) {
@@ -1187,6 +1237,7 @@ module.exports = {
   getEstimateHistory,
   updateEstimateStatus,
   deleteEstimate,
+  bulkDeleteEstimates,
   updateEstimate,
   requestProjectEstimate,
 };

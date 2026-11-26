@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getEstimates, deleteEstimate, requestProjectEstimate } from '../../customer/api/estimatesApi';
+import { getEstimates, deleteEstimate, bulkDeleteEstimates, requestProjectEstimate } from '../../customer/api/estimatesApi';
 import { downloadEstimatePdf, downloadEstimateExcel } from '../../../utils/reportExport';
 import contractorBannerBg from '../../../assets/images/Banner_BG_img.png';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
@@ -368,12 +368,13 @@ export default function ContractorProjectsPage() {
     setSuccessToast(`Exported ${selectedEsts.length} Excel dossiers.`);
   };
 
-  // Batch Delete
+  // Batch Delete (Single fast atomic API request)
   const handleConfirmBatchDelete = async () => {
     setBatchDeleting(true);
     try {
-      await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      await bulkDeleteEstimates(selectedIds);
       setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
+      try { localStorage.removeItem('drp_cont_estimates_cache'); } catch {}
       setSuccessToast(`Successfully deleted ${selectedIds.length} projects.`);
       setSelectedIds([]);
       setShowBatchDeleteModal(false);

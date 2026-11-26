@@ -30,6 +30,7 @@ router.use(contractorCheck);
 
 // Estimate endpoints
 router.post('/', validate(createEstimateSchema), estimateController.createEstimate);
+router.post('/bulk-delete', estimateController.bulkDeleteEstimates);
 router.get('/', estimateController.getEstimates);
 router.get('/:id', validate(idParamSchema), estimateController.getEstimateById);
 router.post('/:id/recalculate', validate(recalculateEstimateSchema), estimateController.recalculateEstimate);

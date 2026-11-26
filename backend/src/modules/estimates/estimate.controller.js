@@ -111,6 +111,23 @@ async function deleteEstimate(req, res, next) {
   }
 }
 
+async function bulkDeleteEstimates(req, res, next) {
+  try {
+    const ids = req.body?.ids || [];
+    const result = await estimateService.bulkDeleteEstimates(
+      ids,
+      req.user,
+      getClientIp(req)
+    );
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function updateEstimate(req, res, next) {
   try {
     const estimate = await estimateService.updateEstimate(
@@ -154,6 +171,7 @@ module.exports = {
   getEstimateHistory,
   updateEstimateStatus,
   deleteEstimate,
+  bulkDeleteEstimates,
   updateEstimate,
   requestProjectEstimate,
 };

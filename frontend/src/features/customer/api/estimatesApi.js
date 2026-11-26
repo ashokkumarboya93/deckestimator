@@ -76,6 +76,14 @@ export async function deleteEstimate(id) {
   return res.data;
 }
 
+export async function bulkDeleteEstimates(ids = []) {
+  const res = await apiClient(`${ENDPOINTS.ESTIMATES.BASE}/bulk-delete`, {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+  return res.data;
+}
+
 export async function requestProjectEstimate(id, payload = {}) {
   const res = await apiClient(`${ENDPOINTS.ESTIMATES.BASE}/${id}/request`, {
     method: 'POST',

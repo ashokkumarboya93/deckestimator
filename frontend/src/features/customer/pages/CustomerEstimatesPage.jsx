@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { getEstimates, getEstimateById, deleteEstimate, requestProjectEstimate } from '../api/estimatesApi';
+import { getEstimates, getEstimateById, deleteEstimate, bulkDeleteEstimates, requestProjectEstimate } from '../api/estimatesApi';
 import bannerBgImg from '../../../assets/images/Banner_BG_img.png';
 import { ESTIMATOR_IMAGES } from '../../../assets/images/Input_images/estimatorImages';
 import { OPERATING_HOURS_PRINT_LINES } from '../../../constants/operatingHours';
@@ -478,13 +478,14 @@ export default function CustomerEstimatesPage() {
     }
   };
 
-  // Batch Delete
+  // Batch Delete (Single fast atomic API request)
   const handleConfirmBatchDelete = async () => {
     setBatchDeleting(true);
     try {
-      await Promise.all(selectedIds.map((id) => deleteEstimate(id)));
+      await bulkDeleteEstimates(selectedIds);
       selectedIds.forEach((id) => hydratedCacheRef.current.delete(id));
       setEstimates((prev) => prev.filter((item) => !selectedIds.includes(item._id || item.id)));
+      try { localStorage.removeItem('drp_cust_estimates_cache'); } catch {}
       setSuccessToast(`Successfully deleted ${selectedIds.length} estimates.`);
       setSelectedIds([]);
       setShowBatchDeleteModal(false);

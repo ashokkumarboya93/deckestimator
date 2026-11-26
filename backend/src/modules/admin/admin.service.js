@@ -1002,15 +1002,12 @@ async function bulkDeleteUsers(adminUser, userIds = [], reason = 'Bulk administr
   if (!Array.isArray(userIds) || userIds.length === 0) {
     return { success: true, count: 0, message: 'No users selected.' };
   }
-  let count = 0;
-  for (const uid of userIds) {
-    try {
-      await softDeleteUser(adminUser, uid, reason, true);
-      count++;
-    } catch (err) {
-      console.warn(`[BulkDeleteUser] Skipped ${uid}:`, err.message);
-    }
-  }
+  const results = await Promise.allSettled(
+    userIds.map((uid) => softDeleteUser(adminUser, uid, reason, true))
+  );
+  const count = results.filter((r) => r.status === 'fulfilled').length;
+  usersFacetCache.timestamp = 0;
+  invalidateAdminDashboardCache();
   return { success: true, count, message: `Successfully deleted ${count} user(s) from database.` };
 }
 
@@ -1019,7 +1016,8 @@ async function bulkDeleteContractorDocuments(adminUser, docIds = []) {
     return { success: true, count: 0, message: 'No documents selected.' };
   }
   const res = await VerificationDocument.deleteMany({ _id: { $in: docIds } });
-  await logAdminAction(adminUser, 'CONTRACTOR_DOCS_BULK_DELETED', 'VerificationDocument', null, null, { count: res.deletedCount, docIds });
+  invalidateAdminDashboardCache();
+  logAdminAction(adminUser, 'CONTRACTOR_DOCS_BULK_DELETED', 'VerificationDocument', null, null, { count: res.deletedCount, docIds }).catch(() => {});
   return { success: true, count: res.deletedCount, message: `Successfully deleted ${res.deletedCount} document(s).` };
 }
 
@@ -1028,25 +1026,25 @@ async function bulkDeleteVerifications(adminUser, profileIds = []) {
     return { success: true, count: 0, message: 'No verification records selected.' };
   }
   // Delete verification documents and reset/delete ContractorProfile records WITHOUT deleting any User
-  const profiles = await ContractorProfile.find({ _id: { $in: profileIds } });
+  const profiles = await ContractorProfile.find({ _id: { $in: profileIds } }).select('_id userId').lean();
   const userIds = profiles.map((p) => p.userId).filter(Boolean);
 
-  // Delete contractor documents
-  await VerificationDocument.deleteMany({
-    $or: [
-      { contractorId: { $in: profileIds } },
-      { userId: { $in: userIds } },
-    ],
-  });
+  const [, res] = await Promise.all([
+    VerificationDocument.deleteMany({
+      $or: [
+        { contractorId: { $in: profileIds } },
+        { userId: { $in: userIds } },
+      ],
+    }),
+    ContractorProfile.deleteMany({ _id: { $in: profileIds } }),
+  ]);
 
-  // Delete contractor profile verification records
-  const res = await ContractorProfile.deleteMany({ _id: { $in: profileIds } });
-
-  await logAdminAction(adminUser, 'VERIFICATION_RECORDS_BULK_DELETED', 'ContractorProfile', null, null, {
+  invalidateAdminDashboardCache();
+  logAdminAction(adminUser, 'VERIFICATION_RECORDS_BULK_DELETED', 'ContractorProfile', null, null, {
     count: res.deletedCount,
     profileIds,
     preservedUsersCount: userIds.length,
-  });
+  }).catch(() => {});
 
   return {
     success: true,
@@ -1061,23 +1059,25 @@ async function bulkDeleteUserRecordsOnly(adminUser, userIds = [], role = 'custom
   }
   let deletedCount = 0;
   if (role === 'contractor') {
-    // Delete ContractorProfiles and VerificationDocuments
-    const docRes = await VerificationDocument.deleteMany({
-      $or: [{ userId: { $in: userIds } }, { contractorId: { $in: userIds } }],
-    });
-    const profRes = await ContractorProfile.deleteMany({ userId: { $in: userIds } });
+    const [docRes, profRes] = await Promise.all([
+      VerificationDocument.deleteMany({
+        $or: [{ userId: { $in: userIds } }, { contractorId: { $in: userIds } }],
+      }),
+      ContractorProfile.deleteMany({ userId: { $in: userIds } }),
+    ]);
     deletedCount = profRes.deletedCount + docRes.deletedCount;
   } else {
-    // Delete customer estimates and verification requests
     const estRes = await Estimate.deleteMany({ customerId: { $in: userIds } });
     deletedCount = estRes.deletedCount;
   }
 
-  await logAdminAction(adminUser, 'USER_RECORDS_PURGED_PRESERVED_USER', 'UserRecords', null, null, {
+  usersFacetCache.timestamp = 0;
+  invalidateAdminDashboardCache();
+  logAdminAction(adminUser, 'USER_RECORDS_PURGED_PRESERVED_USER', 'UserRecords', null, null, {
     userIds,
     deletedCount,
     role,
-  });
+  }).catch(() => {});
 
   return {
     success: true,
