@@ -44,6 +44,7 @@ export default function AdminProfilePage() {
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [showChildPw, setShowChildPw] = useState(false);
 
   // Hierarchy State
   const [hierarchy, setHierarchy] = useState({
@@ -630,6 +631,8 @@ export default function AdminProfilePage() {
                 <label style={styles.subInputLabel}>Email Address</label>
                 <input
                   type="email"
+                  name="child_admin_email"
+                  autoComplete="off"
                   placeholder="admin.child@deckestimator.com"
                   value={newChildAdmin.email}
                   onChange={(e) => setNewChildAdmin({ ...newChildAdmin, email: e.target.value })}
@@ -651,14 +654,25 @@ export default function AdminProfilePage() {
 
               <div style={{ flex: '1 1 180px' }}>
                 <label style={styles.subInputLabel}>Initial Password</label>
-                <input
-                  type="password"
-                  placeholder="At least 8 chars"
-                  value={newChildAdmin.password}
-                  onChange={(e) => setNewChildAdmin({ ...newChildAdmin, password: e.target.value })}
-                  style={styles.inputSmall}
-                  required
-                />
+                <div style={styles.pwWrap}>
+                  <input
+                    type={showChildPw ? 'text' : 'password'}
+                    name="child_admin_password"
+                    autoComplete="new-password"
+                    placeholder="At least 8 chars"
+                    value={newChildAdmin.password}
+                    onChange={(e) => setNewChildAdmin({ ...newChildAdmin, password: e.target.value })}
+                    style={styles.inputSmall}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowChildPw(!showChildPw)}
+                    style={styles.pwToggleBtn}
+                  >
+                    {showChildPw ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
