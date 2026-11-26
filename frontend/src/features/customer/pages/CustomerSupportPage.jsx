@@ -222,14 +222,14 @@ export default function CustomerSupportPage() {
     setSubmitSuccess(null);
 
     try {
-      await leadApi.createLead({
+      await leadApi.submitReachOut({
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         subject: formData.subject,
-        notes: `Customer Inquiry from Help & Support Center:\n- Scope/Subject: ${formData.subject}\n- Est. Deck Size: ${formData.deckSize || 'Not specified'}\n- Wood Type: ${formData.woodType}\n\nMessage:\n${formData.message.trim()}`,
-        source: 'CUSTOMER_PORTAL_SUPPORT',
-        status: 'NEW',
+        message: `Customer Inquiry from Help & Support Center:\n- Scope/Subject: ${formData.subject}\n- Est. Deck Size: ${formData.deckSize || 'Not specified'}\n- Wood Type: ${formData.woodType}\n\nMessage:\n${formData.message.trim()}`,
+        contactSource: 'Reach Out',
+        leadSource: 'reach_out',
       });
 
       setSubmitSuccess('Thank you! Your inquiry was delivered directly to our senior estimating team. We will contact you promptly.');

@@ -13,29 +13,32 @@ async function generatePdfFromElement(element, filename) {
     margin: [10, 10, 10, 10],
     filename,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 780, backgroundColor: '#FFFFFF' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
-  document.body.appendChild(element);
-  try {
-    const html2pdfModule = await import('html2pdf.js');
-    const html2pdf = typeof html2pdfModule.default === 'function'
-      ? html2pdfModule.default
-      : (typeof html2pdfModule.default?.default === 'function'
-        ? html2pdfModule.default.default
-        : (typeof html2pdfModule === 'function' ? html2pdfModule : null));
+  element.style.backgroundColor = '#FFFFFF';
+  const htmlMarkup = element.outerHTML;
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf = typeof html2pdfModule.default === 'function'
+    ? html2pdfModule.default
+    : (typeof html2pdfModule.default?.default === 'function'
+      ? html2pdfModule.default.default
+      : (typeof html2pdfModule === 'function' ? html2pdfModule : null));
 
-    if (!html2pdf) {
-      throw new Error('PDF export engine failed to initialize.');
-    }
-
-    await html2pdf().from(element).set(opt).save();
-  } finally {
-    if (document.body.contains(element)) {
-      document.body.removeChild(element);
-    }
+  if (!html2pdf) {
+    throw new Error('PDF export engine failed to initialize.');
   }
+
+  const pdfBlob = await html2pdf().from(htmlMarkup).set(opt).outputPdf('blob');
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
 }
 
 /**
@@ -48,8 +51,8 @@ export async function downloadAdminManualPdf() {
   container.style.backgroundColor = '#FFFFFF';
   container.style.color = '#0F2C59';
   container.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  container.style.fontSize = '12px';
-  container.style.lineHeight = '1.5';
+  container.style.fontSize = '13.5px';
+  container.style.lineHeight = '1.65';
 
   container.innerHTML = `
     <!-- HEADER BANNER -->
@@ -297,8 +300,8 @@ export async function downloadCalculatorFormulasPdf() {
   container.style.backgroundColor = '#FFFFFF';
   container.style.color = '#0F2C59';
   container.style.fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  container.style.fontSize = '12px';
-  container.style.lineHeight = '1.5';
+  container.style.fontSize = '13.5px';
+  container.style.lineHeight = '1.65';
 
   container.innerHTML = `
     <!-- HEADER BANNER -->

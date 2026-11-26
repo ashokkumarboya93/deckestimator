@@ -2037,6 +2037,8 @@ async function listLeads({
       $and: [
         { $or: [{ estimateId: null }, { estimateId: { $exists: false } }] },
         { $or: [{ 'estimateSnapshot.estimateId': null }, { 'estimateSnapshot.estimateId': { $exists: false } }] },
+        { leadSource: { $nin: ['customer_estimator', 'contractor_estimator'] } },
+        { contactSource: { $ne: 'Estimation Service' } },
       ],
     });
   }
@@ -2188,6 +2190,8 @@ async function listLeads({
     $and: [
       { $or: [{ estimateId: null }, { estimateId: { $exists: false } }] },
       { $or: [{ 'estimateSnapshot.estimateId': null }, { 'estimateSnapshot.estimateId': { $exists: false } }] },
+      { leadSource: { $nin: ['customer_estimator', 'contractor_estimator'] } },
+      { contactSource: { $ne: 'Estimation Service' } },
     ],
   };
 

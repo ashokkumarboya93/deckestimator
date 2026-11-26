@@ -51,6 +51,10 @@ const verificationDocumentSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'File size in bytes is required'],
     },
+    fileData: {
+      type: Buffer,
+      select: false,
+    },
     documentStatus: {
       type: String,
       enum: Object.values(VERIFICATION_DOCUMENT_STATUS),

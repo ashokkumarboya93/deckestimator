@@ -1342,31 +1342,33 @@ export default function AdminPricingDiscountsPage() {
                   <td style={styles.tableTd}>
                     <span style={{ fontSize: '12px', color: '#475569' }}>{item.desc || '—'}</span>
                   </td>
-                  <td style={{ ...styles.tableTd, textAlign: 'right' }}>
-                    <button
-                      onClick={() =>
-                        setComponentModal({
-                          open: true,
-                          isEdit: true,
-                          key,
-                          label: item.label,
-                          unit: item.unit,
-                          factor: item.factor,
-                          desc: item.desc || '',
-                        })
-                      }
-                      style={styles.editActionBtn}
-                      title="Edit Component"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteComponent(key)}
-                      style={styles.deleteActionBtn}
-                      title="Delete Component"
-                    >
-                      Delete
-                    </button>
+                  <td style={{ ...styles.tableTd, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button
+                        onClick={() =>
+                          setComponentModal({
+                            open: true,
+                            isEdit: true,
+                            key,
+                            label: item.label,
+                            unit: item.unit,
+                            factor: item.factor,
+                            desc: item.desc || '',
+                          })
+                        }
+                        style={{ ...styles.editActionBtn, marginRight: 0 }}
+                        title="Edit Component"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteComponent(key)}
+                        style={styles.deleteActionBtn}
+                        title="Delete Component"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

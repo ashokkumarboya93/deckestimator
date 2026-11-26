@@ -43,6 +43,7 @@ export default function AdminProfilePage() {
   });
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   // Hierarchy State
   const [hierarchy, setHierarchy] = useState({
@@ -543,13 +544,22 @@ export default function AdminProfilePage() {
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.inputLabel}>Confirm New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    style={styles.input}
-                    required
-                  />
+                  <div style={styles.pwWrap}>
+                    <input
+                      type={showConfirmPw ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      style={styles.input}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      style={styles.pwToggleBtn}
+                    >
+                      {showConfirmPw ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -220,6 +220,7 @@ export default function AdminVerificationProgressPage() {
 
   // Document Blob Preview State
   const [docBlobUrl, setDocBlobUrl] = useState(null);
+  const [docError, setDocError] = useState(null);
   const [docLoading, setDocLoading] = useState(false);
   const [viewingDocModal, setViewingDocModal] = useState(null);
   const [docReviewModal, setDocReviewModal] = useState({ open: false, doc: null, action: '', notes: '' });
@@ -418,6 +419,7 @@ export default function AdminVerificationProgressPage() {
     let isMounted = true;
     async function fetchDocBlob() {
       setDocLoading(true);
+      setDocError(null);
       try {
         const token = getStoredToken();
         const fileUrl = `${BASE_URL}/admin/contractor-documents/${docId}/file?token=${encodeURIComponent(token || '')}`;
@@ -425,11 +427,11 @@ export default function AdminVerificationProgressPage() {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) {
-          throw new Error(`Failed to fetch file: ${res.status}`);
+          throw new Error(`Document file unavailable (${res.status}). Contractor may need to re-upload.`);
         }
         const cType = res.headers.get('content-type') || '';
         if (cType.includes('text/html')) {
-          throw new Error('Received HTML fallback instead of real document blob');
+          throw new Error('Document stream returned HTML fallback instead of binary file.');
         }
         const blob = await res.blob();
         if (isMounted) {
@@ -437,7 +439,9 @@ export default function AdminVerificationProgressPage() {
           setDocBlobUrl(url);
         }
       } catch (err) {
-        console.warn('Direct file stream fallback:', err);
+        if (isMounted) {
+          setDocError(err?.message || 'Unable to load document preview.');
+        }
       } finally {
         if (isMounted) setDocLoading(false);
       }
@@ -2001,21 +2005,23 @@ export default function AdminVerificationProgressPage() {
               )}
             </div>
 
-            <div style={styles.filterGroup}>
-              <span style={styles.filterLabel}>Status:</span>
-              <select
-                value={discountReqFilter}
-                onChange={(e) => {
-                  setDiscountReqFilter(e.target.value);
-                  setPage(1);
-                }}
-                style={styles.filterSelect}
-              >
-                <option value="all">All Requests</option>
-                <option value="PENDING">Pending Review</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
+            <div style={{ ...styles.filterGroup, flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={styles.filterLabel}>Status:</span>
+                <select
+                  value={discountReqFilter}
+                  onChange={(e) => {
+                    setDiscountReqFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={styles.filterSelect}
+                >
+                  <option value="all">All Requests</option>
+                  <option value="PENDING">Pending Review</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={styles.filterLabel}>Timeframe:</span>
@@ -2227,8 +2233,8 @@ export default function AdminVerificationProgressPage() {
                           </span>
                         </td>
 
-                        <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
+                        <td style={{ ...styles.td, textAlign: 'right', minWidth: '235px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap', maxWidth: '250px', marginLeft: 'auto' }}>
                             <button
                               type="button"
                               onClick={() => {
@@ -2462,25 +2468,39 @@ export default function AdminVerificationProgressPage() {
                   <div><strong>File Type:</strong> {viewingDocModal.mimeType || 'application/pdf'}</div>
                 </div>
 
-                {/* REAL LIVE DOCUMENT PREVIEW CONTAINER */}
+                {/* REAL LIVE SCROLLABLE DOCUMENT PREVIEW CONTAINER */}
                 <div style={{ marginTop: '16px', marginBottom: '16px', minHeight: '340px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', border: '1.5px solid #CBD5E1', borderRadius: '10px', padding: '12px' }}>
                   {docLoading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '12px' }}>
                       <div style={styles.spinner} />
                       <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Loading secure document stream...</span>
                     </div>
+                  ) : docError ? (
+                    <div style={{ textAlign: 'center', padding: '32px 20px', maxWidth: '460px' }}>
+                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>📄</div>
+                      <p style={{ margin: '0 0 6px', fontWeight: '700', color: '#991B1B', fontSize: '14px' }}>
+                        Document File Not Found on Server
+                      </p>
+                      <p style={{ margin: 0, fontSize: '12.5px', color: '#64748B', lineHeight: '1.5' }}>
+                        {docError}
+                      </p>
+                    </div>
                   ) : isImg ? (
-                    <img
-                      src={previewSrc}
-                      alt={viewingDocModal.originalFileName}
-                      style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-                    />
+                    <div style={{ width: '100%', maxHeight: '520px', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '4px' }}>
+                      <img
+                        src={previewSrc}
+                        alt={viewingDocModal.originalFileName}
+                        style={{ maxWidth: '100%', height: 'auto', objectFit: 'contain', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                      />
+                    </div>
                   ) : isPdf ? (
-                    <iframe
-                      src={previewSrc}
-                      title={viewingDocModal.originalFileName}
-                      style={{ width: '100%', height: '500px', border: '1px solid #E2E8F0', borderRadius: '6px' }}
-                    />
+                    <div style={{ width: '100%', height: '520px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '6px', backgroundColor: '#FFFFFF' }}>
+                      <iframe
+                        src={previewSrc}
+                        title={viewingDocModal.originalFileName}
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '24px 16px' }}>
                       <p style={{ margin: '0 0 10px', fontWeight: '700', color: '#0F172A' }}>
@@ -2497,23 +2517,25 @@ export default function AdminVerificationProgressPage() {
                     </div>
                   )}
 
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <a
-                      href={previewSrc}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontSize: '12.5px', color: '#0284C7', fontWeight: '700', textDecoration: 'underline' }}
-                    >
-                      Open Document in Dedicated Tab &rarr;
-                    </a>
-                    <a
-                      href={previewSrc}
-                      download={viewingDocModal.originalFileName || 'document.pdf'}
-                      style={{ fontSize: '12.5px', color: '#15803D', fontWeight: '700', textDecoration: 'underline' }}
-                    >
-                      Download Document File ↓
-                    </a>
-                  </div>
+                  {!docError && !docLoading && (
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <a
+                        href={previewSrc}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '12.5px', color: '#1D4ED8', fontWeight: '700', textDecoration: 'none' }}
+                      >
+                        Open Document in Dedicated Tab &rarr;
+                      </a>
+                      <a
+                        href={previewSrc}
+                        download={viewingDocModal.originalFileName || 'document.pdf'}
+                        style={{ padding: '6px 12px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', fontSize: '12.5px', color: '#15803D', fontWeight: '700', textDecoration: 'none' }}
+                      >
+                        Download Document File ↓
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {viewingDocModal.reviewNotes && (

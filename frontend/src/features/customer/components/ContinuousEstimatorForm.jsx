@@ -1853,7 +1853,8 @@ export default function ContinuousEstimatorForm({
     setReachOutSending(true);
     try {
       await leadApi.submitReachOut({
-        contactSource: 'Estimator Top Bar / Sidebar Reach Out',
+        contactSource: 'Reach Out',
+        leadSource: 'reach_out',
         subject: reachOutSubject.trim() || 'Estimator Support Enquiry',
         message: reachOutMsg.trim(),
         additionalNotes: `Customer deck: ${shape}, ${floorArea} sqft, ${woodSpecies}.`,

@@ -11,7 +11,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { downloadAdminManualPdf, downloadCalculatorFormulasPdf } from '../../../utils/adminGuidelinesPdf';
+import { downloadAdminManualPdf } from '../../../utils/adminGuidelinesPdf';
 
 const SECTIONS = [
   { id: 'overview', title: '1. Architecture & Platform Lifecycle', path: '/admin/dashboard' },
@@ -24,7 +24,6 @@ const SECTIONS = [
   { id: 'reports', title: '8. Business Intelligence & Reports', path: '/admin/reports' },
   { id: 'settings', title: '9. System Settings & Broadcast Alerts', path: '/admin/settings' },
   { id: 'sop', title: '10. Administrator Daily & Weekly SOPs', path: '/admin/dashboard' },
-  { id: 'calculator', title: '11. Estimator Formulas & Math Architecture', path: '/admin/pricing-discounts' },
 ];
 
 export default function AdminGuidelinesPage() {
@@ -32,7 +31,6 @@ export default function AdminGuidelinesPage() {
   const [activeSection, setActiveSection] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingManual, setDownloadingManual] = useState(false);
-  const [downloadingCalc, setDownloadingCalc] = useState(false);
 
   const filteredSections = SECTIONS.filter((s) => {
     if (!searchQuery.trim()) return true;
@@ -48,18 +46,6 @@ export default function AdminGuidelinesPage() {
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setDownloadingManual(false);
-    }
-  };
-
-  const handleDownloadCalc = async () => {
-    try {
-      setDownloadingCalc(true);
-      await downloadCalculatorFormulasPdf();
-    } catch (err) {
-      console.error('Failed to download calculator formulas:', err);
-      alert('Failed to generate calculator PDF. Please try again.');
-    } finally {
-      setDownloadingCalc(false);
     }
   };
 
@@ -170,7 +156,7 @@ export default function AdminGuidelinesPage() {
             <span style={styles.liveBadge}>Platform Version 2.4 • Live System Docs</span>
           </div>
           <p style={styles.subtitle}>
-            Comprehensive operational documentation, page navigation, standard operating procedures (SOP), and mathematical calculation reference for platform administrators.
+            Comprehensive operational documentation, page navigation, and standard operating procedures (SOP) for platform administrators.
           </p>
         </div>
         <div style={styles.headerActions}>
@@ -186,21 +172,6 @@ export default function AdminGuidelinesPage() {
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             {downloadingManual ? 'Generating PDF...' : 'Download Admin Manual (PDF)'}
-          </button>
-
-          <button
-            onClick={handleDownloadCalc}
-            disabled={downloadingCalc}
-            style={styles.btnCalcDownload}
-            title="Download technical calculator formulas and worked examples guide as a single PDF"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ marginRight: 7 }}>
-              <rect x="4" y="2" width="16" height="20" rx="2" />
-              <line x1="8" y1="6" x2="16" y2="6" />
-              <polyline points="10 14 12 16 14 14" />
-              <line x1="12" y1="11" x2="12" y2="16" />
-            </svg>
-            {downloadingCalc ? 'Generating PDF...' : 'Download Calculator Engine & Formulas (PDF)'}
           </button>
         </div>
       </div>
@@ -768,183 +739,6 @@ export default function AdminGuidelinesPage() {
             </div>
           )}
 
-          {/* SECTION 11: ESTIMATOR FORMULAS & MATH ARCHITECTURE */}
-          {activeSection === 'calculator' && (
-            <div style={styles.docArticle}>
-              <div style={styles.articleHeader}>
-                <div>
-                  <div style={styles.badgePill}>MATHEMATICAL REFERENCE</div>
-                  <h2 style={styles.docTitle}>Estimator Calculation Engine &amp; Math Architecture</h2>
-                </div>
-                <button onClick={() => navigate('/admin/pricing-discounts')} style={styles.navPageBtn}>
-                  Configure Pricing →
-                </button>
-              </div>
-
-              <p style={styles.docLead}>
-                Comprehensive mathematical specification of the continuous deck restoration pricing engine, including geometric surface area aggregation, chemical coverage packaging, labor hour equations, minimum mobilization price rules, and trade discount deductions.
-              </p>
-
-              {/* Formula Card 1: Effective Surface Area */}
-              <div style={styles.formulaCard}>
-                <div style={styles.formulaTitle}>1. Geometric Effective Surface Area Formula</div>
-                <div style={styles.mathBlock}>
-                  A_total = A_floor + (LF_railings × 3.0 × 2) + (N_steps × W_stair × 1.5) + (LF_fascia × 0.8) + (A_floor × 0.35 [if joists]) + (L_perg × W_perg × 0.60) + A_privacy + A_siding
-                </div>
-                <p style={styles.formulaDesc}>
-                  Every architectural element has a standard conversion multiplier reflecting true 3D surface area (e.g. railings are measured on both inner and outer face, stairs include treads + risers at 1.5x tread width).
-                </p>
-              </div>
-
-              {/* Formula Card 2: Continuous Base Rate Card Matrix */}
-              <div style={styles.formulaCard}>
-                <div style={styles.formulaTitle}>2. Base Rate Card Lookup Matrix ($/sq ft)</div>
-                <div style={styles.tableResponsive}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Preparation Phase</th>
-                        <th style={styles.th}>Clear Sealer</th>
-                        <th style={styles.th}>Semi-Transparent</th>
-                        <th style={styles.th}>Semi-Solid</th>
-                        <th style={styles.th}>Solid Stain</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>Clean &amp; Wash</strong></td>
-                        <td style={styles.td}>$2.50 / sq ft</td>
-                        <td style={styles.td}>$2.75 / sq ft</td>
-                        <td style={styles.td}>$3.10 / sq ft</td>
-                        <td style={styles.td}>$3.45 / sq ft</td>
-                      </tr>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>Chemical Strip &amp; Neutralize</strong></td>
-                        <td style={styles.td}>$3.25 / sq ft</td>
-                        <td style={styles.td}>$3.50 / sq ft</td>
-                        <td style={styles.td}>$3.85 / sq ft</td>
-                        <td style={styles.td}>$4.25 / sq ft</td>
-                      </tr>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>Heavy Strip &amp; Mechanical Sand</strong></td>
-                        <td style={styles.td}>$4.50 / sq ft</td>
-                        <td style={styles.td}>$4.85 / sq ft</td>
-                        <td style={styles.td}>$5.25 / sq ft</td>
-                        <td style={styles.td}>$5.75 / sq ft</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Formula Card 3: Chemical Coverage */}
-              <div style={styles.formulaCard}>
-                <div style={styles.formulaTitle}>3. Chemical Packaging &amp; Coverage Specifications</div>
-                <div style={styles.tableResponsive}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Chemical Agent</th>
-                        <th style={styles.th}>Theoretical Spread Rate</th>
-                        <th style={styles.th}>Packaging Unit</th>
-                        <th style={styles.th}>Quantity Formula</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>Restoration Cleaner / Stripper</strong></td>
-                        <td style={styles.td}>150 sq ft per gallon</td>
-                        <td style={styles.td}>5-Gallon Commercial Pails</td>
-                        <td style={styles.td}><code>ceil(A_total / (150 × 5)) pails</code></td>
-                      </tr>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>pH Balancing Neutralizer / Brightener</strong></td>
-                        <td style={styles.td}>200 sq ft per gallon</td>
-                        <td style={styles.td}>5-Gallon Commercial Pails</td>
-                        <td style={styles.td}><code>ceil(A_total / (200 × 5)) pails</code></td>
-                      </tr>
-                      <tr style={styles.tr}>
-                        <td style={styles.td}><strong>Protective Penetrating Stain / Sealer</strong></td>
-                        <td style={styles.td}>175 sq ft per gallon (2 coats)</td>
-                        <td style={styles.td}>5-Gallon Pails + 1-Gal Cans</td>
-                        <td style={styles.td}><code>ceil(A_total / 175) total gallons</code></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Formula Card 4: Labor Hours & Mobilization Floor */}
-              <div style={styles.formulaCard}>
-                <div style={styles.formulaTitle}>4. Labor Hours &amp; Mobilization Floor Rules</div>
-                <div style={styles.mathBlock}>
-                  Hours = (A_total / ProductionSpeed) × M_species × M_elevation
-                  <br />
-                  RetailQuote = max((A_total × BaseRate × M_wood × M_condition) + Repairs + Addons, $2,500.00)
-                </div>
-                <p style={styles.formulaDesc}>
-                  <strong>Minimum Mobilization Policy:</strong> When contractor or retail projects yield raw calculation below $2,500, the platform automatically applies the mobilization safety floor of $2,500.00 to guarantee crew overhead and transit profitability.
-                </p>
-              </div>
-
-              {/* Worked Example */}
-              <div style={styles.exampleCard}>
-                <div style={styles.exampleTitle}>Complete Step-by-Step Practical Worked Example: 500 Sq Ft California Redwood Deck</div>
-                <div style={{ fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
-                  <p><strong>Input Parameters:</strong></p>
-                  <ul>
-                    <li>Floor Area: 500 sq ft (20 ft × 25 ft)</li>
-                    <li>Railings: 45 linear ft (3 ft height)</li>
-                    <li>Stairs: 1 set of 5 steps (4 ft wide)</li>
-                    <li>Wood Species: California Redwood (+15% labor multiplier)</li>
-                    <li>Deck Condition: Weathered Graying (Requires Chemical Strip + Neutralize)</li>
-                    <li>Selected Protective Finish: Semi-Transparent Cedar Tone</li>
-                    <li>Elevation: Ground level (&lt;4 ft)</li>
-                    <li>Contractor: Certified Partner (10% standard wholesale trade discount)</li>
-                  </ul>
-
-                  <p><strong>Step 1: Calculate Effective Total Surface Area</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '6px' }}>
-                    Floor Area = 500 sq ft<br />
-                    Railings Area = 45 LF × 3.0 ft × 2 faces = 270 sq ft<br />
-                    Stairs Area = 5 steps × 4.0 ft × 1.5 multiplier = 30 sq ft<br />
-                    <strong>Total Effective Area (A_total) = 500 + 270 + 30 = 800 sq ft</strong>
-                  </p>
-
-                  <p><strong>Step 2: Base Rate Card Matrix Lookup</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '6px' }}>
-                    Preparation = Chemical Strip &amp; Neutralize<br />
-                    Finish = Semi-Transparent Stain<br />
-                    <strong>Matrix Lookup Unit Rate = $3.50 / sq ft</strong>
-                  </p>
-
-                  <p><strong>Step 3: Base Surface Restoration Cost</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '6px' }}>
-                    Base Cost = 800 sq ft × $3.50 = <strong>$2,800.00</strong>
-                  </p>
-
-                  <p><strong>Step 4: Wood Species Multiplier Adjustment</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '6px' }}>
-                    California Redwood Multiplier = 1.15 (+15%)<br />
-                    Redwood Adjusted Price = $2,800.00 × 1.15 = <strong>$3,220.00</strong>
-                  </p>
-
-                  <p><strong>Step 5: Mobilization Floor Verification</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '6px' }}>
-                    $3,220.00 is greater than $2,500.00 minimum mobilization threshold.<br />
-                    <strong>Standard Retail Homeowner Quote = $3,220.00</strong>
-                  </p>
-
-                  <p><strong>Step 6: Certified Contractor Wholesale Quote Calculation</strong></p>
-                  <p style={{ fontFamily: 'monospace', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', padding: '8px 12px', borderRadius: '6px', color: '#065f46' }}>
-                    Trade Discount Rate = 10%<br />
-                    Discount Amount = $3,220.00 × 0.10 = $322.00<br />
-                    <strong>Contractor Trade Wholesale Price = $3,220.00 - $322.00 = $2,898.00</strong>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </main>
       </div>
     </div>

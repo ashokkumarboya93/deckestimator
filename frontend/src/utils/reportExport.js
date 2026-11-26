@@ -502,7 +502,7 @@ export async function downloadEstimatePdf(est = {}, cust = {}) {
     margin: [6, 6, 6, 6],
     filename: fileName,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
@@ -749,7 +749,7 @@ export async function downloadUserProfilePdf(profileData = {}) {
     margin: [6, 6, 6, 6],
     filename: `DRP-UserProfile-${safeName}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, x: 0, y: 0, windowWidth: 794, backgroundColor: '#FFFFFF' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 

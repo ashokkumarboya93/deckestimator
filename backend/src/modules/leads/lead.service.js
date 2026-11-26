@@ -850,8 +850,8 @@ async function submitReachOutEnquiry(user, payload = {}) {
   }
 
   const userType = isContractor ? 'Contractor' : 'Customer';
-  const defaultSource = isContractor ? 'Reach Out' : 'Contact Us';
-  const source = payload.contactSource || defaultSource;
+  const defaultSource = payload.estimateId ? 'Estimation Service' : 'Reach Out';
+  const source = payload.estimateId ? 'Estimation Service' : (payload.contactSource || defaultSource);
   const resolvedName = (payload.fullName || user.fullName || userType).trim();
   const resolvedEmail = (payload.email || user.email || '').trim().toLowerCase();
   const resolvedPhone = (payload.phone || user.phone || user.phoneNumber || '').trim();

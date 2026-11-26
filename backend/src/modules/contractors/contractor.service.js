@@ -267,6 +267,7 @@ async function uploadDocument(userId, file, documentType, notes = '') {
     storageKey: saved.storageKey,
     mimeType: file.mimetype,
     fileSize: saved.fileSize,
+    fileData: file.buffer,
     documentStatus: VERIFICATION_DOCUMENT_STATUS.PENDING_REVIEW,
     reviewNotes: notes || '',
   });
@@ -304,7 +305,7 @@ async function getDocuments(contractorId, requestingUser) {
  * Retrieve absolute file path for a verification document with strict authorization.
  */
 async function getDocumentFilePath(documentId, requestingUser) {
-  const doc = await VerificationDocument.findById(documentId);
+  const doc = await VerificationDocument.findById(documentId).select('+fileData');
   if (!doc) {
     const error = new Error('Verification document not found.');
     error.statusCode = 404;
@@ -326,18 +327,26 @@ async function getDocumentFilePath(documentId, requestingUser) {
     doc.storageKey,
     'contractor-documents'
   );
-  if (!filePath) {
-    const error = new Error('Document file is missing from storage.');
-    error.statusCode = 404;
-    error.code = 'FILE_NOT_FOUND';
-    throw error;
+  if (filePath) {
+    return {
+      filePath,
+      mimeType: doc.mimeType,
+      originalFileName: doc.originalFileName,
+    };
   }
 
-  return {
-    filePath,
-    mimeType: doc.mimeType,
-    originalFileName: doc.originalFileName,
-  };
+  if (doc.fileData && doc.fileData.length > 0) {
+    return {
+      buffer: doc.fileData,
+      mimeType: doc.mimeType,
+      originalFileName: doc.originalFileName,
+    };
+  }
+
+  const error = new Error('Document file is missing from storage.');
+  error.statusCode = 404;
+  error.code = 'FILE_NOT_FOUND';
+  throw error;
 }
 
 /**

@@ -87,7 +87,11 @@ async function downloadDocument(req, res, next) {
       'Content-Disposition',
       `inline; filename="${fileInfo.originalFileName}"`
     );
-    res.sendFile(fileInfo.filePath);
+    if (fileInfo.buffer) {
+      res.send(fileInfo.buffer);
+    } else {
+      res.sendFile(fileInfo.filePath);
+    }
   } catch (error) {
     next(error);
   }

@@ -131,16 +131,38 @@ export default function AdminUserProfilePage() {
     }
   };
 
-  const handleDownloadAvatar = () => {
+  const handleDownloadAvatar = async () => {
     const rawAvatar = profileData?.user?.avatar || profileData?.user?.profilePicture || profileData?.user?.avatarUrl || profileData?.contractorProfile?.avatarUrl;
     const avatarSrc = resolveAvatarUrl(rawAvatar);
-    if (!avatarSrc) return;
-    const link = document.createElement('a');
-    link.href = avatarSrc;
-    link.download = `${(profileData?.user?.fullName || 'user').toLowerCase().replace(/\s+/g, '_')}_profile_picture.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!avatarSrc) {
+      setError('No profile photo has been uploaded for this user.');
+      return;
+    }
+    const safeName = `${(profileData?.user?.fullName || 'user').toLowerCase().replace(/[^a-z0-9_-]+/g, '_')}_profile_picture.jpg`;
+    try {
+      if (avatarSrc.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = avatarSrc;
+        link.download = safeName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+      const res = await fetch(avatarSrc);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = safeName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    } catch {
+      window.open(avatarSrc, '_blank', 'noopener,noreferrer');
+    }
   };
 
   if (loading) {
@@ -252,27 +274,33 @@ export default function AdminUserProfilePage() {
             <span>{isExportingPdf ? 'Generating PDF...' : 'Export Profile (PDF)'}</span>
           </button>
 
-          {/* Download Photo Button */}
-          {resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl) && (
-            <button
-              type="button"
-              onClick={handleDownloadAvatar}
-              style={{
-                ...styles.exportBtn,
-                backgroundColor: '#f0fdf4',
-                color: '#15803d',
-                borderColor: '#bbf7d0',
-              }}
-              title="Download user profile picture directly"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Download Photo</span>
-            </button>
-          )}
+          {/* Download Photo Button (Always visible across all profiles) */}
+          {(() => {
+            const hasAvatar = Boolean(resolveAvatarUrl(u.avatar || u.profilePicture || u.avatarUrl || cp?.avatarUrl));
+            return (
+              <button
+                type="button"
+                onClick={handleDownloadAvatar}
+                disabled={!hasAvatar}
+                style={{
+                  ...styles.exportBtn,
+                  backgroundColor: hasAvatar ? '#f0fdf4' : '#f8fafc',
+                  color: hasAvatar ? '#15803d' : '#94a3b8',
+                  borderColor: hasAvatar ? '#bbf7d0' : '#e2e8f0',
+                  cursor: hasAvatar ? 'pointer' : 'not-allowed',
+                  opacity: hasAvatar ? 1 : 0.75,
+                }}
+                title={hasAvatar ? 'Download user profile picture directly' : 'No profile photo uploaded by this user'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Download Photo</span>
+              </button>
+            );
+          })()}
 
           {/* Delete User Button */}
           <button
